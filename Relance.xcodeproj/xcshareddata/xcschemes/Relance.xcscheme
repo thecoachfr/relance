@@ -35,6 +35,20 @@
                ReferencedContainer = "container:Relance.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "28FC620AC0B5772633531BD6"
+               BuildableName = "RelanceWidgets.appex"
+               BlueprintName = "RelanceWidgets"
+               ReferencedContainer = "container:Relance.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction

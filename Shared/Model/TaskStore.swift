@@ -1,31 +1,38 @@
 import Foundation
 import SwiftData
+import WidgetKit
 
 /// Point d'entrée unique pour lire et modifier les tâches.
 /// Chaque modification est enregistrée localement, puis envoyée à Google et suivie d'un recalcul des relances.
 @Observable
 final class TaskStore {
     let container: ModelContainer
-    let auth: GoogleAuth
+    let auth: any AccountProvider
     let scheduler = ReminderScheduler()
     private(set) var isSyncing = false
     private(set) var lastError: String?
     /// Tâche à ouvrir (touche sur une notification).
     var openedTaskID: UUID?
+    /// Ouvre la saisie rapide (commande du Centre de contrôle).
+    var showQuickAdd = false
+    /// Appelé après chaque changement des tâches (activité en direct, côté app).
+    var onTasksChanged: (() -> Void)?
+    /// Données d'exemple, sans réseau (captures d'écran, revue de design).
+    var isDemo = false
 
     private var context: ModelContext { container.mainContext }
     private var api: TasksAPI { TasksAPI(token: { [auth] in try await auth.accessToken() }) }
 
-    private static let lastSyncKey = "lastSync"
+    /// v2 : la base a déménagé dans l'App Group, il faut une synchro complète.
+    private static let lastSyncKey = "lastSync.v2"
     private var lastSync: Date? {
-        get { UserDefaults.standard.object(forKey: Self.lastSyncKey) as? Date }
-        set { UserDefaults.standard.set(newValue, forKey: Self.lastSyncKey) }
+        get { AppGroup.defaults.object(forKey: Self.lastSyncKey) as? Date }
+        set { AppGroup.defaults.set(newValue, forKey: Self.lastSyncKey) }
     }
 
-    init(auth: GoogleAuth, inMemory: Bool = false) {
+    init(auth: any AccountProvider, inMemory: Bool = false) {
         self.auth = auth
-        container = try! ModelContainer(
-            for: TaskItem.self, configurations: ModelConfiguration(isStoredInMemoryOnly: inMemory))
+        container = AppGroup.modelContainer(inMemory: inMemory)
     }
 
     // MARK: - Lecture
@@ -123,6 +130,8 @@ final class TaskStore {
         let overdue = tasks.filter { $0.isOverdue() }.count
         await scheduler.apply(tasks: tasks.map { $0.plannable() }, inboxCount: inbox,
                               finishedTaskIDs: completedIDs, overdueNow: overdue)
+        WidgetCenter.shared.reloadAllTimelines()
+        onTasksChanged?()
     }
 
     // MARK: - Synchronisation Google Tasks
@@ -139,7 +148,10 @@ final class TaskStore {
     }
 
     private func performSync() async {
-        guard auth.isSignedIn else { return }
+        guard auth.isSignedIn, !isDemo else {
+            if isDemo { await reschedule() }
+            return
+        }
         isSyncing = true
         defer { isSyncing = false }
         do {

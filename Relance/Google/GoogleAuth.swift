@@ -3,7 +3,7 @@ import UIKit
 
 /// Connexion au compte Google, avec le seul accès nécessaire : Google Tasks.
 @Observable
-final class GoogleAuth {
+final class GoogleAuth: AccountProvider {
     static let tasksScope = "https://www.googleapis.com/auth/tasks"
 
     private(set) var email: String?
@@ -31,6 +31,14 @@ final class GoogleAuth {
         }
         email = result.user.profile?.email
     }
+
+    #if DEBUG
+    /// Mode démo (argument de lancement `-demo`) : connecté, sans Google.
+    func enableDemo() {
+        email = "demo@relance"
+        isRestoring = false
+    }
+    #endif
 
     func signOut() {
         GIDSignIn.sharedInstance.signOut()

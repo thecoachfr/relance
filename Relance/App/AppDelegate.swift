@@ -1,15 +1,29 @@
+import AppIntents
 import UIKit
 import UserNotifications
 
 /// Reçoit les touches et les boutons des notifications, y compris quand l'app est en arrière-plan.
 final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     let auth = GoogleAuth()
-    lazy var store = TaskStore(auth: auth)
+    static let isDemo = ProcessInfo.processInfo.arguments.contains("-demo")
+    lazy var store = TaskStore(auth: auth, inMemory: Self.isDemo)
+    let liveActivity = LiveActivityManager()
 
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        #if DEBUG
+        if Self.isDemo {
+            auth.enableDemo()
+            store.isDemo = true
+            DemoData.seed(store)
+        }
+        #endif
         UNUserNotificationCenter.current().delegate = self
         store.scheduler.registerCategories()
+        // Siri, widgets et activité en direct passent par ce magasin.
+        let store = store
+        AppDependencyManager.shared.add(dependency: store)
+        store.onTasksChanged = { [liveActivity] in liveActivity.refresh(tasks: store.activeTasks()) }
         return true
     }
 

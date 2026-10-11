@@ -3,19 +3,35 @@ import SwiftUI
 struct TaskRow: View {
     let item: TaskItem
     var now: Date = .now
+    /// Rond à cocher, comme dans Rappels : le geste de balayage seul ne se découvre pas.
+    var onDone: ((TaskItem) -> Void)?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(item.title.isEmpty ? "Sans titre" : item.title)
-                .font(.body)
-            if let status {
-                Label(status.text, systemImage: status.symbol)
-                    .font(.subheadline)
-                    .foregroundStyle(status.color)
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            if let onDone {
+                Button { onDone(item) } label: {
+                    Image(systemName: "circle")
+                        .font(.title2)
+                        .foregroundStyle(item.isOverdue(now: now) ? .red : .secondary)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.borderless)
+                .padding(.leading, -10)
+                .accessibilityLabel("Marquer comme faite")
             }
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.title.isEmpty ? "Sans titre" : item.title)
+                    .font(.body)
+                if let status {
+                    Label(status.text, systemImage: status.symbol)
+                        .font(.subheadline)
+                        .foregroundStyle(status.color)
+                }
+            }
+            .accessibilityElement(children: .combine)
         }
         .padding(.vertical, 2)
-        .accessibilityElement(children: .combine)
     }
 
     private var status: (text: String, symbol: String, color: Color)? {

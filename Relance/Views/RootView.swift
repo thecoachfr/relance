@@ -27,22 +27,25 @@ struct MainTabs: View {
     @Environment(TaskStore.self) private var store
     @Query(filter: #Predicate<TaskItem> { !$0.isCompleted && !$0.isTrashed })
     private var active: [TaskItem]
+    /// `-tab 1` au lancement ouvre directement un onglet (captures d'écran).
+    @State private var tab = UserDefaults.standard.integer(forKey: "tab")
 
     var body: some View {
         @Bindable var store = store
-        TabView {
-            Tab("À faire", systemImage: "checklist") {
+        TabView(selection: $tab) {
+            Tab("À faire", systemImage: "checklist", value: 0) {
                 TodoView()
             }
-            Tab("À trier", systemImage: "tray") {
+            Tab("À trier", systemImage: "tray", value: 1) {
                 InboxView()
             }
             .badge(active.filter(\.needsTriage).count)
-            Tab("Fait", systemImage: "checkmark.circle") {
+            Tab("Fait", systemImage: "checkmark.circle", value: 2) {
                 DoneView()
             }
         }
         .tabViewStyle(.sidebarAdaptable)
+        .sheet(isPresented: $store.showQuickAdd) { QuickAddSheet() }
         .sheet(item: Binding(
             get: { store.openedTaskID.flatMap { store.task($0) } },
             set: { store.openedTaskID = $0?.localID })

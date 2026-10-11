@@ -18,22 +18,24 @@ targets:
   Relance:
     type: application
     platform: iOS
-    sources: [Relance]
+    sources: [Relance, Shared]
     configFiles:
       Debug: Relance/Resources/Secrets.xcconfig
       Release: Relance/Resources/Secrets.xcconfig
     dependencies:
       - package: GoogleSignIn
+      - target: RelanceWidgets
     entitlements:
       path: Relance/Resources/Relance.entitlements
       properties:
         com.apple.developer.usernotifications.time-sensitive: true
         aps-environment: development
+        com.apple.security.application-groups: [group.fr.alexandrefau.relance]
     info:
       path: Relance/Resources/Info.plist
       properties:
         CFBundleDisplayName: Relance
-        CFBundleShortVersionString: "0.1"
+        CFBundleShortVersionString: "0.2"
         CFBundleVersion: "1"
         UILaunchScreen: {}
         UISupportedInterfaceOrientations~iphone: [UIInterfaceOrientationPortrait]
@@ -41,6 +43,7 @@ targets:
           [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown,
            UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
         UIBackgroundModes: [fetch, remote-notification]
+        NSSupportsLiveActivities: true
         BGTaskSchedulerPermittedIdentifiers: [fr.alexandrefau.relance.refresh]
         GIDClientID: $(GOOGLE_CLIENT_ID)
         CFBundleURLTypes:
@@ -50,6 +53,27 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: fr.alexandrefau.relance
         TARGETED_DEVICE_FAMILY: "1,2"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+  RelanceWidgets:
+    type: app-extension
+    platform: iOS
+    sources: [RelanceWidgets, Shared]
+    entitlements:
+      path: RelanceWidgets/RelanceWidgets.entitlements
+      properties:
+        com.apple.security.application-groups: [group.fr.alexandrefau.relance]
+    info:
+      path: RelanceWidgets/Info.plist
+      properties:
+        CFBundleDisplayName: Relance
+        CFBundleShortVersionString: "0.2"
+        CFBundleVersion: "1"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: fr.alexandrefau.relance.widgets
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SKIP_INSTALL: YES
   RelanceTests:
     type: bundle.unit-test
     platform: iOS
@@ -64,6 +88,7 @@ schemes:
     build:
       targets:
         Relance: all
+        RelanceWidgets: all
         RelanceTests: [test]
     test:
       targets: [RelanceTests]

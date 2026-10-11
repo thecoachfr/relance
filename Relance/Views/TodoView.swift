@@ -32,14 +32,14 @@ struct TodoView: View {
             .navigationTitle("À faire")
             .refreshable { await store.sync() }
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Réglages", systemImage: "gearshape") { showSettings = true }
                 }
-                ToolbarItem(placement: .bottomBar) {
-                    Button { showAdd = true } label: {
-                        Label("Nouvelle tâche", systemImage: "plus.circle.fill").labelStyle(.titleAndIcon)
-                    }
-                    .keyboardShortcut("n", modifiers: .command)
+                // La barre d'onglets d'iOS 26 masque la barre d'outils du bas : l'ajout va en haut à droite.
+                ToolbarItem(placement: .primaryAction) {
+                    Button("Nouvelle tâche", systemImage: "plus") { showAdd = true }
+                        .buttonStyle(.borderedProminent)
+                        .keyboardShortcut("n", modifiers: .command)
                 }
             }
             .safeAreaInset(edge: .bottom) { undoBanner }
@@ -55,7 +55,7 @@ struct TodoView: View {
         if !items.isEmpty {
             Section(title) {
                 ForEach(items) { item in
-                    TaskRow(item: item, now: now)
+                    TaskRow(item: item, now: now, onDone: markDone)
                         .taskActions(item, onDone: markDone, onEdit: { editing = $0 })
                 }
             }

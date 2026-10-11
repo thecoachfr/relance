@@ -16,7 +16,7 @@ struct RelanceApp: App {
                 .modelContainer(delegate.store.container)
                 .onOpenURL { delegate.auth.handle($0) }
                 .task {
-                    await delegate.auth.restore()
+                    if !AppDelegate.isDemo { await delegate.auth.restore() }
                     await delegate.store.sync()
                 }
         }
