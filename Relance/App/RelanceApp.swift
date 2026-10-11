@@ -28,7 +28,12 @@ struct RelanceApp: App {
         }
         .onChange(of: scenePhase) { _, phase in
             switch phase {
-            case .active: Task { await delegate.store.sync() }
+            case .active:
+                if AppGroup.defaults.bool(forKey: NewTaskIntent.pendingKey) {
+                    AppGroup.defaults.removeObject(forKey: NewTaskIntent.pendingKey)
+                    delegate.store.showQuickAdd = true
+                }
+                Task { await delegate.store.sync() }
             case .background: Self.scheduleRefresh()
             default: break
             }

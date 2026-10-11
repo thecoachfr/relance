@@ -15,8 +15,7 @@ struct RelanceWidgetsBundle: WidgetBundle {
 struct NewTaskControl: ControlWidget {
     var body: some ControlWidgetConfiguration {
         StaticControlConfiguration(kind: "fr.alexandrefau.relance.newtask") {
-            // Un lien plutôt qu'un intent maison : l'ouverture de l'app est garantie par le système.
-            ControlWidgetButton(action: OpenURLIntent(URL(string: "relance://nouvelle")!)) {
+            ControlWidgetButton(action: NewTaskIntent()) {
                 Label("Nouvelle tâche", systemImage: "plus.circle")
             }
         }

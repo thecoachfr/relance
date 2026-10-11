@@ -92,3 +92,19 @@ struct OverdueTasksIntent: AppIntent {
         }
     }
 }
+
+/// Commande « Nouvelle tâche » (Centre de contrôle, bouton Action, écran verrouillé).
+/// L'intent peut s'exécuter dans l'extension : il ne touche pas au magasin, il laisse une marque
+/// dans l'App Group que l'app lit en passant au premier plan.
+struct NewTaskIntent: AppIntent {
+    static let title: LocalizedStringResource = "Nouvelle tâche"
+    static let description = IntentDescription("Ouvre Relance sur la saisie d'une nouvelle tâche.")
+    static let openAppWhenRun = true
+
+    static let pendingKey = "pendingQuickAdd"
+
+    func perform() async throws -> some IntentResult {
+        AppGroup.defaults.set(true, forKey: Self.pendingKey)
+        return .result()
+    }
+}
