@@ -24,8 +24,23 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         let store = store
         AppDependencyManager.shared.add(dependency: store)
         RelanceShortcuts.updateAppShortcutParameters()
+        // Pushes silencieux de la vigie Home Assistant (aucune autorisation demandée à l'utilisateur).
+        application.registerForRemoteNotifications()
         store.onTasksChanged = { [liveActivity] in liveActivity.refresh(tasks: store.activeTasks()) }
         return true
+    }
+
+    func application(_ application: UIApplication,
+                     didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        Task { await PushRegistration.register(token: deviceToken) }
+    }
+
+    /// Push silencieux de la vigie : une tâche a été ajoutée ou cochée ailleurs.
+    func application(_ application: UIApplication,
+                     didReceiveRemoteNotification userInfo: [AnyHashable: Any]) async -> UIBackgroundFetchResult {
+        if auth.isRestoring { await auth.restore() }
+        await store.sync()
+        return store.lastError == nil ? .newData : .failed
     }
 
     func userNotificationCenter(_ center: UNUserNotificationCenter,

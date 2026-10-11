@@ -60,6 +60,8 @@
 	</array>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
+	<key>RelanceWebhookURL</key>
+	<string>$(RELANCE_WEBHOOK_URL)</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>fetch</string>

@@ -10,6 +10,7 @@
 		02D12DB891B37A57CB157A49 /* ReminderPlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E48E67DBEFD62C7E6118390 /* ReminderPlanner.swift */; };
 		030C7DAFDDC60DD19687BBED /* TodoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FFB746BA5E4C74B3B145047 /* TodoView.swift */; };
 		07B29052A2CDDC105B8AF1F2 /* NotesTimeCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05822D2ACADE5BC42570E7F5 /* NotesTimeCodec.swift */; };
+		09A9D13D9B7E48F4CA6DE691 /* PushRegistration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C1E3FCC309390331F7A6DDF /* PushRegistration.swift */; };
 		0FD58AD3F148C02CC851A2B9 /* QuickAddSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD9D4E32E198251993005BCC /* QuickAddSheet.swift */; };
 		134CDA592AB93A092C18F96B /* DemoData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59196264DF41F8F7B0C15A3A /* DemoData.swift */; };
 		13786AEE51D9397701A22CED /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0C65CE1B1707634DEE54856 /* OnboardingView.swift */; };
@@ -97,6 +98,7 @@
 		2FD7A3A536C16BA93AFF03B6 /* RelanceWidgetsBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelanceWidgetsBundle.swift; sourceTree = "<group>"; };
 		2FE0AB94C1F8EF86B799B335 /* TaskRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskRow.swift; sourceTree = "<group>"; };
 		356BC2CE21D14CF0CBA3C9B6 /* TasksProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksProvider.swift; sourceTree = "<group>"; };
+		3C1E3FCC309390331F7A6DDF /* PushRegistration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushRegistration.swift; sourceTree = "<group>"; };
 		3D82D35DFB589C1E996F8CBC /* ReminderPlannerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderPlannerTests.swift; sourceTree = "<group>"; };
 		4710CF61EBFBFD1A1472103A /* TaskActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskActivityAttributes.swift; sourceTree = "<group>"; };
 		59196264DF41F8F7B0C15A3A /* DemoData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoData.swift; sourceTree = "<group>"; };
@@ -283,6 +285,7 @@
 				B30F392FC92433C39C1922E7 /* AppDelegate.swift */,
 				59196264DF41F8F7B0C15A3A /* DemoData.swift */,
 				E5C54AAEC34A872D13A632F8 /* LiveActivityManager.swift */,
+				3C1E3FCC309390331F7A6DDF /* PushRegistration.swift */,
 				59F7A908CED23B538B56A391 /* RelanceApp.swift */,
 				01BFACD05E33901EC0A7A084 /* RelanceShortcuts.swift */,
 			);
@@ -427,6 +430,7 @@
 				2FFD58C76AEB38E084377310 /* LiveActivityManager.swift in Sources */,
 				07B29052A2CDDC105B8AF1F2 /* NotesTimeCodec.swift in Sources */,
 				13786AEE51D9397701A22CED /* OnboardingView.swift in Sources */,
+				09A9D13D9B7E48F4CA6DE691 /* PushRegistration.swift in Sources */,
 				0FD58AD3F148C02CC851A2B9 /* QuickAddSheet.swift in Sources */,
 				59D184F4DD3047DCE4FBAF66 /* RelanceApp.swift in Sources */,
 				81E219AB9CB3C261F4FEA193 /* RelanceShortcuts.swift in Sources */,

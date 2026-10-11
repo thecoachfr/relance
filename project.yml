@@ -51,6 +51,7 @@ targets:
           - INAlternativeAppName: L'appli Relance
         BGTaskSchedulerPermittedIdentifiers: [fr.alexandrefau.relance.refresh]
         GIDClientID: $(GOOGLE_CLIENT_ID)
+        RelanceWebhookURL: $(RELANCE_WEBHOOK_URL)
         CFBundleURLTypes:
           - CFBundleURLSchemes: [$(GOOGLE_REVERSED_CLIENT_ID)]
           - CFBundleURLName: fr.alexandrefau.relance

@@ -1,0 +1,12 @@
+# À ajouter dans /addon_configs/a0d7b954_appdaemon/apps/apps.yaml
+relance_vigie:
+  module: relance_vigie
+  class: RelanceVigie
+  # Entité créée par l'intégration Google Tasks pour la liste « Mes tâches » (à confirmer après ajout).
+  todo_entity: todo.mes_taches
+  bundle_id: fr.alexandrefau.relance
+  team_id: GD6W292ZXP
+  # Key ID de la clé APNs (10 caractères), et le fichier .p8 copié à côté des apps.
+  key_id: XXXXXXXXXX
+  key_path: /config/apps/AuthKey_relance.p8
+  refresh_seconds: 60
