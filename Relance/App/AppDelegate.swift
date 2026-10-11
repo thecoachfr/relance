@@ -23,6 +23,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         // Siri, widgets et activité en direct passent par ce magasin.
         let store = store
         AppDependencyManager.shared.add(dependency: store)
+        RelanceShortcuts.updateAppShortcutParameters()
         store.onTasksChanged = { [liveActivity] in liveActivity.refresh(tasks: store.activeTasks()) }
         return true
     }

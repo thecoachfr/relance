@@ -44,6 +44,11 @@ targets:
            UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
         UIBackgroundModes: [fetch, remote-notification]
         NSSupportsLiveActivities: true
+        # « Relance » est un mot courant : on aide Siri à y reconnaître l'app.
+        INAlternativeAppNames:
+          - INAlternativeAppName: Mes relances
+          - INAlternativeAppName: Relances
+          - INAlternativeAppName: L'appli Relance
         BGTaskSchedulerPermittedIdentifiers: [fr.alexandrefau.relance.refresh]
         GIDClientID: $(GOOGLE_CLIENT_ID)
         CFBundleURLTypes:

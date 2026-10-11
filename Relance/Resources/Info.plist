@@ -43,6 +43,21 @@
 	<string>1</string>
 	<key>GIDClientID</key>
 	<string>$(GOOGLE_CLIENT_ID)</string>
+	<key>INAlternativeAppNames</key>
+	<array>
+		<dict>
+			<key>INAlternativeAppName</key>
+			<string>Mes relances</string>
+		</dict>
+		<dict>
+			<key>INAlternativeAppName</key>
+			<string>Relances</string>
+		</dict>
+		<dict>
+			<key>INAlternativeAppName</key>
+			<string>L'appli Relance</string>
+		</dict>
+	</array>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>UIBackgroundModes</key>
