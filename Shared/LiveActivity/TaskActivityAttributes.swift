@@ -11,5 +11,7 @@ nonisolated struct TaskActivityAttributes: ActivityAttributes {
         var hasTime: Bool
         /// Autres tâches en retard, en plus de celle affichée.
         var otherOverdue: Int
+        /// Reportée avec « Dans 1 h » : prochaine relance.
+        var snoozedUntil: Date? = nil
     }
 }

@@ -68,7 +68,9 @@ private struct StatusLine: View {
 
     var body: some View {
         Group {
-            if late && state.hasTime {
+            if let snoozed = state.snoozedUntil, snoozed > .now {
+                Text("Reportée, relance à \(snoozed.formatted(date: .omitted, time: .shortened))")
+            } else if late && state.hasTime {
                 Text("En retard de \(Text(state.due, style: .relative))")
             } else if late {
                 Text("Échéance passée, toujours pas fait")
@@ -79,7 +81,7 @@ private struct StatusLine: View {
             }
         }
         .font(.subheadline)
-        .foregroundStyle(late ? .red : .secondary)
+        .foregroundStyle(late && (state.snoozedUntil ?? .distantPast) <= .now ? .red : .secondary)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
