@@ -1,0 +1,576 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		030C7DAFDDC60DD19687BBED /* TodoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FFB746BA5E4C74B3B145047 /* TodoView.swift */; };
+		0FD58AD3F148C02CC851A2B9 /* QuickAddSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD9D4E32E198251993005BCC /* QuickAddSheet.swift */; };
+		13786AEE51D9397701A22CED /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0C65CE1B1707634DEE54856 /* OnboardingView.swift */; };
+		28789DBD3D4F6CA8FB3B49EE /* GoogleAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BC7FD887AB3B53D2F6D6148 /* GoogleAuth.swift */; };
+		2B570BF6BA12EF4960F1ACD3 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 99A3E8623A59510F508D7421 /* Assets.xcassets */; };
+		30B420CBEF3DC2A1CB0FE161 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AF3B2A793608CF0B2A9F70C /* SettingsView.swift */; };
+		33B7402C2D9B8978CA0931CD /* ReminderPlannerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D82D35DFB589C1E996F8CBC /* ReminderPlannerTests.swift */; };
+		34825F57C915622D74FD3F36 /* TasksAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44A7A78F4A604B2D23B48061 /* TasksAPI.swift */; };
+		4FF5B1E0BB1083E64764515D /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B30F392FC92433C39C1922E7 /* AppDelegate.swift */; };
+		59D184F4DD3047DCE4FBAF66 /* RelanceApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59F7A908CED23B538B56A391 /* RelanceApp.swift */; };
+		6C7478733E97564534724799 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 95845BE823BDEEB575973A70 /* GoogleSignIn */; };
+		6F403A2EEEB1D06543B8EF10 /* NotesTimeCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB70F0CB5E2373F58296F007 /* NotesTimeCodec.swift */; };
+		731F6DF1F8AA3768BA2DFFB2 /* TaskRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FE0AB94C1F8EF86B799B335 /* TaskRow.swift */; };
+		7FD7435B902C80B885E67058 /* ReminderScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9F3FF418D2C0DE978AC76FC /* ReminderScheduler.swift */; };
+		A646043D50D2DACD71EFEA18 /* TaskEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09D01BAE1A3D8381127E9147 /* TaskEditor.swift */; };
+		B124EB00A072E175CD261404 /* NotesTimeCodecTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77112E8A0B99D6D1C55C2D66 /* NotesTimeCodecTests.swift */; };
+		B48E7FB2A592684F66A8557F /* TaskStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 692D74CC1E3D5F8E3C4234A8 /* TaskStore.swift */; };
+		BC8E1D24312B29365D78F691 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D537FFD88362EBC0053D6B55 /* RootView.swift */; };
+		D149D4516671CF0B49D0D5C1 /* InboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA74C2AD3519045DE673C1B1 /* InboxView.swift */; };
+		DC1B15409C41F6A7EB9FFA5C /* DoneView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2085B3617089E328A5BF3F30 /* DoneView.swift */; };
+		DE7FD35BD4EAC18DCA7AE545 /* TaskItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AF7BC9A85C008B87A26355C /* TaskItem.swift */; };
+		EF303D821C38FF6E13B8A452 /* ReminderPlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 815EA7805F6EBEC8E4CA1488 /* ReminderPlanner.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		7AD33C56424A58DC65C7E1F8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0C20496AA76ED5ECD2004085 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 771442508ECBB75C1E72BA56;
+			remoteInfo = Relance;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		01185B1571F35657DBA69826 /* Secrets.example.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.example.xcconfig; sourceTree = "<group>"; };
+		09D01BAE1A3D8381127E9147 /* TaskEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskEditor.swift; sourceTree = "<group>"; };
+		2085B3617089E328A5BF3F30 /* DoneView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoneView.swift; sourceTree = "<group>"; };
+		2D32FEC519FB14B6CA29BE8F /* Relance.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Relance.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		2FE0AB94C1F8EF86B799B335 /* TaskRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskRow.swift; sourceTree = "<group>"; };
+		3D82D35DFB589C1E996F8CBC /* ReminderPlannerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderPlannerTests.swift; sourceTree = "<group>"; };
+		44A7A78F4A604B2D23B48061 /* TasksAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksAPI.swift; sourceTree = "<group>"; };
+		59F7A908CED23B538B56A391 /* RelanceApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelanceApp.swift; sourceTree = "<group>"; };
+		5FFB746BA5E4C74B3B145047 /* TodoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoView.swift; sourceTree = "<group>"; };
+		692D74CC1E3D5F8E3C4234A8 /* TaskStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskStore.swift; sourceTree = "<group>"; };
+		74643B8064742A8000773BDB /* Relance.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Relance.entitlements; sourceTree = "<group>"; };
+		77112E8A0B99D6D1C55C2D66 /* NotesTimeCodecTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotesTimeCodecTests.swift; sourceTree = "<group>"; };
+		7EA1042AC75E061B36BD80DB /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		815EA7805F6EBEC8E4CA1488 /* ReminderPlanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderPlanner.swift; sourceTree = "<group>"; };
+		99A3E8623A59510F508D7421 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		9AF3B2A793608CF0B2A9F70C /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		9AF7BC9A85C008B87A26355C /* TaskItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskItem.swift; sourceTree = "<group>"; };
+		9BC7FD887AB3B53D2F6D6148 /* GoogleAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleAuth.swift; sourceTree = "<group>"; };
+		9BE2244FA751B3FDCB2E97BB /* RelanceTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = RelanceTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A9F3FF418D2C0DE978AC76FC /* ReminderScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderScheduler.swift; sourceTree = "<group>"; };
+		AD9D4E32E198251993005BCC /* QuickAddSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickAddSheet.swift; sourceTree = "<group>"; };
+		AEAE6516E008CA0F6431F7FC /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
+		B30F392FC92433C39C1922E7 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		CB70F0CB5E2373F58296F007 /* NotesTimeCodec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotesTimeCodec.swift; sourceTree = "<group>"; };
+		D537FFD88362EBC0053D6B55 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		DA74C2AD3519045DE673C1B1 /* InboxView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InboxView.swift; sourceTree = "<group>"; };
+		E0C65CE1B1707634DEE54856 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		F291DAB649372842EEC2CC48 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6C7478733E97564534724799 /* GoogleSignIn in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		022966EB69538C1A4A0775FE /* Relance */ = {
+			isa = PBXGroup;
+			children = (
+				DE87279FB6590006DC1B27B1 /* App */,
+				691015D6F3F55109D9AF46E9 /* Google */,
+				F7D8164F8D20C5B0B0BF8100 /* Model */,
+				CF47C4345B4FAC7DED549008 /* Reminders */,
+				2D4ECC9E022BA3C082E89FEA /* Resources */,
+				5EEFE8FECD21EF7D4D739B46 /* Views */,
+			);
+			path = Relance;
+			sourceTree = "<group>";
+		};
+		103CB1AB909D91F6CC84DEE1 /* RelanceTests */ = {
+			isa = PBXGroup;
+			children = (
+				77112E8A0B99D6D1C55C2D66 /* NotesTimeCodecTests.swift */,
+				3D82D35DFB589C1E996F8CBC /* ReminderPlannerTests.swift */,
+			);
+			path = RelanceTests;
+			sourceTree = "<group>";
+		};
+		2D4ECC9E022BA3C082E89FEA /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				99A3E8623A59510F508D7421 /* Assets.xcassets */,
+				7EA1042AC75E061B36BD80DB /* Info.plist */,
+				74643B8064742A8000773BDB /* Relance.entitlements */,
+				01185B1571F35657DBA69826 /* Secrets.example.xcconfig */,
+				AEAE6516E008CA0F6431F7FC /* Secrets.xcconfig */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		3FAA85D51CB959D4DA6989E0 = {
+			isa = PBXGroup;
+			children = (
+				022966EB69538C1A4A0775FE /* Relance */,
+				103CB1AB909D91F6CC84DEE1 /* RelanceTests */,
+				6B18254A9AE72EDAB8C2BFDF /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		5EEFE8FECD21EF7D4D739B46 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				2085B3617089E328A5BF3F30 /* DoneView.swift */,
+				DA74C2AD3519045DE673C1B1 /* InboxView.swift */,
+				E0C65CE1B1707634DEE54856 /* OnboardingView.swift */,
+				AD9D4E32E198251993005BCC /* QuickAddSheet.swift */,
+				D537FFD88362EBC0053D6B55 /* RootView.swift */,
+				9AF3B2A793608CF0B2A9F70C /* SettingsView.swift */,
+				09D01BAE1A3D8381127E9147 /* TaskEditor.swift */,
+				2FE0AB94C1F8EF86B799B335 /* TaskRow.swift */,
+				5FFB746BA5E4C74B3B145047 /* TodoView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		691015D6F3F55109D9AF46E9 /* Google */ = {
+			isa = PBXGroup;
+			children = (
+				9BC7FD887AB3B53D2F6D6148 /* GoogleAuth.swift */,
+				CB70F0CB5E2373F58296F007 /* NotesTimeCodec.swift */,
+				44A7A78F4A604B2D23B48061 /* TasksAPI.swift */,
+			);
+			path = Google;
+			sourceTree = "<group>";
+		};
+		6B18254A9AE72EDAB8C2BFDF /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				2D32FEC519FB14B6CA29BE8F /* Relance.app */,
+				9BE2244FA751B3FDCB2E97BB /* RelanceTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		CF47C4345B4FAC7DED549008 /* Reminders */ = {
+			isa = PBXGroup;
+			children = (
+				815EA7805F6EBEC8E4CA1488 /* ReminderPlanner.swift */,
+				A9F3FF418D2C0DE978AC76FC /* ReminderScheduler.swift */,
+			);
+			path = Reminders;
+			sourceTree = "<group>";
+		};
+		DE87279FB6590006DC1B27B1 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				B30F392FC92433C39C1922E7 /* AppDelegate.swift */,
+				59F7A908CED23B538B56A391 /* RelanceApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		F7D8164F8D20C5B0B0BF8100 /* Model */ = {
+			isa = PBXGroup;
+			children = (
+				9AF7BC9A85C008B87A26355C /* TaskItem.swift */,
+				692D74CC1E3D5F8E3C4234A8 /* TaskStore.swift */,
+			);
+			path = Model;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		771442508ECBB75C1E72BA56 /* Relance */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7DD030DC8A1A798132B53D66 /* Build configuration list for PBXNativeTarget "Relance" */;
+			buildPhases = (
+				135C0509B11F986ADEFEC5BF /* Sources */,
+				22DFF5089B387ACD8AD36011 /* Resources */,
+				F291DAB649372842EEC2CC48 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Relance;
+			packageProductDependencies = (
+				95845BE823BDEEB575973A70 /* GoogleSignIn */,
+			);
+			productName = Relance;
+			productReference = 2D32FEC519FB14B6CA29BE8F /* Relance.app */;
+			productType = "com.apple.product-type.application";
+		};
+		9BAF880CC3453E9283C31453 /* RelanceTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7B0F926096686FD4EFF80B89 /* Build configuration list for PBXNativeTarget "RelanceTests" */;
+			buildPhases = (
+				8FEBAE25BE0E3EF1760BD226 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				8CA5F350359C04CDB87FD7EC /* PBXTargetDependency */,
+			);
+			name = RelanceTests;
+			packageProductDependencies = (
+			);
+			productName = RelanceTests;
+			productReference = 9BE2244FA751B3FDCB2E97BB /* RelanceTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		0C20496AA76ED5ECD2004085 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					771442508ECBB75C1E72BA56 = {
+						DevelopmentTeam = GD6W292ZXP;
+					};
+					9BAF880CC3453E9283C31453 = {
+						DevelopmentTeam = GD6W292ZXP;
+					};
+				};
+			};
+			buildConfigurationList = 179D3F35BE341765F6DCDEF7 /* Build configuration list for PBXProject "Relance" */;
+			developmentRegion = fr;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				fr,
+			);
+			mainGroup = 3FAA85D51CB959D4DA6989E0;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				176DA386C48FFC99165A6B10 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 6B18254A9AE72EDAB8C2BFDF /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				771442508ECBB75C1E72BA56 /* Relance */,
+				9BAF880CC3453E9283C31453 /* RelanceTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		22DFF5089B387ACD8AD36011 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2B570BF6BA12EF4960F1ACD3 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		135C0509B11F986ADEFEC5BF /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4FF5B1E0BB1083E64764515D /* AppDelegate.swift in Sources */,
+				DC1B15409C41F6A7EB9FFA5C /* DoneView.swift in Sources */,
+				28789DBD3D4F6CA8FB3B49EE /* GoogleAuth.swift in Sources */,
+				D149D4516671CF0B49D0D5C1 /* InboxView.swift in Sources */,
+				6F403A2EEEB1D06543B8EF10 /* NotesTimeCodec.swift in Sources */,
+				13786AEE51D9397701A22CED /* OnboardingView.swift in Sources */,
+				0FD58AD3F148C02CC851A2B9 /* QuickAddSheet.swift in Sources */,
+				59D184F4DD3047DCE4FBAF66 /* RelanceApp.swift in Sources */,
+				EF303D821C38FF6E13B8A452 /* ReminderPlanner.swift in Sources */,
+				7FD7435B902C80B885E67058 /* ReminderScheduler.swift in Sources */,
+				BC8E1D24312B29365D78F691 /* RootView.swift in Sources */,
+				30B420CBEF3DC2A1CB0FE161 /* SettingsView.swift in Sources */,
+				A646043D50D2DACD71EFEA18 /* TaskEditor.swift in Sources */,
+				DE7FD35BD4EAC18DCA7AE545 /* TaskItem.swift in Sources */,
+				731F6DF1F8AA3768BA2DFFB2 /* TaskRow.swift in Sources */,
+				B48E7FB2A592684F66A8557F /* TaskStore.swift in Sources */,
+				34825F57C915622D74FD3F36 /* TasksAPI.swift in Sources */,
+				030C7DAFDDC60DD19687BBED /* TodoView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8FEBAE25BE0E3EF1760BD226 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B124EB00A072E175CD261404 /* NotesTimeCodecTests.swift in Sources */,
+				33B7402C2D9B8978CA0931CD /* ReminderPlannerTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		8CA5F350359C04CDB87FD7EC /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 771442508ECBB75C1E72BA56 /* Relance */;
+			targetProxy = 7AD33C56424A58DC65C7E1F8 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		5924A74C146F44AC0D1546D1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = AEAE6516E008CA0F6431F7FC /* Secrets.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Relance/Resources/Relance.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = Relance/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = fr.alexandrefau.relance;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		7796FB9B1880E5FAA9D52CD3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = AEAE6516E008CA0F6431F7FC /* Secrets.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Relance/Resources/Relance.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = Relance/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = fr.alexandrefau.relance;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		CF8A0BC9A73C0EE7E4494016 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = fr.alexandrefau.RelanceTests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Relance.app/Relance";
+			};
+			name = Release;
+		};
+		D4E06E975A22C4EBFA68D0E2 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = fr.alexandrefau.RelanceTests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Relance.app/Relance";
+			};
+			name = Debug;
+		};
+		E75C27F89CA0F2B93E8D3749 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = GD6W292ZXP;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		F893E4C07E2026EE99D75FB0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = GD6W292ZXP;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		179D3F35BE341765F6DCDEF7 /* Build configuration list for PBXProject "Relance" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E75C27F89CA0F2B93E8D3749 /* Debug */,
+				F893E4C07E2026EE99D75FB0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		7B0F926096686FD4EFF80B89 /* Build configuration list for PBXNativeTarget "RelanceTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D4E06E975A22C4EBFA68D0E2 /* Debug */,
+				CF8A0BC9A73C0EE7E4494016 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		7DD030DC8A1A798132B53D66 /* Build configuration list for PBXNativeTarget "Relance" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7796FB9B1880E5FAA9D52CD3 /* Debug */,
+				5924A74C146F44AC0D1546D1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		176DA386C48FFC99165A6B10 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 8.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		95845BE823BDEEB575973A70 /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 176DA386C48FFC99165A6B10 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 0C20496AA76ED5ECD2004085 /* Project object */;
+}

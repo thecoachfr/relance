@@ -1,0 +1,69 @@
+name: Relance
+options:
+  bundleIdPrefix: fr.alexandrefau
+  deploymentTarget:
+    iOS: "18.0"
+  developmentLanguage: fr
+packages:
+  GoogleSignIn:
+    url: https://github.com/google/GoogleSignIn-iOS
+    from: 8.0.0
+settings:
+  base:
+    DEVELOPMENT_TEAM: GD6W292ZXP
+    SWIFT_VERSION: "6.0"
+    SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+    SWIFT_APPROACHABLE_CONCURRENCY: YES
+targets:
+  Relance:
+    type: application
+    platform: iOS
+    sources: [Relance]
+    configFiles:
+      Debug: Relance/Resources/Secrets.xcconfig
+      Release: Relance/Resources/Secrets.xcconfig
+    dependencies:
+      - package: GoogleSignIn
+    entitlements:
+      path: Relance/Resources/Relance.entitlements
+      properties:
+        com.apple.developer.usernotifications.time-sensitive: true
+        aps-environment: development
+    info:
+      path: Relance/Resources/Info.plist
+      properties:
+        CFBundleDisplayName: Relance
+        CFBundleShortVersionString: "0.1"
+        CFBundleVersion: "1"
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations~iphone: [UIInterfaceOrientationPortrait]
+        UISupportedInterfaceOrientations~ipad:
+          [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown,
+           UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        UIBackgroundModes: [fetch, remote-notification]
+        BGTaskSchedulerPermittedIdentifiers: [fr.alexandrefau.relance.refresh]
+        GIDClientID: $(GOOGLE_CLIENT_ID)
+        CFBundleURLTypes:
+          - CFBundleURLSchemes: [$(GOOGLE_REVERSED_CLIENT_ID)]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: fr.alexandrefau.relance
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+  RelanceTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [RelanceTests]
+    dependencies:
+      - target: Relance
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  Relance:
+    build:
+      targets:
+        Relance: all
+        RelanceTests: [test]
+    test:
+      targets: [RelanceTests]

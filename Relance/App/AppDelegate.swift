@@ -1,0 +1,55 @@
+import UIKit
+import UserNotifications
+
+/// Reçoit les touches et les boutons des notifications, y compris quand l'app est en arrière-plan.
+final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
+    let auth = GoogleAuth()
+    lazy var store = TaskStore(auth: auth)
+
+    func application(_ application: UIApplication,
+                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        UNUserNotificationCenter.current().delegate = self
+        store.scheduler.registerCategories()
+        return true
+    }
+
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
+        [.banner, .list, .sound, .badge]
+    }
+
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                didReceive response: UNNotificationResponse) async {
+        guard let idString = response.notification.request.content.userInfo["taskID"] as? String,
+              let id = UUID(uuidString: idString) else { return }
+
+        if auth.isRestoring { await auth.restore() }
+        guard let item = store.task(id) else { return }
+        let calendar = Calendar.current
+        let now = Date.now
+        let action = response.actionIdentifier
+
+        switch action {
+        case ReminderScheduler.Action.done:
+            store.complete(item)
+        case ReminderScheduler.Action.plusOneHour:
+            store.snooze(item, until: now.addingTimeInterval(3600))
+        case ReminderScheduler.Action.tonight:
+            let evening = store.scheduler.settings.evening
+            let tonight = calendar.date(bySettingHour: evening / 60, minute: evening % 60, second: 0, of: now)!
+            store.snooze(item, until: tonight > now ? tonight : now.addingTimeInterval(3600))
+        case ReminderScheduler.Action.tomorrow:
+            store.moveToTomorrow(item)
+        case let a where a.hasPrefix(ReminderScheduler.Action.timePrefix):
+            if let minutes = Int(a.dropFirst(ReminderScheduler.Action.timePrefix.count)) {
+                store.setTime(item, minutes: minutes)
+            }
+        case UNNotificationDefaultActionIdentifier:
+            store.openedTaskID = id
+        default:
+            break
+        }
+        // Laisse le temps à la synchro de partir avant que iOS ne suspende l'app.
+        await store.sync()
+    }
+}
