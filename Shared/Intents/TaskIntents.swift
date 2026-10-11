@@ -92,27 +92,3 @@ struct OverdueTasksIntent: AppIntent {
         }
     }
 }
-
-/// Écran à ouvrir depuis la commande du Centre de contrôle ou le bouton Action.
-enum AppScreen: String, AppEnum {
-    case newTask
-
-    static let typeDisplayRepresentation: TypeDisplayRepresentation = "Écran"
-    static let caseDisplayRepresentations: [AppScreen: DisplayRepresentation] = [.newTask: "Nouvelle tâche"]
-}
-
-/// Ouvre l'app directement sur la saisie rapide.
-struct NewTaskIntent: OpenIntent {
-    static let title: LocalizedStringResource = "Nouvelle tâche"
-    static let description = IntentDescription("Ouvre Relance sur la saisie d'une nouvelle tâche.")
-
-    @Parameter(title: "Écran") var target: AppScreen
-    @Dependency private var store: TaskStore
-
-    init() { target = .newTask }
-
-    @MainActor func perform() async throws -> some IntentResult {
-        store.showQuickAdd = true
-        return .result()
-    }
-}

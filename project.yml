@@ -48,6 +48,8 @@ targets:
         GIDClientID: $(GOOGLE_CLIENT_ID)
         CFBundleURLTypes:
           - CFBundleURLSchemes: [$(GOOGLE_REVERSED_CLIENT_ID)]
+          - CFBundleURLName: fr.alexandrefau.relance
+            CFBundleURLSchemes: [relance]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: fr.alexandrefau.relance

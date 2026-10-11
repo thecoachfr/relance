@@ -14,7 +14,13 @@ struct RelanceApp: App {
                 .environment(delegate.store)
                 .environment(delegate.auth)
                 .modelContainer(delegate.store.container)
-                .onOpenURL { delegate.auth.handle($0) }
+                .onOpenURL { url in
+                    if url.scheme == "relance" {
+                        if url.host() == "nouvelle" { delegate.store.showQuickAdd = true }
+                    } else {
+                        delegate.auth.handle(url)
+                    }
+                }
                 .task {
                     if !AppDelegate.isDemo { await delegate.auth.restore() }
                     await delegate.store.sync()
