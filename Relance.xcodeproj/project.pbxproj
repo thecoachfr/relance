@@ -40,6 +40,7 @@
 		A0E972DF6F678949E9C82BA9 /* ReminderPlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E48E67DBEFD62C7E6118390 /* ReminderPlanner.swift */; };
 		A3A87C5D3E867E2619C506BA /* NotesTimeCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05822D2ACADE5BC42570E7F5 /* NotesTimeCodec.swift */; };
 		A646043D50D2DACD71EFEA18 /* TaskEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09D01BAE1A3D8381127E9147 /* TaskEditor.swift */; };
+		B0A7D888D880397CA1F4976B /* DueText.swift in Sources */ = {isa = PBXBuildFile; fileRef = 666C8CA69B643438FA2EC7C2 /* DueText.swift */; };
 		B124EB00A072E175CD261404 /* NotesTimeCodecTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77112E8A0B99D6D1C55C2D66 /* NotesTimeCodecTests.swift */; };
 		B1E59BEF8722E7FE18322099 /* TaskActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4710CF61EBFBFD1A1472103A /* TaskActivityAttributes.swift */; };
 		B62C6C5D2C7AD96BC26CF840 /* AppGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A12D2947BB91F0172F0ED7C /* AppGroup.swift */; };
@@ -49,6 +50,8 @@
 		D149D4516671CF0B49D0D5C1 /* InboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA74C2AD3519045DE673C1B1 /* InboxView.swift */; };
 		DC1B15409C41F6A7EB9FFA5C /* DoneView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2085B3617089E328A5BF3F30 /* DoneView.swift */; };
 		E337F58207F59D61C12F17B9 /* ReminderScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13C930EA8E752F00D8973CDF /* ReminderScheduler.swift */; };
+		E760D750ADA9349B536A92E7 /* DueTextTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4DC1239718727B09A71BA21 /* DueTextTests.swift */; };
+		FA2B6044BDAC65C92DEC372D /* DueText.swift in Sources */ = {isa = PBXBuildFile; fileRef = 666C8CA69B643438FA2EC7C2 /* DueText.swift */; };
 		FB05E9F723FF63E217A0F3E7 /* TaskIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B19813EA3F6E02B516AA5F8 /* TaskIntents.swift */; };
 		FCFE9052F1D340E3D024856D /* TaskLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC6BAC9DF11A10BB3CFAC2F3 /* TaskLiveActivity.swift */; };
 /* End PBXBuildFile section */
@@ -105,6 +108,7 @@
 		59F7A908CED23B538B56A391 /* RelanceApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelanceApp.swift; sourceTree = "<group>"; };
 		5C0DA8FD3D838562DDAE1750 /* TaskStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskStore.swift; sourceTree = "<group>"; };
 		5FFB746BA5E4C74B3B145047 /* TodoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoView.swift; sourceTree = "<group>"; };
+		666C8CA69B643438FA2EC7C2 /* DueText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DueText.swift; sourceTree = "<group>"; };
 		74643B8064742A8000773BDB /* Relance.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Relance.entitlements; sourceTree = "<group>"; };
 		77112E8A0B99D6D1C55C2D66 /* NotesTimeCodecTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotesTimeCodecTests.swift; sourceTree = "<group>"; };
 		7EA1042AC75E061B36BD80DB /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -125,6 +129,7 @@
 		D537FFD88362EBC0053D6B55 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		DA74C2AD3519045DE673C1B1 /* InboxView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InboxView.swift; sourceTree = "<group>"; };
 		E0C65CE1B1707634DEE54856 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		E4DC1239718727B09A71BA21 /* DueTextTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DueTextTests.swift; sourceTree = "<group>"; };
 		E5468914DD0794A1803AA561 /* TasksWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksWidget.swift; sourceTree = "<group>"; };
 		E5C54AAEC34A872D13A632F8 /* LiveActivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -155,6 +160,7 @@
 		103CB1AB909D91F6CC84DEE1 /* RelanceTests */ = {
 			isa = PBXGroup;
 			children = (
+				E4DC1239718727B09A71BA21 /* DueTextTests.swift */,
 				77112E8A0B99D6D1C55C2D66 /* NotesTimeCodecTests.swift */,
 				3D82D35DFB589C1E996F8CBC /* ReminderPlannerTests.swift */,
 				BE4BC2D4DF42F4878D28C1E9 /* TaskStoreSyncTests.swift */,
@@ -191,6 +197,7 @@
 			isa = PBXGroup;
 			children = (
 				2A12D2947BB91F0172F0ED7C /* AppGroup.swift */,
+				666C8CA69B643438FA2EC7C2 /* DueText.swift */,
 				A6A4EF6EA4834A24EB534187 /* TaskItem.swift */,
 				5C0DA8FD3D838562DDAE1750 /* TaskStore.swift */,
 			);
@@ -425,6 +432,7 @@
 				B62C6C5D2C7AD96BC26CF840 /* AppGroup.swift in Sources */,
 				134CDA592AB93A092C18F96B /* DemoData.swift in Sources */,
 				DC1B15409C41F6A7EB9FFA5C /* DoneView.swift in Sources */,
+				FA2B6044BDAC65C92DEC372D /* DueText.swift in Sources */,
 				28789DBD3D4F6CA8FB3B49EE /* GoogleAuth.swift in Sources */,
 				D149D4516671CF0B49D0D5C1 /* InboxView.swift in Sources */,
 				2FFD58C76AEB38E084377310 /* LiveActivityManager.swift in Sources */,
@@ -453,6 +461,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E760D750ADA9349B536A92E7 /* DueTextTests.swift in Sources */,
 				B124EB00A072E175CD261404 /* NotesTimeCodecTests.swift in Sources */,
 				33B7402C2D9B8978CA0931CD /* ReminderPlannerTests.swift in Sources */,
 				6FA4BFC948DDB87891AA78EA /* TaskStoreSyncTests.swift in Sources */,
@@ -464,6 +473,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				9EF4DE2A2BECC496038B054E /* AppGroup.swift in Sources */,
+				B0A7D888D880397CA1F4976B /* DueText.swift in Sources */,
 				A3A87C5D3E867E2619C506BA /* NotesTimeCodec.swift in Sources */,
 				5EAC1A94052E8B1E3BBC6184 /* RelanceWidgetsBundle.swift in Sources */,
 				02D12DB891B37A57CB157A49 /* ReminderPlanner.swift in Sources */,

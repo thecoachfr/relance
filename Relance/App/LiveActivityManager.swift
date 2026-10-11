@@ -1,42 +1,43 @@
 import ActivityKit
 import Foundation
 
-/// Garde une seule activité en direct, sur la tâche la plus urgente :
-/// la plus en retard, sinon celle prévue dans les deux prochaines heures.
+/// Garde une seule activité en direct, avec les tâches les plus urgentes :
+/// en retard d'abord, puis celles prévues dans les deux prochaines heures.
+/// Les tâches reportées passent après les autres.
 final class LiveActivityManager {
+    static let maxItems = 3
     private let upcomingWindow: TimeInterval = 2 * 3600
 
     func refresh(tasks: [TaskItem], now: Date = .now) {
         let state = urgentState(tasks: tasks, now: now)
-        Task { await apply(state) }
+        Task { await apply(state, now: now) }
     }
 
-    /// Les tâches reportées cèdent la place ; s'il ne reste qu'elles, on affiche la première avec son report.
     private func urgentState(tasks: [TaskItem], now: Date) -> TaskActivityAttributes.ContentState? {
-        let dated = tasks
-            .compactMap { item in item.dueInstant().map { (item, $0) } }
-            .sorted { $0.1 < $1.1 }
-        let isSnoozed = { (item: TaskItem) in (item.snoozedUntil ?? .distantPast) > now }
-        let overdue = dated.filter { $0.0.isOverdue(now: now) }
-        let urgent = overdue + dated.filter { !$0.0.isOverdue(now: now) && $0.1.timeIntervalSince(now) <= upcomingWindow }
-
-        guard let (item, due) = urgent.first(where: { !isSnoozed($0.0) }) ?? urgent.first else { return nil }
-        return .init(taskID: item.localID.uuidString, title: item.title, due: due,
-                     hasTime: item.dueMinutes != nil,
-                     otherOverdue: overdue.filter { $0.0 !== item }.count,
-                     snoozedUntil: isSnoozed(item) ? item.snoozedUntil : nil)
+        let urgent = tasks
+            .compactMap { item -> TaskActivityAttributes.ContentState.Item? in
+                guard let due = item.dueInstant(), due.timeIntervalSince(now) <= upcomingWindow else { return nil }
+                return .init(id: item.localID.uuidString, title: item.title, due: due,
+                             hasTime: item.dueMinutes != nil, snoozedUntil: item.snoozedUntil)
+            }
+            .sorted { a, b in
+                let (sa, sb) = (a.isSnoozed(at: now), b.isSnoozed(at: now))
+                return sa != sb ? !sa : a.due < b.due
+            }
+        guard !urgent.isEmpty else { return nil }
+        return .init(items: Array(urgent.prefix(Self.maxItems)), total: urgent.count)
     }
 
-    private func apply(_ state: TaskActivityAttributes.ContentState?) async {
+    private func apply(_ state: TaskActivityAttributes.ContentState?, now: Date) async {
         let current = Activity<TaskActivityAttributes>.activities
 
         guard let state else {
             for activity in current { await activity.end(nil, dismissalPolicy: .immediate) }
             return
         }
-        // Après l'échéance, iOS marque l'activité comme périmée : la vue passe en « en retard ».
-        // À la fin d'un report aussi, pour que la vue repasse en « en retard ».
-        let content = ActivityContent(state: state, staleDate: state.snoozedUntil ?? (state.due > .now ? state.due : nil))
+        // Prochain changement d'affichage : une tâche qui passe en retard ou un report qui se termine.
+        let changes = state.items.flatMap { [$0.due, $0.snoozedUntil].compactMap { $0 } }.filter { $0 > now }
+        let content = ActivityContent(state: state, staleDate: changes.min())
 
         if let activity = current.first {
             await activity.update(content)

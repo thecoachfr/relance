@@ -25,7 +25,7 @@ struct TasksWidgetView: View {
         case .accessoryRectangular: rectangular
         case .accessoryInline: inline
         case .systemSmall: small
-        default: list(limit: family == .systemLarge ? 7 : 3)
+        default: list(limit: family == .systemLarge ? 9 : 3)
         }
     }
 
@@ -64,48 +64,64 @@ struct TasksWidgetView: View {
     // MARK: - Écran d'accueil
 
     private var small: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 4) {
             if entry.tasks.isEmpty {
                 Image(systemName: "checkmark.circle.fill").font(.title).foregroundStyle(.green)
                 Spacer()
                 Text("Rien d'urgent").font(.headline)
             } else {
                 Text("\(entry.overdue.count)")
-                    .font(.system(size: 44, weight: .bold, design: .rounded))
+                    .font(.system(size: 40, weight: .bold, design: .rounded))
                     .foregroundStyle(entry.overdue.isEmpty ? Color.primary : .red)
                 Text("en retard").font(.subheadline).foregroundStyle(.secondary)
-                Spacer()
+                Spacer(minLength: 0)
                 if let next = entry.ordered.first {
                     Text(next.title).font(.footnote.weight(.semibold)).lineLimit(2)
+                    Text(DueText.short(due: next.due, hasTime: next.hasTime, now: entry.date))
+                        .font(.caption2).foregroundStyle(next.due < entry.date ? .red : .secondary)
                 }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
+    /// Une ligne par tâche (titre + échéance courte) : 3 tiennent dans le format moyen sans couper le titre.
     private func list(limit: Int) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(headline).font(.headline)
-                .foregroundStyle(entry.overdue.isEmpty ? Color.primary : .red)
+        let rows = Array(entry.ordered.prefix(limit))
+        return VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(headline).font(.subheadline.bold())
+                    .foregroundStyle(entry.overdue.isEmpty ? Color.primary : .red)
+                Spacer()
+                if entry.tasks.count > rows.count {
+                    Text("+\(entry.tasks.count - rows.count) autres").font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            .padding(.bottom, 2)
             if entry.tasks.isEmpty {
                 Spacer()
                 Label("Rien d'urgent", systemImage: "checkmark.circle").foregroundStyle(.secondary)
                 Spacer()
             } else {
-                ForEach(entry.ordered.prefix(limit)) { task in
-                    HStack(spacing: 10) {
+                ForEach(rows) { task in
+                    let late = task.due < entry.date
+                    HStack(spacing: 8) {
                         Button(intent: CompleteTaskIntent(taskID: task.id)) {
-                            Image(systemName: "circle").font(.title3)
+                            Image(systemName: "circle")
+                                .font(.body)
+                                .frame(width: 28, height: 30)
+                                .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
-                        .foregroundStyle(task.due < entry.date ? .red : .secondary)
+                        .foregroundStyle(late ? .red : .secondary)
                         .accessibilityLabel("Marquer « \(task.title) » comme faite")
 
-                        VStack(alignment: .leading, spacing: 0) {
-                            Text(task.title).font(.subheadline).lineLimit(1)
-                            Text(status(task)).font(.caption)
-                                .foregroundStyle(task.due < entry.date ? .red : .secondary)
-                        }
+                        Text(task.title).font(.subheadline).lineLimit(1)
+                        Spacer(minLength: 4)
+                        Text(DueText.short(due: task.due, hasTime: task.hasTime, now: entry.date))
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(late ? .red : .secondary)
+                            .lineLimit(1)
                     }
                 }
                 Spacer(minLength: 0)
@@ -119,23 +135,10 @@ struct TasksWidgetView: View {
     private var headline: String {
         let overdue = entry.overdue.count, today = entry.today.count
         switch (overdue, today) {
-        case (0, 0): return "Rien d'urgent"
+        case (0, 0): return entry.tasks.isEmpty ? "Rien d'urgent" : "\(entry.tasks.count) à venir"
         case (0, _): return "\(today) aujourd'hui"
         case (_, 0): return "\(overdue) en retard"
         default: return "\(overdue) en retard · \(today) aujourd'hui"
         }
-    }
-
-    private func status(_ task: WidgetTask) -> String {
-        let calendar = Calendar.current
-        if task.due < entry.date {
-            let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: task.due),
-                                               to: calendar.startOfDay(for: entry.date)).day ?? 0
-            return days >= 1 ? "En retard · \(days) j" : "En retard"
-        }
-        let time = task.hasTime ? " à " + task.due.formatted(date: .omitted, time: .shortened) : ""
-        if calendar.isDate(task.due, inSameDayAs: entry.date) { return "Aujourd'hui" + time }
-        if calendar.isDateInTomorrow(task.due) { return "Demain" + time }
-        return task.due.formatted(.dateTime.weekday(.abbreviated).day()) + time
     }
 }

@@ -34,23 +34,13 @@ struct TaskRow: View {
         .padding(.vertical, 2)
     }
 
+    /// Même texte que dans les widgets et l'activité en direct (`DueText`).
     private var status: (text: String, symbol: String, color: Color)? {
-        guard let day = item.dueDay else { return nil }
-        let calendar = Calendar.current
-        let time = item.dueMinutes.map { " à " + ReminderPlanner.formatTime($0) } ?? ""
-
-        if item.isOverdue(now: now) {
-            let days = calendar.dateComponents([.day], from: day, to: calendar.startOfDay(for: now)).day ?? 0
-            let text = switch days {
-            case ..<1: "En retard · prévu\(time)"
-            case 1: "En retard · depuis hier"
-            default: "En retard · \(days) jours"
-            }
-            return (text, "exclamationmark.circle.fill", .red)
-        }
-        if calendar.isDateInToday(day) { return ("Aujourd'hui\(time)", "clock", .secondary) }
-        if calendar.isDateInTomorrow(day) { return ("Demain\(time)", "calendar", .secondary) }
-        return (day.formatted(.dateTime.weekday(.wide).day().month(.wide)) + time, "calendar", .secondary)
+        guard let due = item.dueInstant() else { return nil }
+        let text = DueText.long(due: due, hasTime: item.dueMinutes != nil, now: now)
+        if item.isOverdue(now: now) { return (text, "exclamationmark.circle.fill", .red) }
+        let symbol = Calendar.current.isDateInToday(item.dueDay!) ? "clock" : "calendar"
+        return (text, symbol, .secondary)
     }
 }
 

@@ -3,104 +3,153 @@ import AppIntents
 import SwiftUI
 import WidgetKit
 
+typealias ActivityItem = TaskActivityAttributes.ContentState.Item
+
+/// Une tâche : vue détaillée avec deux grands boutons.
+/// Plusieurs : liste de 3 au plus, chacune avec son rond « Fait » et son bouton « 1 h ».
+/// (Apple limite la hauteur à 160 pt sur l'écran verrouillé.)
 struct TaskLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: TaskActivityAttributes.self) { context in
-            LockScreenView(state: context.state, isStale: context.isStale)
-                .padding()
-                .activityBackgroundTint(nil)
+            Group {
+                if context.state.items.count == 1, let item = context.state.items.first {
+                    SingleTaskView(item: item)
+                } else {
+                    TaskListView(state: context.state, maxRows: 3)
+                }
+            }
+            .padding(12)
+            .activityBackgroundTint(nil)
         } dynamicIsland: { context in
             let state = context.state
-            let late = context.isStale || state.due < .now
+            let late = state.items.filter { isLate($0) }.count
             return DynamicIsland {
-                DynamicIslandExpandedRegion(.leading) {
-                    Image(systemName: late ? "exclamationmark.circle.fill" : "clock")
-                        .font(.title2).foregroundStyle(late ? .red : .orange)
-                }
-                DynamicIslandExpandedRegion(.center) {
-                    Text(state.title).font(.headline).lineLimit(1)
-                }
                 DynamicIslandExpandedRegion(.bottom) {
-                    VStack(spacing: 8) {
-                        StatusLine(state: state, late: late)
-                        ActionButtons(taskID: state.taskID)
+                    if state.items.count == 1, let item = state.items.first {
+                        SingleTaskView(item: item)
+                    } else {
+                        TaskListView(state: state, maxRows: 2)
                     }
                 }
             } compactLeading: {
-                Image(systemName: late ? "exclamationmark.circle.fill" : "clock")
-                    .foregroundStyle(late ? .red : .orange)
+                Image(systemName: late > 0 ? "exclamationmark.circle.fill" : "clock")
+                    .foregroundStyle(late > 0 ? .red : .orange)
             } compactTrailing: {
-                Text(state.title).font(.caption).lineLimit(1).frame(maxWidth: 64)
+                // Un nombre se lit d'un coup d'œil ; un titre tronqué à 60 pt, non.
+                Text("\(state.total)").font(.body.bold().monospacedDigit())
+                    .foregroundStyle(late > 0 ? .red : .orange)
+                    .accessibilityLabel("\(state.total) tâches urgentes")
             } minimal: {
-                Image(systemName: late ? "exclamationmark.circle.fill" : "clock")
-                    .foregroundStyle(late ? .red : .orange)
+                Text("\(state.total)").font(.body.bold().monospacedDigit())
+                    .foregroundStyle(late > 0 ? .red : .orange)
             }
         }
     }
 }
 
-private struct LockScreenView: View {
-    let state: TaskActivityAttributes.ContentState
-    let isStale: Bool
+private func isLate(_ item: ActivityItem, now: Date = .now) -> Bool {
+    DueText.isLate(due: item.due, now: now) && !item.isSnoozed(at: now)
+}
+
+private func statusText(_ item: ActivityItem, long: Bool, now: Date = .now) -> String {
+    if let snoozed = item.snoozedUntil, snoozed > now {
+        return (long ? "Reportée, relance à " : "relance ") + DueText.clock(snoozed)
+    }
+    return long ? DueText.long(due: item.due, hasTime: item.hasTime, now: now)
+                : DueText.short(due: item.due, hasTime: item.hasTime, now: now)
+}
+
+// MARK: - Une seule tâche
+
+private struct SingleTaskView: View {
+    let item: ActivityItem
 
     var body: some View {
-        let late = isStale || state.due < .now
+        let late = isLate(item)
         VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .firstTextBaseline) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Image(systemName: late ? "exclamationmark.circle.fill" : "clock")
                     .foregroundStyle(late ? .red : .orange)
-                Text(state.title).font(.headline).lineLimit(2)
+                Text(item.title).font(.headline).lineLimit(2)
+            }
+            Text(statusText(item, long: true))
+                .font(.subheadline)
+                .foregroundStyle(late ? .red : .secondary)
+            HStack {
+                Button(intent: CompleteTaskIntent(taskID: item.id)) {
+                    Label("Fait", systemImage: "checkmark").frame(maxWidth: .infinity)
+                }
+                .tint(.green)
+                Button(intent: SnoozeTaskIntent(taskID: item.id)) {
+                    Label("Dans 1 h", systemImage: "clock").frame(maxWidth: .infinity)
+                }
+                .tint(.orange)
+            }
+            .buttonStyle(.borderedProminent)
+            .font(.subheadline.weight(.semibold))
+        }
+    }
+}
+
+// MARK: - Plusieurs tâches
+
+private struct TaskListView: View {
+    let state: TaskActivityAttributes.ContentState
+    let maxRows: Int
+
+    var body: some View {
+        let rows = Array(state.items.prefix(maxRows))
+        let late = state.items.filter { isLate($0) }.count
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(late > 0 ? "\(late) en retard" : "\(state.total) à faire bientôt")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(late > 0 ? .red : .orange)
                 Spacer()
-                if state.otherOverdue > 0 {
-                    Text("+\(state.otherOverdue)").font(.subheadline.bold()).foregroundStyle(.red)
-                        .accessibilityLabel("\(state.otherOverdue) autres en retard")
+                if state.total > rows.count {
+                    Text("+\(state.total - rows.count) autres").font(.caption).foregroundStyle(.secondary)
                 }
             }
-            StatusLine(state: state, late: late)
-            ActionButtons(taskID: state.taskID)
+            ForEach(rows) { item in
+                TaskLine(item: item)
+            }
         }
     }
 }
 
-private struct StatusLine: View {
-    let state: TaskActivityAttributes.ContentState
-    let late: Bool
+private struct TaskLine: View {
+    let item: ActivityItem
 
     var body: some View {
-        Group {
-            if let snoozed = state.snoozedUntil, snoozed > .now {
-                Text("Reportée, relance à \(snoozed.formatted(date: .omitted, time: .shortened))")
-            } else if late && state.hasTime {
-                Text("En retard de \(Text(state.due, style: .relative))")
-            } else if late {
-                Text("Échéance passée, toujours pas fait")
-            } else if state.hasTime {
-                Text("Prévu à \(state.due.formatted(date: .omitted, time: .shortened)), dans \(Text(state.due, style: .relative))")
-            } else {
-                Text("Prévu aujourd'hui")
+        let late = isLate(item)
+        HStack(spacing: 10) {
+            Button(intent: CompleteTaskIntent(taskID: item.id)) {
+                Image(systemName: "circle")
+                    .font(.title3)
+                    .foregroundStyle(late ? .red : .secondary)
+                    .frame(width: 34, height: 34)
+                    .contentShape(Rectangle())
             }
-        }
-        .font(.subheadline)
-        .foregroundStyle(late && (state.snoozedUntil ?? .distantPast) <= .now ? .red : .secondary)
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-}
+            .buttonStyle(.plain)
+            .accessibilityLabel("Marquer « \(item.title) » comme faite")
 
-private struct ActionButtons: View {
-    let taskID: String
+            Text(item.title).font(.subheadline).lineLimit(1)
+            Spacer(minLength: 6)
+            Text(statusText(item, long: false))
+                .font(.caption.monospacedDigit())
+                .foregroundStyle(late ? .red : .secondary)
+                .lineLimit(1)
 
-    var body: some View {
-        HStack {
-            Button(intent: CompleteTaskIntent(taskID: taskID)) {
-                Label("Fait", systemImage: "checkmark").frame(maxWidth: .infinity)
+            Button(intent: SnoozeTaskIntent(taskID: item.id)) {
+                Image(systemName: "clock.arrow.circlepath")
+                    .font(.subheadline)
+                    .frame(width: 34, height: 34)
+                    .contentShape(Rectangle())
             }
-            .tint(.green)
-            Button(intent: SnoozeTaskIntent(taskID: taskID)) {
-                Label("Dans 1 h", systemImage: "clock").frame(maxWidth: .infinity)
-            }
-            .tint(.orange)
+            .buttonStyle(.plain)
+            .foregroundStyle(.orange)
+            .accessibilityLabel("Reporter « \(item.title) » d'une heure")
         }
-        .buttonStyle(.borderedProminent)
-        .font(.subheadline.weight(.semibold))
+        .frame(height: 34)
     }
 }

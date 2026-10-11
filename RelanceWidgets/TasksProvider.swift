@@ -13,7 +13,13 @@ struct TasksEntry: TimelineEntry {
     var tasks: [WidgetTask]
 
     var overdue: [WidgetTask] { tasks.filter { $0.due < date } }
-    var today: [WidgetTask] { tasks.filter { $0.due >= date && Calendar.current.isDate($0.due, inSameDayAs: date) } }
+    /// Pas encore en retard et prévues aujourd'hui (une tâche sans heure a pour échéance le minuit suivant).
+    var today: [WidgetTask] {
+        tasks.filter { task in
+            let day = task.hasTime ? task.due : task.due.addingTimeInterval(-1)
+            return task.due >= date && Calendar.current.isDate(day, inSameDayAs: date)
+        }
+    }
     /// En retard d'abord, puis par échéance.
     var ordered: [WidgetTask] { tasks.sorted { $0.due < $1.due } }
 
