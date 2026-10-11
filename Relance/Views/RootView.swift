@@ -7,12 +7,18 @@ struct RootView: View {
     @AppStorage("onboardingDone") private var onboardingDone = false
 
     var body: some View {
-        if auth.isRestoring {
-            ProgressView()
-        } else if !auth.isSignedIn || !onboardingDone {
-            OnboardingView(done: $onboardingDone)
-        } else {
-            MainTabs()
+        Group {
+            if auth.isRestoring {
+                ProgressView()
+            } else if !auth.isSignedIn || !onboardingDone {
+                OnboardingView(done: $onboardingDone)
+            } else {
+                MainTabs()
+            }
+        }
+        // Après une (re)connexion, la copie locale est vide : on va chercher les tâches tout de suite.
+        .onChange(of: auth.isSignedIn) { _, signedIn in
+            if signedIn { Task { await store.sync() } }
         }
     }
 }

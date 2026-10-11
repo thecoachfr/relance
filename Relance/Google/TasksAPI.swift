@@ -2,11 +2,13 @@ import Foundation
 
 nonisolated enum TasksAPIError: LocalizedError {
     case notSignedIn
+    case missingScope
     case http(Int, String)
 
     var errorDescription: String? {
         switch self {
         case .notSignedIn: "Pas connecté à Google."
+        case .missingScope: "L'accès à Google Tasks n'a pas été autorisé. Reconnecte-toi en cochant l'accès à tes tâches."
         case .http(let code, let message): "Google Tasks a répondu \(code) : \(message)"
         }
     }

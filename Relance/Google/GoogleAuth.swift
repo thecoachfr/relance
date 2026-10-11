@@ -24,6 +24,11 @@ final class GoogleAuth {
         guard let presenter = Self.topViewController() else { return }
         let result = try await GIDSignIn.sharedInstance.signIn(
             withPresenting: presenter, hint: nil, additionalScopes: [Self.tasksScope])
+        // Google permet de décocher l'accès aux tâches sur son écran de consentement.
+        guard result.user.grantedScopes?.contains(Self.tasksScope) == true else {
+            GIDSignIn.sharedInstance.signOut()
+            throw TasksAPIError.missingScope
+        }
         email = result.user.profile?.email
     }
 
