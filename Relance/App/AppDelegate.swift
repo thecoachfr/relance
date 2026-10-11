@@ -8,6 +8,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     static let isDemo = ProcessInfo.processInfo.arguments.contains("-demo")
     lazy var store = TaskStore(auth: auth, inMemory: Self.isDemo)
     let liveActivity = LiveActivityManager()
+    private var watchSync: WatchSync?
 
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
@@ -26,7 +27,13 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         RelanceShortcuts.updateAppShortcutParameters()
         // Pushes silencieux de la vigie Home Assistant (aucune autorisation demandée à l'utilisateur).
         application.registerForRemoteNotifications()
-        store.onTasksChanged = { [liveActivity] in liveActivity.refresh(tasks: store.activeTasks()) }
+        let watchSync = WatchSync(store: store)
+        self.watchSync = watchSync
+        store.onTasksChanged = { [liveActivity] in
+            let tasks = store.activeTasks()
+            liveActivity.refresh(tasks: tasks)
+            watchSync.send(tasks)
+        }
         return true
     }
 

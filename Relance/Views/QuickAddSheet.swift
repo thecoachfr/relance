@@ -80,14 +80,7 @@ struct QuickAddSheet: View {
 
     // MARK: - Reconnaissance de la date dans la phrase
 
-    private var detected: (range: Range<String.Index>, date: Date, hasTime: Bool)? {
-        guard let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.date.rawValue),
-              let match = detector.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
-              let date = match.date, let range = Range(match.range, in: text) else { return nil }
-        let fragment = text[range]
-        let hasTime = fragment.range(of: #"\d{1,2}\s*(h|:)"#, options: .regularExpression) != nil
-        return (range, date, hasTime)
-    }
+    private var detected: DateDetection.Match? { DateDetection.firstMatch(in: text) }
 
     private func detect() {
         guard !manual, let found = detected else { return }

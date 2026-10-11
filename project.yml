@@ -3,6 +3,7 @@ options:
   bundleIdPrefix: fr.alexandrefau
   deploymentTarget:
     iOS: "18.0"
+    watchOS: "11.0"
   developmentLanguage: fr
 packages:
   GoogleSignIn:
@@ -25,6 +26,7 @@ targets:
     dependencies:
       - package: GoogleSignIn
       - target: RelanceWidgets
+      - target: RelanceWatch
     entitlements:
       path: Relance/Resources/Relance.entitlements
       properties:
@@ -35,7 +37,7 @@ targets:
       path: Relance/Resources/Info.plist
       properties:
         CFBundleDisplayName: Relance
-        CFBundleShortVersionString: "0.2"
+        CFBundleShortVersionString: "0.3"
         CFBundleVersion: "1"
         UILaunchScreen: {}
         UISupportedInterfaceOrientations~iphone: [UIInterfaceOrientationPortrait]
@@ -73,7 +75,7 @@ targets:
       path: RelanceWidgets/Info.plist
       properties:
         CFBundleDisplayName: Relance
-        CFBundleShortVersionString: "0.2"
+        CFBundleShortVersionString: "0.3"
         CFBundleVersion: "1"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
@@ -81,6 +83,57 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: fr.alexandrefau.relance.widgets
         TARGETED_DEVICE_FAMILY: "1,2"
+        SKIP_INSTALL: YES
+  RelanceWatch:
+    type: application
+    platform: watchOS
+    sources:
+      - RelanceWatch
+      - Shared/Watch
+      - Shared/Model/DueText.swift
+      - Shared/Model/DateDetection.swift
+      - Shared/Reminders/ReminderPlanner.swift
+    dependencies:
+      - target: RelanceWatchWidgets
+    entitlements:
+      path: RelanceWatch/RelanceWatch.entitlements
+      properties:
+        com.apple.security.application-groups: [group.fr.alexandrefau.relance]
+    info:
+      path: RelanceWatch/Info.plist
+      properties:
+        CFBundleDisplayName: Relance
+        CFBundleShortVersionString: "0.3"
+        CFBundleVersion: "1"
+        WKApplication: true
+        WKCompanionAppBundleIdentifier: fr.alexandrefau.relance
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: fr.alexandrefau.relance.watchkitapp
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+  RelanceWatchWidgets:
+    type: app-extension
+    platform: watchOS
+    sources:
+      - RelanceWatchWidgets
+      - Shared/Watch
+      - Shared/Model/DueText.swift
+      - Shared/Reminders/ReminderPlanner.swift
+    entitlements:
+      path: RelanceWatchWidgets/RelanceWatchWidgets.entitlements
+      properties:
+        com.apple.security.application-groups: [group.fr.alexandrefau.relance]
+    info:
+      path: RelanceWatchWidgets/Info.plist
+      properties:
+        CFBundleDisplayName: Relance
+        CFBundleShortVersionString: "0.3"
+        CFBundleVersion: "1"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: fr.alexandrefau.relance.watchkitapp.widgets
         SKIP_INSTALL: YES
   RelanceTests:
     type: bundle.unit-test
