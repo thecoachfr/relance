@@ -141,10 +141,14 @@ final class TaskStore {
     /// Une seule synchro à la fois ; un appel pendant une synchro attend la fin puis relance la sienne.
     func sync() async {
         while let running = syncTask { await running.value }
-        let task = Task { await performSync() }
+        // La tâche se retire elle-même avant de se terminer : un appel en attente qui reprend
+        // ne retombe jamais sur une synchro déjà finie (sinon il boucle sans fin sur le thread principal).
+        let task = Task {
+            await performSync()
+            syncTask = nil
+        }
         syncTask = task
         await task.value
-        syncTask = nil
     }
 
     private func performSync() async {
