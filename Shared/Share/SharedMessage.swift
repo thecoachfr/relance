@@ -24,6 +24,8 @@ nonisolated enum SharedMessage {
         #"^\d{1,2}[/.]\d{1,2}[/.]\d{2,4},? \d{1,2}:\d{2} - [^:\n]{1,40}\s?: "#,
     ]
     private static let greetings = #"^(salut|bonjour|bonsoir|coucou|hello|hey|hi|cc|yo)\b[\s,!.]*([a-zà-ÿ-]+)?[\s,!.]*$"#
+    /// Formules de politesse : jamais un titre de tâche (« J'espère que tout va bien », « Bisous »).
+    private static let pleasantries = #"^(j'esp[eè]re que (tout va bien|tu vas bien|vous allez bien|[çc]a va)|comment ([çc]a )?va(s|-tu| tu)?|[çc]a va|tu vas bien|merci( beaucoup| d'avance)?|bisous?|biz|bises|bonne (journée|soirée|fin de journée|semaine)|à (plus|bientôt|demain)|a\+|amitiés|cordialement)\b[\s\p{P}]*\S{0,20}[\s\p{P}]*$"#
     static let maxTitleLength = 60
 
     static func body(of text: String) -> String {
@@ -71,7 +73,12 @@ nonisolated enum SharedMessage {
             .components(separatedBy: .newlines)
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty }
-        let useful = sentences.first { $0.range(of: greetings, options: [.regularExpression, .caseInsensitive]) == nil }
+        let useful = sentences.first { sentence in
+            // WhatsApp écrit l'apostrophe typographique (’).
+            let s = sentence.replacingOccurrences(of: "’", with: "'")
+            return s.range(of: greetings, options: [.regularExpression, .caseInsensitive]) == nil
+                && s.range(of: pleasantries, options: [.regularExpression, .caseInsensitive]) == nil
+        }
         return (useful ?? sentences.first ?? body)
             .trimmingCharacters(in: .whitespaces.union(CharacterSet(charactersIn: ".!?…")))
     }

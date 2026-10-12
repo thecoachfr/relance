@@ -44,4 +44,12 @@ struct SharedMessageTests {
         #expect(SharedMessage.notes(original: " msg ", titleEdited: false) == "📩 Message partagé — titre à revoir\nmsg")
         #expect(SharedMessage.notes(original: "msg", titleEdited: true) == "📩 Message partagé\nmsg")
     }
+
+    /// Message réel du 12/10 : la formule de politesse ne doit pas devenir le titre.
+    @Test func pleasantriesAreSkipped() {
+        let d = SharedMessage.draft(from: "Coucou alex. J’espère que tout va bien.  Bloque ton 16 dec. Je vais faire un pot de départ dans un bar avec les anciens. Bisous")
+        #expect(!d.title.localizedCaseInsensitiveContains("espère"))
+        #expect(d.title.hasPrefix("Bloque ton"))
+        #expect(SharedMessage.draft(from: "Merci ! Peux-tu rappeler le plombier").title == "Peux-tu rappeler le plombier")
+    }
 }
