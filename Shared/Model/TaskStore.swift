@@ -9,6 +9,8 @@ final class TaskStore {
     let container: ModelContainer
     let auth: any AccountProvider
     let scheduler = ReminderScheduler()
+    /// Mémo de contexte de la routine de tri (liste Google Tasks à part).
+    @ObservationIgnored lazy var memo = MemoStore(auth: auth)
     private(set) var isSyncing = false
     private(set) var lastError: String?
     /// Tâche à ouvrir (touche sur une notification).

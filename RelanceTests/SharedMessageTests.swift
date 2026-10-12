@@ -80,6 +80,11 @@ struct TaskContactTests {
         let replaced = TaskContact.notes("a\n📍 Ancien lieu\nb", setting: TaskContact(name: "Mairie"))
         #expect(replaced == "a\n📍 Mairie\nb")
         #expect(TaskContact.notes("a\n📍 Ancien lieu\nb", setting: nil) == "a\nb")
+        // Une simple adresse : écrite une fois, et relue comme adresse (itinéraire possible).
+        let street = TaskContact(name: "3 place de la Mairie, 75002 Paris", address: "3 place de la Mairie, 75002 Paris")
+        #expect(street.line == "📍 3 place de la Mairie, 75002 Paris")
+        #expect(TaskContact(notes: street.line)?.address == "3 place de la Mairie, 75002 Paris")
+        #expect(TaskContact(notes: street.line)?.mapsURL != nil)
     }
 }
 

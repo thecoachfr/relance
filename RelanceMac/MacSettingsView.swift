@@ -13,6 +13,11 @@ struct MacSettingsView: View {
                     .formStyle(.grouped)
                     .frame(width: 520, height: 620)
             }
+            Tab("Mémo", systemImage: "text.book.closed") {
+                NavigationStack { MemoListView() }
+                    .formStyle(.grouped)
+                    .frame(width: 520, height: 560)
+            }
             Tab("Synchro", systemImage: "arrow.triangle.2.circlepath") {
                 SyncLogSettings()
             }

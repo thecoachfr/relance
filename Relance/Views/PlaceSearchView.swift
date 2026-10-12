@@ -76,10 +76,11 @@ struct PlaceSearchView: View {
             return TaskContact(name: fallback.title, address: fallback.subtitle.isEmpty ? nil : fallback.subtitle)
         }
         let address = Self.address(of: item)
-        let name = item.name ?? fallback.title
+        var name = item.name ?? fallback.title
+        // Une simple adresse (« 67 rue X » puis « 67 rue X, 94140 Ville ») : le nom est l'adresse complète.
+        if let address, address.lowercased().hasPrefix(name.lowercased()) { name = address }
         return TaskContact(name: name,
-                           // Une simple adresse : pas de doublon nom / adresse.
-                           address: address == name ? nil : address,
+                           address: address,
                            phone: item.phoneNumber,
                            link: item.url)
     }

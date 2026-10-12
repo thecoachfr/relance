@@ -14,7 +14,7 @@ struct ContactSection: View {
             if let contact = TaskContact(notes: notes) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(contact.name).font(.headline)
-                    if let address = contact.address {
+                    if let address = contact.address, address != contact.name {
                         Text(address).font(.subheadline).foregroundStyle(.secondary)
                     }
                 }
@@ -32,13 +32,10 @@ struct ContactSection: View {
                         Button { openURL(url) } label: { Label("Site web", systemImage: "safari") }
                     }
                 }
-                Menu {
-                    Button("Changer de lieu", systemImage: "magnifyingglass") { searching = true }
-                    Button("Retirer le lieu", systemImage: "mappin.slash", role: .destructive) {
-                        notes = TaskContact.notes(notes, setting: nil)
-                    }
-                } label: {
-                    Label("Modifier le lieu", systemImage: "mappin.and.ellipse")
+                // Deux lignes visibles plutôt qu'un menu : retirer un lieu doit se trouver sans chercher.
+                Button("Changer de lieu", systemImage: "mappin.and.ellipse") { searching = true }
+                Button("Retirer le lieu", systemImage: "mappin.slash", role: .destructive) {
+                    notes = TaskContact.notes(notes, setting: nil)
                 }
             } else {
                 Button("Ajouter un lieu", systemImage: "mappin.and.ellipse") { searching = true }

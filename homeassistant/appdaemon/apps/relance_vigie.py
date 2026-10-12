@@ -39,6 +39,9 @@ class RelanceVigie(Hass):
                 return
 
         self._todo = self.args["todo_entity"]
+        # Mémo de la routine de tri : Home Assistant le garde en cache, on le rafraîchit avec les tâches
+        # pour que la routine lise les fiches ajoutées depuis l'app.
+        self._memo = self.args.get("memo_entity", "todo.relance_memo")
         self._bundle_id = self.args["bundle_id"]
         self._tokens_path = Path(self.args.get("tokens_file", "/config/relance_tokens.json"))
         self._lock = threading.Lock()
@@ -65,7 +68,7 @@ class RelanceVigie(Hass):
         if self._refreshes == 1:
             self.log("Rafraîchissement automatique de Google Tasks actif")
         try:
-            self.call_service("homeassistant/update_entity", entity_id=self._todo)
+            self.call_service("homeassistant/update_entity", entity_id=[self._todo, self._memo])
         except Exception as error:  # noqa: BLE001 — on veut voir toute erreur dans le journal
             self.log(f"Rafraîchissement impossible : {error!r}", level="WARNING")
 

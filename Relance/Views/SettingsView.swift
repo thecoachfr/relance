@@ -24,6 +24,7 @@ struct SettingsView: View {
                 ReminderDeviceSection()
                 Section {
                     NavigationLink("Quand et comment relancer") { ReminderSettingsView() }
+                    NavigationLink("Mémo pour le tri") { MemoListView() }
                 }
                 Section {
                     let entries = SyncLog.all().prefix(12)

@@ -17,7 +17,8 @@ nonisolated struct TaskContact: Equatable, Sendable {
 
     /// « 📍 Nom · adresse · téléphone · lien » (parties vides omises, « · » retiré des valeurs).
     var line: String {
-        let parts = [name, address, phone, link?.absoluteString]
+        // Une simple adresse : écrite une fois (« 📍 67 rue X, 94140 Ville »), pas en nom puis en adresse.
+        let parts = [name, address == name ? nil : address, phone, link?.absoluteString]
             .compactMap { $0?.replacingOccurrences(of: " · ", with: ", ").trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty }
         return Self.marker + " " + parts.joined(separator: " · ")
@@ -50,12 +51,14 @@ nonisolated struct TaskContact: Equatable, Sendable {
             .filter { !$0.isEmpty }
         guard let first = parts.first else { return nil }
         name = first
+        // Un « nom » qui est une adresse (code postal à 5 chiffres) sert aussi d'adresse : itinéraire, trajet.
+        if first.range(of: #"\b\d{5}\b"#, options: .regularExpression) != nil { address = first }
         for part in parts.dropFirst() {
             if let url = URL(string: part), url.scheme?.hasPrefix("http") == true {
                 link = url
             } else if part.range(of: #"^\+?[\d .\-()]{8,}$"#, options: .regularExpression) != nil {
                 phone = part
-            } else if address == nil {
+            } else if address == nil || address == name {
                 address = part
             }
         }

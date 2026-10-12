@@ -25,6 +25,7 @@
 		134CDA592AB93A092C18F96B /* DemoData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59196264DF41F8F7B0C15A3A /* DemoData.swift */; };
 		13786AEE51D9397701A22CED /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0C65CE1B1707634DEE54856 /* OnboardingView.swift */; };
 		149050EA2D5382406AC2FEAE /* TaskDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90710C68F0B11F5A74C59129 /* TaskDetailView.swift */; };
+		15329CD0971902FD75BAD125 /* MemoStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5397683CF5FD3589B36E1F13 /* MemoStore.swift */; };
 		15DB97C34C95B08222BA4C35 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 562B75805BA1C9F3215AF394 /* GoogleSignIn */; };
 		17A257C14E793776BEFA2E6B /* CategoryViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E8C4B98CC17E47DEB59005B /* CategoryViews.swift */; };
 		1F7BE65A34F657867F64CA1D /* NoteLines.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6203FE3484BB9AB47B0C2D83 /* NoteLines.swift */; };
@@ -93,6 +94,7 @@
 		6C7478733E97564534724799 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 95845BE823BDEEB575973A70 /* GoogleSignIn */; };
 		6F427AFAE378B76CFA22DF05 /* GoogleRefreshSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D9F2F47AFB8AE35410E0899 /* GoogleRefreshSession.swift */; };
 		6FA4BFC948DDB87891AA78EA /* TaskStoreSyncTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE4BC2D4DF42F4878D28C1E9 /* TaskStoreSyncTests.swift */; };
+		6FD8EAC6F14FB052B287EFDE /* MemoStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5397683CF5FD3589B36E1F13 /* MemoStore.swift */; };
 		72B3AB693C6106E42B8D7808 /* TaskTag.swift in Sources */ = {isa = PBXBuildFile; fileRef = B863B8DA8A7D1FFAE24BE87C /* TaskTag.swift */; };
 		731F6DF1F8AA3768BA2DFFB2 /* TaskRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FE0AB94C1F8EF86B799B335 /* TaskRow.swift */; };
 		73A73D24C9178EBF388986BF /* TravelTimes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CB106E929FD91C07948C23D /* TravelTimes.swift */; };
@@ -162,10 +164,13 @@
 		CBAFE55704F5C1DBAA548A8D /* NotesTimeCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05822D2ACADE5BC42570E7F5 /* NotesTimeCodec.swift */; };
 		CD14AB719C3C74C632F62B26 /* TaskIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B19813EA3F6E02B516AA5F8 /* TaskIntents.swift */; };
 		CEB0661B20E19E4D74AF8B84 /* ReminderOverride.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CF4B1AF23ADE07B4C45F7D2 /* ReminderOverride.swift */; };
+		D076AD5BAD8313D71FB3A5A1 /* MemoViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3BA2CD7259FBD2501089EDD /* MemoViews.swift */; };
 		D149D4516671CF0B49D0D5C1 /* InboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA74C2AD3519045DE673C1B1 /* InboxView.swift */; };
 		D156AAA722C8F7A57043FCA6 /* CalendarLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41BF8369B5A6A593F0D8D600 /* CalendarLink.swift */; };
+		D59C52AE4BD1B63ACA82308F /* MemoViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3BA2CD7259FBD2501089EDD /* MemoViews.swift */; };
 		D5E83FE8A77DE51C60ADC4FE /* GoogleRefreshSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D9F2F47AFB8AE35410E0899 /* GoogleRefreshSession.swift */; };
 		D68D03B7649D68EDC025CDF1 /* SharedMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AC3C376A9AF6A9087AF2A12 /* SharedMessage.swift */; };
+		D6948788F05C7941A5F837B8 /* MemoStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5397683CF5FD3589B36E1F13 /* MemoStore.swift */; };
 		D9678F91680CE624DF564526 /* MacRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 745CB36B5E1C4CC59E0B3317 /* MacRootView.swift */; };
 		DC1B15409C41F6A7EB9FFA5C /* DoneView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2085B3617089E328A5BF3F30 /* DoneView.swift */; };
 		DC3500607F510BCE3212212F /* TaskDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90710C68F0B11F5A74C59129 /* TaskDetailView.swift */; };
@@ -313,6 +318,7 @@
 		4839CCA69FBABCA6821B8333 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		4AF54CF05DEFFF16CB11D50D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		4DCCE35813EA2892D8D3C8B7 /* SharedMessageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedMessageTests.swift; sourceTree = "<group>"; };
+		5397683CF5FD3589B36E1F13 /* MemoStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoStore.swift; sourceTree = "<group>"; };
 		58450EAF33557E45B79243CC /* TaskCategory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskCategory.swift; sourceTree = "<group>"; };
 		59196264DF41F8F7B0C15A3A /* DemoData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoData.swift; sourceTree = "<group>"; };
 		595289CE4264CBC8CBE2415D /* CalendarSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarSection.swift; sourceTree = "<group>"; };
@@ -347,6 +353,7 @@
 		9E8C4B98CC17E47DEB59005B /* CategoryViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryViews.swift; sourceTree = "<group>"; };
 		9FC595196AA59A6F7E158258 /* RelanceMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RelanceMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A2F3B0D9F7B7B77D50FC3CFD /* TaskFieldsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskFieldsTests.swift; sourceTree = "<group>"; };
+		A3BA2CD7259FBD2501089EDD /* MemoViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoViews.swift; sourceTree = "<group>"; };
 		A52A26E7A17146871684BD99 /* MacSignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacSignInView.swift; sourceTree = "<group>"; };
 		A6A4EF6EA4834A24EB534187 /* TaskItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskItem.swift; sourceTree = "<group>"; };
 		AD9D4E32E198251993005BCC /* QuickAddSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickAddSheet.swift; sourceTree = "<group>"; };
@@ -477,6 +484,7 @@
 				2A12D2947BB91F0172F0ED7C /* AppGroup.swift */,
 				CFB0E54140635703273C5FC6 /* DateDetection.swift */,
 				666C8CA69B643438FA2EC7C2 /* DueText.swift */,
+				5397683CF5FD3589B36E1F13 /* MemoStore.swift */,
 				6203FE3484BB9AB47B0C2D83 /* NoteLines.swift */,
 				110B163FAF813ACD416300F7 /* SyncLog.swift */,
 				58450EAF33557E45B79243CC /* TaskCategory.swift */,
@@ -520,6 +528,7 @@
 				7E7598AD45ABC35C0448C201 /* ContactSection.swift */,
 				2085B3617089E328A5BF3F30 /* DoneView.swift */,
 				DA74C2AD3519045DE673C1B1 /* InboxView.swift */,
+				A3BA2CD7259FBD2501089EDD /* MemoViews.swift */,
 				E0C65CE1B1707634DEE54856 /* OnboardingView.swift */,
 				2E5A4192036752DBF4B79400 /* PlaceSearchView.swift */,
 				C7926432BD1ECAC69B112A06 /* PlatformCompat.swift */,
@@ -920,6 +929,8 @@
 				67A4FDCDD524644D106A829B /* GoogleRefreshSession.swift in Sources */,
 				D149D4516671CF0B49D0D5C1 /* InboxView.swift in Sources */,
 				2FFD58C76AEB38E084377310 /* LiveActivityManager.swift in Sources */,
+				6FD8EAC6F14FB052B287EFDE /* MemoStore.swift in Sources */,
+				D076AD5BAD8313D71FB3A5A1 /* MemoViews.swift in Sources */,
 				EFC83DD6A67E0F2993AC4368 /* NoteLines.swift in Sources */,
 				07B29052A2CDDC105B8AF1F2 /* NotesTimeCodec.swift in Sources */,
 				13786AEE51D9397701A22CED /* OnboardingView.swift in Sources */,
@@ -986,6 +997,8 @@
 				21764D67E4736716AF18B998 /* MacSettingsView.swift in Sources */,
 				305E38E51F2369415D44951D /* MacSignInView.swift in Sources */,
 				DFC6E932EB58DED730E9A2DC /* MacTaskList.swift in Sources */,
+				D6948788F05C7941A5F837B8 /* MemoStore.swift in Sources */,
+				D59C52AE4BD1B63ACA82308F /* MemoViews.swift in Sources */,
 				F4C5EFBEC247872881CCA2E0 /* MenuBarView.swift in Sources */,
 				1F7BE65A34F657867F64CA1D /* NoteLines.swift in Sources */,
 				594F293387ACE61FCAE44667 /* NotesTimeCodec.swift in Sources */,
@@ -1101,6 +1114,7 @@
 				A39A76DBF0758EAE3CFFA8E2 /* DateDetection.swift in Sources */,
 				B0A7D888D880397CA1F4976B /* DueText.swift in Sources */,
 				D5E83FE8A77DE51C60ADC4FE /* GoogleRefreshSession.swift in Sources */,
+				15329CD0971902FD75BAD125 /* MemoStore.swift in Sources */,
 				21ECD757144B4BABAE5727D2 /* NoteLines.swift in Sources */,
 				A3A87C5D3E867E2619C506BA /* NotesTimeCodec.swift in Sources */,
 				5EAC1A94052E8B1E3BBC6184 /* RelanceWidgetsBundle.swift in Sources */,

@@ -20,6 +20,11 @@ struct RetriageSection: View {
                 }
             }
             .disabled(state == .sending)
+            NavigationLink {
+                MemoEditor(entry: nil, fromTask: item.title)
+            } label: {
+                Label("Retenir pour le tri…", systemImage: "text.book.closed")
+            }
         } footer: {
             Text(state.footer(single: true))
         }

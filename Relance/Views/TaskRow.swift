@@ -52,6 +52,15 @@ struct TaskRow: View {
                         if let category = item.category { CategoryChip(name: category, onSelection: isSelected) }
                         TagsText(tags: item.tags)
                     }
+                } else if !item.isCompleted {
+                    // La routine met toujours une catégorie : sans catégorie, la tâche attend son tri.
+                    HStack(spacing: 3) {
+                        Image(systemName: "sparkles").imageScale(.small)
+                        Text("Tri en attente")
+                    }
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .accessibilityLabel("En attente du tri par Claude")
                 }
             }
             .accessibilityElement(children: .combine)

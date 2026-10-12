@@ -29,6 +29,15 @@ nonisolated struct RemoteTask: Codable, Sendable {
     var hidden: Bool?
 }
 
+nonisolated struct RemoteTaskList: Codable, Sendable {
+    var id: String
+    var title: String?
+}
+
+nonisolated private struct TaskListPage: Decodable {
+    var items: [RemoteTaskList]?
+}
+
 nonisolated private struct TaskPage: Decodable {
     var items: [RemoteTask]?
     var nextPageToken: String?
@@ -80,6 +89,19 @@ nonisolated struct TasksAPI: Sendable {
         _ = try await request("DELETE", path: "tasks/\(id)")
     }
 
+    // MARK: - Listes
+
+    /// Identifiant de la liste `title`, créée si elle n'existe pas.
+    func listID(named title: String) async throws -> String {
+        let lists = URL(string: "https://tasks.googleapis.com/tasks/v1/users/@me/lists")!
+        var all = lists
+        all.append(queryItems: [URLQueryItem(name: "maxResults", value: "100")])
+        let page = try JSONDecoder().decode(TaskListPage.self, from: await request(url: all, method: "GET"))
+        if let found = page.items?.first(where: { $0.title == title }) { return found.id }
+        let body = try JSONSerialization.data(withJSONObject: ["title": title])
+        return try JSONDecoder().decode(RemoteTaskList.self, from: await request(url: lists, method: "POST", body: body)).id
+    }
+
     // MARK: - Dates
 
     /// Google renvoie la date à minuit UTC : on la relit en UTC pour retrouver le bon jour.
@@ -117,7 +139,10 @@ nonisolated struct TasksAPI: Sendable {
     private func request(_ method: String, path: String, query: [URLQueryItem] = [], body: Data? = nil) async throws -> Data {
         var url = base.appending(path: list).appending(path: path)
         if !query.isEmpty { url.append(queryItems: query) }
+        return try await request(url: url, method: method, body: body)
+    }
 
+    private func request(url: URL, method: String, body: Data? = nil) async throws -> Data {
         var request = URLRequest(url: url)
         request.httpMethod = method
         request.setValue("Bearer \(try await token())", forHTTPHeaderField: "Authorization")
