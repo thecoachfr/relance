@@ -24,15 +24,25 @@ struct TaskRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.title.isEmpty ? "Sans titre" : item.title)
                     .font(.body)
-                if let status {
-                    Label(status.text, systemImage: status.symbol)
-                        .font(.subheadline)
-                        .foregroundStyle(status.color)
-                }
+                // Étiquette sous le statut, comme les tags dans Rappels : rien n'est jamais coupé.
+                statusLabel
+                categoryChip
             }
             .accessibilityElement(children: .combine)
         }
         .padding(.vertical, 2)
+    }
+
+    @ViewBuilder private var statusLabel: some View {
+        if let status {
+            Label(status.text, systemImage: status.symbol)
+                .font(.subheadline)
+                .foregroundStyle(status.color)
+        }
+    }
+
+    @ViewBuilder private var categoryChip: some View {
+        if let category = item.category { CategoryChip(name: category) }
     }
 
     /// Même texte que dans les widgets et l'activité en direct (`DueText`).

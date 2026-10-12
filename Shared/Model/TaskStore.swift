@@ -53,8 +53,9 @@ final class TaskStore {
     // MARK: - Actions
 
     @discardableResult
-    func add(title: String, day: Date?, minutes: Int?) -> TaskItem {
+    func add(title: String, day: Date?, minutes: Int?, category: String? = nil) -> TaskItem {
         let item = TaskItem(title: title, dueDay: day, dueMinutes: day == nil ? nil : minutes)
+        item.category = category
         context.insert(item)
         commit()
         return item
@@ -93,8 +94,9 @@ final class TaskStore {
         commit()
     }
 
-    func update(_ item: TaskItem, title: String, notes: String, day: Date?, minutes: Int?) {
+    func update(_ item: TaskItem, title: String, notes: String, day: Date?, minutes: Int?, category: String?? = .none) {
         item.title = title
+        if let category { item.category = category }
         item.notes = notes
         item.dueDay = day.map { Calendar.current.startOfDay(for: $0) }
         item.dueMinutes = day == nil ? nil : minutes
@@ -234,7 +236,7 @@ final class TaskStore {
     static func fields(for item: TaskItem) -> [String: Any] {
         [
             "title": item.title,
-            "notes": NotesTimeCodec.encode(minutes: item.dueMinutes, notes: item.notes),
+            "notes": NotesTimeCodec.encode(minutes: item.dueMinutes, category: item.category, notes: item.notes),
             "due": TasksAPI.due(fromDay: item.dueDay) ?? NSNull(),
             "status": item.isCompleted ? "completed" : "needsAction",
             "completed": item.isCompleted ? TasksAPI.timestamp(item.completedAt ?? .now) : NSNull(),
@@ -242,7 +244,9 @@ final class TaskStore {
     }
 
     static func apply(_ r: RemoteTask, to item: TaskItem) {
-        let (minutes, notes) = NotesTimeCodec.decode(r.notes)
+        let meta = NotesTimeCodec.decode(r.notes)
+        let (minutes, notes) = (meta.minutes, meta.notes)
+        item.category = meta.category
         let day = TasksAPI.day(fromDue: r.due)
         if day != item.dueDay || minutes != item.dueMinutes { item.snoozedUntil = nil }
         item.title = r.title ?? ""

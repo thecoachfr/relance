@@ -10,3 +10,6 @@ relance_vigie:
   key_id: XXXXXXXXXX
   key_path: /config/apps/AuthKey_relance.p8
   refresh_seconds: 60
+  # Routine Claude « Relance · tri » lancée à chaque nouvelle tâche. Le jeton (déclencheur API de la routine,
+  # créé sur claude.ai) se met dans /config/relance_routine_token, jamais dans ce fichier.
+  routine_id: trig_01GFD6vBExCUvTYDbx9KePm7

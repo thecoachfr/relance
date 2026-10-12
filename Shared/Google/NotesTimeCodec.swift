@@ -1,27 +1,55 @@
 import Foundation
 
-/// L'API Google Tasks ne transmet pas l'heure d'échéance : on la range en tête des notes,
-/// sur une ligne « ⏰ 15:00 », pour que l'iPhone et l'iPad la partagent.
+/// Google Tasks n'a ni heure d'échéance (dans son API) ni étiquettes : on range les deux
+/// en tête des notes, pour que l'iPhone, l'iPad, la montre et le tri du matin les partagent.
+///
+///     ⏰ 15:00
+///     🏷 Administratif
+///     Notes de l'utilisateur…
 nonisolated enum NotesTimeCodec {
-    static let marker = "⏰"
+    static let timeMarker = "⏰"
+    static let categoryMarker = "🏷"
 
-    static func decode(_ notes: String?) -> (minutes: Int?, notes: String) {
-        guard let notes, !notes.isEmpty else { return (nil, "") }
-        var lines = notes.components(separatedBy: "\n")
-        guard let first = lines.first, first.hasPrefix(marker) else { return (nil, notes) }
-
-        let value = first.dropFirst(marker.count).trimmingCharacters(in: .whitespaces)
-        let parts = value.split(separator: ":").compactMap { Int($0) }
-        guard parts.count == 2, (0..<24).contains(parts[0]), (0..<60).contains(parts[1]) else {
-            return (nil, notes)
-        }
-        lines.removeFirst()
-        return (parts[0] * 60 + parts[1], lines.joined(separator: "\n"))
+    struct Meta: Equatable {
+        var minutes: Int?
+        var category: String?
+        var notes: String
     }
 
-    static func encode(minutes: Int?, notes: String) -> String {
-        guard let minutes else { return notes }
-        let line = String(format: "%@ %02d:%02d", marker, minutes / 60, minutes % 60)
-        return notes.isEmpty ? line : line + "\n" + notes
+    static func decode(_ raw: String?) -> Meta {
+        guard let raw, !raw.isEmpty else { return Meta(notes: "") }
+        var lines = raw.components(separatedBy: "\n")
+        var meta = Meta(notes: "")
+
+        // Les lignes ⏰ et 🏷 sont en tête, dans n'importe quel ordre ; on s'arrête à la première autre ligne.
+        while let first = lines.first {
+            if meta.minutes == nil, first.hasPrefix(timeMarker), let minutes = parseTime(first) {
+                meta.minutes = minutes
+            } else if meta.category == nil, first.hasPrefix(categoryMarker) {
+                let name = first.dropFirst(categoryMarker.count).trimmingCharacters(in: .whitespaces)
+                guard !name.isEmpty else { break }
+                meta.category = name
+            } else {
+                break
+            }
+            lines.removeFirst()
+        }
+        meta.notes = lines.joined(separator: "\n")
+        return meta
+    }
+
+    static func encode(minutes: Int?, category: String? = nil, notes: String) -> String {
+        var lines: [String] = []
+        if let minutes { lines.append(String(format: "%@ %02d:%02d", timeMarker, minutes / 60, minutes % 60)) }
+        if let category, !category.isEmpty { lines.append("\(categoryMarker) \(category)") }
+        if !notes.isEmpty { lines.append(notes) }
+        return lines.joined(separator: "\n")
+    }
+
+    private static func parseTime(_ line: String) -> Int? {
+        let value = line.dropFirst(timeMarker.count).trimmingCharacters(in: .whitespaces)
+        let parts = value.split(separator: ":").compactMap { Int($0) }
+        guard parts.count == 2, (0..<24).contains(parts[0]), (0..<60).contains(parts[1]) else { return nil }
+        return parts[0] * 60 + parts[1]
     }
 }

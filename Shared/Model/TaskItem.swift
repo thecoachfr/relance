@@ -14,6 +14,8 @@ final class TaskItem {
     var dueDay: Date?
     /// Heure d'échéance en minutes depuis minuit (stockée dans les notes côté Google).
     var dueMinutes: Int?
+    /// Catégorie (ligne « 🏷 » des notes côté Google).
+    var category: String?
     var isCompleted: Bool
     var completedAt: Date?
     var snoozedUntil: Date?

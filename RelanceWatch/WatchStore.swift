@@ -42,7 +42,7 @@ final class WatchStore: NSObject, WCSessionDelegate {
     private static func watchTask(_ r: RemoteTask) -> WatchTask? {
         guard let id = r.id, r.status != "completed", r.deleted != true else { return nil }
         let calendar = Calendar.current
-        let (minutes, _) = NotesTimeCodec.decode(r.notes)
+        let minutes = NotesTimeCodec.decode(r.notes).minutes
         let due = TasksAPI.day(fromDue: r.due).flatMap { day -> Date? in
             if let minutes {
                 return calendar.date(bySettingHour: minutes / 60, minute: minutes % 60, second: 0, of: day)

@@ -13,6 +13,7 @@ struct TodoView: View {
     @State private var justDone: TaskItem?
     /// iPad : tâche affichée dans la colonne de droite.
     @State private var selectedID: UUID?
+    @AppStorage("categoryFilter") private var categoryFilter = ""
     @Environment(\.horizontalSizeClass) private var sizeClass
 
     var body: some View {
@@ -61,6 +62,9 @@ struct TodoView: View {
                 if dated.isEmpty {
                     ContentUnavailableView("Rien d'urgent", systemImage: "checkmark.circle",
                                            description: Text("Les tâches avec une date apparaissent ici."))
+                } else if !categoryFilter.isEmpty, !dated.contains(where: { $0.matches(categoryFilter: categoryFilter) }) {
+                    ContentUnavailableView("Rien en « \(categoryFilter) »", systemImage: "line.3.horizontal.decrease.circle",
+                                           description: Text("Change de filtre pour voir les autres tâches."))
                 }
             }
         }
@@ -69,6 +73,9 @@ struct TodoView: View {
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Button("Réglages", systemImage: "gearshape") { showSettings = true }
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                CategoryFilterMenu(filter: $categoryFilter)
             }
             // Tirer pour actualiser ne se devine pas au trackpad : bouton visible sur grand écran.
             if sizeClass == .regular {
@@ -107,7 +114,7 @@ struct TodoView: View {
 
     private func group(now: Date) -> (overdue: [TaskItem], today: [TaskItem], later: [TaskItem]) {
         let calendar = Calendar.current
-        let sorted = dated.sorted { ($0.dueInstant() ?? .distantFuture) < ($1.dueInstant() ?? .distantFuture) }
+        let sorted = dated.filter { $0.matches(categoryFilter: categoryFilter) }.sorted { ($0.dueInstant() ?? .distantFuture) < ($1.dueInstant() ?? .distantFuture) }
         let overdue = sorted.filter { $0.isOverdue(now: now) }
         let rest = sorted.filter { !$0.isOverdue(now: now) }
         return (overdue,

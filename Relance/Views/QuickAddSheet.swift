@@ -10,6 +10,7 @@ struct QuickAddSheet: View {
     @State private var time = Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: .now)!
     /// Vrai dès que l'utilisateur touche les réglages : la phrase ne les écrase plus.
     @State private var manual = false
+    @State private var category: String?
     @FocusState private var focused: Bool
 
     var body: some View {
@@ -21,6 +22,9 @@ struct QuickAddSheet: View {
                         .submitLabel(.done)
                         .onSubmit(save)
                         .onChange(of: text) { detect() }
+                }
+                Section {
+                    CategoryPicker(category: $category)
                 }
                 Section("Échéance") {
                     Picker("Jour", selection: dayChoice) {
@@ -98,7 +102,7 @@ struct QuickAddSheet: View {
     private func save() {
         guard !cleanTitle.isEmpty else { return }
         let c = Calendar.current.dateComponents([.hour, .minute], from: time)
-        store.add(title: cleanTitle, day: day, minutes: hasTime ? (c.hour! * 60 + c.minute!) : nil)
+        store.add(title: cleanTitle, day: day, minutes: hasTime ? (c.hour! * 60 + c.minute!) : nil, category: category)
         dismiss()
     }
 }

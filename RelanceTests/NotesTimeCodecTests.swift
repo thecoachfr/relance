@@ -26,4 +26,19 @@ struct NotesTimeCodecTests {
         #expect(NotesTimeCodec.encode(minutes: 9 * 60, notes: "") == "⏰ 09:00")
         #expect(NotesTimeCodec.decode("⏰ 09:00").minutes == 540)
     }
+
+    @Test func timeCategoryAndNotes() {
+        let encoded = NotesTimeCodec.encode(minutes: 10 * 60, category: "Administratif", notes: "Formulaire bleu")
+        #expect(encoded == "⏰ 10:00\n🏷 Administratif\nFormulaire bleu")
+        #expect(NotesTimeCodec.decode(encoded) == .init(minutes: 600, category: "Administratif", notes: "Formulaire bleu"))
+    }
+
+    /// Le tri du matin peut écrire 🏷 sans ⏰, et la suggestion 💡 reste dans les notes.
+    @Test func categoryWithoutTimeAndSuggestion() {
+        let decoded = NotesTimeCodec.decode("🏷 Santé\n💡 Suggestion : jeudi")
+        #expect(decoded.minutes == nil)
+        #expect(decoded.category == "Santé")
+        #expect(decoded.notes == "💡 Suggestion : jeudi")
+        #expect(TaskCategory(name: "santé") == .sante)
+    }
 }

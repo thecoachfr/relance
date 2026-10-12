@@ -10,9 +10,10 @@ struct InboxView: View {
     /// Tâches passées pour l'instant : elles reviennent en fin de file.
     @State private var skipped: [UUID] = []
     @State private var editing: TaskItem?
+    @AppStorage("categoryFilter") private var categoryFilter = ""
 
     private var queue: [TaskItem] {
-        items.sorted { (skipped.firstIndex(of: $0.localID) ?? -1) < (skipped.firstIndex(of: $1.localID) ?? -1) }
+        items.filter { $0.matches(categoryFilter: categoryFilter) }.sorted { (skipped.firstIndex(of: $0.localID) ?? -1) < (skipped.firstIndex(of: $1.localID) ?? -1) }
     }
 
     var body: some View {
@@ -35,6 +36,9 @@ struct InboxView: View {
                 }
             }
             .navigationTitle("À trier")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) { CategoryFilterMenu(filter: $categoryFilter) }
+            }
             .refreshable { await store.sync() }
             .sheet(item: $editing) { TaskEditor(item: $0) }
         }
@@ -57,6 +61,7 @@ struct InboxView: View {
                     Label(dayText(day), systemImage: "calendar")
                         .font(.subheadline).foregroundStyle(.secondary)
                 }
+                if let category = item.category { CategoryChip(name: category) }
             }
 
             if item.dueDay == nil {

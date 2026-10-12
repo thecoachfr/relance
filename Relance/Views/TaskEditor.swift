@@ -11,6 +11,7 @@ struct TaskEditor: View {
     @State private var day = Date.now
     @State private var hasTime = false
     @State private var time = Date.now
+    @State private var category: String?
 
     var body: some View {
         NavigationStack {
@@ -19,6 +20,9 @@ struct TaskEditor: View {
                     TextField("Titre", text: $title, axis: .vertical)
                     TextField("Notes", text: $notes, axis: .vertical)
                         .lineLimit(3...)
+                }
+                Section {
+                    CategoryPicker(category: $category)
                 }
                 Section("Échéance") {
                     Toggle("Date", isOn: $hasDay)
@@ -49,7 +53,7 @@ struct TaskEditor: View {
                     Button("OK") {
                         let c = Calendar.current.dateComponents([.hour, .minute], from: time)
                         store.update(item, title: title, notes: notes, day: hasDay ? day : nil,
-                                     minutes: hasTime ? c.hour! * 60 + c.minute! : nil)
+                                     minutes: hasTime ? c.hour! * 60 + c.minute! : nil, category: .some(category))
                         dismiss()
                     }
                     .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
@@ -62,6 +66,7 @@ struct TaskEditor: View {
     private func load() {
         title = item.title
         notes = item.notes
+        category = item.category
         hasDay = item.dueDay != nil
         day = item.dueDay ?? .now
         hasTime = item.dueMinutes != nil

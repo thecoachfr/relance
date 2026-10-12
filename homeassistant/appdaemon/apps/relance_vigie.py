@@ -23,6 +23,12 @@ APNS_HOSTS = {
 # Apple refuse un jeton de plus d'une heure et en limite le renouvellement : on le garde 50 min.
 JWT_LIFETIME = 50 * 60
 UNAVAILABLE = (None, "unavailable", "unknown")
+ROUTINE_URL = "https://api.anthropic.com/v1/claude_code/routines/{}/fire"
+# Laisse le temps de dicter plusieurs tâches d'affilée avant de lancer un seul tri.
+TRIAGE_DELAY = 90
+# Le tri prend en général moins d'une minute ; on réveille ensuite les appareils pour qu'ils voient le résultat.
+PUSH_AFTER_TRIAGE = 180
+MAX_TRIAGES_PER_DAY = 20
 
 
 class RelanceVigie(Hass):
@@ -44,6 +50,9 @@ class RelanceVigie(Hass):
         self.listen_event(lambda *_args, **_kw: self.push_all(), "relance_test_push")
         self.listen_state(self.on_tasks_changed, self._todo)
         self._refreshes = 0
+        self._triage_handle = None
+        self._triage_day = None
+        self._triage_count = 0
         self.run_every(self.refresh, "now+5", int(self.args.get("refresh_seconds", 60)))
         self.log(f"Vigie active sur {self._todo}, {len(self._load_tokens())} appareil(s) enregistré(s)")
 
@@ -63,6 +72,62 @@ class RelanceVigie(Hass):
             return
         self.log(f"{entity} : {old} → {new} tâches à faire, réveil des appareils")
         self.push_all()
+        if self._as_int(new) > self._as_int(old):
+            self.schedule_triage()
+
+    @staticmethod
+    def _as_int(value):
+        try:
+            return int(float(value))
+        except (TypeError, ValueError):
+            return 0
+
+    # MARK: - Tri par la routine Claude
+
+    def schedule_triage(self):
+        """Nouvelle tâche : lance la routine « tri » après un court délai (regroupe les dictées)."""
+        if not self.args.get("routine_id"):
+            return
+        if self._triage_handle:
+            self.cancel_timer(self._triage_handle)
+        self._triage_handle = self.run_in(self.fire_triage, TRIAGE_DELAY)
+
+    def fire_triage(self, **kwargs):
+        self._triage_handle = None
+        token_path = Path(self.args.get("routine_token_file", "/config/relance_routine_token"))
+        try:
+            token = token_path.read_text().strip()
+        except FileNotFoundError:
+            self.log(f"Tri non lancé : jeton de routine absent ({token_path})", level="WARNING")
+            return
+
+        today = time.strftime("%Y-%m-%d")
+        if self._triage_day != today:
+            self._triage_day, self._triage_count = today, 0
+        if self._triage_count >= MAX_TRIAGES_PER_DAY:
+            self.log("Tri non lancé : plafond quotidien atteint", level="WARNING")
+            return
+        self._triage_count += 1
+
+        try:
+            response = httpx.post(
+                ROUTINE_URL.format(self.args["routine_id"]),
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "anthropic-beta": "experimental-cc-routine-2026-04-01",
+                    "anthropic-version": "2023-06-01",
+                },
+                json={"text": "Nouvelle tâche signalée par Home Assistant : trie les tâches qui en ont besoin."},
+                timeout=20,
+            )
+        except httpx.HTTPError as error:
+            self.log(f"Tri non lancé : {error}", level="WARNING")
+            return
+        if response.status_code >= 300:
+            self.log(f"Tri refusé ({response.status_code}) : {response.text[:200]}", level="WARNING")
+            return
+        self.log(f"Tri lancé ({self._triage_count}/{MAX_TRIAGES_PER_DAY} aujourd'hui)")
+        self.run_in(lambda **_kw: self.push_all(), PUSH_AFTER_TRIAGE)
 
     # MARK: - Appareils
 

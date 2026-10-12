@@ -12,6 +12,7 @@ struct TaskDetailView: View {
     @State private var day = Date.now
     @State private var hasTime = false
     @State private var time = Date.now
+    @State private var category: String?
     @State private var loaded = false
 
     var body: some View {
@@ -27,6 +28,9 @@ struct TaskDetailView: View {
                 }
                 TextField("Notes", text: $notes, axis: .vertical)
                     .lineLimit(3...)
+            }
+            Section {
+                CategoryPicker(category: $category)
             }
             Section("Échéance") {
                 Toggle("Date", isOn: $hasDay)
@@ -63,6 +67,7 @@ struct TaskDetailView: View {
         .onChange(of: day) { save() }
         .onChange(of: hasTime) { save() }
         .onChange(of: time) { save() }
+        .onChange(of: category) { save() }
         // Texte : enregistré à la sortie du champ ou de la tâche, pas à chaque frappe (chaque enregistrement synchronise).
         .onSubmit { save() }
         .onDisappear { save() }
@@ -71,6 +76,7 @@ struct TaskDetailView: View {
     private func load() {
         title = item.title
         notes = item.notes
+        category = item.category
         hasDay = item.dueDay != nil
         day = item.dueDay ?? .now
         hasTime = item.dueMinutes != nil
@@ -84,7 +90,8 @@ struct TaskDetailView: View {
         let c = Calendar.current.dateComponents([.hour, .minute], from: time)
         let minutes = hasDay && hasTime ? c.hour! * 60 + c.minute! : nil
         let newDay = hasDay ? Calendar.current.startOfDay(for: day) : nil
-        guard title != item.title || notes != item.notes || newDay != item.dueDay || minutes != item.dueMinutes else { return }
-        store.update(item, title: title, notes: notes, day: newDay, minutes: minutes)
+        guard title != item.title || notes != item.notes || newDay != item.dueDay || minutes != item.dueMinutes
+                || category != item.category else { return }
+        store.update(item, title: title, notes: notes, day: newDay, minutes: minutes, category: .some(category))
     }
 }
