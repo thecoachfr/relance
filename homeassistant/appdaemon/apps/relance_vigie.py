@@ -43,13 +43,20 @@ class RelanceVigie(Hass):
         # Diagnostic : « relance_test_push » envoie un push tout de suite à chaque appareil.
         self.listen_event(lambda *_args, **_kw: self.push_all(), "relance_test_push")
         self.listen_state(self.on_tasks_changed, self._todo)
-        self.run_every(self.refresh, "now+10", int(self.args.get("refresh_seconds", 60)))
+        self._refreshes = 0
+        self.run_every(self.refresh, "now+5", int(self.args.get("refresh_seconds", 60)))
         self.log(f"Vigie active sur {self._todo}, {len(self._load_tokens())} appareil(s) enregistré(s)")
 
     # MARK: - Surveillance
 
     def refresh(self, **kwargs):
-        self.call_service("homeassistant/update_entity", entity_id=self._todo)
+        self._refreshes += 1
+        if self._refreshes == 1:
+            self.log("Rafraîchissement automatique de Google Tasks actif")
+        try:
+            self.call_service("homeassistant/update_entity", entity_id=self._todo)
+        except Exception as error:  # noqa: BLE001 — on veut voir toute erreur dans le journal
+            self.log(f"Rafraîchissement impossible : {error!r}", level="WARNING")
 
     def on_tasks_changed(self, entity, attribute, old, new, **kwargs):
         if old in UNAVAILABLE or new in UNAVAILABLE or old == new:
