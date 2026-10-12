@@ -62,7 +62,7 @@ struct TaskContactTests {
         #expect(c?.address == "12 rue de la Paix, 75002 Paris")
         #expect(c?.phoneURL?.absoluteString == "tel:0143750000")
         #expect(c?.link?.host() == "www.doctolib.fr")
-        #expect(c?.mapsURL?.absoluteString.contains("daddr=114") == true)
+        #expect(c?.mapsURL?.absoluteString.contains("daddr=12") == true)
         #expect(TaskContact(notes: "📍 Atrium Gestion")?.address == nil)
         #expect(TaskContact(notes: "rien") == nil)
     }
