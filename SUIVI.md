@@ -9,7 +9,7 @@
 
 | Brique | État |
 |---|---|
-| **App iPhone** | Widget : symbole coloré de la catégorie avant l'échéance. Relances qui insistent (à l'heure, +1 h, 20 h ; en retard 7 h 30 et 20 h ; silence 22 h–7 h 30), boutons Fait / Dans 1 h / Ce soir / Demain matin, activité en direct (3 tâches max, Fait / 1 h par tâche ; vue dédiée dans le Smart Stack de la montre), widgets accueil et écran verrouillé, commande « + » (Centre de contrôle, bouton Action, écran verrouillé), Siri (« nouvelle Relance » : date dans la phrase ou « Pour quand ? », « sans date » → À trier ; « Relance en retard » après synchro), question « À quelle heure ? » immédiate pour une tâche arrivée de Google avec une date sans heure (boutons 9/12/15/18 h, sans son la nuit), écran À trier une tâche à la fois, catégories, journal de synchro dans les réglages |
+| **App iPhone** | Widget : symbole coloré de la catégorie avant l'échéance. Relances qui insistent (à l'heure, +1 h, 20 h ; en retard 7 h 30 et 20 h ; silence 22 h–7 h 30), boutons Fait / Dans 1 h / Ce soir / Demain matin, activité en direct (3 tâches max, Fait / 1 h par tâche ; vue dédiée dans le Smart Stack de la montre), widgets accueil et écran verrouillé, commande « + » (Centre de contrôle, bouton Action, écran verrouillé), Siri (« marque *X* comme fait », « reporte *X* » → « À quand ? », « qu'est-ce que j'ai aujourd'hui » ; tâches connues de Siri et de Spotlight ; « dans 2 heures » compris partout ; « nouvelle Relance » : date dans la phrase ou « Pour quand ? », « sans date » → À trier ; « Relance en retard » après synchro), question « À quelle heure ? » immédiate pour une tâche arrivée de Google avec une date sans heure (boutons 9/12/15/18 h, sans son la nuit), écran À trier une tâche à la fois, catégories, journal de synchro dans les réglages |
 | **App iPad** | Liste + détail, raccourcis clavier (↑↓, ⌘↩, ⌘L, ⌘⌫, ⌘R, ⌘N), pas de relances par défaut (réglage « Relances sur cet appareil ») |
 | **App Mac** | L'app iPad « Designed for iPad », lancée depuis Xcode (⌘R) |
 | **Priorité** | Urgente / Normale / Basse. Urgente : relancée toutes les 30 min jusqu'à minuit (silence 22 h–7 h 30), en retard 7 h 30 / midi / 20 h, passe le mode Concentration, sous-titre « Urgente », toujours dans l'activité en direct. Basse : un seul rappel à l'heure, puis résumé du matin ; jamais dans l'activité en direct ni le widget. Réglée dans l'app (formulaires, balayage, appui long), à la voix (« urgent », « pas pressé » : Siri, saisie rapide, dictée montre) ou par le tri. Affichage : **le rond à cocher porte la priorité** (épais et rouge = Urgente, pointillés = Basse), la catégorie reste seule en pastille (choix du 12/10 après comparaison de deux maquettes) |
@@ -45,7 +45,7 @@ Catégories fixes : Administratif, Maison, Santé, Achats, Travail, Famille, Per
 
 1. **Premier tri automatique du matin** : demain 6 h 45 (vérifier dans [la routine](https://claude.ai/code/routines/trig_01GFD6vBExCUvTYDbx9KePm7)).
 2. **Correction des transcriptions Google Home** (activée le 12/10) : vérifier sur une prochaine dictée que les erreurs évidentes sont corrigées (titre d'origine gardé en 🎙) et que les titres corrects ne bougent pas.
-3. **Siri, suite** : agir sur une tâche existante (« marque *garage* comme fait », « reporte *garage* à demain », via une entité Tâche, aussi cherchable dans Spotlight) ; « qu'est-ce que j'ai aujourd'hui » ; comprendre « dans 2 heures ».
+3. **Tags et mémo de contexte** (en cours) : tags transversaux (SCI, Photo, Syndic, Travaux, Spectacle) en plus des catégories, ligne `🔖` ; mémo de contexte dans la consigne de la routine (jamais dans le dépôt public).
 
 ## 3. Idées et pistes (non faites)
 
@@ -84,5 +84,5 @@ Catégories fixes : Administratif, Maison, Santé, Achats, Travail, Famille, Per
 | Webhook | automatisation « Relance : enregistrer un appareil » → événement `relance_register` ; test : événement `relance_test_push` |
 | Routine | `trig_01GFD6vBExCUvTYDbx9KePm7` « Relance · tri », Sonnet 5.5, 4 h 45 UTC + déclencheur API |
 | Appareils | iPhone 17 Pro Max, iPad Pro M4, Apple Watch Ultra 2, Mac Studio (tous enregistrés sur le compte) |
-| Mise à jour de la montre | L'app montre est intégrée à l'app iPhone : **augmenter `CFBundleVersion`** (project.yml, toutes les cibles) pour que l'iPhone la transmette à la montre ; sinon installer directement quand Xcode voit la montre |
+| Mise à jour de la montre | L'app montre est intégrée à l'app iPhone : **augmenter `CFBundleVersion`** (3 au 12/10) (project.yml, toutes les cibles) pour que l'iPhone la transmette à la montre ; sinon installer directement quand Xcode voit la montre |
 | Xcode 27 | fenêtre des appareils = **Device Hub** (+ → Pair Nearby Device) ; `xcodebuild` n'enregistre pas les appareils |

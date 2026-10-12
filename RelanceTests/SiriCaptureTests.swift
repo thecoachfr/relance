@@ -63,3 +63,23 @@ struct PriorityTests {
         #expect(NotesTimeCodec.decode("🔽 Basse").priority == .low)
     }
 }
+
+struct RelativeDateTests {
+    let now = Date(timeIntervalSince1970: 1_791_800_000)
+
+    @Test func relativeDurations() {
+        let cases: [(String, Int)] = [
+            ("rappeler Paul dans 2 heures", 120), ("dans 2h", 120), ("dans une heure", 60),
+            ("dans une demi-heure", 30), ("dans un quart d’heure", 15), ("dans 20 minutes", 20),
+            ("dans deux heures et demie", 150), ("dans 45 min", 45),
+        ]
+        for (text, minutes) in cases {
+            let m = DateDetection.firstMatch(in: text, now: now)
+            #expect(m?.hasTime == true, "\(text)")
+            #expect(m?.date == now.addingTimeInterval(TimeInterval(minutes * 60)), "\(text)")
+        }
+        let m = DateDetection.firstMatch(in: "rappeler Paul dans 2 heures", now: now)!
+        #expect(DateDetection.title(of: "rappeler Paul dans 2 heures", removing: m) == "rappeler Paul")
+        #expect(DateDetection.firstMatch(in: "dans le garage", now: now) == nil)
+    }
+}

@@ -33,6 +33,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         store.onTasksChanged = { [liveActivity] in
             let tasks = store.activeTasks()
             liveActivity.refresh(tasks: tasks, settings: store.scheduler.settings)
+            TaskIndex.update(tasks)
             watchSync.send(tasks)
             // L'extension de partage parle à Google avec la même connexion (trousseau partagé).
             let credentials = auth.watchCredentials
