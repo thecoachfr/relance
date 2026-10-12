@@ -23,7 +23,7 @@ struct WatchAddTaskIntent: AppIntent {
         let due = r.day.map { day in
             r.minutes.flatMap { Calendar.current.date(byAdding: .minute, value: $0, to: day) } ?? day
         }
-        await WatchStore.shared.insert(title: r.title, due: due, hasTime: r.minutes != nil)
+        await WatchStore.shared.insert(title: r.title, due: due, hasTime: r.minutes != nil, priority: r.priority)
         return .result(dialog: IntentDialog(stringLiteral: SiriCapture.confirmation(r)))
     }
 }

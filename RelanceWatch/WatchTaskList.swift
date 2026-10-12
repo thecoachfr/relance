@@ -8,7 +8,8 @@ struct WatchTaskList: View {
         NavigationStack {
             TimelineView(.everyMinute) { context in
                 let now = context.date
-                let dated = store.tasks.filter { $0.due != nil }.sorted { $0.due! < $1.due! }
+                let dated = store.tasks.filter { $0.due != nil }
+                    .sorted { $0.isUrgent != $1.isUrgent ? $0.isUrgent : $0.due! < $1.due! }
                 let late = dated.filter { $0.isLate(at: now) }
                 let today = dated.filter { !$0.isLate(at: now) && isToday($0, now: now) }
                 let later = dated.filter { !$0.isLate(at: now) && !isToday($0, now: now) }
@@ -78,21 +79,22 @@ struct WatchTaskRow: View {
         let late = task.isLate(at: now) && (task.snoozedUntil ?? .distantPast) <= now
         HStack(spacing: 8) {
             Button { store.complete(task) } label: {
-                Image(systemName: "circle")
+                PriorityCircle(priority: task.priority ?? .normal, late: late)
                     .font(.title3)
-                    .foregroundStyle(late ? .red : .secondary)
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Marquer « \(task.title) » comme faite")
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(task.title).font(.body).lineLimit(2)
+                    .foregroundStyle(task.priority == .low ? .secondary : .primary)
                 if let status = status(late: late) {
                     Text(status).font(.footnote).foregroundStyle(late ? .red : .secondary)
                 }
             }
         }
         .accessibilityElement(children: .combine)
+        .accessibilityValue(task.priority.map { $0 == .normal ? "" : "Priorité \($0.rawValue)" } ?? "")
         .accessibilityAction(named: "Fait") { store.complete(task) }
         .accessibilityAction(named: "Reporter d'une heure") { store.snooze(task) }
     }

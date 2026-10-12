@@ -45,17 +45,19 @@ struct WatchAddView: View {
     }
 
     private func save(_ match: DateDetection.Match?) {
-        let title = DateDetection.title(of: text, removing: match)
+        let spoken = TaskPriority.detect(in: text)
+        let title = TaskPriority.removing(spoken, from: DateDetection.title(of: text, removing: match))
         guard !title.isEmpty else { return }
+        let priority = spoken?.priority ?? .normal
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: .now)
         if let match {
-            store.add(title: title, due: match.hasTime ? match.date : calendar.startOfDay(for: match.date), hasTime: match.hasTime)
+            store.add(title: title, due: match.hasTime ? match.date : calendar.startOfDay(for: match.date), hasTime: match.hasTime, priority: priority)
         } else {
             switch choice {
-            case .today: store.add(title: title, due: today, hasTime: false)
-            case .tomorrow: store.add(title: title, due: calendar.date(byAdding: .day, value: 1, to: today), hasTime: false)
-            case .none: store.add(title: title, due: nil, hasTime: false)
+            case .today: store.add(title: title, due: today, hasTime: false, priority: priority)
+            case .tomorrow: store.add(title: title, due: calendar.date(byAdding: .day, value: 1, to: today), hasTime: false, priority: priority)
+            case .none: store.add(title: title, due: nil, hasTime: false, priority: priority)
             }
         }
         dismiss()

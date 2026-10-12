@@ -12,9 +12,10 @@
 | **App iPhone** | Relances qui insistent (à l'heure, +1 h, 20 h ; en retard 7 h 30 et 20 h ; silence 22 h–7 h 30), boutons Fait / Dans 1 h / Ce soir / Demain matin, activité en direct (3 tâches max, Fait / 1 h par tâche ; vue dédiée dans le Smart Stack de la montre), widgets accueil et écran verrouillé, commande « + » (Centre de contrôle, bouton Action, écran verrouillé), Siri (« nouvelle Relance » : date dans la phrase ou « Pour quand ? », « sans date » → À trier ; « Relance en retard » après synchro), question « À quelle heure ? » immédiate pour une tâche arrivée de Google avec une date sans heure (boutons 9/12/15/18 h, sans son la nuit), écran À trier une tâche à la fois, catégories, journal de synchro dans les réglages |
 | **App iPad** | Liste + détail, raccourcis clavier (↑↓, ⌘↩, ⌘L, ⌘⌫, ⌘R, ⌘N), pas de relances par défaut (réglage « Relances sur cet appareil ») |
 | **App Mac** | L'app iPad « Designed for iPad », lancée depuis Xcode (⌘R) |
+| **Priorité** | Urgente / Normale / Basse. Urgente : relancée toutes les 30 min jusqu'à minuit (silence 22 h–7 h 30), en retard 7 h 30 / midi / 20 h, passe le mode Concentration, sous-titre « Urgente », toujours dans l'activité en direct. Basse : un seul rappel à l'heure, puis résumé du matin ; jamais dans l'activité en direct ni le widget. Réglée dans l'app (formulaires, balayage, appui long), à la voix (« urgent », « pas pressé » : Siri, saisie rapide, dictée montre) ou par le tri. Affichage : **le rond à cocher porte la priorité** (épais et rouge = Urgente, pointillés = Basse), la catégorie reste seule en pastille (choix du 12/10 après comparaison de deux maquettes) |
 | **Apple Watch** | Liste, cocher, reporter, dictée, complication, Siri (« nouvelle Relance », garde l'heure, direct chez Google) ; l'iPhone sert de relais |
 | **Vigie Home Assistant** | AppDaemon rafraîchit Google Tasks chaque minute ; si le nombre de tâches change → push silencieux à l'iPhone et l'iPad (testé : push reçu et synchro en 1 s) |
-| **Tri par Claude** | Routine cloud « Relance · tri » : catégorie (🏷), date/heure si explicites (⏰), sinon suggestion (💡) ; retire alors du titre l'expression de date/heure dictée (titre d'origine gardé en « 🎙 Dicté : … », rien retiré en cas de doute). Tous les jours à 6 h 45 **et** 90 s après chaque nouvelle tâche (lancée par la vigie, max 20/jour). Testé le 12/10 |
+| **Tri par Claude** | Routine cloud « Relance · tri » : catégorie (🏷), date/heure si explicites (⏰), sinon suggestion (💡) ; priorité (❗/🔽) seulement si « urgent » / « pas pressé » est dit ; retire du titre l'expression de date/heure ou le mot de priorité dictés (titre d'origine gardé en « 🎙 Dicté : … », rien retiré en cas de doute). Tous les jours à 6 h 45 **et** 90 s après chaque nouvelle tâche (lancée par la vigie, max 20/jour). Testé le 12/10 |
 | **Catégories** | Affichées sur l'iPhone et l'iPad (vérifié le 12/10) ; « 🏷 » et « ⏰ » reconnus avec ou sans sélecteur de variante (U+FE0F) |
 | **Logo** | « Boucle » (flèche circulaire + coche, orange), variantes sombre / teintée / montre |
 
@@ -23,6 +24,7 @@ Google Tasks n'a ni heure (dans son API) ni étiquettes : en tête des notes, da
 ```
 ⏰ 15:00
 🏷 Administratif
+❗ Urgente            (ou « 🔽 Basse » ; rien pour Normale)
 🎙 Dicté : … (titre d'origine, si le tri l'a nettoyé)
 Notes libres…
 💡 Suggestion : … (ajoutée par le tri)
@@ -43,7 +45,11 @@ Catégories fixes : Administratif, Maison, Santé, Achats, Travail, Famille, Per
 3. **Premier tri automatique du matin** : demain 6 h 45 (vérifier dans [la routine](https://claude.ai/code/routines/trig_01GFD6vBExCUvTYDbx9KePm7)).
 4. **Nettoyage du titre** (activé le 12/10) : comme Google retire lui-même la date du titre, il ne servira que si une date reste dans le titre. Piste : faire corriger par le tri les erreurs de transcription évidentes (« appel et le garage »), en gardant l'original en 🎙.
 5. Catégories pas encore affichées dans le **widget** ni sur la **montre**.
-6. **Siri, suite** : agir sur une tâche existante (« marque *garage* comme fait », « reporte *garage* à demain », via une entité Tâche, aussi cherchable dans Spotlight) ; « qu'est-ce que j'ai aujourd'hui » ; comprendre « dans 2 heures ».
+6. **Personnalisation des relances, étapes 2 et 3** (étape 1 = priorité, faite le 12/10) :
+   - Étape 2 : Réglages › Relances : horaires globaux (plage silencieuse, résumé du matin, relance du soir, jours calmes) et profil modifiable par priorité (prévenir avant, intervalle de relance, relance du soir, relances en retard, mode Concentration, activité en direct), avec « Rétablir par défaut ».
+   - Étape 3 : par tâche, « Relances : selon la priorité » → « Prévenir avant » et « Relancer toutes les » pour cette tâche (ligne `🔁` dans les notes Google).
+   - À prévoir : limite iOS de 64 notifications programmées (servir les urgentes d'abord).
+7. **Siri, suite** : agir sur une tâche existante (« marque *garage* comme fait », « reporte *garage* à demain », via une entité Tâche, aussi cherchable dans Spotlight) ; « qu'est-ce que j'ai aujourd'hui » ; comprendre « dans 2 heures ».
 
 ## 3. Idées et pistes (non faites)
 

@@ -9,6 +9,7 @@ nonisolated struct PlannableTask: Sendable, Equatable {
     /// Heure d'échéance en minutes depuis minuit. `nil` = date seule (cas des dictées Google Home).
     var dueMinutes: Int?
     var snoozedUntil: Date?
+    var priority: TaskPriority = .normal
 }
 
 nonisolated struct ReminderSettings: Sendable, Equatable {
@@ -17,6 +18,10 @@ nonisolated struct ReminderSettings: Sendable, Equatable {
     var quietStart = 22 * 60
     var quietEnd = 7 * 60 + 30
     var followUpDelay: TimeInterval = 3600
+    /// Tâche urgente : relancée à cet intervalle jusqu'à « Fait » (hors plage silencieuse).
+    var urgentInterval: TimeInterval = 30 * 60
+    /// Relance de midi des tâches urgentes (sans heure, ou en retard).
+    var midday = 12 * 60
     /// Nombre de jours de relances programmés à l'avance.
     var horizonDays = 7
     /// iOS garde au plus 64 notifications locales en attente par app.
@@ -42,6 +47,8 @@ nonisolated struct PlannedReminder: Sendable, Equatable {
     var timeSensitive: Bool
     /// Nombre de tâches en retard au moment où la notification s'affiche.
     var badge: Int
+    /// « Urgente » sous le titre ; vide sinon.
+    var subtitle = ""
 }
 
 /// Calcule toutes les relances à programmer. Fonction pure : mêmes tâches + même instant = même plan.
@@ -70,8 +77,9 @@ nonisolated struct ReminderPlanner: Sendable {
                     kind: kind,
                     title: task.title,
                     body: body(for: task, kind: kind, at: date),
-                    timeSensitive: [.due, .evening, .overdue, .snoozed].contains(kind),
-                    badge: 0))
+                    timeSensitive: isTimeSensitive(task.priority, kind),
+                    badge: 0,
+                    subtitle: task.priority == .urgent ? TaskPriority.urgent.rawValue : ""))
             }
         }
 
@@ -87,25 +95,62 @@ nonisolated struct ReminderPlanner: Sendable {
 
     // MARK: - Règles
 
+    /// Urgente : toutes les 30 min, midi compris, et passe le mode Concentration.
+    /// Normale : à l'heure, +1 h, 20 h, puis chaque soir en retard.
+    /// Basse : une seule fois à l'heure ; le reste passe par le résumé du matin.
     private func events(for task: PlannableTask, dayStart: Date, horizon: Date) -> [(date: Date, kind: ReminderKind)] {
         var events: [(Date, ReminderKind)] = []
         let evening = at(dayStart, settings.evening)
+        let due = task.dueMinutes.map { at(dayStart, $0) }
 
-        if let minutes = task.dueMinutes {
-            let due = at(dayStart, minutes)
-            let followUp = due.addingTimeInterval(settings.followUpDelay)
-            events += [(due, .due), (followUp, .followUp)]
-            if evening > followUp { events.append((evening, .evening)) }
-        } else {
-            events += [(at(dayStart, settings.morning), .askTime), (evening, .evening)]
+        switch task.priority {
+        case .low:
+            if let due { events.append((due, .due)) }
+            return events
+
+        case .normal:
+            if let due {
+                let followUp = due.addingTimeInterval(settings.followUpDelay)
+                events += [(due, .due), (followUp, .followUp)]
+                if evening > followUp { events.append((evening, .evening)) }
+            } else {
+                events += [(at(dayStart, settings.morning), .askTime), (evening, .evening)]
+            }
+
+        case .urgent:
+            if let due {
+                events.append((due, .due))
+                // Jusqu'à minuit ; la plage silencieuse coupe la nuit (voir `isMuted`).
+                let endOfDay = calendar.date(byAdding: .day, value: 1, to: dayStart)!
+                var next = due.addingTimeInterval(settings.urgentInterval)
+                while next < endOfDay {
+                    events.append((next, .followUp))
+                    next = next.addingTimeInterval(settings.urgentInterval)
+                }
+            } else {
+                events += [(at(dayStart, settings.morning), .askTime),
+                           (at(dayStart, settings.midday), .evening),
+                           (evening, .evening)]
+            }
         }
 
         var day = 1
         while let next = calendar.date(byAdding: .day, value: day, to: dayStart), next <= horizon {
+            if task.priority == .urgent {
+                events += [(at(next, settings.morning), .overdue), (at(next, settings.midday), .overdue)]
+            }
             events.append((at(next, settings.evening), .overdue))
             day += 1
         }
         return events
+    }
+
+    private func isTimeSensitive(_ priority: TaskPriority, _ kind: ReminderKind) -> Bool {
+        switch priority {
+        case .urgent: kind != .digest
+        case .normal: [.due, .evening, .overdue, .snoozed].contains(kind)
+        case .low: false
+        }
     }
 
     private func digests(tasks: [PlannableTask], inboxCount: Int, now: Date, horizon: Date) -> [PlannedReminder] {

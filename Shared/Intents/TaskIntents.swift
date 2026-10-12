@@ -63,7 +63,7 @@ struct AddTaskIntent: AppIntent {
             when = try await $when.requestValue(IntentDialog(stringLiteral: SiriCapture.whenDialog))
         }
         let r = SiriCapture.parse(text: text, when: when)
-        _ = store.add(title: r.title, day: r.day, minutes: r.minutes)
+        _ = store.add(title: r.title, day: r.day, minutes: r.minutes, priority: r.priority)
         await store.sync()
         return .result(dialog: IntentDialog(stringLiteral: SiriCapture.confirmation(r)))
     }

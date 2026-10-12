@@ -95,6 +95,7 @@ private struct SingleTaskView: View {
                 Image(systemName: late ? "exclamationmark.circle.fill" : "clock")
                     .foregroundStyle(late ? .red : .orange)
                 Text(item.title).font(.headline).lineLimit(2)
+                if item.isUrgent { UrgentMark() }
             }
             Text(statusText(item, long: true))
                 .font(.subheadline)
@@ -148,14 +149,13 @@ private struct TaskLine: View {
         let late = isLate(item)
         HStack(spacing: 10) {
             Button(intent: CompleteTaskIntent(taskID: item.id)) {
-                Image(systemName: "circle")
+                PriorityCircle(priority: item.isUrgent ? .urgent : .normal, late: late)
                     .font(.title3)
-                    .foregroundStyle(late ? .red : .secondary)
                     .frame(width: 34, height: 34)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Marquer « \(item.title) » comme faite")
+            .accessibilityLabel("Marquer « \(item.title) » comme faite\(item.isUrgent ? ", urgente" : "")")
 
             Text(item.title).font(.subheadline).lineLimit(1)
             Spacer(minLength: 6)
@@ -188,7 +188,10 @@ private struct SmallSingleTaskView: View {
     var body: some View {
         let late = isLate(item)
         VStack(alignment: .leading, spacing: 4) {
-            Text(item.title).font(.headline).lineLimit(2)
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                if item.isUrgent { UrgentMark() }
+                Text(item.title).font(.headline).lineLimit(2)
+            }
             Text(statusText(item, long: false))
                 .font(.caption.monospacedDigit())
                 .foregroundStyle(late ? .red : .orange)
@@ -222,6 +225,7 @@ private struct SmallTaskListView: View {
                 .foregroundStyle(late > 0 ? .red : .orange)
             ForEach(state.items.prefix(2)) { item in
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    if item.isUrgent { UrgentMark() }
                     Text(item.title).font(.footnote).lineLimit(1)
                     Spacer(minLength: 4)
                     Text(statusText(item, long: false))
@@ -235,5 +239,15 @@ private struct SmallTaskListView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// « ! » rouge des tâches urgentes, là où il n'y a pas de rond à cocher (vues à une tâche, montre).
+private struct UrgentMark: View {
+    var body: some View {
+        Image(systemName: "exclamationmark")
+            .font(.caption.weight(.heavy))
+            .foregroundStyle(.red)
+            .accessibilityLabel("Urgente")
     }
 }

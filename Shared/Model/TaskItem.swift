@@ -16,6 +16,8 @@ final class TaskItem {
     var dueMinutes: Int?
     /// Catégorie (ligne « 🏷 » des notes côté Google).
     var category: String?
+    /// Ligne « ❗ » / « 🔽 » des notes ; `nil` = Normale.
+    var priorityRaw: String?
     var isCompleted: Bool
     var completedAt: Date?
     var snoozedUntil: Date?
@@ -50,6 +52,11 @@ final class TaskItem {
         return due < now
     }
 
+    var priority: TaskPriority {
+        get { priorityRaw.flatMap(TaskPriority.init(rawValue:)) ?? .normal }
+        set { priorityRaw = newValue == .normal ? nil : newValue.rawValue }
+    }
+
     /// À trier : pas de date, ou une date sans heure.
     var needsTriage: Bool { dueDay == nil || dueMinutes == nil }
 
@@ -64,6 +71,7 @@ final class TaskItem {
             title: title,
             dueDay: dueDay.map { calendar.dateComponents([.year, .month, .day], from: $0) },
             dueMinutes: dueMinutes,
-            snoozedUntil: snoozedUntil)
+            snoozedUntil: snoozedUntil,
+            priority: priority)
     }
 }

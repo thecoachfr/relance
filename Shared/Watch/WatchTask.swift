@@ -9,6 +9,10 @@ nonisolated struct WatchTask: Codable, Hashable, Identifiable, Sendable {
     var due: Date?
     var hasTime: Bool
     var snoozedUntil: Date?
+    /// `nil` = Normale (et listes envoyées par une ancienne version de l'iPhone).
+    var priority: TaskPriority?
+
+    var isUrgent: Bool { priority == .urgent }
 
     func isLate(at now: Date) -> Bool { due.map { $0 < now } ?? false }
 }
@@ -21,6 +25,7 @@ nonisolated enum WatchLink {
     static let titleKey = "title"
     static let dueKey = "due"
     static let hasTimeKey = "hasTime"
+    static let priorityKey = "priority"
     /// Connexion Google transmise à la montre pour qu'elle parle seule à Google (eSIM).
     static let refreshTokenKey = "googleRefreshToken"
     static let clientIDKey = "googleClientID"

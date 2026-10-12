@@ -53,9 +53,10 @@ final class TaskStore {
     // MARK: - Actions
 
     @discardableResult
-    func add(title: String, day: Date?, minutes: Int?, category: String? = nil) -> TaskItem {
+    func add(title: String, day: Date?, minutes: Int?, category: String? = nil, priority: TaskPriority = .normal) -> TaskItem {
         let item = TaskItem(title: title, dueDay: day, dueMinutes: day == nil ? nil : minutes)
         item.category = category
+        item.priority = priority
         context.insert(item)
         commit()
         return item
@@ -94,13 +95,22 @@ final class TaskStore {
         commit()
     }
 
-    func update(_ item: TaskItem, title: String, notes: String, day: Date?, minutes: Int?, category: String?? = .none) {
+    func update(_ item: TaskItem, title: String, notes: String, day: Date?, minutes: Int?, category: String?? = .none,
+                priority: TaskPriority? = nil) {
         item.title = title
         if let category { item.category = category }
+        if let priority { item.priority = priority }
         item.notes = notes
         item.dueDay = day.map { Calendar.current.startOfDay(for: $0) }
         item.dueMinutes = day == nil ? nil : minutes
         item.snoozedUntil = nil
+        item.markChanged()
+        commit()
+    }
+
+    func setPriority(_ item: TaskItem, _ priority: TaskPriority) {
+        guard item.priority != priority else { return }
+        item.priority = priority
         item.markChanged()
         commit()
     }
@@ -176,7 +186,9 @@ final class TaskStore {
         try? context.save()
         await reschedule()
         if !needTimeNow.isEmpty {
-            let asks = needTimeNow.compactMap { task($0) }.filter { $0.dueMinutes == nil && !$0.isCompleted }
+            // Une tâche Basse n'a pas besoin d'heure : elle n'est relancée que dans le résumé du matin.
+            let asks = needTimeNow.compactMap { task($0) }
+                .filter { $0.dueMinutes == nil && !$0.isCompleted && $0.priority != .low }
             needTimeNow = []
             await scheduler.askTimeNow(for: asks.map { $0.plannable() })
         }
@@ -247,7 +259,8 @@ final class TaskStore {
     static func fields(for item: TaskItem) -> [String: Any] {
         [
             "title": item.title,
-            "notes": NotesTimeCodec.encode(minutes: item.dueMinutes, category: item.category, notes: item.notes),
+            "notes": NotesTimeCodec.encode(minutes: item.dueMinutes, category: item.category,
+                                           priority: item.priority, notes: item.notes),
             "due": TasksAPI.due(fromDay: item.dueDay) ?? NSNull(),
             "status": item.isCompleted ? "completed" : "needsAction",
             "completed": item.isCompleted ? TasksAPI.timestamp(item.completedAt ?? .now) : NSNull(),
@@ -258,6 +271,7 @@ final class TaskStore {
         let meta = NotesTimeCodec.decode(r.notes)
         let (minutes, notes) = (meta.minutes, meta.notes)
         item.category = meta.category
+        item.priority = meta.priority
         let day = TasksAPI.day(fromDue: r.due)
         if day != item.dueDay || minutes != item.dueMinutes { item.snoozedUntil = nil }
         item.title = r.title ?? ""

@@ -7,15 +7,43 @@ struct CategoryChip: View {
     var body: some View {
         let category = TaskCategory(name: name)
         let color = category?.color ?? .gray
-        Label(name, systemImage: category?.symbol ?? "tag")
+        ChipContent(text: name, symbol: category?.symbol ?? "tag")
             .font(.caption.weight(.medium))
-            .labelStyle(.titleAndIcon)
-            .padding(.horizontal, 7)
-            .padding(.vertical, 2)
-            .foregroundStyle(color)
-            .background(color.opacity(0.14), in: .capsule)
+            .chipStyle(color)
             .accessibilityLabel("Catégorie \(name)")
     }
+}
+
+/// Symbole collé au texte : dans une liste, `Label` réserve une colonne d'icône trop large pour une pastille.
+struct ChipContent: View {
+    let text: String
+    let symbol: String
+
+    var body: some View {
+        HStack(spacing: 3) {
+            Image(systemName: symbol).imageScale(.small)
+            Text(text)
+        }
+    }
+}
+
+/// Pastille teintée lisible : le texte coloré est assombri (clair) ou éclairci (sombre)
+/// pour dépasser 4,5:1 sur son fond, même en petite taille.
+struct ChipStyle: ViewModifier {
+    let color: Color
+    @Environment(\.colorScheme) private var scheme
+
+    func body(content: Content) -> some View {
+        content
+            .padding(.horizontal, 7)
+            .padding(.vertical, 2)
+            .foregroundStyle(color.mix(with: scheme == .dark ? .white : .black, by: scheme == .dark ? 0.3 : 0.45))
+            .background(color.opacity(scheme == .dark ? 0.22 : 0.12), in: .capsule)
+    }
+}
+
+extension View {
+    func chipStyle(_ color: Color) -> some View { modifier(ChipStyle(color: color)) }
 }
 
 /// Choix de catégorie pour les formulaires (« Aucune » + la liste fixe).

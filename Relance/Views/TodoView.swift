@@ -114,7 +114,11 @@ struct TodoView: View {
 
     private func group(now: Date) -> (overdue: [TaskItem], today: [TaskItem], later: [TaskItem]) {
         let calendar = Calendar.current
-        let sorted = dated.filter { $0.matches(categoryFilter: categoryFilter) }.sorted { ($0.dueInstant() ?? .distantFuture) < ($1.dueInstant() ?? .distantFuture) }
+        // Dans chaque section : les urgentes d'abord, puis par échéance.
+        let sorted = dated.filter { $0.matches(categoryFilter: categoryFilter) }.sorted { a, b in
+            if a.priority.rank != b.priority.rank { return a.priority.rank < b.priority.rank }
+            return (a.dueInstant() ?? .distantFuture) < (b.dueInstant() ?? .distantFuture)
+        }
         let overdue = sorted.filter { $0.isOverdue(now: now) }
         let rest = sorted.filter { !$0.isOverdue(now: now) }
         return (overdue,

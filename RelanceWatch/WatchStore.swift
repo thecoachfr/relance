@@ -44,14 +44,16 @@ final class WatchStore: NSObject, WCSessionDelegate {
     private static func watchTask(_ r: RemoteTask) -> WatchTask? {
         guard let id = r.id, r.status != "completed", r.deleted != true else { return nil }
         let calendar = Calendar.current
-        let minutes = NotesTimeCodec.decode(r.notes).minutes
+        let meta = NotesTimeCodec.decode(r.notes)
+        let minutes = meta.minutes
         let due = TasksAPI.day(fromDue: r.due).flatMap { day -> Date? in
             if let minutes {
                 return calendar.date(bySettingHour: minutes / 60, minute: minutes % 60, second: 0, of: day)
             }
             return calendar.date(byAdding: .day, value: 1, to: day)
         }
-        return WatchTask(id: id, title: r.title ?? "", due: due, hasTime: minutes != nil && due != nil, snoozedUntil: nil)
+        return WatchTask(id: id, title: r.title ?? "", due: due, hasTime: minutes != nil && due != nil, snoozedUntil: nil,
+                         priority: meta.priority)
     }
 
     // MARK: - Actions
@@ -78,13 +80,13 @@ final class WatchStore: NSObject, WCSessionDelegate {
     }
 
     /// `due` : début du jour (date seule) ou instant précis (avec heure).
-    func add(title: String, due: Date?, hasTime: Bool) {
-        Task { await insert(title: title, due: due, hasTime: hasTime) }
+    func add(title: String, due: Date?, hasTime: Bool, priority: TaskPriority = .normal) {
+        Task { await insert(title: title, due: due, hasTime: hasTime, priority: priority) }
     }
 
     /// Version qu'on peut attendre (Siri répond une fois la tâche partie).
-    func insert(title: String, due: Date?, hasTime: Bool) async {
-        guard google.isAvailable else { return sendAdd(title: title, due: due, hasTime: hasTime) }
+    func insert(title: String, due: Date?, hasTime: Bool, priority: TaskPriority = .normal) async {
+        guard google.isAvailable else { return sendAdd(title: title, due: due, hasTime: hasTime, priority: priority) }
         let calendar = Calendar.current
         let minutes = hasTime ? due.map {
             let c = calendar.dateComponents([.hour, .minute], from: $0)
@@ -92,21 +94,22 @@ final class WatchStore: NSObject, WCSessionDelegate {
         } : nil
         let fields: [String: Any] = [
             "title": title,
-            "notes": NotesTimeCodec.encode(minutes: minutes, notes: ""),
+            "notes": NotesTimeCodec.encode(minutes: minutes, priority: priority, notes: ""),
             "due": TasksAPI.due(fromDay: due) ?? NSNull(),
         ]
         if (try? await api.insert(fields)) != nil {
             await refreshFromGoogle()
         } else {
-            sendAdd(title: title, due: due, hasTime: hasTime)
+            sendAdd(title: title, due: due, hasTime: hasTime, priority: priority)
         }
     }
 
-    private func sendAdd(title: String, due: Date?, hasTime: Bool) {
+    private func sendAdd(title: String, due: Date?, hasTime: Bool, priority: TaskPriority = .normal) {
         var message: [String: Any] = [
             WatchLink.actionKey: WatchLink.Action.add.rawValue,
             WatchLink.titleKey: title,
             WatchLink.hasTimeKey: hasTime,
+            WatchLink.priorityKey: priority.rawValue,
         ]
         if let due { message[WatchLink.dueKey] = due }
         send(message)

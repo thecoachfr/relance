@@ -10,9 +10,9 @@ enum DemoData {
         let hour = calendar.component(.hour, from: .now)
 
         store.add(title: "Renvoyer le formulaire de la mutuelle", day: day(-2), minutes: 10 * 60, category: "Administratif")
-        store.add(title: "Appeler le garage", day: day(0), minutes: max(0, hour - 1) * 60)
+        store.add(title: "Appeler le garage", day: day(0), minutes: max(0, hour - 1) * 60, priority: .urgent)
         store.add(title: "Payer la cantine", day: day(0), minutes: min(23, hour + 2) * 60, category: "Famille")
-        store.add(title: "Acheter un cadeau pour Léa", day: day(0), minutes: nil)
+        store.add(title: "Acheter un cadeau pour Léa", day: day(0), minutes: nil, priority: .low)
         store.add(title: "Réserver le contrôle technique", day: day(1), minutes: 9 * 60 + 30, category: "Maison")
         store.add(title: "Rendre les livres à la médiathèque", day: day(3), minutes: nil)
         store.add(title: "Trier les papiers de la banque", day: nil, minutes: nil)

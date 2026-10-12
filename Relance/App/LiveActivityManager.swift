@@ -3,6 +3,7 @@ import Foundation
 
 /// Garde une seule activité en direct, avec les tâches les plus urgentes :
 /// en retard d'abord, puis celles prévues dans les deux prochaines heures.
+/// Une tâche Urgente y entre dès le jour prévu et passe devant ; une tâche Basse n'y entre jamais.
 /// Les tâches reportées passent après les autres.
 final class LiveActivityManager {
     static let maxItems = 3
@@ -16,13 +17,18 @@ final class LiveActivityManager {
     private func urgentState(tasks: [TaskItem], now: Date) -> TaskActivityAttributes.ContentState? {
         let urgent = tasks
             .compactMap { item -> TaskActivityAttributes.ContentState.Item? in
-                guard let due = item.dueInstant(), due.timeIntervalSince(now) <= upcomingWindow else { return nil }
+                guard item.priority != .low, let due = item.dueInstant(), let day = item.dueDay else { return nil }
+                let isUrgent = item.priority == .urgent
+                guard due.timeIntervalSince(now) <= upcomingWindow
+                        || (isUrgent && day <= Calendar.current.startOfDay(for: now)) else { return nil }
                 return .init(id: item.localID.uuidString, title: item.title, due: due,
-                             hasTime: item.dueMinutes != nil, snoozedUntil: item.snoozedUntil)
+                             hasTime: item.dueMinutes != nil, snoozedUntil: item.snoozedUntil, isUrgent: isUrgent)
             }
             .sorted { a, b in
                 let (sa, sb) = (a.isSnoozed(at: now), b.isSnoozed(at: now))
-                return sa != sb ? !sa : a.due < b.due
+                if sa != sb { return !sa }
+                if a.isUrgent != b.isUrgent { return a.isUrgent }
+                return a.due < b.due
             }
         guard !urgent.isEmpty else { return nil }
         return .init(items: Array(urgent.prefix(Self.maxItems)), total: urgent.count)

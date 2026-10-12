@@ -16,10 +16,11 @@ struct ReminderPlannerTests {
         calendar.date(from: DateComponents(year: 2026, month: 10, day: day, hour: hour, minute: minute))!
     }
 
-    func task(_ id: String, day: Int?, minutes: Int? = nil, snoozed: Date? = nil) -> PlannableTask {
+    func task(_ id: String, day: Int?, minutes: Int? = nil, snoozed: Date? = nil,
+              priority: TaskPriority = .normal) -> PlannableTask {
         PlannableTask(id: id, title: id,
                       dueDay: day.map { DateComponents(year: 2026, month: 10, day: $0) },
-                      dueMinutes: minutes, snoozedUntil: snoozed)
+                      dueMinutes: minutes, snoozedUntil: snoozed, priority: priority)
     }
 
     func taskReminders(_ plan: [PlannedReminder], _ id: String) -> [(Date, ReminderKind)] {
@@ -102,5 +103,26 @@ struct ReminderPlannerTests {
     @Test func formatsFrenchTimes() {
         #expect(ReminderPlanner.formatTime(15 * 60) == "15 h")
         #expect(ReminderPlanner.formatTime(7 * 60 + 5) == "7 h 05")
+    }
+
+    // MARK: - Priorité
+
+    @Test func urgentRepeatsEvery30MinutesUntilQuietHours() {
+        let plan = planner.plan(tasks: [task("a", day: 12, minutes: 20 * 60, priority: .urgent)], inboxCount: 0, now: date(12, 8))
+        let sameDay = taskReminders(plan, "a").filter { calendar.isDate($0.0, inSameDayAs: date(12, 0)) }
+        // 20 h, 20 h 30, 21 h, 21 h 30 ; 22 h et après : plage silencieuse.
+        #expect(sameDay.map(\.0) == [date(12, 20), date(12, 20, 30), date(12, 21), date(12, 21, 30)])
+        #expect(plan.filter { $0.taskID == "a" }.allSatisfy { $0.timeSensitive && $0.subtitle == "Urgente" })
+        // En retard : 7 h 30, midi et 20 h.
+        let nextDay = taskReminders(plan, "a").filter { calendar.isDate($0.0, inSameDayAs: date(13, 0)) }
+        #expect(nextDay.map(\.0) == [date(13, 7, 30), date(13, 12), date(13, 20)])
+    }
+
+    @Test func lowFiresOnceAndNeverWhenDateOnly() {
+        let plan = planner.plan(tasks: [task("a", day: 12, minutes: 15 * 60, priority: .low),
+                                        task("b", day: 12, priority: .low)], inboxCount: 0, now: date(12, 8))
+        #expect(taskReminders(plan, "a").map(\.1) == [.due])
+        #expect(plan.filter { $0.taskID == "a" }.allSatisfy { !$0.timeSensitive })
+        #expect(taskReminders(plan, "b").isEmpty)
     }
 }

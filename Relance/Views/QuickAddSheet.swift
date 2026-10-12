@@ -11,6 +11,9 @@ struct QuickAddSheet: View {
     /// Vrai dès que l'utilisateur touche les réglages : la phrase ne les écrase plus.
     @State private var manual = false
     @State private var category: String?
+    @State private var priority = TaskPriority.normal
+    /// Vrai dès que l'utilisateur choisit la priorité : la phrase ne la change plus.
+    @State private var manualPriority = false
     @FocusState private var focused: Bool
 
     var body: some View {
@@ -22,9 +25,6 @@ struct QuickAddSheet: View {
                         .submitLabel(.done)
                         .onSubmit(save)
                         .onChange(of: text) { detect() }
-                }
-                Section {
-                    CategoryPicker(category: $category)
                 }
                 Section("Échéance") {
                     Picker("Jour", selection: dayChoice) {
@@ -46,6 +46,16 @@ struct QuickAddSheet: View {
                                        displayedComponents: .hourAndMinute)
                         }
                     }
+                }
+                Section {
+                    PriorityPicker(priority: Binding(get: { priority }, set: { priority = $0; manualPriority = true }))
+                } header: {
+                    Text("Priorité")
+                } footer: {
+                    PriorityFooter(priority: priority)
+                }
+                Section {
+                    CategoryPicker(category: $category)
                 }
             }
             .navigationTitle("Nouvelle tâche")
@@ -87,6 +97,7 @@ struct QuickAddSheet: View {
     private var detected: DateDetection.Match? { DateDetection.firstMatch(in: text) }
 
     private func detect() {
+        if !manualPriority { priority = TaskPriority.detect(in: text)?.priority ?? .normal }
         guard !manual, let found = detected else { return }
         day = Calendar.current.startOfDay(for: found.date)
         hasTime = found.hasTime
@@ -96,13 +107,15 @@ struct QuickAddSheet: View {
     private var cleanTitle: String {
         var title = text
         if !manual, let found = detected { title.removeSubrange(found.range) }
+        if !manualPriority { title = TaskPriority.removing(TaskPriority.detect(in: title), from: title) }
         return title.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private func save() {
         guard !cleanTitle.isEmpty else { return }
         let c = Calendar.current.dateComponents([.hour, .minute], from: time)
-        store.add(title: cleanTitle, day: day, minutes: hasTime ? (c.hour! * 60 + c.minute!) : nil, category: category)
+        _ = store.add(title: cleanTitle, day: day, minutes: hasTime ? (c.hour! * 60 + c.minute!) : nil,
+                      category: category, priority: priority)
         dismiss()
     }
 }

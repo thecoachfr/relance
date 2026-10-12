@@ -3,6 +3,7 @@ import Foundation
 /// Ajout par Siri, commun à l'iPhone et à la montre.
 /// « appeler le garage vendredi à 15 h » en une réponse ; sinon Siri demande « Pour quand ? »,
 /// et une réponse sans date (« sans date », « je ne sais pas ») range la tâche dans À trier.
+/// « urgent » ou « pas pressé », dans l'une ou l'autre réponse, règle la priorité.
 nonisolated enum SiriCapture {
     static let whenDialog = "Pour quand ? Tu peux aussi dire « sans date »."
 
@@ -11,14 +12,18 @@ nonisolated enum SiriCapture {
         /// Début du jour d'échéance.
         var day: Date?
         var minutes: Int?
+        var priority: TaskPriority = .normal
     }
 
     /// Date trouvée dans la phrase elle-même : pas besoin de demander « Pour quand ? ».
     static func needsWhen(_ text: String) -> Bool {
-        DateDetection.firstMatch(in: text) == nil
+        DateDetection.firstMatch(in: TaskPriority.removing(TaskPriority.detect(in: text), from: text)) == nil
     }
 
     static func parse(text: String, when: String?, calendar: Calendar = .current) -> Result {
+        let spoken = TaskPriority.detect(in: text)
+        let priority = spoken?.priority ?? when.flatMap { TaskPriority.detect(in: $0)?.priority } ?? .normal
+        let text = TaskPriority.removing(spoken, from: text)
         var title = text
         var match = DateDetection.firstMatch(in: text)
         if let found = match {
@@ -29,18 +34,24 @@ nonisolated enum SiriCapture {
         title = title.trimmingCharacters(in: .whitespacesAndNewlines)
         title = title.prefix(1).uppercased() + title.dropFirst()
 
-        guard let match else { return Result(title: title) }
+        guard let match else { return Result(title: title, priority: priority) }
         let c = calendar.dateComponents([.hour, .minute], from: match.date)
         return Result(title: title,
                       day: calendar.startOfDay(for: match.date),
-                      minutes: match.hasTime ? (c.hour ?? 0) * 60 + (c.minute ?? 0) : nil)
+                      minutes: match.hasTime ? (c.hour ?? 0) * 60 + (c.minute ?? 0) : nil,
+                      priority: priority)
     }
 
     /// « C'est noté : Appeler le garage, vendredi 16 octobre à 15 h. »
     static func confirmation(_ r: Result) -> String {
-        guard let day = r.day else { return "C'est noté : \(r.title), sans date. Elle t'attend dans À trier." }
+        let note = switch r.priority {
+        case .urgent: "C'est noté, en urgent"
+        case .normal: "C'est noté"
+        case .low: "C'est noté, sans urgence"
+        }
+        guard let day = r.day else { return "\(note) : \(r.title), sans date. Elle t'attend dans À trier." }
         var when = day.formatted(.dateTime.weekday(.wide).day().month(.wide))
         if let m = r.minutes { when += " à " + ReminderPlanner.formatTime(m) }
-        return "C'est noté : \(r.title), \(when)."
+        return "\(note) : \(r.title), \(when)."
     }
 }

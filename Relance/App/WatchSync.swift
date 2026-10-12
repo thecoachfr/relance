@@ -23,7 +23,7 @@ final class WatchSync: NSObject, WCSessionDelegate {
         let payload = tasks
             .filter { !$0.isCompleted && !$0.isTrashed }
             .map { WatchTask(id: $0.googleID ?? $0.localID.uuidString, title: $0.title, due: $0.dueInstant(),
-                             hasTime: $0.dueMinutes != nil, snoozedUntil: $0.snoozedUntil) }
+                             hasTime: $0.dueMinutes != nil, snoozedUntil: $0.snoozedUntil, priority: $0.priority) }
         var context: [String: Any] = [WatchLink.tasksKey: WatchLink.encode(payload)]
         // Passe par le lien chiffré iPhone ↔ montre ; une chaîne vide dit à la montre d'oublier la connexion.
         let credentials = store.auth.watchCredentials
@@ -71,7 +71,8 @@ final class WatchSync: NSObject, WCSessionDelegate {
                 let c = calendar.dateComponents([.hour, .minute], from: date)
                 return (c.hour ?? 0) * 60 + (c.minute ?? 0)
             }
-            store.add(title: title, day: due.map { calendar.startOfDay(for: $0) }, minutes: minutes)
+            let priority = (message[WatchLink.priorityKey] as? String).flatMap(TaskPriority.init(rawValue:)) ?? .normal
+            _ = store.add(title: title, day: due.map { calendar.startOfDay(for: $0) }, minutes: minutes, priority: priority)
         }
         await store.sync()
     }

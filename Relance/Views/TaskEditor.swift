@@ -12,6 +12,7 @@ struct TaskEditor: View {
     @State private var hasTime = false
     @State private var time = Date.now
     @State private var category: String?
+    @State private var priority = TaskPriority.normal
 
     var body: some View {
         NavigationStack {
@@ -20,9 +21,6 @@ struct TaskEditor: View {
                     TextField("Titre", text: $title, axis: .vertical)
                     TextField("Notes", text: $notes, axis: .vertical)
                         .lineLimit(3...)
-                }
-                Section {
-                    CategoryPicker(category: $category)
                 }
                 Section("Échéance") {
                     Toggle("Date", isOn: $hasDay)
@@ -33,6 +31,16 @@ struct TaskEditor: View {
                             DatePicker("À", selection: $time, displayedComponents: .hourAndMinute)
                         }
                     }
+                }
+                Section {
+                    PriorityPicker(priority: $priority)
+                } header: {
+                    Text("Priorité")
+                } footer: {
+                    PriorityFooter(priority: priority)
+                }
+                Section {
+                    CategoryPicker(category: $category)
                 }
                 Section {
                     Button(item.isCompleted ? "Marquer à faire" : "Marquer fait") {
@@ -53,7 +61,8 @@ struct TaskEditor: View {
                     Button("OK") {
                         let c = Calendar.current.dateComponents([.hour, .minute], from: time)
                         store.update(item, title: title, notes: notes, day: hasDay ? day : nil,
-                                     minutes: hasTime ? c.hour! * 60 + c.minute! : nil, category: .some(category))
+                                     minutes: hasTime ? c.hour! * 60 + c.minute! : nil, category: .some(category),
+                                     priority: priority)
                         dismiss()
                     }
                     .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
@@ -67,6 +76,7 @@ struct TaskEditor: View {
         title = item.title
         notes = item.notes
         category = item.category
+        priority = item.priority
         hasDay = item.dueDay != nil
         day = item.dueDay ?? .now
         hasTime = item.dueMinutes != nil

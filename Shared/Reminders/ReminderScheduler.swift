@@ -142,6 +142,7 @@ final class ReminderScheduler {
     private func request(for reminder: PlannedReminder) -> UNNotificationRequest {
         let content = UNMutableNotificationContent()
         content.title = reminder.title
+        content.subtitle = reminder.subtitle
         content.body = reminder.body
         content.sound = .default
         content.badge = NSNumber(value: reminder.badge)

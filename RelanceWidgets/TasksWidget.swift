@@ -107,14 +107,13 @@ struct TasksWidgetView: View {
                     let late = task.due < entry.date
                     HStack(spacing: 8) {
                         Button(intent: CompleteTaskIntent(taskID: task.id)) {
-                            Image(systemName: "circle")
+                            PriorityCircle(priority: task.isUrgent ? .urgent : .normal, late: late)
                                 .font(.body)
                                 .frame(width: 28, height: 30)
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
-                        .foregroundStyle(late ? .red : .secondary)
-                        .accessibilityLabel("Marquer « \(task.title) » comme faite")
+                        .accessibilityLabel("Marquer « \(task.title) » comme faite\(task.isUrgent ? ", urgente" : "")")
 
                         Text(task.title).font(.subheadline).lineLimit(1)
                         Spacer(minLength: 4)

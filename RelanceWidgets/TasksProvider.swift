@@ -6,6 +6,7 @@ struct WidgetTask: Identifiable, Hashable {
     var title: String
     var due: Date
     var hasTime: Bool
+    var isUrgent = false
 }
 
 struct TasksEntry: TimelineEntry {
@@ -20,8 +21,8 @@ struct TasksEntry: TimelineEntry {
             return task.due >= date && Calendar.current.isDate(day, inSameDayAs: date)
         }
     }
-    /// En retard d'abord, puis par échéance.
-    var ordered: [WidgetTask] { tasks.sorted { $0.due < $1.due } }
+    /// Urgentes d'abord, puis par échéance.
+    var ordered: [WidgetTask] { tasks.sorted { $0.isUrgent != $1.isUrgent ? $0.isUrgent : $0.due < $1.due } }
 
     static let placeholder = TasksEntry(date: .now, tasks: [
         WidgetTask(id: "1", title: "Appeler le garage", due: .now.addingTimeInterval(-3600), hasTime: true),
@@ -55,9 +56,11 @@ struct TasksProvider: TimelineProvider {
         let descriptor = FetchDescriptor<TaskItem>(
             predicate: #Predicate { !$0.isCompleted && !$0.isTrashed && $0.dueDay != nil })
         let items = (try? context.fetch(descriptor)) ?? []
-        return items.compactMap { item in
+        // Les tâches Basses restent dans l'app : le widget montre ce qui presse.
+        return items.filter { $0.priority != .low }.compactMap { item in
             item.dueInstant().map {
-                WidgetTask(id: item.localID.uuidString, title: item.title, due: $0, hasTime: item.dueMinutes != nil)
+                WidgetTask(id: item.localID.uuidString, title: item.title, due: $0, hasTime: item.dueMinutes != nil,
+                           isUrgent: item.priority == .urgent)
             }
         }
     }

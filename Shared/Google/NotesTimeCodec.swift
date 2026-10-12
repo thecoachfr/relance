@@ -5,6 +5,7 @@ import Foundation
 ///
 ///     ⏰ 15:00
 ///     🏷 Administratif
+///     ❗ Urgente            (ou « 🔽 Basse » ; rien pour Normale)
 ///     Notes de l'utilisateur…
 nonisolated enum NotesTimeCodec {
     static let timeMarker = "⏰"
@@ -13,6 +14,7 @@ nonisolated enum NotesTimeCodec {
     struct Meta: Equatable {
         var minutes: Int?
         var category: String?
+        var priority: TaskPriority = .normal
         var notes: String
     }
 
@@ -21,7 +23,8 @@ nonisolated enum NotesTimeCodec {
         var lines = raw.components(separatedBy: "\n")
         var meta = Meta(notes: "")
 
-        // Les lignes ⏰ et 🏷 sont en tête, dans n'importe quel ordre ; on s'arrête à la première autre ligne.
+        var hasPriority = false
+        // Les lignes ⏰, 🏷 et ❗/🔽 sont en tête, dans n'importe quel ordre ; on s'arrête à la première autre ligne.
         while let raw = lines.first {
             // « 🏷️ » (avec le sélecteur de variante U+FE0F) est un autre caractère que « 🏷 » pour Swift :
             // on l'enlève, car le tri (ou un humain) peut écrire l'une ou l'autre forme.
@@ -32,6 +35,9 @@ nonisolated enum NotesTimeCodec {
                 let name = first.dropFirst(categoryMarker.count).trimmingCharacters(in: .whitespaces)
                 guard !name.isEmpty else { break }
                 meta.category = name
+            } else if !hasPriority, let priority = Self.priority(first) {
+                meta.priority = priority
+                hasPriority = true
             } else {
                 break
             }
@@ -41,12 +47,23 @@ nonisolated enum NotesTimeCodec {
         return meta
     }
 
-    static func encode(minutes: Int?, category: String? = nil, notes: String) -> String {
+    static func encode(minutes: Int?, category: String? = nil, priority: TaskPriority = .normal, notes: String) -> String {
         var lines: [String] = []
         if let minutes { lines.append(String(format: "%@ %02d:%02d", timeMarker, minutes / 60, minutes % 60)) }
         if let category, !category.isEmpty { lines.append("\(categoryMarker) \(category)") }
+        if let marker = priority.marker { lines.append("\(marker) \(priority.rawValue)") }
         if !notes.isEmpty { lines.append(notes) }
         return lines.joined(separator: "\n")
+    }
+
+    /// « ❗ Urgente », « 🔽 Basse » ; le marqueur seul suffit si le mot manque ou est inconnu.
+    private static func priority(_ line: String) -> TaskPriority? {
+        for p in [TaskPriority.urgent, .low] {
+            guard let marker = p.marker, line.hasPrefix(marker) else { continue }
+            let name = line.dropFirst(marker.count).trimmingCharacters(in: .whitespaces)
+            return TaskPriority(name: name) ?? p
+        }
+        return nil
     }
 
     private static func parseTime(_ line: String) -> Int? {

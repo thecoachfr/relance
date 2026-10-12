@@ -96,6 +96,7 @@ targets:
       - Shared/Google/TasksAPI.swift
       - Shared/Google/NotesTimeCodec.swift
       - Shared/Intents/SiriCapture.swift
+      - Shared/Model/TaskPriority.swift
     dependencies:
       - target: RelanceWatchWidgets
     entitlements:
@@ -125,6 +126,7 @@ targets:
       - RelanceWatchWidgets
       - Shared/Watch
       - Shared/Model/DueText.swift
+      - Shared/Model/TaskPriority.swift
       - Shared/Reminders/ReminderPlanner.swift
     entitlements:
       path: RelanceWatchWidgets/RelanceWatchWidgets.entitlements

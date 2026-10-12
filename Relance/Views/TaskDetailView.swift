@@ -13,6 +13,7 @@ struct TaskDetailView: View {
     @State private var hasTime = false
     @State private var time = Date.now
     @State private var category: String?
+    @State private var priority = TaskPriority.normal
     @State private var loaded = false
 
     var body: some View {
@@ -23,14 +24,11 @@ struct TaskDetailView: View {
                 // L'information clé, juste sous le titre.
                 if let due = item.dueInstant(), !item.isCompleted {
                     Label(DueText.long(due: due, hasTime: item.dueMinutes != nil),
-                          systemImage: item.isOverdue() ? "exclamationmark.circle.fill" : "clock")
+                          systemImage: item.isOverdue() ? "clock.fill" : "clock")
                         .foregroundStyle(item.isOverdue() ? .red : .secondary)
                 }
                 TextField("Notes", text: $notes, axis: .vertical)
                     .lineLimit(3...)
-            }
-            Section {
-                CategoryPicker(category: $category)
             }
             Section("Échéance") {
                 Toggle("Date", isOn: $hasDay)
@@ -41,6 +39,16 @@ struct TaskDetailView: View {
                         DatePicker("À", selection: $time, displayedComponents: .hourAndMinute)
                     }
                 }
+            }
+            Section {
+                PriorityPicker(priority: $priority)
+            } header: {
+                Text("Priorité")
+            } footer: {
+                PriorityFooter(priority: priority)
+            }
+            Section {
+                CategoryPicker(category: $category)
             }
             Section {
                 Button(item.isCompleted ? "Marquer à faire" : "Marquer fait",
@@ -68,6 +76,7 @@ struct TaskDetailView: View {
         .onChange(of: hasTime) { save() }
         .onChange(of: time) { save() }
         .onChange(of: category) { save() }
+        .onChange(of: priority) { save() }
         // Texte : enregistré à la sortie du champ ou de la tâche, pas à chaque frappe (chaque enregistrement synchronise).
         .onSubmit { save() }
         .onDisappear { save() }
@@ -77,6 +86,7 @@ struct TaskDetailView: View {
         title = item.title
         notes = item.notes
         category = item.category
+        priority = item.priority
         hasDay = item.dueDay != nil
         day = item.dueDay ?? .now
         hasTime = item.dueMinutes != nil
@@ -91,7 +101,8 @@ struct TaskDetailView: View {
         let minutes = hasDay && hasTime ? c.hour! * 60 + c.minute! : nil
         let newDay = hasDay ? Calendar.current.startOfDay(for: day) : nil
         guard title != item.title || notes != item.notes || newDay != item.dueDay || minutes != item.dueMinutes
-                || category != item.category else { return }
-        store.update(item, title: title, notes: notes, day: newDay, minutes: minutes, category: .some(category))
+                || category != item.category || priority != item.priority else { return }
+        store.update(item, title: title, notes: notes, day: newDay, minutes: minutes, category: .some(category),
+                     priority: priority)
     }
 }
