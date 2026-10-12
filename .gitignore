@@ -4,3 +4,6 @@ Relance/Resources/Secrets.xcconfig
 DerivedData/
 build/
 .DS_Store
+
+# Mémo de contexte de la routine de tri : informations personnelles, jamais sur GitHub
+memo-contexte.md
