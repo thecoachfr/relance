@@ -153,3 +153,7 @@ schemes:
         RelanceTests: [test]
     test:
       targets: [RelanceTests]
+  RelanceWatch:
+    build:
+      targets:
+        RelanceWatch: all

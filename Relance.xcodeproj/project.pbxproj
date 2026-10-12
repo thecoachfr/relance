@@ -160,7 +160,7 @@
 		297D48117D9F85F84A3B1F2F /* WatchSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSync.swift; sourceTree = "<group>"; };
 		2A12D2947BB91F0172F0ED7C /* AppGroup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppGroup.swift; sourceTree = "<group>"; };
 		2A6EB3519185E598EB52B14D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
-		2D32FEC519FB14B6CA29BE8F /* Relance.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Relance.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		2D32FEC519FB14B6CA29BE8F /* Relance.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Relance.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2FD7A3A536C16BA93AFF03B6 /* RelanceWidgetsBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelanceWidgetsBundle.swift; sourceTree = "<group>"; };
 		2FE0AB94C1F8EF86B799B335 /* TaskRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskRow.swift; sourceTree = "<group>"; };
 		356BC2CE21D14CF0CBA3C9B6 /* TasksProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksProvider.swift; sourceTree = "<group>"; };
