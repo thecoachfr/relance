@@ -61,10 +61,11 @@ struct InboxView: View {
                     Label(dayText(day), systemImage: "calendar")
                         .font(.subheadline).foregroundStyle(.secondary)
                 }
-                if item.category != nil || item.priority != .normal {
+                if item.category != nil || item.priority != .normal || !item.tags.isEmpty {
                     HStack(spacing: 6) {
                         PriorityChip(priority: item.priority)
                         if let category = item.category { CategoryChip(name: category) }
+                        TagsText(tags: item.tags)
                     }
                 }
             }

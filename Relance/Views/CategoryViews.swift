@@ -60,8 +60,9 @@ struct CategoryPicker: View {
     }
 }
 
-/// Filtre de catégorie partagé par « À faire » et « À trier » (mémorisé sur l'appareil).
+/// Filtre de catégorie ou de tag (« #SCI »), partagé par « À faire » et « À trier » (mémorisé sur l'appareil).
 struct CategoryFilterMenu: View {
+    @Environment(TaskStore.self) private var store
     @Binding var filter: String
 
     var body: some View {
@@ -72,8 +73,13 @@ struct CategoryFilterMenu: View {
                     Label(category.rawValue, systemImage: category.symbol).tag(category.rawValue)
                 }
             }
+            Picker("Tag", selection: $filter) {
+                ForEach(store.knownTags(), id: \.self) { tag in
+                    Text("#" + tag).tag("#" + tag)
+                }
+            }
         } label: {
-            Label("Filtrer par catégorie",
+            Label("Filtrer par catégorie ou tag",
                   systemImage: filter.isEmpty ? "line.3.horizontal.decrease.circle" : "line.3.horizontal.decrease.circle.fill")
         }
     }
@@ -81,6 +87,10 @@ struct CategoryFilterMenu: View {
 
 extension TaskItem {
     func matches(categoryFilter: String) -> Bool {
-        categoryFilter.isEmpty || category == categoryFilter
+        if categoryFilter.hasPrefix("#") {
+            let tag = categoryFilter.dropFirst()
+            return tags.contains { $0.caseInsensitiveCompare(tag) == .orderedSame }
+        }
+        return categoryFilter.isEmpty || category == categoryFilter
     }
 }

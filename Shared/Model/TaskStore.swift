@@ -37,6 +37,14 @@ final class TaskStore {
 
     // MARK: - Lecture
 
+    /// Tags connus : ceux de départ, puis ceux trouvés dans les tâches (ordre alphabétique).
+    func knownTags() -> [String] {
+        let used = activeTasks().flatMap(\.tags)
+        var seen = Set(TaskTag.defaults.map { $0.lowercased() })
+        let extra = used.filter { seen.insert($0.lowercased()).inserted }.sorted()
+        return TaskTag.defaults + extra
+    }
+
     func activeTasks() -> [TaskItem] {
         let descriptor = FetchDescriptor<TaskItem>(predicate: #Predicate { !$0.isCompleted && !$0.isTrashed })
         return (try? context.fetch(descriptor)) ?? []
@@ -96,11 +104,12 @@ final class TaskStore {
     }
 
     func update(_ item: TaskItem, title: String, notes: String, day: Date?, minutes: Int?, category: String?? = .none,
-                priority: TaskPriority? = nil, reminders: ReminderOverride?? = .none) {
+                priority: TaskPriority? = nil, reminders: ReminderOverride?? = .none, tags: [String]? = nil) {
         item.title = title
         if let category { item.category = category }
         if let priority { item.priority = priority }
         if let reminders { item.reminderOverride = reminders }
+        if let tags { item.tags = tags }
         item.notes = notes
         item.dueDay = day.map { Calendar.current.startOfDay(for: $0) }
         item.dueMinutes = day == nil ? nil : minutes
@@ -267,7 +276,7 @@ final class TaskStore {
     static func fields(for item: TaskItem) -> [String: Any] {
         [
             "title": item.title,
-            "notes": NotesTimeCodec.encode(minutes: item.dueMinutes, category: item.category,
+            "notes": NotesTimeCodec.encode(minutes: item.dueMinutes, category: item.category, tags: item.tags,
                                            priority: item.priority, reminders: item.reminderOverride, notes: item.notes),
             "due": TasksAPI.due(fromDay: item.dueDay) ?? NSNull(),
             "status": item.isCompleted ? "completed" : "needsAction",
@@ -280,6 +289,7 @@ final class TaskStore {
         let (minutes, notes) = (meta.minutes, meta.notes)
         item.category = meta.category
         item.priority = meta.priority
+        item.tags = meta.tags
         item.remindersRaw = meta.reminders?.line
         let day = TasksAPI.day(fromDue: r.due)
         if day != item.dueDay || minutes != item.dueMinutes { item.snoozedUntil = nil }

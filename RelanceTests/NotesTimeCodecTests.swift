@@ -74,3 +74,15 @@ struct ReminderOverrideTests {
         #expect(ReminderOverride(followUp: .off).applied(to: .defaults(for: .urgent)).followUpMinutes == nil)
     }
 }
+
+struct TaskTagTests {
+    @Test func tagsLine() {
+        let encoded = NotesTimeCodec.encode(minutes: 600, category: "Administratif", tags: ["#SCI", "photo", "SCI", "Syndic", "Travaux"],
+                                            priority: .urgent, notes: "x")
+        // Sans « # », sans doublon (majuscules ignorées), 3 au plus, rangée après la catégorie.
+        #expect(encoded == "⏰ 10:00\n🏷 Administratif\n🔖 SCI, photo, Syndic\n❗ Urgente\nx")
+        let meta = NotesTimeCodec.decode(encoded)
+        #expect(meta.tags == ["SCI", "photo", "Syndic"] && meta.category == "Administratif" && meta.notes == "x")
+        #expect(NotesTimeCodec.encode(minutes: nil, tags: [], notes: "x") == "x")
+    }
+}

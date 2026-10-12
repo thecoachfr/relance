@@ -96,6 +96,9 @@ struct WatchTaskRow: View {
                     HStack(spacing: 3) {
                         Image(systemName: category?.symbol ?? "tag").foregroundStyle(category?.color ?? .gray)
                         Text(name).foregroundStyle(.secondary)
+                        if let tags = task.tags {
+                            Text(tags.map { "#" + $0 }.joined(separator: " ")).foregroundStyle(.secondary)
+                        }
                     }
                     .font(.caption2)
                     .accessibilityLabel("Catégorie \(name)")

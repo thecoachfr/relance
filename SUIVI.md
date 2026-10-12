@@ -14,6 +14,8 @@
 | **App Mac** | L'app iPad « Designed for iPad », lancée depuis Xcode (⌘R) |
 | **Priorité** | Urgente / Normale / Basse. Urgente : relancée toutes les 30 min jusqu'à minuit (silence 22 h–7 h 30), en retard 7 h 30 / midi / 20 h, passe le mode Concentration, sous-titre « Urgente », toujours dans l'activité en direct. Basse : un seul rappel à l'heure, puis résumé du matin ; jamais dans l'activité en direct ni le widget. Réglée dans l'app (formulaires, balayage, appui long), à la voix (« urgent », « pas pressé » : Siri, saisie rapide, dictée montre) ou par le tri. Affichage : **le rond à cocher porte la priorité** (épais et rouge = Urgente, pointillés = Basse), la catégorie reste seule en pastille (choix du 12/10 après comparaison de deux maquettes) |
 | **Réglages des relances** | Réglages › Relances › Quand et comment relancer : horaires (résumé du matin, midi, soir), plage silencieuse, week-end calme ; profil par priorité (prévenir avant, relancer après / jusqu'à ce que ce soit fait, matin/midi/soir sans heure ou en retard, demander l'heure, mode Concentration, activité en direct, rétablir). Valeurs d'origine = comportement d'avant. Gardés sur l'appareil (`ReminderSettings`, App Group). **Par tâche** : ligne « Relances » du détail (prévenir avant, relancer une fois ou toutes les…), rangée dans les notes Google (`🔁 …`), respectée par le tri. Limite iOS de 64 notifications : l'heure prévue, les rappels avant, les reports et les résumés passent d'abord |
+| **Tags et mémo de contexte** | Tags transversaux en plus de la catégorie (SCI, Micro, Photo, Syndic, Travaux, Spectacle + ceux créés), 3 max, ligne `🔖`, affichés en gris `#SCI` (pas de pastille), filtre et choix dans le détail. **Mémo de contexte** (activités, interlocuteurs, santé…) : `memo-contexte.md` (hors Git) recopié dans la consigne de la routine, qui s'en sert pour catégories, tags et contacts |
+| **Contact et « à prendre »** | Le tri ajoute `📍 Nom · adresse · téléphone · lien` quand une tâche désigne un interlocuteur du mémo ; le détail affiche Appeler / Itinéraire / Prendre rendez-vous. Rendez-vous médical : `🎒 À prendre : carte Vitale…` |
 | **Partage depuis une autre app** | Extension « Relance » dans la feuille de partage (WhatsApp, Mail, Messages, Safari…) : fiche avec titre prérempli (première phrase utile : salutations, formules de politesse et en-têtes WhatsApp sautés), échéance et priorité lues dans le message, message complet dans les notes (« 📩 Message partagé »). Envoi direct chez Google (trousseau partagé `GD6W292ZXP.fr.alexandrefau.relance.shared`, rempli par l'app à chaque synchro) ; sans réseau, file d'attente envoyée à la synchro suivante. Le tri propose un meilleur titre une fois (« — titre à revoir ») si le titre n'a pas été retouché. Texte et liens seulement |
 | **Apple Watch** | Testée seule (eSIM, iPhone en mode Avion) le 12/10. Liste, cocher, reporter, dictée, complication, catégorie sous l'échéance, rond de priorité, Siri (« nouvelle Relance », garde l'heure, direct chez Google) ; l'iPhone sert de relais |
 | **Vigie Home Assistant** | AppDaemon rafraîchit Google Tasks chaque minute ; si le nombre de tâches change → push silencieux à l'iPhone et l'iPad (testé : push reçu et synchro en 1 s) |
@@ -26,6 +28,7 @@ Google Tasks n'a ni heure (dans son API) ni étiquettes : en tête des notes, da
 ```
 ⏰ 15:00
 🏷 Administratif
+🔖 SCI, Micro          (tags, 3 au plus)
 ❗ Urgente            (ou « 🔽 Basse » ; rien pour Normale)
 🔁 Prévenir 1 jour avant · Relancer toutes les 15 min   (relances propres à la tâche)
 🎙 Dicté : … (titre d'origine, si le tri l'a nettoyé)
@@ -45,7 +48,7 @@ Catégories fixes : Administratif, Maison, Santé, Achats, Travail, Famille, Per
 
 1. **Premier tri automatique du matin** : demain 6 h 45 (vérifier dans [la routine](https://claude.ai/code/routines/trig_01GFD6vBExCUvTYDbx9KePm7)).
 2. **Correction des transcriptions Google Home** (activée le 12/10) : vérifier sur une prochaine dictée que les erreurs évidentes sont corrigées (titre d'origine gardé en 🎙) et que les titres corrects ne bougent pas.
-3. **Tags et mémo de contexte** (en cours) : tags transversaux (SCI, Photo, Syndic, Travaux, Spectacle) en plus des catégories, ligne `🔖` ; mémo de contexte dans la consigne de la routine (jamais dans le dépôt public).
+3. **Mémo de contexte** : compléter téléphone, lien Doctolib et horaires (dentiste, kiné), locataires des places, comptable, artisans ; puis recopier dans la routine.
 
 ## 3. Idées et pistes (non faites)
 
@@ -84,5 +87,6 @@ Catégories fixes : Administratif, Maison, Santé, Achats, Travail, Famille, Per
 | Webhook | automatisation « Relance : enregistrer un appareil » → événement `relance_register` ; test : événement `relance_test_push` |
 | Routine | `trig_01GFD6vBExCUvTYDbx9KePm7` « Relance · tri », Sonnet 5.5, 4 h 45 UTC + déclencheur API |
 | Appareils | iPhone 17 Pro Max, iPad Pro M4, Apple Watch Ultra 2, Mac Studio (tous enregistrés sur le compte) |
-| Mise à jour de la montre | L'app montre est intégrée à l'app iPhone : **augmenter `CFBundleVersion`** (3 au 12/10) (project.yml, toutes les cibles) pour que l'iPhone la transmette à la montre ; sinon installer directement quand Xcode voit la montre |
+| Formulaires | Le détail iPad et l'éditeur iPhone ne renvoient que les champs modifiés (`TaskFields`) et se rechargent si la tâche change ailleurs : sinon ils écrasaient les ajouts de la routine ou d'un autre appareil (bug corrigé le 12/10) |
+| Mise à jour de la montre | L'app montre est intégrée à l'app iPhone : **augmenter `CFBundleVersion`** (7 au 12/10) (project.yml, toutes les cibles) pour que l'iPhone la transmette à la montre ; sinon installer directement quand Xcode voit la montre |
 | Xcode 27 | fenêtre des appareils = **Device Hub** (+ → Pair Nearby Device) ; `xcodebuild` n'enregistre pas les appareils |

@@ -43,7 +43,7 @@ targets:
       properties:
         CFBundleDisplayName: Relance
         CFBundleShortVersionString: "0.3"
-        CFBundleVersion: "3"
+        CFBundleVersion: "7"
         UILaunchScreen: {}
         UISupportedInterfaceOrientations~iphone: [UIInterfaceOrientationPortrait]
         UISupportedInterfaceOrientations~ipad:
@@ -78,6 +78,7 @@ targets:
       - Shared/Model/DateDetection.swift
       - Shared/Model/TaskPriority.swift
       - Shared/Reminders/ReminderOverride.swift
+      - Shared/Model/TaskTag.swift
     entitlements:
       path: RelanceShare/RelanceShare.entitlements
       properties:
@@ -88,7 +89,7 @@ targets:
       properties:
         CFBundleDisplayName: Relance
         CFBundleShortVersionString: "0.3"
-        CFBundleVersion: "3"
+        CFBundleVersion: "7"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.share-services
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ShareViewController
@@ -112,7 +113,7 @@ targets:
       properties:
         CFBundleDisplayName: Relance
         CFBundleShortVersionString: "0.3"
-        CFBundleVersion: "3"
+        CFBundleVersion: "7"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:
@@ -137,6 +138,7 @@ targets:
       - Shared/Intents/SiriCapture.swift
       - Shared/Model/TaskPriority.swift
       - Shared/Model/TaskCategory.swift
+      - Shared/Model/TaskTag.swift
     dependencies:
       - target: RelanceWatchWidgets
     entitlements:
@@ -148,7 +150,7 @@ targets:
       properties:
         CFBundleDisplayName: Relance
         CFBundleShortVersionString: "0.3"
-        CFBundleVersion: "3"
+        CFBundleVersion: "7"
         WKApplication: true
         WKCompanionAppBundleIdentifier: fr.alexandrefau.relance
         INAlternativeAppNames:
@@ -179,7 +181,7 @@ targets:
       properties:
         CFBundleDisplayName: Relance
         CFBundleShortVersionString: "0.3"
-        CFBundleVersion: "3"
+        CFBundleVersion: "7"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:

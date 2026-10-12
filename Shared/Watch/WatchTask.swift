@@ -12,6 +12,7 @@ nonisolated struct WatchTask: Codable, Hashable, Identifiable, Sendable {
     /// `nil` = Normale (et listes envoyées par une ancienne version de l'iPhone).
     var priority: TaskPriority?
     var category: String?
+    var tags: [String]?
 
     var isUrgent: Bool { priority == .urgent }
 

@@ -18,6 +18,8 @@ final class TaskItem {
     var category: String?
     /// Ligne « ❗ » / « 🔽 » des notes ; `nil` = Normale.
     var priorityRaw: String?
+    /// Ligne « 🔖 … » des notes, sans le marqueur ; `nil` = aucun tag.
+    var tagsRaw: String?
     /// Ligne « 🔁 … » des notes : relances propres à la tâche ; `nil` = selon la priorité.
     var remindersRaw: String?
     var isCompleted: Bool
@@ -57,6 +59,11 @@ final class TaskItem {
     var priority: TaskPriority {
         get { priorityRaw.flatMap(TaskPriority.init(rawValue:)) ?? .normal }
         set { priorityRaw = newValue == .normal ? nil : newValue.rawValue }
+    }
+
+    var tags: [String] {
+        get { tagsRaw.flatMap { TaskTag.parse(TaskTag.marker + $0) } ?? [] }
+        set { tagsRaw = TaskTag.line(newValue).map { String($0.dropFirst(TaskTag.marker.count + 1)) } }
     }
 
     var reminderOverride: ReminderOverride? {

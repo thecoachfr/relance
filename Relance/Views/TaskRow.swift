@@ -26,7 +26,12 @@ struct TaskRow: View {
                     .foregroundStyle(item.priority == .low ? .secondary : .primary)
                 // Étiquette sous le statut, comme les tags dans Rappels : rien n'est jamais coupé.
                 statusLabel
-                if let category = item.category { CategoryChip(name: category) }
+                if item.category != nil || !item.tags.isEmpty {
+                    HStack(spacing: 8) {
+                        if let category = item.category { CategoryChip(name: category) }
+                        TagsText(tags: item.tags)
+                    }
+                }
             }
             .accessibilityElement(children: .combine)
             // La priorité ne se voit qu'au rond : VoiceOver la dit en clair.

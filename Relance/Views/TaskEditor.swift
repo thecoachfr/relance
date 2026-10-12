@@ -14,6 +14,8 @@ struct TaskEditor: View {
     @State private var category: String?
     @State private var priority = TaskPriority.normal
     @State private var reminders: ReminderOverride?
+    @State private var tags: [String] = []
+    @State private var base: TaskFields?
 
     var body: some View {
         NavigationStack {
@@ -23,6 +25,7 @@ struct TaskEditor: View {
                     TextField("Notes", text: $notes, axis: .vertical)
                         .lineLimit(3...)
                 }
+                ContactSection(notes: notes)
                 Section("Échéance") {
                     Toggle("Date", isOn: $hasDay)
                     if hasDay {
@@ -43,6 +46,7 @@ struct TaskEditor: View {
                 }
                 Section {
                     CategoryPicker(category: $category)
+                    TagsRow(tags: $tags)
                 }
                 Section {
                     Button(item.isCompleted ? "Marquer à faire" : "Marquer fait") {
@@ -62,9 +66,12 @@ struct TaskEditor: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("OK") {
                         let c = Calendar.current.dateComponents([.hour, .minute], from: time)
-                        store.update(item, title: title, notes: notes, day: hasDay ? day : nil,
-                                     minutes: hasTime ? c.hour! * 60 + c.minute! : nil, category: .some(category),
-                                     priority: priority, reminders: .some(reminders))
+                        let entered = TaskFields(title: title, notes: notes,
+                                                 day: hasDay ? Calendar.current.startOfDay(for: day) : nil,
+                                                 minutes: hasDay && hasTime ? c.hour! * 60 + c.minute! : nil,
+                                                 category: category, priority: priority, reminders: reminders, tags: tags)
+                        // Seuls les champs changés ici sont repris (une synchro a pu arriver pendant la saisie).
+                        if let base { store.save(entered.merged(base: base, current: TaskFields(item)), to: item) }
                         dismiss()
                     }
                     .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
@@ -80,10 +87,12 @@ struct TaskEditor: View {
         category = item.category
         priority = item.priority
         reminders = item.reminderOverride
+        tags = item.tags
         hasDay = item.dueDay != nil
         day = item.dueDay ?? .now
         hasTime = item.dueMinutes != nil
         let minutes = item.dueMinutes ?? 9 * 60
         time = Calendar.current.date(bySettingHour: minutes / 60, minute: minutes % 60, second: 0, of: .now)!
+        base = TaskFields(item)
     }
 }

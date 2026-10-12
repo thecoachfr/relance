@@ -15,7 +15,10 @@ struct TaskDetailView: View {
     @State private var category: String?
     @State private var priority = TaskPriority.normal
     @State private var reminders: ReminderOverride?
+    @State private var tags: [String] = []
     @State private var loaded = false
+    /// État de la tâche au chargement : sert à ne renvoyer que ce que l'utilisateur a changé.
+    @State private var base: TaskFields?
 
     var body: some View {
         Form {
@@ -31,6 +34,7 @@ struct TaskDetailView: View {
                 TextField("Notes", text: $notes, axis: .vertical)
                     .lineLimit(3...)
             }
+            ContactSection(notes: notes)
             Section("Échéance") {
                 Toggle("Date", isOn: $hasDay)
                 if hasDay {
@@ -51,6 +55,7 @@ struct TaskDetailView: View {
             }
             Section {
                 CategoryPicker(category: $category)
+                TagsRow(tags: $tags)
             }
             Section {
                 Button(item.isCompleted ? "Marquer à faire" : "Marquer fait",
@@ -73,6 +78,8 @@ struct TaskDetailView: View {
         .toolbar(.hidden, for: .navigationBar)
         .onAppear(perform: load)
         .onChange(of: item.localID) { loaded = false; load() }
+        // Modifiée ailleurs (synchro, routine de tri, autre appareil) : on recharge si rien n'est en cours de saisie.
+        .onChange(of: item.updatedAt) { if !hasPendingEdits { load() } }
         .onChange(of: hasDay) { save() }
         .onChange(of: day) { save() }
         .onChange(of: hasTime) { save() }
@@ -80,6 +87,7 @@ struct TaskDetailView: View {
         .onChange(of: category) { save() }
         .onChange(of: priority) { save() }
         .onChange(of: reminders) { save() }
+        .onChange(of: tags) { save() }
         // Texte : enregistré à la sortie du champ ou de la tâche, pas à chaque frappe (chaque enregistrement synchronise).
         .onSubmit { save() }
         .onDisappear { save() }
@@ -91,23 +99,33 @@ struct TaskDetailView: View {
         category = item.category
         priority = item.priority
         reminders = item.reminderOverride
+        tags = item.tags
         hasDay = item.dueDay != nil
         day = item.dueDay ?? .now
         hasTime = item.dueMinutes != nil
         let minutes = item.dueMinutes ?? 9 * 60
         time = Calendar.current.date(bySettingHour: minutes / 60, minute: minutes % 60, second: 0, of: .now)!
+        base = TaskFields(item)
         loaded = true
     }
 
-    private func save() {
-        guard loaded, !item.isTrashed, !title.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+    private var entered: TaskFields {
         let c = Calendar.current.dateComponents([.hour, .minute], from: time)
-        let minutes = hasDay && hasTime ? c.hour! * 60 + c.minute! : nil
-        let newDay = hasDay ? Calendar.current.startOfDay(for: day) : nil
-        guard title != item.title || notes != item.notes || newDay != item.dueDay || minutes != item.dueMinutes
-                || category != item.category || priority != item.priority
-                || reminders != item.reminderOverride else { return }
-        store.update(item, title: title, notes: notes, day: newDay, minutes: minutes, category: .some(category),
-                     priority: priority, reminders: .some(reminders))
+        return TaskFields(title: title, notes: notes,
+                          day: hasDay ? Calendar.current.startOfDay(for: day) : nil,
+                          minutes: hasDay && hasTime ? c.hour! * 60 + c.minute! : nil,
+                          category: category, priority: priority, reminders: reminders, tags: tags)
+    }
+
+    private var hasPendingEdits: Bool {
+        guard let base else { return false }
+        return entered.merged(base: base, current: base) != base
+    }
+
+    private func save() {
+        guard loaded, let base, !item.isTrashed, !title.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+        let fields = entered.merged(base: base, current: TaskFields(item))
+        store.save(fields, to: item)
+        self.base = TaskFields(item)
     }
 }

@@ -53,3 +53,17 @@ struct SharedMessageTests {
         #expect(SharedMessage.draft(from: "Merci ! Peux-tu rappeler le plombier").title == "Peux-tu rappeler le plombier")
     }
 }
+
+struct TaskContactTests {
+    @Test func contactLine() {
+        let notes = "Apporter la radio\n📍 Dr Claire Martin · 12 rue de la Paix, 75002 Paris · 01 43 75 00 00 · https://www.doctolib.fr/x"
+        let c = TaskContact(notes: notes)
+        #expect(c?.name == "Dr Claire Martin")
+        #expect(c?.address == "12 rue de la Paix, 75002 Paris")
+        #expect(c?.phoneURL?.absoluteString == "tel:0143750000")
+        #expect(c?.link?.host() == "www.doctolib.fr")
+        #expect(c?.mapsURL?.absoluteString.contains("daddr=114") == true)
+        #expect(TaskContact(notes: "📍 Atrium Gestion")?.address == nil)
+        #expect(TaskContact(notes: "rien") == nil)
+    }
+}
