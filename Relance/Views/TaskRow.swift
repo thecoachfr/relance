@@ -17,6 +17,7 @@ struct TaskRow: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.borderless)
+                .hoverEffect(.highlight)
                 .padding(.leading, -10)
                 .accessibilityLabel("Marquer comme faite")
             }

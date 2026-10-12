@@ -26,7 +26,7 @@ struct TaskEditor: View {
                         DatePicker("Jour", selection: $day, displayedComponents: .date)
                         Toggle("Heure", isOn: $hasTime)
                         if hasTime {
-                            DatePicker("Heure", selection: $time, displayedComponents: .hourAndMinute)
+                            DatePicker("À", selection: $time, displayedComponents: .hourAndMinute)
                         }
                     }
                 }

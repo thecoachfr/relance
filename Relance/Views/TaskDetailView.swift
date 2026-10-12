@@ -19,6 +19,12 @@ struct TaskDetailView: View {
             Section {
                 TextField("Titre", text: $title, axis: .vertical)
                     .font(.title3.weight(.semibold))
+                // L'information clé, juste sous le titre.
+                if let due = item.dueInstant(), !item.isCompleted {
+                    Label(DueText.long(due: due, hasTime: item.dueMinutes != nil),
+                          systemImage: item.isOverdue() ? "exclamationmark.circle.fill" : "clock")
+                        .foregroundStyle(item.isOverdue() ? .red : .secondary)
+                }
                 TextField("Notes", text: $notes, axis: .vertical)
                     .lineLimit(3...)
             }
@@ -28,13 +34,8 @@ struct TaskDetailView: View {
                     DatePicker("Jour", selection: $day, displayedComponents: .date)
                     Toggle("Heure", isOn: $hasTime)
                     if hasTime {
-                        DatePicker("Heure", selection: $time, displayedComponents: .hourAndMinute)
+                        DatePicker("À", selection: $time, displayedComponents: .hourAndMinute)
                     }
-                }
-                if let due = item.dueInstant() {
-                    Label(DueText.long(due: due, hasTime: item.dueMinutes != nil),
-                          systemImage: item.isOverdue() ? "exclamationmark.circle.fill" : "clock")
-                        .foregroundStyle(item.isOverdue() ? .red : .secondary)
                 }
             }
             Section {
@@ -42,17 +43,20 @@ struct TaskDetailView: View {
                        systemImage: item.isCompleted ? "arrow.uturn.backward" : "checkmark") {
                     item.isCompleted ? store.reopen(item) : store.complete(item)
                 }
+                .keyboardShortcut(.return, modifiers: .command)
                 if !item.isCompleted {
                     Button("Reporter d'une heure", systemImage: "clock") {
                         store.snooze(item, until: .now.addingTimeInterval(3600))
                     }
+                    .keyboardShortcut("l", modifiers: .command)
                     Button("Demain matin", systemImage: "sunrise") { store.moveToTomorrow(item) }
                 }
                 Button("Supprimer", systemImage: "trash", role: .destructive) { store.delete(item) }
+                    .keyboardShortcut(.delete, modifiers: .command)
             }
         }
-        .navigationTitle(item.title.isEmpty ? "Tâche" : item.title)
-        .navigationBarTitleDisplayMode(.inline)
+        // Le titre est déjà le premier champ : pas de doublon dans la barre.
+        .toolbar(.hidden, for: .navigationBar)
         .onAppear(perform: load)
         .onChange(of: item.localID) { loaded = false; load() }
         .onChange(of: hasDay) { save() }

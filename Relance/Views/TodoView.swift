@@ -19,6 +19,9 @@ struct TodoView: View {
         if sizeClass == .regular {
             NavigationSplitView {
                 list
+                    // Un seul bouton de panneau latéral (celui des onglets) : la liste reste toujours visible.
+                    .toolbar(removing: .sidebarToggle)
+                    .navigationSplitViewColumnWidth(min: 320, ideal: 380, max: 460)
                     // Grand écran : la colonne de droite montre d'emblée la tâche la plus urgente.
                     .onAppear {
                         if selectedID == nil {
@@ -48,7 +51,8 @@ struct TodoView: View {
         TimelineView(.everyMinute) { context in
             let now = context.date
             let groups = group(now: now)
-            List {
+            // Sélection native sur grand écran : flèches ↑ ↓ au clavier, surlignage système.
+            List(selection: sizeClass == .regular ? $selectedID : .constant(nil)) {
                 section("En retard", groups.overdue, now: now)
                 section("Aujourd'hui", groups.today, now: now)
                 section("Bientôt", groups.later, now: now)
@@ -65,6 +69,14 @@ struct TodoView: View {
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Button("Réglages", systemImage: "gearshape") { showSettings = true }
+            }
+            // Tirer pour actualiser ne se devine pas au trackpad : bouton visible sur grand écran.
+            if sizeClass == .regular {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Synchroniser", systemImage: "arrow.clockwise") { Task { await store.sync() } }
+                        .keyboardShortcut("r", modifiers: .command)
+                        .disabled(store.isSyncing)
+                }
             }
             // La barre d'onglets d'iOS 26 masque la barre d'outils du bas : l'ajout va en haut à droite.
             ToolbarItem(placement: .primaryAction) {
@@ -87,8 +99,7 @@ struct TodoView: View {
                 ForEach(items) { item in
                     TaskRow(item: item, now: now, onDone: markDone)
                         .taskActions(item, onDone: markDone, onEdit: open)
-                        .listRowBackground(selectedID == item.localID && sizeClass == .regular
-                                           ? Color.accentColor.opacity(0.15) : nil)
+                        .tag(item.localID)
                 }
             }
         }

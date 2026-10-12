@@ -35,7 +35,6 @@ struct InboxView: View {
                 }
             }
             .navigationTitle("À trier")
-            .toolbarTitleDisplayMode(.inlineLarge)
             .refreshable { await store.sync() }
             .sheet(item: $editing) { TaskEditor(item: $0) }
         }
