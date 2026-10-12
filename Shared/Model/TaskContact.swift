@@ -11,6 +11,34 @@ nonisolated struct TaskContact: Equatable, Sendable {
     var phone: String?
     var link: URL?
 
+    init(name: String, address: String? = nil, phone: String? = nil, link: URL? = nil) {
+        (self.name, self.address, self.phone, self.link) = (name, address, phone, link)
+    }
+
+    /// « 📍 Nom · adresse · téléphone · lien » (parties vides omises, « · » retiré des valeurs).
+    var line: String {
+        let parts = [name, address, phone, link?.absoluteString]
+            .compactMap { $0?.replacingOccurrences(of: " · ", with: ", ").trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+        return Self.marker + " " + parts.joined(separator: " · ")
+    }
+
+    /// Les notes avec ce lieu à la place de l'ancien (même ligne), ajouté à la fin s'il n'y en avait pas,
+    /// ou retiré si `contact` est `nil`.
+    static func notes(_ notes: String, setting contact: TaskContact?) -> String {
+        var lines = notes.components(separatedBy: "\n")
+        let index = lines.firstIndex { $0.trimmingCharacters(in: .whitespaces).hasPrefix(marker) }
+        switch (index, contact) {
+        case let (i?, c?): lines[i] = c.line
+        case let (i?, nil): lines.remove(at: i)
+        case let (nil, c?):
+            while lines.last?.trimmingCharacters(in: .whitespaces).isEmpty == true { lines.removeLast() }
+            lines.append(c.line)
+        case (nil, nil): break
+        }
+        return lines.joined(separator: "\n")
+    }
+
     /// Première ligne « 📍 … » des notes.
     init?(notes: String) {
         guard let line = notes.components(separatedBy: .newlines)
@@ -31,6 +59,12 @@ nonisolated struct TaskContact: Equatable, Sendable {
                 address = part
             }
         }
+    }
+
+    /// Lien de prise de rendez-vous (Doctolib…) plutôt que simple site web.
+    var isBookingLink: Bool {
+        guard let host = link?.host()?.lowercased() else { return false }
+        return ["doctolib", "maiia", "keldoc", "rdv", "planity", "calendly"].contains { host.contains($0) }
     }
 
     var phoneURL: URL? {

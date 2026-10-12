@@ -63,7 +63,37 @@ struct TaskContactTests {
         #expect(c?.phoneURL?.absoluteString == "tel:0143750000")
         #expect(c?.link?.host() == "www.doctolib.fr")
         #expect(c?.mapsURL?.absoluteString.contains("daddr=12") == true)
-        #expect(TaskContact(notes: "📍 Atrium Gestion")?.address == nil)
+        #expect(TaskContact(notes: "📍 Cabinet Dupont")?.address == nil)
         #expect(TaskContact(notes: "rien") == nil)
+        #expect(c?.isBookingLink == true)
+        #expect(TaskContact(name: "Mairie", link: URL(string: "https://www.paris.fr")).isBookingLink == false)
+    }
+
+    /// Lieu choisi à la main : remplace la ligne existante à sa place, s'ajoute à la fin, ou se retire.
+    @Test func settingPlace() {
+        let place = TaskContact(name: "Pharmacie du Centre", address: "3 place de la Mairie, 75002 Paris",
+                                phone: "01 40 00 00 00", link: URL(string: "https://example.fr"))
+        #expect(place.line == "📍 Pharmacie du Centre · 3 place de la Mairie, 75002 Paris · 01 40 00 00 00 · https://example.fr")
+        #expect(TaskContact(notes: place.line) == place)
+        #expect(TaskContact.notes("Apporter l'ordonnance\n", setting: place) == "Apporter l'ordonnance\n" + place.line)
+        #expect(TaskContact.notes("", setting: place) == place.line)
+        let replaced = TaskContact.notes("a\n📍 Ancien lieu\nb", setting: TaskContact(name: "Mairie"))
+        #expect(replaced == "a\n📍 Mairie\nb")
+        #expect(TaskContact.notes("a\n📍 Ancien lieu\nb", setting: nil) == "a\nb")
+    }
+}
+
+struct NoteLinesTests {
+    @Test func hidesTechnicalLinesAndKeepsThem() {
+        let notes = "📩 Message partagé\nCoucou, bloque ton 16.\n📍 Mairie · 1 place de la Mairie\n🎒 À prendre : carte\n📅 Dans l'agenda"
+        #expect(NoteLines.visible(notes) == "Coucou, bloque ton 16.\n🎒 À prendre : carte")
+        // Rien de changé : notes identiques.
+        #expect(NoteLines.replacingVisible(in: notes, with: NoteLines.visible(notes)) == notes)
+        // Texte modifié : les lignes cachées sont gardées, à la fin.
+        let edited = NoteLines.replacingVisible(in: notes, with: "Pot de départ")
+        #expect(edited == "Pot de départ\n📩 Message partagé\n📍 Mairie · 1 place de la Mairie\n📅 Dans l'agenda")
+        #expect(TaskContact(notes: edited)?.name == "Mairie")
+        #expect(NoteLines.replacingVisible(in: "📍 Mairie", with: "") == "📍 Mairie")
+        #expect(NoteLines.visible("📍\u{FE0F} Mairie\nx") == "x")
     }
 }

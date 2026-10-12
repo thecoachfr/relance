@@ -54,8 +54,8 @@ struct InboxView: View {
                     .foregroundStyle(.secondary)
                 Text(item.title.isEmpty ? "Sans titre" : item.title)
                     .font(.title2.bold())
-                if !item.notes.isEmpty {
-                    Text(item.notes).font(.body).foregroundStyle(.secondary).lineLimit(3)
+                if !NoteLines.visible(item.notes).isEmpty {
+                    Text(NoteLines.visible(item.notes)).font(.body).foregroundStyle(.secondary).lineLimit(3)
                 }
                 if let day = item.dueDay {
                     Label(dayText(day), systemImage: "calendar")

@@ -20,6 +20,7 @@ struct TaskDetailView: View {
     /// État de la tâche au chargement : sert à ne renvoyer que ce que l'utilisateur a changé.
     @State private var base: TaskFields?
     @State private var confirmDelete = false
+    @State private var searchingPlace = false
 
     var body: some View {
         Form {
@@ -33,11 +34,11 @@ struct TaskDetailView: View {
                           systemImage: item.isOverdue() ? "clock.fill" : "clock")
                         .foregroundStyle(item.isOverdue() ? .red : .secondary)
                 }
-                TextField("Notes", text: $notes, prompt: Text("Notes"), axis: .vertical)
+                TextField("Notes", text: visibleNotes, prompt: Text("Notes"), axis: .vertical)
                     .lineLimit(3...)
                     .formFieldWithoutLabel()
             }
-            ContactSection(notes: notes)
+            ContactSection(notes: $notes, searching: $searchingPlace)
             Section("Échéance") {
                 #if os(macOS)
                 // Mac : l'interrupteur et la valeur sur la même ligne, comme dans Rappels.
@@ -106,6 +107,7 @@ struct TaskDetailView: View {
             #endif
         }
         .deleteTaskConfirmation(item, isPresented: $confirmDelete)
+        .placeSearch(isPresented: $searchingPlace, notes: $notes)
         #if os(macOS)
         .toolbar { macActions }
         #endif
@@ -123,6 +125,8 @@ struct TaskDetailView: View {
         .onChange(of: priority) { save() }
         .onChange(of: reminders) { save() }
         .onChange(of: tags) { save() }
+        // Lieu ajouté, changé ou retiré (bouton) : enregistré tout de suite, comme les autres réglages.
+        .onChange(of: TaskContact(notes: notes)) { save() }
         // Texte : enregistré à la sortie du champ ou de la tâche, pas à chaque frappe (chaque enregistrement synchronise).
         .onSubmit { save() }
         .onDisappear { save() }
@@ -151,6 +155,11 @@ struct TaskDetailView: View {
         }
     }
     #endif
+
+    /// Le champ Notes sans les lignes techniques (lieu, agenda, message partagé), gardées à l'enregistrement.
+    private var visibleNotes: Binding<String> {
+        Binding { NoteLines.visible(notes) } set: { notes = NoteLines.replacingVisible(in: notes, with: $0) }
+    }
 
     private func load() {
         title = item.title

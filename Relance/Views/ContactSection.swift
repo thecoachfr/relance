@@ -1,13 +1,17 @@
 import SwiftUI
 
-/// Contact de la tâche (ligne « 📍 » des notes) : appeler, itinéraire, prendre rendez-vous.
+/// Lieu de la tâche (ligne « 📍 » des notes) : appeler, itinéraire, prendre rendez-vous ;
+/// l'ajouter à la main, le changer ou le retirer.
 struct ContactSection: View {
-    let notes: String
+    @Binding var notes: String
+    /// Ouvre la recherche. La feuille est portée par le formulaire (`placeSearch`) : ouverte depuis une ligne
+    /// d'un formulaire lui-même dans une feuille, elle refermait la fiche de la tâche (iPhone).
+    @Binding var searching: Bool
     @Environment(\.openURL) private var openURL
 
     var body: some View {
-        if let contact = TaskContact(notes: notes) {
-            Section {
+        Section {
+            if let contact = TaskContact(notes: notes) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(contact.name).font(.headline)
                     if let address = contact.address {
@@ -22,11 +26,38 @@ struct ContactSection: View {
                     Button { openURL(url) } label: { Label("Itinéraire", systemImage: "map") }
                 }
                 if let url = contact.link {
-                    Button { openURL(url) } label: { Label("Prendre rendez-vous", systemImage: "calendar.badge.plus") }
+                    if contact.isBookingLink {
+                        Button { openURL(url) } label: { Label("Prendre rendez-vous", systemImage: "calendar.badge.plus") }
+                    } else {
+                        Button { openURL(url) } label: { Label("Site web", systemImage: "safari") }
+                    }
                 }
-            } header: {
-                Text("Contact")
+                Menu {
+                    Button("Changer de lieu", systemImage: "magnifyingglass") { searching = true }
+                    Button("Retirer le lieu", systemImage: "mappin.slash", role: .destructive) {
+                        notes = TaskContact.notes(notes, setting: nil)
+                    }
+                } label: {
+                    Label("Modifier le lieu", systemImage: "mappin.and.ellipse")
+                }
+            } else {
+                Button("Ajouter un lieu", systemImage: "mappin.and.ellipse") { searching = true }
             }
+        } header: {
+            Text("Lieu")
+        } footer: {
+            if TaskContact(notes: notes) == nil {
+                Text("Avec une adresse, Relance peut te dire quand partir et l'ajouter à l'événement d'agenda.")
+            }
+        }
+    }
+}
+
+extension View {
+    /// Recherche de lieu pour `ContactSection`, à poser sur le formulaire entier.
+    func placeSearch(isPresented: Binding<Bool>, notes: Binding<String>) -> some View {
+        sheet(isPresented: isPresented) {
+            PlaceSearchView { notes.wrappedValue = TaskContact.notes(notes.wrappedValue, setting: $0) }
         }
     }
 }

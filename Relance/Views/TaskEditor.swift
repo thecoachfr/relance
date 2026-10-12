@@ -17,16 +17,17 @@ struct TaskEditor: View {
     @State private var tags: [String] = []
     @State private var base: TaskFields?
     @State private var confirmDelete = false
+    @State private var searchingPlace = false
 
     var body: some View {
         NavigationStack {
             Form {
                 Section {
                     TextField("Titre", text: $title, axis: .vertical)
-                    TextField("Notes", text: $notes, axis: .vertical)
+                    TextField("Notes", text: visibleNotes, axis: .vertical)
                         .lineLimit(3...)
                 }
-                ContactSection(notes: notes)
+                ContactSection(notes: $notes, searching: $searchingPlace)
                 Section("Échéance") {
                     Toggle("Date", isOn: $hasDay)
                     if hasDay {
@@ -81,7 +82,13 @@ struct TaskEditor: View {
                 }
             }
             .onAppear(perform: load)
+            .placeSearch(isPresented: $searchingPlace, notes: $notes)
         }
+    }
+
+    /// Le champ Notes sans les lignes techniques (lieu, agenda, message partagé), gardées à l'enregistrement.
+    private var visibleNotes: Binding<String> {
+        Binding { NoteLines.visible(notes) } set: { notes = NoteLines.replacingVisible(in: notes, with: $0) }
     }
 
     private func load() {

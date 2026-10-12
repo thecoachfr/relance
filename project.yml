@@ -102,6 +102,7 @@ targets:
       - Relance/Views/ReminderSettingsView.swift
       - Relance/Views/QuickAddSheet.swift
       - Relance/Views/ReminderDeviceSection.swift
+      - Relance/Views/PlaceSearchView.swift
     configFiles:
       Debug: Relance/Resources/Secrets.xcconfig
       Release: Relance/Resources/Secrets.xcconfig
