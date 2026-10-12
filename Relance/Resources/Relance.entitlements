@@ -10,5 +10,10 @@
 	<array>
 		<string>group.fr.alexandrefau.relance</string>
 	</array>
+	<key>keychain-access-groups</key>
+	<array>
+		<string>$(AppIdentifierPrefix)fr.alexandrefau.relance</string>
+		<string>$(AppIdentifierPrefix)fr.alexandrefau.relance.shared</string>
+	</array>
 </dict>
 </plist>

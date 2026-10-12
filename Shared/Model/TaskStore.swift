@@ -195,6 +195,13 @@ final class TaskStore {
     }
 
     private func push() async throws {
+        // Partagées depuis une autre app sans réseau (extension) : elles deviennent des tâches à envoyer.
+        for shared in PendingShares.takeAll() {
+            let item = TaskItem(title: shared.title, notes: shared.notes, dueDay: shared.day,
+                                dueMinutes: shared.day == nil ? nil : shared.minutes)
+            item.priority = shared.priority
+            context.insert(item)
+        }
         let dirty = try context.fetch(FetchDescriptor<TaskItem>(predicate: #Predicate { $0.isDirty }))
         for item in dirty {
             if item.isTrashed {

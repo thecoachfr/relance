@@ -29,10 +29,15 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         application.registerForRemoteNotifications()
         let watchSync = WatchSync(store: store)
         self.watchSync = watchSync
+        let auth = auth
         store.onTasksChanged = { [liveActivity] in
             let tasks = store.activeTasks()
             liveActivity.refresh(tasks: tasks)
             watchSync.send(tasks)
+            // L'extension de partage parle à Google avec la même connexion (trousseau partagé).
+            let credentials = auth.watchCredentials
+            GoogleRefreshSession.shared.store(refreshToken: credentials?.refreshToken ?? "",
+                                              clientID: credentials?.clientID ?? "")
         }
         return true
     }

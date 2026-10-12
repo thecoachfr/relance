@@ -27,12 +27,17 @@ targets:
       - package: GoogleSignIn
       - target: RelanceWidgets
       - target: RelanceWatch
+      - target: RelanceShare
     entitlements:
       path: Relance/Resources/Relance.entitlements
       properties:
         com.apple.developer.usernotifications.time-sensitive: true
         aps-environment: development
         com.apple.security.application-groups: [group.fr.alexandrefau.relance]
+        # Le groupe propre de l'app d'abord (connexion Google existante), puis celui partagé avec l'extension.
+        keychain-access-groups:
+          - $(AppIdentifierPrefix)fr.alexandrefau.relance
+          - $(AppIdentifierPrefix)fr.alexandrefau.relance.shared
     info:
       path: Relance/Resources/Info.plist
       properties:
@@ -63,6 +68,36 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: fr.alexandrefau.relance
         TARGETED_DEVICE_FAMILY: "1,2"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+  RelanceShare:
+    type: app-extension
+    platform: iOS
+    sources:
+      - RelanceShare
+      - Shared/Share
+      - Shared/Google
+      - Shared/Model/DateDetection.swift
+      - Shared/Model/TaskPriority.swift
+    entitlements:
+      path: RelanceShare/RelanceShare.entitlements
+      properties:
+        com.apple.security.application-groups: [group.fr.alexandrefau.relance]
+        keychain-access-groups: [$(AppIdentifierPrefix)fr.alexandrefau.relance.shared]
+    info:
+      path: RelanceShare/Info.plist
+      properties:
+        CFBundleDisplayName: Relance
+        CFBundleShortVersionString: "0.3"
+        CFBundleVersion: "1"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.share-services
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ShareViewController
+          NSExtensionAttributes:
+            NSExtensionActivationRule:
+              NSExtensionActivationSupportsText: true
+              NSExtensionActivationSupportsWebURLWithMaxCount: 1
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: fr.alexandrefau.relance.share
   RelanceWidgets:
     type: app-extension
     platform: iOS
@@ -95,6 +130,7 @@ targets:
       - Shared/Reminders/ReminderPlanner.swift
       - Shared/Google/TasksAPI.swift
       - Shared/Google/NotesTimeCodec.swift
+      - Shared/Google/GoogleRefreshSession.swift
       - Shared/Intents/SiriCapture.swift
       - Shared/Model/TaskPriority.swift
     dependencies:

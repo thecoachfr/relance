@@ -19,7 +19,7 @@ final class WatchStore: NSObject, WCSessionDelegate {
     private(set) var lastUpdate: Date? = WatchStore.defaults.object(forKey: WatchStore.updatedKey) as? Date
     private(set) var isRefreshing = false
 
-    let google = WatchGoogle()
+    let google = GoogleRefreshSession()
     private var api: TasksAPI { TasksAPI(token: { [google] in try await google.validAccessToken() }) }
 
     override init() {
