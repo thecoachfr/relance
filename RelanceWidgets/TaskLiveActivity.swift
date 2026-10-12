@@ -11,15 +11,8 @@ typealias ActivityItem = TaskActivityAttributes.ContentState.Item
 struct TaskLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: TaskActivityAttributes.self) { context in
-            Group {
-                if context.state.items.count == 1, let item = context.state.items.first {
-                    SingleTaskView(item: item)
-                } else {
-                    TaskListView(state: context.state, maxRows: 3)
-                }
-            }
-            .padding(12)
-            .activityBackgroundTint(nil)
+            ActivityContent(state: context.state)
+                .activityBackgroundTint(nil)
         } dynamicIsland: { context in
             let state = context.state
             let late = state.items.filter { isLate($0) }.count
@@ -43,6 +36,37 @@ struct TaskLiveActivity: Widget {
                 Text("\(state.total)").font(.body.bold().monospacedDigit())
                     .foregroundStyle(late > 0 ? .red : .orange)
             }
+        }
+        // Sans .small, la montre (Smart Stack) n'affiche que l'icône et le nombre de la Dynamic Island.
+        .supplementalActivityFamilies([.small, .medium])
+    }
+}
+
+/// Écran verrouillé (.medium) ou Apple Watch (.small).
+private struct ActivityContent: View {
+    let state: TaskActivityAttributes.ContentState
+    @Environment(\.activityFamily) private var family
+
+    var body: some View {
+        switch family {
+        case .small:
+            Group {
+                if state.items.count == 1, let item = state.items.first {
+                    SmallSingleTaskView(item: item)
+                } else {
+                    SmallTaskListView(state: state)
+                }
+            }
+            .padding(8)
+        default:
+            Group {
+                if state.items.count == 1, let item = state.items.first {
+                    SingleTaskView(item: item)
+                } else {
+                    TaskListView(state: state, maxRows: 3)
+                }
+            }
+            .padding(12)
         }
     }
 }
@@ -151,5 +175,65 @@ private struct TaskLine: View {
             .accessibilityLabel("Reporter « \(item.title) » d'une heure")
         }
         .frame(height: 34)
+    }
+}
+
+
+// MARK: - Apple Watch (Smart Stack)
+
+/// Une tâche : titre, échéance et deux boutons assez grands pour le poignet.
+private struct SmallSingleTaskView: View {
+    let item: ActivityItem
+
+    var body: some View {
+        let late = isLate(item)
+        VStack(alignment: .leading, spacing: 4) {
+            Text(item.title).font(.headline).lineLimit(2)
+            Text(statusText(item, long: false))
+                .font(.caption.monospacedDigit())
+                .foregroundStyle(late ? .red : .orange)
+            HStack(spacing: 6) {
+                Button(intent: CompleteTaskIntent(taskID: item.id)) {
+                    Label("Fait", systemImage: "checkmark").frame(maxWidth: .infinity)
+                }
+                .tint(.green)
+                Button(intent: SnoozeTaskIntent(taskID: item.id)) {
+                    Label("1 h", systemImage: "clock").frame(maxWidth: .infinity)
+                }
+                .tint(.orange)
+            }
+            .buttonStyle(.borderedProminent)
+            .font(.caption.weight(.semibold))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// Plusieurs tâches : le compte, puis les deux plus urgentes (titre et échéance).
+private struct SmallTaskListView: View {
+    let state: TaskActivityAttributes.ContentState
+
+    var body: some View {
+        let late = state.items.filter { isLate($0) }.count
+        VStack(alignment: .leading, spacing: 3) {
+            Label(late > 0 ? "\(late) en retard" : "\(state.total) à faire",
+                  systemImage: late > 0 ? "exclamationmark.circle.fill" : "clock")
+                .font(.caption.bold())
+                .foregroundStyle(late > 0 ? .red : .orange)
+            ForEach(state.items.prefix(2)) { item in
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    Text(item.title).font(.footnote).lineLimit(1)
+                    Spacer(minLength: 4)
+                    Text(statusText(item, long: false))
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(isLate(item) ? .red : .secondary)
+                        .lineLimit(1)
+                }
+            }
+            if state.total > 2 {
+                Text("+\(state.total - 2) autres").font(.caption2).foregroundStyle(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

@@ -41,4 +41,10 @@ struct NotesTimeCodecTests {
         #expect(decoded.notes == "💡 Suggestion : jeudi")
         #expect(TaskCategory(name: "santé") == .sante)
     }
+
+    /// Emojis écrits avec le sélecteur de variante U+FE0F (« ⏰️ », « 🏷️ »).
+    @Test func markersWithVariationSelector() {
+        let decoded = NotesTimeCodec.decode("⏰\u{FE0F} 15:00\n🏷\u{FE0F} Maison\nNotes")
+        #expect(decoded == .init(minutes: 900, category: "Maison", notes: "Notes"))
+    }
 }

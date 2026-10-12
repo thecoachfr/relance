@@ -22,7 +22,10 @@ nonisolated enum NotesTimeCodec {
         var meta = Meta(notes: "")
 
         // Les lignes ⏰ et 🏷 sont en tête, dans n'importe quel ordre ; on s'arrête à la première autre ligne.
-        while let first = lines.first {
+        while let raw = lines.first {
+            // « 🏷️ » (avec le sélecteur de variante U+FE0F) est un autre caractère que « 🏷 » pour Swift :
+            // on l'enlève, car le tri (ou un humain) peut écrire l'une ou l'autre forme.
+            let first = raw.replacingOccurrences(of: "\u{FE0F}", with: "")
             if meta.minutes == nil, first.hasPrefix(timeMarker), let minutes = parseTime(first) {
                 meta.minutes = minutes
             } else if meta.category == nil, first.hasPrefix(categoryMarker) {

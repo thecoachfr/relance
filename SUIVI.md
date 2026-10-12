@@ -9,12 +9,13 @@
 
 | Brique | État |
 |---|---|
-| **App iPhone** | Relances qui insistent (à l'heure, +1 h, 20 h ; en retard 7 h 30 et 20 h ; silence 22 h–7 h 30), boutons Fait / Dans 1 h / Ce soir / Demain matin, activité en direct (3 tâches max, Fait / 1 h par tâche), widgets accueil et écran verrouillé, commande « + » (Centre de contrôle, bouton Action, écran verrouillé), Siri (« nouvelle Relance », « Relance en retard »), écran À trier une tâche à la fois, catégories, journal de synchro dans les réglages |
+| **App iPhone** | Relances qui insistent (à l'heure, +1 h, 20 h ; en retard 7 h 30 et 20 h ; silence 22 h–7 h 30), boutons Fait / Dans 1 h / Ce soir / Demain matin, activité en direct (3 tâches max, Fait / 1 h par tâche ; vue dédiée dans le Smart Stack de la montre), widgets accueil et écran verrouillé, commande « + » (Centre de contrôle, bouton Action, écran verrouillé), Siri (« nouvelle Relance », « Relance en retard »), écran À trier une tâche à la fois, catégories, journal de synchro dans les réglages |
 | **App iPad** | Liste + détail, raccourcis clavier (↑↓, ⌘↩, ⌘L, ⌘⌫, ⌘R, ⌘N), pas de relances par défaut (réglage « Relances sur cet appareil ») |
 | **App Mac** | L'app iPad « Designed for iPad », lancée depuis Xcode (⌘R) |
 | **Apple Watch** | Liste, cocher, reporter, dictée, complication ; l'iPhone sert de relais |
 | **Vigie Home Assistant** | AppDaemon rafraîchit Google Tasks chaque minute ; si le nombre de tâches change → push silencieux à l'iPhone et l'iPad (testé : push reçu et synchro en 1 s) |
 | **Tri par Claude** | Routine cloud « Relance · tri » : catégorie (🏷), date/heure si explicites (⏰), sinon suggestion (💡). Tous les jours à 6 h 45 **et** 90 s après chaque nouvelle tâche (lancée par la vigie, max 20/jour). Testé le 12/10 |
+| **Catégories** | Affichées sur l'iPhone et l'iPad (vérifié le 12/10) ; « 🏷 » et « ⏰ » reconnus avec ou sans sélecteur de variante (U+FE0F) |
 | **Logo** | « Boucle » (flèche circulaire + coche, orange), variantes sombre / teintée / montre |
 
 ### Conventions dans les notes Google Tasks
@@ -37,11 +38,10 @@ Catégories fixes : Administratif, Maison, Santé, Achats, Travail, Famille, Per
 ## 2. Reste à faire / à vérifier
 
 1. **Montre autonome (eSIM)** — codée et installée, **pas encore testée** : couper l'iPhone (mode Avion), ouvrir Relance sur la montre, tirer la liste (« Mis à jour à l'instant »), cocher une tâche, rallumer l'iPhone et vérifier qu'elle est cochée là aussi.
-2. **Catégories dans l'app** : vérifier que les étiquettes apparaissent sur l'iPhone et l'iPad après le tri du 12/10.
-3. **Tâches de test** à cocher : « [test] appeler le garage… », « [test] renouveler le passeport », « [test] envoyer le dossier ».
-4. **Premier tri automatique du matin** : demain 6 h 45 (vérifier dans [la routine](https://claude.ai/code/routines/trig_01GFD6vBExCUvTYDbx9KePm7)).
-5. **Décision en attente** : autoriser la routine à **nettoyer le titre** (retirer « vendredi à 15 h » une fois la date et l'heure rangées) ?
-6. Catégories pas encore affichées dans le **widget** ni sur la **montre**.
+2. **Tâches de test** à cocher : « [test] appeler le garage… », « [test] renouveler le passeport », « [test] envoyer le dossier ».
+3. **Premier tri automatique du matin** : demain 6 h 45 (vérifier dans [la routine](https://claude.ai/code/routines/trig_01GFD6vBExCUvTYDbx9KePm7)).
+4. **Décision en attente** : autoriser la routine à **nettoyer le titre** (retirer « vendredi à 15 h » une fois la date et l'heure rangées) ?
+5. Catégories pas encore affichées dans le **widget** ni sur la **montre**.
 
 ## 3. Idées et pistes (non faites)
 
