@@ -174,4 +174,22 @@ struct ReminderPlannerTests {
         let partial = try JSONDecoder().decode(ReminderSettings.self, from: Data(#"{"evening": 1230}"#.utf8))
         #expect(partial.evening == 1230 && partial.morning == ReminderSettings().morning && partial.low == .defaults(for: .low))
     }
+
+    @Test func taskOverrideBeatsPriority() {
+        var t = task("a", day: 12, minutes: 15 * 60)
+        t.reminders = ReminderOverride(advance: .minutes(60), followUp: .off)
+        let plan = planner.plan(tasks: [t], inboxCount: 0, now: date(12, 8))
+        let sameDay = taskReminders(plan, "a").filter { calendar.isDate($0.0, inSameDayAs: date(12, 0)) }
+        #expect(sameDay.map(\.1) == [.advance, .due, .evening])
+        #expect(sameDay.first?.0 == date(12, 14))
+    }
+
+    /// Une tâche relancée toutes les 15 min ne doit pas évincer l'heure prévue d'une autre, dans 3 jours.
+    @Test func essentialRemindersSurviveTheLimit() {
+        var busy = task("busy", day: 12, minutes: 8 * 60)
+        busy.reminders = ReminderOverride(followUp: .every(15))
+        let plan = planner.plan(tasks: [busy, task("later", day: 15, minutes: 10 * 60)], inboxCount: 0, now: date(12, 7))
+        #expect(plan.count <= ReminderSettings().maxRequests)
+        #expect(plan.contains { $0.taskID == "later" && $0.kind == .due })
+    }
 }

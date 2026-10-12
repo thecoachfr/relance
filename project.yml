@@ -77,6 +77,7 @@ targets:
       - Shared/Google
       - Shared/Model/DateDetection.swift
       - Shared/Model/TaskPriority.swift
+      - Shared/Reminders/ReminderOverride.swift
     entitlements:
       path: RelanceShare/RelanceShare.entitlements
       properties:
@@ -129,6 +130,7 @@ targets:
       - Shared/Model/DateDetection.swift
       - Shared/Reminders/ReminderPlanner.swift
       - Shared/Reminders/ReminderProfile.swift
+      - Shared/Reminders/ReminderOverride.swift
       - Shared/Google/TasksAPI.swift
       - Shared/Google/NotesTimeCodec.swift
       - Shared/Google/GoogleRefreshSession.swift
@@ -166,6 +168,7 @@ targets:
       - Shared/Model/TaskPriority.swift
       - Shared/Reminders/ReminderPlanner.swift
       - Shared/Reminders/ReminderProfile.swift
+      - Shared/Reminders/ReminderOverride.swift
     entitlements:
       path: RelanceWatchWidgets/RelanceWatchWidgets.entitlements
       properties:

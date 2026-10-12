@@ -6,6 +6,7 @@ import Foundation
 ///     ⏰ 15:00
 ///     🏷 Administratif
 ///     ❗ Urgente            (ou « 🔽 Basse » ; rien pour Normale)
+///     🔁 Prévenir 1 jour avant · Relancer toutes les 15 min   (relances propres à la tâche)
 ///     Notes de l'utilisateur…
 nonisolated enum NotesTimeCodec {
     static let timeMarker = "⏰"
@@ -15,6 +16,7 @@ nonisolated enum NotesTimeCodec {
         var minutes: Int?
         var category: String?
         var priority: TaskPriority = .normal
+        var reminders: ReminderOverride?
         var notes: String
     }
 
@@ -35,6 +37,8 @@ nonisolated enum NotesTimeCodec {
                 let name = first.dropFirst(categoryMarker.count).trimmingCharacters(in: .whitespaces)
                 guard !name.isEmpty else { break }
                 meta.category = name
+            } else if meta.reminders == nil, let reminders = ReminderOverride(line: first) {
+                meta.reminders = reminders
             } else if !hasPriority, let priority = Self.priority(first) {
                 meta.priority = priority
                 hasPriority = true
@@ -47,11 +51,13 @@ nonisolated enum NotesTimeCodec {
         return meta
     }
 
-    static func encode(minutes: Int?, category: String? = nil, priority: TaskPriority = .normal, notes: String) -> String {
+    static func encode(minutes: Int?, category: String? = nil, priority: TaskPriority = .normal,
+                       reminders: ReminderOverride? = nil, notes: String) -> String {
         var lines: [String] = []
         if let minutes { lines.append(String(format: "%@ %02d:%02d", timeMarker, minutes / 60, minutes % 60)) }
         if let category, !category.isEmpty { lines.append("\(categoryMarker) \(category)") }
         if let marker = priority.marker { lines.append("\(marker) \(priority.rawValue)") }
+        if let line = reminders?.line { lines.append(line) }
         if !notes.isEmpty { lines.append(notes) }
         return lines.joined(separator: "\n")
     }

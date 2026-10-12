@@ -13,6 +13,7 @@ struct TaskEditor: View {
     @State private var time = Date.now
     @State private var category: String?
     @State private var priority = TaskPriority.normal
+    @State private var reminders: ReminderOverride?
 
     var body: some View {
         NavigationStack {
@@ -34,10 +35,11 @@ struct TaskEditor: View {
                 }
                 Section {
                     PriorityPicker(priority: $priority)
+                    TaskRemindersRow(reminders: $reminders, priority: priority)
                 } header: {
                     Text("Priorité")
                 } footer: {
-                    PriorityFooter(priority: priority)
+                    PriorityFooter(priority: priority, reminders: reminders)
                 }
                 Section {
                     CategoryPicker(category: $category)
@@ -62,7 +64,7 @@ struct TaskEditor: View {
                         let c = Calendar.current.dateComponents([.hour, .minute], from: time)
                         store.update(item, title: title, notes: notes, day: hasDay ? day : nil,
                                      minutes: hasTime ? c.hour! * 60 + c.minute! : nil, category: .some(category),
-                                     priority: priority)
+                                     priority: priority, reminders: .some(reminders))
                         dismiss()
                     }
                     .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
@@ -77,6 +79,7 @@ struct TaskEditor: View {
         notes = item.notes
         category = item.category
         priority = item.priority
+        reminders = item.reminderOverride
         hasDay = item.dueDay != nil
         day = item.dueDay ?? .now
         hasTime = item.dueMinutes != nil

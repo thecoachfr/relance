@@ -18,6 +18,8 @@ final class TaskItem {
     var category: String?
     /// Ligne « ❗ » / « 🔽 » des notes ; `nil` = Normale.
     var priorityRaw: String?
+    /// Ligne « 🔁 … » des notes : relances propres à la tâche ; `nil` = selon la priorité.
+    var remindersRaw: String?
     var isCompleted: Bool
     var completedAt: Date?
     var snoozedUntil: Date?
@@ -57,6 +59,11 @@ final class TaskItem {
         set { priorityRaw = newValue == .normal ? nil : newValue.rawValue }
     }
 
+    var reminderOverride: ReminderOverride? {
+        get { remindersRaw.flatMap(ReminderOverride.init(line:)) }
+        set { remindersRaw = newValue?.line }
+    }
+
     /// À trier : pas de date, ou une date sans heure.
     var needsTriage: Bool { dueDay == nil || dueMinutes == nil }
 
@@ -72,6 +79,7 @@ final class TaskItem {
             dueDay: dueDay.map { calendar.dateComponents([.year, .month, .day], from: $0) },
             dueMinutes: dueMinutes,
             snoozedUntil: snoozedUntil,
-            priority: priority)
+            priority: priority,
+            reminders: reminderOverride)
     }
 }

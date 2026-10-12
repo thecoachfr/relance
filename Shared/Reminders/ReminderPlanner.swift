@@ -10,6 +10,8 @@ nonisolated struct PlannableTask: Sendable, Equatable {
     var dueMinutes: Int?
     var snoozedUntil: Date?
     var priority: TaskPriority = .normal
+    /// Relances propres à la tâche, par-dessus le profil de sa priorité.
+    var reminders: ReminderOverride?
 }
 
 nonisolated struct ReminderSettings: Sendable, Equatable {
@@ -113,7 +115,15 @@ nonisolated struct ReminderPlanner: Sendable {
         reminders += digests(tasks: tasks, inboxCount: inboxCount, now: now, horizon: horizon)
 
         reminders.sort { $0.fireDate < $1.fireDate }
-        reminders = Array(reminders.prefix(settings.maxRequests))
+        // iOS garde au plus 64 notifications : l'heure prévue, les rappels « avant », les reports choisis
+        // et les résumés passent d'abord ; les relances (souvent répétées) remplissent la place qui reste.
+        // Le plan est recalculé à chaque ouverture et chaque synchro, la suite sera programmée plus tard.
+        if reminders.count > settings.maxRequests {
+            let essential: Set<ReminderKind> = [.advance, .due, .snoozed, .digest]
+            let kept = reminders.filter { essential.contains($0.kind) }.prefix(settings.maxRequests)
+            let rest = reminders.filter { !essential.contains($0.kind) }.prefix(settings.maxRequests - kept.count)
+            reminders = (Array(kept) + rest).sorted { $0.fireDate < $1.fireDate }
+        }
         for i in reminders.indices {
             reminders[i].badge = tasks.filter { isOverdue($0, at: reminders[i].fireDate) }.count
         }
@@ -126,7 +136,7 @@ nonisolated struct ReminderPlanner: Sendable {
     /// avant l'heure, à l'heure, relance(s) après, puis les moments de la journée (matin, midi, soir)
     /// le jour prévu et chaque jour de retard.
     private func events(for task: PlannableTask, dayStart: Date, horizon: Date) -> [(date: Date, kind: ReminderKind)] {
-        let profile = settings[task.priority]
+        let profile = task.reminders?.applied(to: settings[task.priority]) ?? settings[task.priority]
         var events: [(Date, ReminderKind)] = []
         let slots = ReminderProfile.Slot.allCases.filter { profile.slots.contains($0) }
             .map { at(dayStart, settings.minutes(of: $0)) }

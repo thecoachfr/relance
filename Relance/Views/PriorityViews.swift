@@ -28,15 +28,15 @@ struct PriorityPicker: View {
     }
 }
 
-/// Ce que change la priorité, sous le choix : on comprend pourquoi la choisir.
+/// Ce que change la priorité, sous le choix : le réglage réel (Réglages › Relances), pas un texte figé.
 struct PriorityFooter: View {
+    @Environment(TaskStore.self) private var store
     let priority: TaskPriority
+    /// Relances propres à la tâche : le texte décrit alors ce qui s'applique vraiment.
+    var reminders: ReminderOverride?
 
     var body: some View {
-        switch priority {
-        case .urgent: Text("Relancée toutes les 30 minutes jusqu'à ce qu'elle soit faite, même en mode Concentration.")
-        case .normal: Text("Relancée à l'heure, une heure après, puis le soir.")
-        case .low: Text("Un seul rappel, à l'heure prévue s'il y en a une ; ensuite, seulement le résumé du matin.")
-        }
+        let profile = store.scheduler.settings[priority]
+        Text(ReminderSummary.text(for: reminders?.applied(to: profile) ?? profile) + ".")
     }
 }

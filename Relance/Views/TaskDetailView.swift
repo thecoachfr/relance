@@ -14,6 +14,7 @@ struct TaskDetailView: View {
     @State private var time = Date.now
     @State private var category: String?
     @State private var priority = TaskPriority.normal
+    @State private var reminders: ReminderOverride?
     @State private var loaded = false
 
     var body: some View {
@@ -42,10 +43,11 @@ struct TaskDetailView: View {
             }
             Section {
                 PriorityPicker(priority: $priority)
+                TaskRemindersRow(reminders: $reminders, priority: priority)
             } header: {
                 Text("Priorité")
             } footer: {
-                PriorityFooter(priority: priority)
+                PriorityFooter(priority: priority, reminders: reminders)
             }
             Section {
                 CategoryPicker(category: $category)
@@ -77,6 +79,7 @@ struct TaskDetailView: View {
         .onChange(of: time) { save() }
         .onChange(of: category) { save() }
         .onChange(of: priority) { save() }
+        .onChange(of: reminders) { save() }
         // Texte : enregistré à la sortie du champ ou de la tâche, pas à chaque frappe (chaque enregistrement synchronise).
         .onSubmit { save() }
         .onDisappear { save() }
@@ -87,6 +90,7 @@ struct TaskDetailView: View {
         notes = item.notes
         category = item.category
         priority = item.priority
+        reminders = item.reminderOverride
         hasDay = item.dueDay != nil
         day = item.dueDay ?? .now
         hasTime = item.dueMinutes != nil
@@ -101,8 +105,9 @@ struct TaskDetailView: View {
         let minutes = hasDay && hasTime ? c.hour! * 60 + c.minute! : nil
         let newDay = hasDay ? Calendar.current.startOfDay(for: day) : nil
         guard title != item.title || notes != item.notes || newDay != item.dueDay || minutes != item.dueMinutes
-                || category != item.category || priority != item.priority else { return }
+                || category != item.category || priority != item.priority
+                || reminders != item.reminderOverride else { return }
         store.update(item, title: title, notes: notes, day: newDay, minutes: minutes, category: .some(category),
-                     priority: priority)
+                     priority: priority, reminders: .some(reminders))
     }
 }

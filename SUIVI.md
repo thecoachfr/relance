@@ -13,7 +13,7 @@
 | **App iPad** | Liste + détail, raccourcis clavier (↑↓, ⌘↩, ⌘L, ⌘⌫, ⌘R, ⌘N), pas de relances par défaut (réglage « Relances sur cet appareil ») |
 | **App Mac** | L'app iPad « Designed for iPad », lancée depuis Xcode (⌘R) |
 | **Priorité** | Urgente / Normale / Basse. Urgente : relancée toutes les 30 min jusqu'à minuit (silence 22 h–7 h 30), en retard 7 h 30 / midi / 20 h, passe le mode Concentration, sous-titre « Urgente », toujours dans l'activité en direct. Basse : un seul rappel à l'heure, puis résumé du matin ; jamais dans l'activité en direct ni le widget. Réglée dans l'app (formulaires, balayage, appui long), à la voix (« urgent », « pas pressé » : Siri, saisie rapide, dictée montre) ou par le tri. Affichage : **le rond à cocher porte la priorité** (épais et rouge = Urgente, pointillés = Basse), la catégorie reste seule en pastille (choix du 12/10 après comparaison de deux maquettes) |
-| **Réglages des relances** | Réglages › Relances › Quand et comment relancer : horaires (résumé du matin, midi, soir), plage silencieuse, week-end calme ; profil par priorité (prévenir avant, relancer après / jusqu'à ce que ce soit fait, matin/midi/soir sans heure ou en retard, demander l'heure, mode Concentration, activité en direct, rétablir). Valeurs d'origine = comportement d'avant. Gardés sur l'appareil (`ReminderSettings`, App Group) |
+| **Réglages des relances** | Réglages › Relances › Quand et comment relancer : horaires (résumé du matin, midi, soir), plage silencieuse, week-end calme ; profil par priorité (prévenir avant, relancer après / jusqu'à ce que ce soit fait, matin/midi/soir sans heure ou en retard, demander l'heure, mode Concentration, activité en direct, rétablir). Valeurs d'origine = comportement d'avant. Gardés sur l'appareil (`ReminderSettings`, App Group). **Par tâche** : ligne « Relances » du détail (prévenir avant, relancer une fois ou toutes les…), rangée dans les notes Google (`🔁 …`), respectée par le tri. Limite iOS de 64 notifications : l'heure prévue, les rappels avant, les reports et les résumés passent d'abord |
 | **Partage depuis une autre app** | Extension « Relance » dans la feuille de partage (WhatsApp, Mail, Messages, Safari…) : fiche avec titre prérempli (première phrase utile, en-têtes WhatsApp retirés), échéance et priorité lues dans le message, message complet dans les notes (« 📩 Message partagé »). Envoi direct chez Google (trousseau partagé `GD6W292ZXP.fr.alexandrefau.relance.shared`, rempli par l'app à chaque synchro) ; sans réseau, file d'attente envoyée à la synchro suivante. Le tri propose un meilleur titre une fois (« — titre à revoir ») si le titre n'a pas été retouché. Texte et liens seulement |
 | **Apple Watch** | Liste, cocher, reporter, dictée, complication, Siri (« nouvelle Relance », garde l'heure, direct chez Google) ; l'iPhone sert de relais |
 | **Vigie Home Assistant** | AppDaemon rafraîchit Google Tasks chaque minute ; si le nombre de tâches change → push silencieux à l'iPhone et l'iPad (testé : push reçu et synchro en 1 s) |
@@ -27,6 +27,7 @@ Google Tasks n'a ni heure (dans son API) ni étiquettes : en tête des notes, da
 ⏰ 15:00
 🏷 Administratif
 ❗ Urgente            (ou « 🔽 Basse » ; rien pour Normale)
+🔁 Prévenir 1 jour avant · Relancer toutes les 15 min   (relances propres à la tâche)
 🎙 Dicté : … (titre d'origine, si le tri l'a nettoyé)
 Notes libres…
 💡 Suggestion : … (ajoutée par le tri)
@@ -48,8 +49,7 @@ Catégories fixes : Administratif, Maison, Santé, Achats, Travail, Famille, Per
 4. **Nettoyage du titre** (activé le 12/10) : comme Google retire lui-même la date du titre, il ne servira que si une date reste dans le titre. Piste : faire corriger par le tri les erreurs de transcription évidentes (« appel et le garage »), en gardant l'original en 🎙.
 5. **Montre** : installer la dernière version (Siri, priorité, rond coloré), injoignable le 12/10.
 6. Catégories pas encore affichées dans le **widget** ni sur la **montre**.
-7. **Personnalisation des relances, étape 3** (étapes 1 priorité et 2 réglages faites le 12/10) : par tâche, « Relances : selon la priorité » → « Prévenir avant » et « Relancer toutes les » pour cette tâche (ligne `🔁` dans les notes Google). À prévoir : limite iOS de 64 notifications programmées (servir les urgentes d'abord).
-8. **Siri, suite** : agir sur une tâche existante (« marque *garage* comme fait », « reporte *garage* à demain », via une entité Tâche, aussi cherchable dans Spotlight) ; « qu'est-ce que j'ai aujourd'hui » ; comprendre « dans 2 heures ».
+7. **Siri, suite** : agir sur une tâche existante (« marque *garage* comme fait », « reporte *garage* à demain », via une entité Tâche, aussi cherchable dans Spotlight) ; « qu'est-ce que j'ai aujourd'hui » ; comprendre « dans 2 heures ».
 
 ## 3. Idées et pistes (non faites)
 

@@ -97,3 +97,21 @@ extension ReminderSettings: Codable {
         defaults.set(try? JSONEncoder().encode(self), forKey: Self.key)
     }
 }
+
+nonisolated extension ReminderOverride {
+    func applied(to profile: ReminderProfile) -> ReminderProfile {
+        var p = profile
+        switch advance {
+        case .off: p.advanceMinutes = nil
+        case .minutes(let m): p.advanceMinutes = m
+        case nil: break
+        }
+        switch followUp {
+        case .off: p.followUpMinutes = nil
+        case .once(let m): p.followUpMinutes = m; p.followUpRepeats = false
+        case .every(let m): p.followUpMinutes = m; p.followUpRepeats = true
+        case nil: break
+        }
+        return p
+    }
+}

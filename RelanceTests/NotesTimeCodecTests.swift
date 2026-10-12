@@ -48,3 +48,29 @@ struct NotesTimeCodecTests {
         #expect(decoded == .init(minutes: 900, category: "Maison", notes: "Notes"))
     }
 }
+
+struct ReminderOverrideTests {
+    @Test func lineRoundTrip() {
+        let r = ReminderOverride(advance: .minutes(24 * 60), followUp: .every(15))
+        #expect(r.line == "🔁 Prévenir 1 jour avant · Relancer toutes les 15 min")
+        #expect(ReminderOverride(line: r.line!) == r)
+        #expect(ReminderOverride(line: "🔁 Ne pas relancer") == ReminderOverride(followUp: .off))
+        #expect(ReminderOverride(line: "🔁 Relancer après 2 h")?.followUp == .once(120))
+        #expect(ReminderOverride(line: "🔁 n'importe quoi") == nil)
+    }
+
+    /// La ligne se range après la priorité ; une ligne illisible reste dans les notes, intacte.
+    @Test func notesWithOverride() {
+        let r = ReminderOverride(advance: .minutes(15))
+        let encoded = NotesTimeCodec.encode(minutes: 600, priority: .urgent, reminders: r, notes: "x")
+        #expect(encoded == "⏰ 10:00\n❗ Urgente\n🔁 Prévenir 15 min avant\nx")
+        #expect(NotesTimeCodec.decode(encoded).reminders == r)
+        #expect(NotesTimeCodec.decode("🔁 bla\nx").notes == "🔁 bla\nx")
+    }
+
+    @Test func overrideReplacesProfile() {
+        let p = ReminderOverride(followUp: .every(15)).applied(to: .defaults(for: .normal))
+        #expect(p.followUpMinutes == 15 && p.followUpRepeats)
+        #expect(ReminderOverride(followUp: .off).applied(to: .defaults(for: .urgent)).followUpMinutes == nil)
+    }
+}
