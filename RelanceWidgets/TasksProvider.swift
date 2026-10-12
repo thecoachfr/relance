@@ -7,6 +7,7 @@ struct WidgetTask: Identifiable, Hashable {
     var due: Date
     var hasTime: Bool
     var isUrgent = false
+    var category: String?
 }
 
 struct TasksEntry: TimelineEntry {
@@ -60,7 +61,7 @@ struct TasksProvider: TimelineProvider {
         return items.filter { $0.priority != .low }.compactMap { item in
             item.dueInstant().map {
                 WidgetTask(id: item.localID.uuidString, title: item.title, due: $0, hasTime: item.dueMinutes != nil,
-                           isUrgent: item.priority == .urgent)
+                           isUrgent: item.priority == .urgent, category: item.category)
             }
         }
     }

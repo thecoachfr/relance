@@ -91,6 +91,15 @@ struct WatchTaskRow: View {
                 if let status = status(late: late) {
                     Text(status).font(.footnote).foregroundStyle(late ? .red : .secondary)
                 }
+                if let name = task.category {
+                    let category = TaskCategory(name: name)
+                    HStack(spacing: 3) {
+                        Image(systemName: category?.symbol ?? "tag").foregroundStyle(category?.color ?? .gray)
+                        Text(name).foregroundStyle(.secondary)
+                    }
+                    .font(.caption2)
+                    .accessibilityLabel("Catégorie \(name)")
+                }
             }
         }
         .accessibilityElement(children: .combine)

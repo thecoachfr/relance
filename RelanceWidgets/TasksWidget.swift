@@ -77,8 +77,12 @@ struct TasksWidgetView: View {
                 Spacer(minLength: 0)
                 if let next = entry.ordered.first {
                     Text(next.title).font(.footnote.weight(.semibold)).lineLimit(2)
-                    Text(DueText.short(due: next.due, hasTime: next.hasTime, now: entry.date))
-                        .font(.caption2).foregroundStyle(next.due < entry.date ? .red : .secondary)
+                    HStack(spacing: 4) {
+                        CategoryMark(name: next.category)
+                        Text(DueText.short(due: next.due, hasTime: next.hasTime, now: entry.date))
+                            .foregroundStyle(next.due < entry.date ? .red : .secondary)
+                    }
+                    .font(.caption2)
                 }
             }
         }
@@ -117,6 +121,7 @@ struct TasksWidgetView: View {
 
                         Text(task.title).font(.subheadline).lineLimit(1)
                         Spacer(minLength: 4)
+                        CategoryMark(name: task.category)
                         Text(DueText.short(due: task.due, hasTime: task.hasTime, now: entry.date))
                             .font(.caption.monospacedDigit())
                             .foregroundStyle(late ? .red : .secondary)
@@ -138,6 +143,22 @@ struct TasksWidgetView: View {
         case (0, _): return "\(today) aujourd'hui"
         case (_, 0): return "\(overdue) en retard"
         default: return "\(overdue) en retard · \(today) aujourd'hui"
+        }
+    }
+}
+
+/// Catégorie réduite à son symbole coloré : une ligne de widget n'a pas la place pour le nom.
+private struct CategoryMark: View {
+    let name: String?
+
+    var body: some View {
+        if let name {
+            let category = TaskCategory(name: name)
+            Image(systemName: category?.symbol ?? "tag")
+                .font(.caption2)
+                .foregroundStyle(category?.color ?? .gray)
+                .widgetAccentable()
+                .accessibilityLabel("Catégorie \(name)")
         }
     }
 }

@@ -53,7 +53,7 @@ final class WatchStore: NSObject, WCSessionDelegate {
             return calendar.date(byAdding: .day, value: 1, to: day)
         }
         return WatchTask(id: id, title: r.title ?? "", due: due, hasTime: minutes != nil && due != nil, snoozedUntil: nil,
-                         priority: meta.priority)
+                         priority: meta.priority, category: meta.category)
     }
 
     // MARK: - Actions
