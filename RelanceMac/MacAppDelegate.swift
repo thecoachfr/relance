@@ -22,6 +22,13 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationC
         #endif
         UNUserNotificationCenter.current().delegate = self
         store.scheduler.registerCategories()
+        // Appareil qui relance changé ailleurs : on pose ou on retire les relances du Mac.
+        ReminderDevice.observe { [store] in
+            Task {
+                if ReminderScheduler.isEnabledOnThisDevice { _ = await store.scheduler.requestAuthorization() }
+                await store.reschedule()
+            }
+        }
         let store = store
         let status = status
         store.travelMinutes = { item in

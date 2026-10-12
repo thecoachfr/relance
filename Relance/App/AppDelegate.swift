@@ -21,6 +21,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         #endif
         UNUserNotificationCenter.current().delegate = self
         store.scheduler.registerCategories()
+        // Appareil qui relance changé ailleurs : on pose ou on retire les relances de celui-ci.
+        ReminderDevice.observe { [store] in Task { await store.reschedule() } }
         // Siri, widgets et activité en direct passent par ce magasin.
         let store = store
         AppDependencyManager.shared.add(dependency: store)

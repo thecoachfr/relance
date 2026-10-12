@@ -34,6 +34,8 @@ targets:
       properties:
         com.apple.developer.usernotifications.time-sensitive: true
         aps-environment: development
+        # Choix de l'appareil qui relance, partagé entre l'iPhone, l'iPad et le Mac.
+        com.apple.developer.ubiquity-kvstore-identifier: $(TeamIdentifierPrefix)fr.alexandrefau.relance
         com.apple.security.application-groups: [group.fr.alexandrefau.relance]
         # Le groupe propre de l'app d'abord (connexion Google existante), puis celui partagé avec l'extension.
         keychain-access-groups:
@@ -99,6 +101,7 @@ targets:
       - Relance/Views/TaskDetailView.swift
       - Relance/Views/ReminderSettingsView.swift
       - Relance/Views/QuickAddSheet.swift
+      - Relance/Views/ReminderDeviceSection.swift
     configFiles:
       Debug: Relance/Resources/Secrets.xcconfig
       Release: Relance/Resources/Secrets.xcconfig
@@ -110,6 +113,7 @@ targets:
         com.apple.security.app-sandbox: true
         com.apple.security.network.client: true
         com.apple.security.personal-information.calendars: true
+        com.apple.developer.ubiquity-kvstore-identifier: $(TeamIdentifierPrefix)fr.alexandrefau.relance
         com.apple.security.application-groups: [group.fr.alexandrefau.relance]
         keychain-access-groups: [$(AppIdentifierPrefix)fr.alexandrefau.relance]
     info:

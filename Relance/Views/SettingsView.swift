@@ -6,8 +6,6 @@ struct SettingsView: View {
     @Environment(GoogleAuth.self) private var auth
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
-    @State private var notificationStatus: UNAuthorizationStatus?
-    @State private var remindersHere = ReminderScheduler.isEnabledOnThisDevice
 
     var body: some View {
         NavigationStack {
@@ -23,22 +21,9 @@ struct SettingsView: View {
                         dismiss()
                     }
                 }
+                ReminderDeviceSection()
                 Section {
                     NavigationLink("Quand et comment relancer") { ReminderSettingsView() }
-                    Toggle("Sur cet appareil", isOn: $remindersHere)
-                        .onChange(of: remindersHere) { _, on in
-                            ReminderScheduler.isEnabledOnThisDevice = on
-                            Task { await store.reschedule() }
-                        }
-                    if notificationStatus == .denied {
-                        Button("Notifications désactivées : ouvrir les réglages") {
-                            openURL(URL(string: UIApplication.openNotificationSettingsURLString)!)
-                        }
-                    }
-                } header: {
-                    Text("Relances")
-                } footer: {
-                    Text("Activées d'origine sur l'iPhone seulement, pour ne pas être relancé deux fois pour la même tâche.")
                 }
                 Section {
                     let entries = SyncLog.all().prefix(12)
@@ -62,7 +47,6 @@ struct SettingsView: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) { Button("OK") { dismiss() } }
             }
-            .task { notificationStatus = await store.scheduler.authorizationStatus() }
         }
     }
 }

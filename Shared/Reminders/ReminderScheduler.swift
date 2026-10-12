@@ -1,8 +1,5 @@
 import Foundation
 import Synchronization
-#if canImport(UIKit)
-import UIKit
-#endif
 import UserNotifications
 
 /// Traduit le plan du `ReminderPlanner` en notifications locales iOS.
@@ -31,22 +28,8 @@ final class ReminderScheduler {
 
     static let askTimeChoices = [9 * 60, 12 * 60, 15 * 60, 18 * 60]
 
-    private static let enabledKey = "remindersOnThisDevice"
-
-    /// Relances sur cet appareil. Par défaut seul l'iPhone relance : sinon iPhone et iPad
-    /// sonnent pour la même tâche, et un « Fait » sur l'un ne coupe l'autre qu'à la synchro suivante.
-    static var isEnabledOnThisDevice: Bool {
-        get { UserDefaults.standard.object(forKey: enabledKey) as? Bool ?? isPhone }
-        set { UserDefaults.standard.set(newValue, forKey: enabledKey) }
-    }
-
-    private static var isPhone: Bool {
-        #if os(iOS)
-        UIDevice.current.userInterfaceIdiom == .phone
-        #else
-        false
-        #endif
-    }
+    /// Relances sur cet appareil : seulement s'il est l'appareil choisi (voir `ReminderDevice`).
+    static var isEnabledOnThisDevice: Bool { ReminderDevice.chosen == .current }
 
     func registerCategories() {
         let done = UNNotificationAction(identifier: Action.done, title: "Fait",

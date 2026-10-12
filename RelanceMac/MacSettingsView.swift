@@ -24,9 +24,6 @@ struct MacSettingsView: View {
 private struct GeneralSettings: View {
     @Environment(TaskStore.self) private var store
     @Environment(GoogleAuth.self) private var auth
-    @Environment(\.openURL) private var openURL
-    @State private var remindersHere = ReminderScheduler.isEnabledOnThisDevice
-    @State private var notificationStatus: UNAuthorizationStatus?
 
     var body: some View {
         Form {
@@ -40,31 +37,10 @@ private struct GeneralSettings: View {
                     Button("Se déconnecter", role: .destructive) { store.signOut() }
                 }
             }
-            Section {
-                Toggle("Relances sur ce Mac", isOn: $remindersHere)
-                    .onChange(of: remindersHere) { _, on in
-                        ReminderScheduler.isEnabledOnThisDevice = on
-                        Task {
-                            if on { _ = await store.scheduler.requestAuthorization() }
-                            notificationStatus = await store.scheduler.authorizationStatus()
-                            await store.reschedule()
-                        }
-                    }
-                if remindersHere, notificationStatus == .denied {
-                    Button("Notifications refusées : ouvrir Réglages Système") {
-                        openURL(URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension")!)
-                    }
-                }
-            } header: {
-                Text("Notifications")
-            } footer: {
-                Text("Désactivées d'origine : l'iPhone relance déjà, et un « Fait » sur un appareil ne coupe l'autre qu'à la synchro suivante.")
-                    .foregroundStyle(.secondary)
-            }
+            ReminderDeviceSection()
         }
         .formStyle(.grouped)
-        .frame(width: 520, height: 340)
-        .task { notificationStatus = await store.scheduler.authorizationStatus() }
+        .frame(width: 520, height: 380)
     }
 }
 
