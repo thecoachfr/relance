@@ -14,7 +14,7 @@
 | **App Mac** | L'app iPad « Designed for iPad », lancée depuis Xcode (⌘R) |
 | **Apple Watch** | Liste, cocher, reporter, dictée, complication ; l'iPhone sert de relais |
 | **Vigie Home Assistant** | AppDaemon rafraîchit Google Tasks chaque minute ; si le nombre de tâches change → push silencieux à l'iPhone et l'iPad (testé : push reçu et synchro en 1 s) |
-| **Tri par Claude** | Routine cloud « Relance · tri » : catégorie (🏷), date/heure si explicites (⏰), sinon suggestion (💡). Tous les jours à 6 h 45 **et** 90 s après chaque nouvelle tâche (lancée par la vigie, max 20/jour). Testé le 12/10 |
+| **Tri par Claude** | Routine cloud « Relance · tri » : catégorie (🏷), date/heure si explicites (⏰), sinon suggestion (💡) ; retire alors du titre l'expression de date/heure dictée (titre d'origine gardé en « 🎙 Dicté : … », rien retiré en cas de doute). Tous les jours à 6 h 45 **et** 90 s après chaque nouvelle tâche (lancée par la vigie, max 20/jour). Testé le 12/10 |
 | **Catégories** | Affichées sur l'iPhone et l'iPad (vérifié le 12/10) ; « 🏷 » et « ⏰ » reconnus avec ou sans sélecteur de variante (U+FE0F) |
 | **Logo** | « Boucle » (flèche circulaire + coche, orange), variantes sombre / teintée / montre |
 
@@ -23,6 +23,7 @@ Google Tasks n'a ni heure (dans son API) ni étiquettes : en tête des notes, da
 ```
 ⏰ 15:00
 🏷 Administratif
+🎙 Dicté : … (titre d'origine, si le tri l'a nettoyé)
 Notes libres…
 💡 Suggestion : … (ajoutée par le tri)
 ```
@@ -40,7 +41,7 @@ Catégories fixes : Administratif, Maison, Santé, Achats, Travail, Famille, Per
 1. **Montre autonome (eSIM)** — codée et installée, **pas encore testée** : couper l'iPhone (mode Avion), ouvrir Relance sur la montre, tirer la liste (« Mis à jour à l'instant »), cocher une tâche, rallumer l'iPhone et vérifier qu'elle est cochée là aussi.
 2. **Tâches de test** à cocher : « [test] appeler le garage… », « [test] renouveler le passeport », « [test] envoyer le dossier ».
 3. **Premier tri automatique du matin** : demain 6 h 45 (vérifier dans [la routine](https://claude.ai/code/routines/trig_01GFD6vBExCUvTYDbx9KePm7)).
-4. **Décision en attente** : autoriser la routine à **nettoyer le titre** (retirer « vendredi à 15 h » une fois la date et l'heure rangées) ?
+4. **Nettoyage du titre** (activé le 12/10) : vérifier sur une tâche dictée « … vendredi à 15 h » que le titre est raccourci et que « 🎙 Dicté » est dans les notes.
 5. Catégories pas encore affichées dans le **widget** ni sur la **montre**.
 
 ## 3. Idées et pistes (non faites)
