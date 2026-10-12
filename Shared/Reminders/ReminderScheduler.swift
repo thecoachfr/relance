@@ -80,6 +80,29 @@ final class ReminderScheduler {
         }
     }
 
+    /// Tâche arrivée de Google avec une date mais sans heure (Google Home garde l'heure pour lui) :
+    /// on la demande tout de suite, plutôt que le matin du jour prévu. En plage silencieuse, sans son.
+    func askTimeNow(for tasks: [PlannableTask], now: Date = .now, calendar: Calendar = .current) async {
+        guard Self.isEnabledOnThisDevice else { return }
+        let c = calendar.dateComponents([.hour, .minute], from: now)
+        let quiet = settings.isQuiet(minuteOfDay: (c.hour ?? 0) * 60 + (c.minute ?? 0))
+        for task in tasks {
+            guard let day = task.dueDay.flatMap(calendar.date(from:)),
+                  day >= calendar.startOfDay(for: now),
+                  let endOfDay = calendar.date(byAdding: .day, value: 1, to: day) else { continue }
+            let when = DueText.long(due: endOfDay, hasTime: false, now: now, calendar: calendar)
+            let content = UNMutableNotificationContent()
+            content.title = task.title
+            content.body = "Prévu \(when.prefix(1).lowercased() + when.dropFirst()). À quelle heure ?"
+            content.sound = quiet ? nil : .default
+            content.interruptionLevel = quiet ? .passive : .active
+            content.threadIdentifier = task.id
+            content.categoryIdentifier = Category.askTime
+            content.userInfo = ["taskID": task.id]
+            try? await center.add(UNNotificationRequest(identifier: "\(task.id)|askTimeNow", content: content, trigger: nil))
+        }
+    }
+
     /// Attend `operation` au plus `seconds` secondes, puis continue même si elle n'a pas répondu.
     nonisolated static func withTimeout(seconds: Double, _ operation: @escaping @Sendable () async -> Void) async {
         let resumed = Mutex(false)

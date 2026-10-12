@@ -143,6 +143,8 @@ final class TaskStore {
     // MARK: - Synchronisation Google Tasks
 
     private var syncTask: Task<Void, Never>?
+    /// Arrivées de Google pendant la dernière synchro avec une date mais sans heure.
+    private var needTimeNow: [UUID] = []
 
     /// Une seule synchro à la fois ; un appel pendant une synchro attend la fin puis relance la sienne.
     func sync() async {
@@ -173,6 +175,11 @@ final class TaskStore {
         }
         try? context.save()
         await reschedule()
+        if !needTimeNow.isEmpty {
+            let asks = needTimeNow.compactMap { task($0) }.filter { $0.dueMinutes == nil && !$0.isCompleted }
+            needTimeNow = []
+            await scheduler.askTimeNow(for: asks.map { $0.plannable() })
+        }
     }
 
     private func push() async throws {
@@ -220,6 +227,10 @@ final class TaskStore {
                 return new
             }()
             Self.apply(r, to: item)
+            // Pas à la première synchro complète : on ne questionne que les tâches qui viennent d'arriver.
+            if local == nil, since != nil, !item.isCompleted, item.dueDay != nil, item.dueMinutes == nil {
+                needTimeNow.append(item.localID)
+            }
         }
 
         // Synchro complète : ce qui n'est plus renvoyé a été coché ou supprimé ailleurs.

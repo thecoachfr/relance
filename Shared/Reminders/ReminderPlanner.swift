@@ -21,6 +21,10 @@ nonisolated struct ReminderSettings: Sendable, Equatable {
     var horizonDays = 7
     /// iOS garde au plus 64 notifications locales en attente par app.
     var maxRequests = 60
+
+    func isQuiet(minuteOfDay m: Int) -> Bool {
+        quietStart > quietEnd ? (m >= quietStart || m < quietEnd) : (m >= quietStart && m < quietEnd)
+    }
 }
 
 nonisolated enum ReminderKind: String, Sendable, Equatable {
@@ -141,10 +145,7 @@ nonisolated struct ReminderPlanner: Sendable {
     /// La plage silencieuse coupe tout, sauf l'échéance elle-même et un report choisi explicitement.
     private func isMuted(_ date: Date, _ kind: ReminderKind) -> Bool {
         guard kind != .due, kind != .snoozed else { return false }
-        let m = minuteOfDay(date)
-        return settings.quietStart > settings.quietEnd
-            ? (m >= settings.quietStart || m < settings.quietEnd)
-            : (m >= settings.quietStart && m < settings.quietEnd)
+        return settings.isQuiet(minuteOfDay: minuteOfDay(date))
     }
 
     func isOverdue(_ task: PlannableTask, at date: Date) -> Bool {
