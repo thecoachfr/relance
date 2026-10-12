@@ -39,15 +39,23 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
 
     func application(_ application: UIApplication,
                      didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        SyncLog.add("Inscrit aux push")
         Task { await PushRegistration.register(token: deviceToken) }
     }
 
     /// Push silencieux de la vigie : une tâche a été ajoutée ou cochée ailleurs.
     func application(_ application: UIApplication,
                      didReceiveRemoteNotification userInfo: [AnyHashable: Any]) async -> UIBackgroundFetchResult {
+        SyncLog.add("Push de la vigie reçu")
         if auth.isRestoring { await auth.restore() }
         await store.sync()
+        SyncLog.add(store.lastError.map { "Synchro après push : échec (\($0))" } ?? "Synchro après push : OK")
         return store.lastError == nil ? .newData : .failed
+    }
+
+    func application(_ application: UIApplication,
+                     didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        SyncLog.add("Inscription aux push impossible : \(error.localizedDescription)")
     }
 
     func userNotificationCenter(_ center: UNUserNotificationCenter,

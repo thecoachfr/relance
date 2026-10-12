@@ -45,6 +45,22 @@ struct SettingsView: View {
                 } header: {
                     Text("Rythme")
                 }
+                Section {
+                    let entries = SyncLog.all().prefix(12)
+                    if entries.isEmpty {
+                        Text("Aucune synchro enregistrée").foregroundStyle(.secondary)
+                    }
+                    ForEach(Array(entries), id: \.self) { entry in
+                        LabeledContent(entry.text) {
+                            Text(entry.date, format: .dateTime.hour().minute().second())
+                        }
+                        .font(.footnote)
+                    }
+                } header: {
+                    Text("Journal de synchro")
+                } footer: {
+                    Text("Si « Push de la vigie reçu » n'apparaît jamais, vérifie Réglages iOS → Général → Actualisation en arrière-plan → Relance, et le mode Économie d'énergie.")
+                }
             }
             .navigationTitle("Réglages")
             .navigationBarTitleDisplayMode(.inline)

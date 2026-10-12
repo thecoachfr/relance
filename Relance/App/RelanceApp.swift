@@ -33,12 +33,14 @@ struct RelanceApp: App {
                     AppGroup.defaults.removeObject(forKey: NewTaskIntent.pendingKey)
                     delegate.store.showQuickAdd = true
                 }
+                SyncLog.add("Ouverture de l'app")
                 Task { await delegate.store.sync() }
             case .background: Self.scheduleRefresh()
             default: break
             }
         }
         .backgroundTask(.appRefresh(Self.refreshTaskID)) {
+            SyncLog.add("Réveil iOS en arrière-plan")
             await Self.scheduleRefresh()
             await delegate.store.sync()
         }
