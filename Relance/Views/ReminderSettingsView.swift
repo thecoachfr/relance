@@ -46,6 +46,24 @@ struct ReminderSettingsView: View {
             }
 
             Section {
+                Toggle("Pars maintenant", isOn: $settings.departure.enabled)
+                if settings.departure.enabled {
+                    TextField("Adresse de départ (domicile)", text: $settings.departure.origin, axis: .vertical)
+                        .textContentType(.fullStreetAddress)
+                    Picker("Trajet", selection: $settings.departure.mode) {
+                        ForEach(DepartureSettings.Mode.allCases, id: \.self) { Text($0.label).tag($0) }
+                    }
+                    Picker("Marge", selection: $settings.departure.marginMinutes) {
+                        ForEach([0, 5, 10, 15], id: \.self) { Text($0 == 0 ? "Aucune" : "\($0) min").tag($0) }
+                    }
+                }
+            } header: {
+                Text("Départ")
+            } footer: {
+                Text("Pour une tâche avec une heure et une adresse : Relance calcule le trajet avec Plans et te prévient quand il faut partir. L'adresse de départ reste sur cet appareil.")
+            }
+
+            Section {
                 Toggle("Week-end calme", isOn: $settings.calmWeekends)
             } footer: {
                 Text("Le samedi et le dimanche, seules l'heure prévue et les tâches urgentes relancent.")

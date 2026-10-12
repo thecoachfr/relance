@@ -17,6 +17,7 @@
 | **Tags et mémo de contexte** | Tags transversaux en plus de la catégorie (SCI, Micro, Photo, Syndic, Travaux, Spectacle + ceux créés), 3 max, ligne `🔖`, affichés en gris `#SCI` (pas de pastille), filtre et choix dans le détail. **Mémo de contexte** (activités, interlocuteurs, santé…) : `memo-contexte.md` (hors Git) recopié dans la consigne de la routine, qui s'en sert pour catégories, tags et contacts |
 | **Contact et « à prendre »** | Le tri ajoute `📍 Nom · adresse · téléphone · lien` quand une tâche désigne un interlocuteur du mémo ; le détail affiche Appeler / Itinéraire / Prendre rendez-vous. Rendez-vous médical : `🎒 À prendre : carte Vitale…` |
 | **Agenda** | Bouton « Ajouter au calendrier » dans le détail d'une tâche avec heure : événement d'1 h dans l'agenda par défaut d'iOS (Google principal), lieu tiré de 📍, sans alerte ; il suit l'heure et le titre de la tâche ; à la suppression, Relance demande s'il faut aussi retirer l'événement. Ligne `📅 Dans l'agenda` dans les notes ; seul l'appareil créateur gère l'événement. Tâches Google masquées dans Google Agenda pour éviter le doublon |
+| **Pars maintenant** | Tâche avec heure et adresse 📍 (36 h à venir) : temps de trajet calculé par Plans depuis l'adresse de départ réglée (domicile, gardée sur l'appareil), mode transports / voiture / à pied, marge 0–15 min ; notification « Pars maintenant · 18 min en transports » avec Itinéraire et Fait, jamais coupée par la plage silencieuse. Recalcul au plus toutes les 30 min |
 | **Partage depuis une autre app** | Extension « Relance » dans la feuille de partage (WhatsApp, Mail, Messages, Safari…) : fiche avec titre prérempli (première phrase utile : salutations, formules de politesse et en-têtes WhatsApp sautés), échéance et priorité lues dans le message, message complet dans les notes (« 📩 Message partagé »). Envoi direct chez Google (trousseau partagé `GD6W292ZXP.fr.alexandrefau.relance.shared`, rempli par l'app à chaque synchro) ; sans réseau, file d'attente envoyée à la synchro suivante. Le tri propose un meilleur titre une fois (« — titre à revoir ») si le titre n'a pas été retouché. Texte et liens seulement |
 | **Apple Watch** | Testée seule (eSIM, iPhone en mode Avion) le 12/10. Liste, cocher, reporter, dictée, complication, catégorie sous l'échéance, rond de priorité, Siri (« nouvelle Relance », garde l'heure, direct chez Google) ; l'iPhone sert de relais |
 | **Vigie Home Assistant** | AppDaemon rafraîchit Google Tasks chaque minute ; si le nombre de tâches change → push silencieux à l'iPhone et l'iPad (testé : push reçu et synchro en 1 s) |
@@ -48,8 +49,9 @@ Catégories fixes : Administratif, Maison, Santé, Achats, Travail, Famille, Per
 ## 2. Reste à faire / à vérifier
 
 1. **Premier tri automatique du matin** : demain 6 h 45 (vérifier dans [la routine](https://claude.ai/code/routines/trig_01GFD6vBExCUvTYDbx9KePm7)).
-2. **Correction des transcriptions Google Home** (activée le 12/10) : vérifier sur une prochaine dictée que les erreurs évidentes sont corrigées (titre d'origine gardé en 🎙) et que les titres corrects ne bougent pas.
-3. **Mémo de contexte** : compléter téléphone, lien Doctolib et horaires (dentiste, kiné), locataires des places, comptable, artisans ; puis recopier dans la routine.
+2. **Pars maintenant** : vérifier le 13/10 la notification de départ pour le dentiste ; piste : partir de la position actuelle quand l'app est ouverte.
+3. **Correction des transcriptions Google Home** (activée le 12/10) : vérifier sur une prochaine dictée que les erreurs évidentes sont corrigées (titre d'origine gardé en 🎙) et que les titres corrects ne bougent pas.
+4. **Mémo de contexte** : compléter téléphone, lien Doctolib et horaires (dentiste, kiné), locataires des places, comptable, artisans ; puis recopier dans la routine.
 
 ## 3. Idées et pistes (non faites)
 
@@ -89,5 +91,5 @@ Catégories fixes : Administratif, Maison, Santé, Achats, Travail, Famille, Per
 | Routine | `trig_01GFD6vBExCUvTYDbx9KePm7` « Relance · tri », Sonnet 5.5, 4 h 45 UTC + déclencheur API |
 | Appareils | iPhone 17 Pro Max, iPad Pro M4, Apple Watch Ultra 2, Mac Studio (tous enregistrés sur le compte) |
 | Formulaires | Le détail iPad et l'éditeur iPhone ne renvoient que les champs modifiés (`TaskFields`) et se rechargent si la tâche change ailleurs : sinon ils écrasaient les ajouts de la routine ou d'un autre appareil (bug corrigé le 12/10) |
-| Mise à jour de la montre | L'app montre est intégrée à l'app iPhone : **augmenter `CFBundleVersion`** (8 au 12/10) (project.yml, toutes les cibles) pour que l'iPhone la transmette à la montre ; sinon installer directement quand Xcode voit la montre |
+| Mise à jour de la montre | L'app montre est intégrée à l'app iPhone : **augmenter `CFBundleVersion`** (9 au 12/10) (project.yml, toutes les cibles) pour que l'iPhone la transmette à la montre ; sinon installer directement quand Xcode voit la montre |
 | Xcode 27 | fenêtre des appareils = **Device Hub** (+ → Pair Nearby Device) ; `xcodebuild` n'enregistre pas les appareils |

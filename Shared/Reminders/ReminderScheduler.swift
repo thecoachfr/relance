@@ -15,6 +15,7 @@ final class ReminderScheduler {
         static let task = "TASK"
         static let askTime = "ASK_TIME"
         static let digest = "DIGEST"
+        static let departure = "DEPARTURE"
     }
 
     enum Action {
@@ -23,6 +24,7 @@ final class ReminderScheduler {
         static let tonight = "TONIGHT"
         static let tomorrow = "TOMORROW"
         static let timePrefix = "TIME_"
+        static let route = "ROUTE"
     }
 
     static let askTimeChoices = [9 * 60, 12 * 60, 15 * 60, 18 * 60]
@@ -54,6 +56,11 @@ final class ReminderScheduler {
             UNNotificationCategory(identifier: Category.task, actions: [done, plusOne, tonight, tomorrow], intentIdentifiers: []),
             UNNotificationCategory(identifier: Category.askTime, actions: times, intentIdentifiers: []),
             UNNotificationCategory(identifier: Category.digest, actions: [], intentIdentifiers: []),
+            UNNotificationCategory(identifier: Category.departure, actions: [
+                UNNotificationAction(identifier: Action.route, title: "Itinéraire", options: .foreground,
+                                     icon: UNNotificationActionIcon(systemImageName: "map")),
+                done,
+            ], intentIdentifiers: []),
         ])
     }
 
@@ -154,6 +161,7 @@ final class ReminderScheduler {
         content.categoryIdentifier = switch reminder.kind {
         case .digest: Category.digest
         case .askTime: Category.askTime
+        case .departure: Category.departure
         default: Category.task
         }
         if let taskID = reminder.taskID { content.userInfo = ["taskID": taskID] }

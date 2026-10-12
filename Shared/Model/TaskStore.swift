@@ -17,6 +17,8 @@ final class TaskStore {
     var showQuickAdd = false
     /// Appelé après chaque changement des tâches (activité en direct, côté app).
     var onTasksChanged: (() -> Void)?
+    /// Temps de trajet jusqu'à l'adresse d'une tâche (Plans, côté app) ; `nil` = pas de « Pars maintenant ».
+    var travelMinutes: ((TaskItem) async -> Int?)?
     /// Données d'exemple, sans réseau (captures d'écran, revue de design).
     var isDemo = false
 
@@ -154,7 +156,16 @@ final class TaskStore {
         let completedIDs = Set(((try? context.fetch(FetchDescriptor<TaskItem>(
             predicate: #Predicate { $0.isCompleted || $0.isTrashed }))) ?? []).map(\.localID.uuidString))
         let overdue = tasks.filter { $0.isOverdue() }.count
-        await scheduler.apply(tasks: tasks.map { $0.plannable() }, inboxCount: inbox,
+        var plannables: [PlannableTask] = []
+        for item in tasks {
+            var p = item.plannable()
+            if let travelMinutes, let due = item.dueInstant(), item.dueMinutes != nil,
+               due > .now, due.timeIntervalSinceNow < 36 * 3600 {
+                p.travelMinutes = await travelMinutes(item)
+            }
+            plannables.append(p)
+        }
+        await scheduler.apply(tasks: plannables, inboxCount: inbox,
                               finishedTaskIDs: completedIDs, overdueNow: overdue)
         WidgetCenter.shared.reloadAllTimelines()
         onTasksChanged?()

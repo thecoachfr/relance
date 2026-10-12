@@ -43,7 +43,7 @@ targets:
       properties:
         CFBundleDisplayName: Relance
         CFBundleShortVersionString: "0.3"
-        CFBundleVersion: "8"
+        CFBundleVersion: "9"
         UILaunchScreen: {}
         UISupportedInterfaceOrientations~iphone: [UIInterfaceOrientationPortrait]
         UISupportedInterfaceOrientations~ipad:
@@ -90,7 +90,7 @@ targets:
       properties:
         CFBundleDisplayName: Relance
         CFBundleShortVersionString: "0.3"
-        CFBundleVersion: "8"
+        CFBundleVersion: "9"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.share-services
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ShareViewController
@@ -114,7 +114,7 @@ targets:
       properties:
         CFBundleDisplayName: Relance
         CFBundleShortVersionString: "0.3"
-        CFBundleVersion: "8"
+        CFBundleVersion: "9"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:
@@ -151,7 +151,7 @@ targets:
       properties:
         CFBundleDisplayName: Relance
         CFBundleShortVersionString: "0.3"
-        CFBundleVersion: "8"
+        CFBundleVersion: "9"
         WKApplication: true
         WKCompanionAppBundleIdentifier: fr.alexandrefau.relance
         INAlternativeAppNames:
@@ -182,7 +182,7 @@ targets:
       properties:
         CFBundleDisplayName: Relance
         CFBundleShortVersionString: "0.3"
-        CFBundleVersion: "8"
+        CFBundleVersion: "9"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:

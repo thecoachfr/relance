@@ -53,9 +53,48 @@ nonisolated struct ReminderProfile: Codable, Equatable, Sendable {
     }
 }
 
+/// « Pars maintenant » : prévenir quand il faut partir pour arriver à l'heure à l'adresse de la tâche (ligne 📍).
+nonisolated struct DepartureSettings: Codable, Equatable, Sendable {
+    enum Mode: String, Codable, CaseIterable, Sendable {
+        case transit, car, walking
+
+        var label: String {
+            switch self {
+            case .transit: "Transports en commun"
+            case .car: "Voiture"
+            case .walking: "À pied"
+            }
+        }
+
+        /// « 18 min en transports ».
+        var phrase: String {
+            switch self {
+            case .transit: "en transports"
+            case .car: "en voiture"
+            case .walking: "à pied"
+            }
+        }
+
+        /// Paramètre « dirflg » de Plans.
+        var mapsFlag: String {
+            switch self {
+            case .transit: "r"
+            case .car: "d"
+            case .walking: "w"
+            }
+        }
+    }
+
+    var enabled = true
+    var mode = Mode.transit
+    var marginMinutes = 5
+    /// Adresse de départ (domicile). Vide = fonction inactive. Reste sur l'appareil.
+    var origin = ""
+}
+
 extension ReminderSettings: Codable {
     private enum Keys: String, CodingKey {
-        case morning, evening, midday, quietStart, quietEnd, calmWeekends, urgent, normal, low
+        case morning, evening, midday, quietStart, quietEnd, calmWeekends, urgent, normal, low, departure
     }
 
     /// Chaque champ est facultatif : un réglage ajouté plus tard prend sa valeur d'origine.
@@ -71,6 +110,7 @@ extension ReminderSettings: Codable {
         urgent = (try? c.decodeIfPresent(ReminderProfile.self, forKey: .urgent)) ?? urgent
         normal = (try? c.decodeIfPresent(ReminderProfile.self, forKey: .normal)) ?? normal
         low = (try? c.decodeIfPresent(ReminderProfile.self, forKey: .low)) ?? low
+        departure = (try? c.decodeIfPresent(DepartureSettings.self, forKey: .departure)) ?? departure
     }
 
     func encode(to encoder: Encoder) throws {
@@ -84,6 +124,7 @@ extension ReminderSettings: Codable {
         try c.encode(urgent, forKey: .urgent)
         try c.encode(normal, forKey: .normal)
         try c.encode(low, forKey: .low)
+        try c.encode(departure, forKey: .departure)
     }
 
     private static let key = "reminderSettings"

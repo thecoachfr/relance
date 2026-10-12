@@ -30,6 +30,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         let watchSync = WatchSync(store: store)
         self.watchSync = watchSync
         let auth = auth
+        store.travelMinutes = { item in
+            await TravelTimes.shared.minutes(for: item, settings: store.scheduler.settings.departure)
+        }
         store.onTasksChanged = { [liveActivity] in
             let tasks = store.activeTasks()
             liveActivity.refresh(tasks: tasks, settings: store.scheduler.settings)
@@ -96,6 +99,12 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
             if let minutes = Int(a.dropFirst(ReminderScheduler.Action.timePrefix.count)) {
                 store.setTime(item, minutes: minutes)
             }
+        case ReminderScheduler.Action.route:
+            if let address = TaskContact(notes: item.notes)?.address,
+               let url = TravelTimes.mapsURL(to: address, settings: store.scheduler.settings.departure) {
+                await UIApplication.shared.open(url)
+            }
+            return
         case UNNotificationDefaultActionIdentifier:
             store.openedTaskID = id
         default:

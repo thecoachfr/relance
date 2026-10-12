@@ -192,4 +192,30 @@ struct ReminderPlannerTests {
         #expect(plan.count <= ReminderSettings().maxRequests)
         #expect(plan.contains { $0.taskID == "later" && $0.kind == .due })
     }
+
+    // MARK: - Pars maintenant
+
+    /// RDV à 14 h 50, 18 min de trajet, 5 min de marge : départ annoncé à 14 h 27, même en plage silencieuse.
+    @Test func departureReminder() {
+        var t = task("a", day: 12, minutes: 14 * 60 + 50)
+        t.travelMinutes = 18
+        let plan = planner.plan(tasks: [t], inboxCount: 0, now: date(12, 8))
+        let leave = plan.first { $0.taskID == "a" && $0.kind == .departure }
+        #expect(leave?.fireDate == date(12, 14, 27))
+        #expect(leave?.timeSensitive == true)
+        #expect(leave?.body == "Pars maintenant · 18 min en transports · prévu à 14 h 50.")
+
+        var early = task("b", day: 12, minutes: 7 * 60 + 30)
+        early.travelMinutes = 30
+        #expect(planner.plan(tasks: [early], inboxCount: 0, now: date(11, 20)).contains { $0.kind == .departure })
+    }
+
+    @Test func departureDisabled() {
+        var settings = ReminderSettings()
+        settings.departure.enabled = false
+        var t = task("a", day: 12, minutes: 15 * 60)
+        t.travelMinutes = 20
+        let plan = ReminderPlanner(calendar: calendar, settings: settings).plan(tasks: [t], inboxCount: 0, now: date(12, 8))
+        #expect(!plan.contains { $0.kind == .departure })
+    }
 }
