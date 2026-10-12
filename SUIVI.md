@@ -51,7 +51,7 @@ Catégories fixes : Administratif, Maison, Santé, Achats, Travail, Famille, Per
 1. **Premier tri automatique du matin** : demain 6 h 45 (vérifier dans [la routine](https://claude.ai/code/routines/trig_01GFD6vBExCUvTYDbx9KePm7)).
 2. **Pars maintenant** : vérifier le 13/10 la notification de départ pour le dentiste ; piste : partir de la position actuelle quand l'app est ouverte.
 3. **Correction des transcriptions Google Home** (activée le 12/10) : vérifier sur une prochaine dictée que les erreurs évidentes sont corrigées (titre d'origine gardé en 🎙) et que les titres corrects ne bougent pas.
-4. **Mémo de contexte** : compléter téléphone, lien Doctolib et horaires (dentiste, kiné), locataires des places, comptable, artisans ; puis recopier dans la routine.
+4. **Mémo de contexte** (`memo-contexte.md`, hors Git) : dentiste et kiné complétés le 12/10 (horaires du kiné inconnus) ; à compléter au fil de l'eau (locataires des places, comptable, artisans), puis recopier dans la consigne de la routine.
 
 ## 3. Idées et pistes (non faites)
 
