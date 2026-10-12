@@ -58,7 +58,7 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("Réglages")
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineNavigationTitle()
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) { Button("OK") { dismiss() } }
             }

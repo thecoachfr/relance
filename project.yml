@@ -4,6 +4,7 @@ options:
   deploymentTarget:
     iOS: "18.0"
     watchOS: "11.0"
+    macOS: "15.0"
   developmentLanguage: fr
 packages:
   GoogleSignIn:
@@ -43,7 +44,7 @@ targets:
       properties:
         CFBundleDisplayName: Relance
         CFBundleShortVersionString: "0.3"
-        CFBundleVersion: "9"
+        CFBundleVersion: "10"
         UILaunchScreen: {}
         UISupportedInterfaceOrientations~iphone: [UIInterfaceOrientationPortrait]
         UISupportedInterfaceOrientations~ipad:
@@ -69,6 +70,67 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: fr.alexandrefau.relance
         TARGETED_DEVICE_FAMILY: "1,2"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+  RelanceMac:
+    type: application
+    platform: macOS
+    # Le code partagé et les vues de tâche de l'iPad ; ni widgets, ni montre, ni activité en direct.
+    sources:
+      - RelanceMac
+      - Shared/Model
+      - Shared/Google
+      - Shared/Reminders
+      - Shared/Share
+      - Relance/Google
+      - Relance/App/CalendarLink.swift
+      - Relance/App/TravelTimes.swift
+      - Relance/App/TriageRequest.swift
+      - Relance/App/PushRegistration.swift
+      - Relance/App/DemoData.swift
+      - Relance/Views/PlatformCompat.swift
+      - Relance/Views/CategoryViews.swift
+      - Relance/Views/TagViews.swift
+      - Relance/Views/PriorityViews.swift
+      - Relance/Views/ContactSection.swift
+      - Relance/Views/CalendarSection.swift
+      - Relance/Views/TaskRemindersView.swift
+      - Relance/Views/TriageViews.swift
+      - Relance/Views/TaskFields.swift
+      - Relance/Views/TaskRow.swift
+      - Relance/Views/TaskDetailView.swift
+      - Relance/Views/ReminderSettingsView.swift
+      - Relance/Views/QuickAddSheet.swift
+    configFiles:
+      Debug: Relance/Resources/Secrets.xcconfig
+      Release: Relance/Resources/Secrets.xcconfig
+    dependencies:
+      - package: GoogleSignIn
+    entitlements:
+      path: RelanceMac/RelanceMac.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.network.client: true
+        com.apple.security.personal-information.calendars: true
+        com.apple.security.application-groups: [group.fr.alexandrefau.relance]
+        keychain-access-groups: [$(AppIdentifierPrefix)fr.alexandrefau.relance]
+    info:
+      path: RelanceMac/Info.plist
+      properties:
+        CFBundleDisplayName: Relance
+        CFBundleShortVersionString: "0.3"
+        CFBundleVersion: "10"
+        LSApplicationCategoryType: public.app-category.productivity
+        NSCalendarsFullAccessUsageDescription: Relance ajoute à ton agenda les tâches que tu choisis, et met l'événement à jour quand l'heure de la tâche change.
+        GIDClientID: $(GOOGLE_CLIENT_ID)
+        RelanceWebhookURL: $(RELANCE_WEBHOOK_URL)
+        CFBundleURLTypes:
+          - CFBundleURLSchemes: [$(GOOGLE_REVERSED_CLIENT_ID)]
+    settings:
+      base:
+        # Même identifiant que l'app iOS : le client OAuth Google est lié à cet identifiant.
+        PRODUCT_BUNDLE_IDENTIFIER: fr.alexandrefau.relance
+        PRODUCT_NAME: Relance
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ENABLE_HARDENED_RUNTIME: YES
   RelanceShare:
     type: app-extension
     platform: iOS
@@ -90,7 +152,7 @@ targets:
       properties:
         CFBundleDisplayName: Relance
         CFBundleShortVersionString: "0.3"
-        CFBundleVersion: "9"
+        CFBundleVersion: "10"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.share-services
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ShareViewController
@@ -114,7 +176,7 @@ targets:
       properties:
         CFBundleDisplayName: Relance
         CFBundleShortVersionString: "0.3"
-        CFBundleVersion: "9"
+        CFBundleVersion: "10"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:
@@ -151,7 +213,7 @@ targets:
       properties:
         CFBundleDisplayName: Relance
         CFBundleShortVersionString: "0.3"
-        CFBundleVersion: "9"
+        CFBundleVersion: "10"
         WKApplication: true
         WKCompanionAppBundleIdentifier: fr.alexandrefau.relance
         INAlternativeAppNames:
@@ -182,7 +244,7 @@ targets:
       properties:
         CFBundleDisplayName: Relance
         CFBundleShortVersionString: "0.3"
-        CFBundleVersion: "9"
+        CFBundleVersion: "10"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:
@@ -207,6 +269,10 @@ schemes:
         RelanceTests: [test]
     test:
       targets: [RelanceTests]
+  RelanceMac:
+    build:
+      targets:
+        RelanceMac: all
   RelanceWatch:
     build:
       targets:

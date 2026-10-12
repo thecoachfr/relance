@@ -50,6 +50,7 @@ struct TaskEditor: View {
                     CategoryPicker(category: $category)
                     TagsRow(tags: $tags)
                 }
+                RetriageSection(item: item)
                 Section {
                     Button(item.isCompleted ? "Marquer à faire" : "Marquer fait") {
                         item.isCompleted ? store.reopen(item) : store.complete(item)
@@ -62,7 +63,7 @@ struct TaskEditor: View {
                 }
             }
             .navigationTitle("Tâche")
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineNavigationTitle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Annuler") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {

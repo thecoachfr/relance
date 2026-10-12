@@ -1,24 +1,45 @@
 import SwiftUI
 
 struct TaskRow: View {
+    /// Ligne sélectionnée (Mac, iPad) : sur le fond d'accent, le rouge et le gris ne se lisent plus.
+    @Environment(\.backgroundProminence) private var prominence
     let item: TaskItem
     var now: Date = .now
+    /// Sélectionnée dans la liste du Mac (où `backgroundProminence` ne suit pas la sélection).
+    var isSelected = false
     /// Rond à cocher, comme dans Rappels : le geste de balayage seul ne se découvre pas.
     var onDone: ((TaskItem) -> Void)?
+    /// Mi-hauteur des majuscules du titre au-dessus de sa ligne de base, lue dans la police du système
+    /// (17 pt sur iPhone, 13 pt sur Mac, et selon la taille du texte choisie).
+    @Environment(\.dynamicTypeSize) private var typeSize
+    private var capCenter: CGFloat {
+        #if os(macOS)
+        NSFont.preferredFont(forTextStyle: .body).capHeight / 2
+        #else
+        UIFont.preferredFont(forTextStyle: .body).capHeight / 2
+        #endif
+    }
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 12) {
             if let onDone {
-                Button { onDone(item) } label: {
-                    PriorityCircle(priority: item.priority, late: item.isOverdue(now: now))
-                        .font(.title2)
-                        .frame(minWidth: 44, minHeight: 44)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.borderless)
-                .hoverEffect(.highlight)
-                .padding(.leading, -10)
-                .accessibilityLabel("Marquer comme faite")
+                // Le rond ne compte pas dans la hauteur de la ligne : en grande taille, il ajoutait de l'espace
+                // au-dessus du titre. Il est posé sur la ligne de base du titre, puis centré sur ses majuscules.
+                Color.clear
+                    .frame(width: 44, height: 1)
+                    .overlay {
+                        Button { onDone(item) } label: {
+                            PriorityCircle(priority: item.priority, late: item.isOverdue(now: now))
+                                .font(Self.circleFont)
+                                .frame(width: 44, height: 44)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.borderless)
+                        .pointerHighlight()
+                        .offset(y: -capCenter)
+                        .accessibilityLabel("Marquer comme faite")
+                    }
+                    .padding(.leading, -10)
             }
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.title.isEmpty ? "Sans titre" : item.title)
@@ -28,7 +49,7 @@ struct TaskRow: View {
                 statusLabel
                 if item.category != nil || !item.tags.isEmpty {
                     HStack(spacing: 8) {
-                        if let category = item.category { CategoryChip(name: category) }
+                        if let category = item.category { CategoryChip(name: category, onSelection: isSelected) }
                         TagsText(tags: item.tags)
                     }
                 }
@@ -37,7 +58,25 @@ struct TaskRow: View {
             // La priorité ne se voit qu'au rond : VoiceOver la dit en clair.
             .accessibilityValue(item.priority == .normal ? "" : "Priorité \(item.priority.rawValue)")
         }
-        .padding(.vertical, 2)
+        // La police réserve de l'espace au-dessus des majuscules : on le retire en haut pour que le bloc
+        // paraisse centré (autant d'air au-dessus du titre que sous la dernière ligne).
+        // Sur Mac, la liste n'ajoute pas de marge autour des lignes : on lui en donne une.
+        #if os(macOS)
+        .padding(.top, 4)
+        .padding(.bottom, 8)
+        #else
+        .padding(.top, -2)
+        .padding(.bottom, 2)
+        #endif
+    }
+
+    /// Rond à la taille de celui de Rappels : plus petit sur Mac, où le texte fait 13 pt.
+    private static var circleFont: Font {
+        #if os(macOS)
+        .title3
+        #else
+        .title2
+        #endif
     }
 
     @ViewBuilder private var statusLabel: some View {
@@ -48,7 +87,7 @@ struct TaskRow: View {
                 Text(status.text)
             }
             .font(.subheadline)
-            .foregroundStyle(status.color)
+            .foregroundStyle(isSelected || prominence == .increased ? .secondary : status.color)
         }
     }
 

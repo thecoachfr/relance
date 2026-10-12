@@ -18,7 +18,11 @@ struct CalendarSection: View {
                     .foregroundStyle(.green)
                 if let start = item.dueInstant() {
                     Button("Ouvrir dans Calendrier", systemImage: "calendar") {
+                        #if os(iOS)
                         openURL(URL(string: "calshow:\(start.timeIntervalSinceReferenceDate)")!)
+                        #else
+                        openURL(URL(fileURLWithPath: "/System/Applications/Calendar.app"))
+                        #endif
                     }
                 }
                 Button("Retirer de l'agenda", systemImage: "calendar.badge.minus", role: .destructive) {

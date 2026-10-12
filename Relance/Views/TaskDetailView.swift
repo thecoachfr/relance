@@ -24,19 +24,38 @@ struct TaskDetailView: View {
     var body: some View {
         Form {
             Section {
-                TextField("Titre", text: $title, axis: .vertical)
+                TextField("Titre", text: $title, prompt: Text("Titre"), axis: .vertical)
                     .font(.title3.weight(.semibold))
+                    .formFieldWithoutLabel()
                 // L'information clé, juste sous le titre.
                 if let due = item.dueInstant(), !item.isCompleted {
                     Label(DueText.long(due: due, hasTime: item.dueMinutes != nil),
                           systemImage: item.isOverdue() ? "clock.fill" : "clock")
                         .foregroundStyle(item.isOverdue() ? .red : .secondary)
                 }
-                TextField("Notes", text: $notes, axis: .vertical)
+                TextField("Notes", text: $notes, prompt: Text("Notes"), axis: .vertical)
                     .lineLimit(3...)
+                    .formFieldWithoutLabel()
             }
             ContactSection(notes: notes)
             Section("Échéance") {
+                #if os(macOS)
+                // Mac : l'interrupteur et la valeur sur la même ligne, comme dans Rappels.
+                LabeledContent("Date") {
+                    HStack {
+                        if hasDay { DatePicker("Jour", selection: $day, displayedComponents: .date).labelsHidden() }
+                        Toggle("Date", isOn: $hasDay).labelsHidden()
+                    }
+                }
+                if hasDay {
+                    LabeledContent("Heure") {
+                        HStack {
+                            if hasTime { DatePicker("À", selection: $time, displayedComponents: .hourAndMinute).labelsHidden() }
+                            Toggle("Heure", isOn: $hasTime).labelsHidden()
+                        }
+                    }
+                }
+                #else
                 Toggle("Date", isOn: $hasDay)
                 if hasDay {
                     DatePicker("Jour", selection: $day, displayedComponents: .date)
@@ -45,13 +64,17 @@ struct TaskDetailView: View {
                         DatePicker("À", selection: $time, displayedComponents: .hourAndMinute)
                     }
                 }
+                #endif
             }
             CalendarSection(item: item)
             Section {
                 PriorityPicker(priority: $priority)
                 TaskRemindersRow(reminders: $reminders, priority: priority)
             } header: {
+                // Sur Mac, la ligne porte déjà le nom « Priorité ».
+                #if os(iOS)
                 Text("Priorité")
+                #endif
             } footer: {
                 PriorityFooter(priority: priority, reminders: reminders)
             }
@@ -59,28 +82,35 @@ struct TaskDetailView: View {
                 CategoryPicker(category: $category)
                 TagsRow(tags: $tags)
             }
+            RetriageSection(item: item)
+            // Sur Mac, ces actions sont dans la barre d'outils et le menu Tâche.
+            #if os(iOS)
             Section {
                 Button(item.isCompleted ? "Marquer à faire" : "Marquer fait",
                        systemImage: item.isCompleted ? "arrow.uturn.backward" : "checkmark") {
                     item.isCompleted ? store.reopen(item) : store.complete(item)
                 }
-                .keyboardShortcut(.return, modifiers: .command)
+                .tabletShortcut(.return, modifiers: .command)
                 if !item.isCompleted {
                     Button("Reporter d'une heure", systemImage: "clock") {
                         store.snooze(item, until: .now.addingTimeInterval(3600))
                     }
-                    .keyboardShortcut("l", modifiers: .command)
+                    .tabletShortcut("l", modifiers: .command)
                     Button("Demain matin", systemImage: "sunrise") { store.moveToTomorrow(item) }
                 }
                 Button("Supprimer", systemImage: "trash", role: .destructive) {
                     if item.calendarEventID != nil { confirmDelete = true } else { store.delete(item) }
                 }
-                .keyboardShortcut(.delete, modifiers: .command)
-                .deleteTaskConfirmation(item, isPresented: $confirmDelete)
+                .tabletShortcut(.delete, modifiers: .command)
             }
+            #endif
         }
+        .deleteTaskConfirmation(item, isPresented: $confirmDelete)
+        #if os(macOS)
+        .toolbar { macActions }
+        #endif
         // Le titre est déjà le premier champ : pas de doublon dans la barre.
-        .toolbar(.hidden, for: .navigationBar)
+        .hiddenNavigationBar()
         .onAppear(perform: load)
         .onChange(of: item.localID) { loaded = false; load() }
         // Modifiée ailleurs (synchro, routine de tri, autre appareil) : on recharge si rien n'est en cours de saisie.
@@ -97,6 +127,30 @@ struct TaskDetailView: View {
         .onSubmit { save() }
         .onDisappear { save() }
     }
+
+    #if os(macOS)
+    /// Actions de la tâche dans la barre d'outils, au-dessus du détail (comme Mail ou Rappels).
+    @ToolbarContentBuilder private var macActions: some ToolbarContent {
+        ToolbarItemGroup {
+            Button(item.isCompleted ? "Remettre à faire" : "Marquer fait",
+                   systemImage: item.isCompleted ? "arrow.uturn.backward.circle" : "checkmark.circle") {
+                item.isCompleted ? store.reopen(item) : store.complete(item)
+            }
+            .help(item.isCompleted ? "Remettre à faire (⌘↩)" : "Marquer fait (⌘↩)")
+            if !item.isCompleted {
+                Menu("Reporter", systemImage: "clock.arrow.circlepath") {
+                    Button("Dans 1 h") { store.snooze(item, until: .now.addingTimeInterval(3600)) }
+                    Button("Demain matin") { store.moveToTomorrow(item) }
+                }
+                .help("Reporter")
+            }
+            Button("Supprimer", systemImage: "trash") {
+                if item.calendarEventID != nil { confirmDelete = true } else { store.delete(item) }
+            }
+            .help("Supprimer (⌘⌫)")
+        }
+    }
+    #endif
 
     private func load() {
         title = item.title

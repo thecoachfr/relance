@@ -46,6 +46,8 @@ class RelanceVigie(Hass):
         self._jwt_issued_at = 0.0
 
         self.listen_event(self.on_register, "relance_register")
+        # Bouton « Retrier » de l'app (même webhook, action « triage ») ou événement direct.
+        self.listen_event(lambda *_a, **_kw: self.request_triage(), "relance_triage")
         # Diagnostic : « relance_test_push » envoie un push tout de suite à chaque appareil.
         self.listen_event(lambda *_args, **_kw: self.push_all(), "relance_test_push")
         self.listen_state(self.on_tasks_changed, self._todo)
@@ -92,6 +94,17 @@ class RelanceVigie(Hass):
             self.cancel_timer(self._triage_handle)
         self._triage_handle = self.run_in(self.fire_triage, TRIAGE_DELAY)
 
+    def request_triage(self):
+        """L'app a retiré catégorie et tags des tâches à retrier : on rafraîchit Google Tasks,
+        puis on lance la routine peu après (le temps que Home Assistant ait la liste à jour)."""
+        if not self.args.get("routine_id"):
+            return
+        self.log("Retri demandé par l'app")
+        self.refresh()
+        if self._triage_handle:
+            self.cancel_timer(self._triage_handle)
+        self._triage_handle = self.run_in(self.fire_triage, 20)
+
     def fire_triage(self, **kwargs):
         self._triage_handle = None
         token_path = Path(self.args.get("routine_token_file", "/config/relance_routine_token"))
@@ -132,6 +145,9 @@ class RelanceVigie(Hass):
     # MARK: - Appareils
 
     def on_register(self, event_name, data, **kwargs):
+        if data.get("action") == "triage":
+            self.request_triage()
+            return
         token = str(data.get("token", "")).strip().lower()
         environment = data.get("environment", "production")
         if len(token) < 32 or not all(c in "0123456789abcdef" for c in token):

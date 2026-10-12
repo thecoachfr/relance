@@ -6,6 +6,8 @@ struct ReminderSettingsView: View {
     @Environment(TaskStore.self) private var store
     @State private var settings = ReminderSettings()
     @State private var loaded = false
+    @State private var confirmRetriage = false
+    @State private var retriage: TriageState = .idle
 
     var body: some View {
         Form {
@@ -64,13 +66,38 @@ struct ReminderSettingsView: View {
             }
 
             Section {
+                Button {
+                    confirmRetriage = true
+                } label: {
+                    HStack {
+                        Label("Tout retrier avec Claude", systemImage: "sparkles")
+                        if retriage == .sending { Spacer(); ProgressView() }
+                    }
+                }
+                .disabled(retriage == .sending)
+                .confirmationDialog("Les catégories et tags actuels de toutes les tâches à faire seront remplacés.",
+                                    isPresented: $confirmRetriage, titleVisibility: .visible) {
+                    Button("Tout retrier") {
+                        Task {
+                            retriage = .sending
+                            retriage = await TriageRequest.retriage(store.activeTasks(), store: store) ? .sent : .failed
+                        }
+                    }
+                }
+            } header: {
+                Text("Tri par Claude")
+            } footer: {
+                Text(retriage.footer(single: false))
+            }
+
+            Section {
                 Toggle("Week-end calme", isOn: $settings.calmWeekends)
             } footer: {
                 Text("Le samedi et le dimanche, seules l'heure prévue et les tâches urgentes relancent.")
             }
         }
         .navigationTitle("Relances")
-        .navigationBarTitleDisplayMode(.inline)
+        .inlineNavigationTitle()
         .onAppear {
             settings = store.scheduler.settings
             loaded = true
@@ -141,11 +168,13 @@ struct ReminderProfileView: View {
                     Text("À l'heure et le soir").tag(ReminderProfile.Breakthrough.important)
                     Text("Ne jamais passer").tag(ReminderProfile.Breakthrough.never)
                 }
+                #if os(iOS)
                 Picker("Activité en direct", selection: $profile.liveActivity) {
                     Text("Dès le jour prévu").tag(ReminderProfile.LiveActivity.always)
                     Text("2 h avant").tag(ReminderProfile.LiveActivity.upcoming)
                     Text("Jamais").tag(ReminderProfile.LiveActivity.never)
                 }
+                #endif
             }
 
             Section {
@@ -154,7 +183,7 @@ struct ReminderProfileView: View {
             }
         }
         .navigationTitle(priority.rawValue)
-        .navigationBarTitleDisplayMode(.inline)
+        .inlineNavigationTitle()
     }
 }
 

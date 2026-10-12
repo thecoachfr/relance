@@ -20,7 +20,8 @@ struct QuickAddSheet: View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("Appeler le garage vendredi 15 h", text: $text, axis: .vertical)
+                    TextField("Nouvelle tâche", text: $text, prompt: Text("Appeler le garage vendredi 15 h"), axis: .vertical)
+                        .formFieldWithoutLabel()
                         .focused($focused)
                         .submitLabel(.done)
                         .onSubmit(save)
@@ -59,7 +60,7 @@ struct QuickAddSheet: View {
                 }
             }
             .navigationTitle("Nouvelle tâche")
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineNavigationTitle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Annuler") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {

@@ -66,7 +66,7 @@ struct TaskRemindersView: View {
             }
         }
         .navigationTitle("Relances")
-        .navigationBarTitleDisplayMode(.inline)
+        .inlineNavigationTitle()
     }
 
     private var advance: Binding<ReminderOverride.Advance?> {

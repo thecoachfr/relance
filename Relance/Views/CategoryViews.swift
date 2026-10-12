@@ -3,13 +3,15 @@ import SwiftUI
 /// Petite étiquette colorée de catégorie (texte + symbole : la couleur n'est jamais seule porteuse du sens).
 struct CategoryChip: View {
     let name: String
+    /// Sur le fond d'accent d'une ligne sélectionnée, la couleur de la catégorie ne se lit plus : pastille blanche.
+    var onSelection = false
 
     var body: some View {
         let category = TaskCategory(name: name)
         let color = category?.color ?? .gray
         ChipContent(text: name, symbol: category?.symbol ?? "tag")
             .font(.caption.weight(.medium))
-            .chipStyle(color)
+            .chipStyle(onSelection ? .white : color, onSelection: onSelection)
             .accessibilityLabel("Catégorie \(name)")
     }
 }
@@ -31,19 +33,22 @@ struct ChipContent: View {
 /// pour dépasser 4,5:1 sur son fond, même en petite taille.
 struct ChipStyle: ViewModifier {
     let color: Color
+    var onSelection = false
     @Environment(\.colorScheme) private var scheme
 
     func body(content: Content) -> some View {
         content
             .padding(.horizontal, 7)
             .padding(.vertical, 2)
-            .foregroundStyle(color.mix(with: scheme == .dark ? .white : .black, by: scheme == .dark ? 0.3 : 0.45))
-            .background(color.opacity(scheme == .dark ? 0.22 : 0.12), in: .capsule)
+            .foregroundStyle(onSelection ? .white : color.mix(with: scheme == .dark ? .white : .black, by: scheme == .dark ? 0.3 : 0.45))
+            .background(color.opacity(onSelection ? 0.2 : scheme == .dark ? 0.22 : 0.12), in: .capsule)
     }
 }
 
 extension View {
-    func chipStyle(_ color: Color) -> some View { modifier(ChipStyle(color: color)) }
+    func chipStyle(_ color: Color, onSelection: Bool = false) -> some View {
+        modifier(ChipStyle(color: color, onSelection: onSelection))
+    }
 }
 
 /// Choix de catégorie pour les formulaires (« Aucune » + la liste fixe).

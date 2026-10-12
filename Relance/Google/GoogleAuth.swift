@@ -1,5 +1,9 @@
 import GoogleSignIn
+#if os(iOS)
 import UIKit
+#else
+import AppKit
+#endif
 
 /// Connexion au compte Google, avec le seul accès nécessaire : Google Tasks.
 @Observable
@@ -21,7 +25,7 @@ final class GoogleAuth: AccountProvider {
     }
 
     func signIn() async throws {
-        guard let presenter = Self.topViewController() else { return }
+        guard let presenter = Self.presenter() else { return }
         let result = try await GIDSignIn.sharedInstance.signIn(
             withPresenting: presenter, hint: nil, additionalScopes: [Self.tasksScope])
         // Google permet de décocher l'accès aux tâches sur son écran de consentement.
@@ -61,7 +65,8 @@ final class GoogleAuth: AccountProvider {
         GIDSignIn.sharedInstance.handle(url)
     }
 
-    private static func topViewController() -> UIViewController? {
+    #if os(iOS)
+    private static func presenter() -> UIViewController? {
         let scene = UIApplication.shared.connectedScenes
             .compactMap { $0 as? UIWindowScene }
             .first { $0.activationState == .foregroundActive }
@@ -69,4 +74,9 @@ final class GoogleAuth: AccountProvider {
         while let presented = top?.presentedViewController { top = presented }
         return top
     }
+    #else
+    private static func presenter() -> NSWindow? {
+        NSApp.keyWindow ?? NSApp.windows.first { $0.isVisible && $0.canBecomeKey }
+    }
+    #endif
 }

@@ -120,6 +120,16 @@ final class TaskStore {
         commit()
     }
 
+    /// Avant un retri par la routine : sans catégorie ni tags, elle traite la tâche comme neuve.
+    func clearTriage(_ items: [TaskItem]) {
+        for item in items where item.category != nil || !item.tags.isEmpty {
+            item.category = nil
+            item.tags = []
+            item.markChanged()
+        }
+        commit()
+    }
+
     func setPriority(_ item: TaskItem, _ priority: TaskPriority) {
         guard item.priority != priority else { return }
         item.priority = priority

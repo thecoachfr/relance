@@ -1,5 +1,7 @@
 import Foundation
+#if os(iOS)
 import UIKit
+#endif
 
 /// Envoie le jeton de notification push à Home Assistant (webhook), pour que la vigie
 /// puisse réveiller l'app quand la liste Google Tasks change.
@@ -13,6 +15,7 @@ enum PushRegistration {
         return URL(string: raw)
     }
 
+    #if os(iOS)
     static func register(token data: Data) async {
         let token = data.map { String(format: "%02x", $0) }.joined()
         let defaults = UserDefaults.standard
@@ -41,4 +44,5 @@ enum PushRegistration {
         defaults.set(token, forKey: sentKey)
         defaults.set(Date.now, forKey: sentAtKey)
     }
+    #endif
 }

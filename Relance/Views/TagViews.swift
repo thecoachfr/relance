@@ -69,7 +69,7 @@ struct TagsPickerView: View {
             }
         }
         .navigationTitle("Tags")
-        .navigationBarTitleDisplayMode(.inline)
+        .inlineNavigationTitle()
     }
 
     private func toggle(_ tag: String, on: Bool) {
