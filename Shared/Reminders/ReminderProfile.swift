@@ -95,6 +95,7 @@ nonisolated struct DepartureSettings: Codable, Equatable, Sendable {
 extension ReminderSettings: Codable {
     private enum Keys: String, CodingKey {
         case morning, evening, midday, quietStart, quietEnd, calmWeekends, urgent, normal, low, departure
+        case eveningDigest, eveningDigestTime
     }
 
     /// Chaque champ est facultatif : un réglage ajouté plus tard prend sa valeur d'origine.
@@ -111,6 +112,8 @@ extension ReminderSettings: Codable {
         normal = (try? c.decodeIfPresent(ReminderProfile.self, forKey: .normal)) ?? normal
         low = (try? c.decodeIfPresent(ReminderProfile.self, forKey: .low)) ?? low
         departure = (try? c.decodeIfPresent(DepartureSettings.self, forKey: .departure)) ?? departure
+        eveningDigest = try c.decodeIfPresent(Bool.self, forKey: .eveningDigest) ?? eveningDigest
+        eveningDigestTime = try c.decodeIfPresent(Int.self, forKey: .eveningDigestTime) ?? eveningDigestTime
     }
 
     func encode(to encoder: Encoder) throws {
@@ -125,6 +128,8 @@ extension ReminderSettings: Codable {
         try c.encode(normal, forKey: .normal)
         try c.encode(low, forKey: .low)
         try c.encode(departure, forKey: .departure)
+        try c.encode(eveningDigest, forKey: .eveningDigest)
+        try c.encode(eveningDigestTime, forKey: .eveningDigestTime)
     }
 
     private static let key = "reminderSettings"

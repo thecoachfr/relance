@@ -32,10 +32,18 @@ struct ReminderSettingsView: View {
                 Text("Chaque tâche suit le réglage de sa priorité.")
             }
 
-            Section("Horaires") {
+            Section {
                 TimeRow(title: "Résumé du matin", minutes: $settings.morning)
                 TimeRow(title: "Relance de midi", minutes: $settings.midday)
                 TimeRow(title: "Relance du soir", minutes: $settings.evening)
+                Toggle("Résumé du soir", isOn: $settings.eveningDigest)
+                if settings.eveningDigest {
+                    TimeRow(title: "À", minutes: $settings.eveningDigestTime)
+                }
+            } header: {
+                Text("Horaires")
+            } footer: {
+                Text("Le résumé du soir annonce les tâches du lendemain et ce qui reste en retard. Rien n'arrive si demain est vide.")
             }
 
             Section {

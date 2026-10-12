@@ -83,6 +83,24 @@ struct ReminderPlannerTests {
         #expect(plan.first?.body == "1 à trier")
     }
 
+    @Test func eveningDigestAnnouncesTomorrow() {
+        let tasks = [task("a", day: 13, minutes: 9 * 60), task("b", day: 13, minutes: 14 * 60, priority: .urgent),
+                     task("c", day: 13), task("late", day: 11, minutes: 10 * 60)]
+        let plan = planner.plan(tasks: tasks, inboxCount: 0, now: date(12, 18))
+        let evening = plan.first { $0.kind == .digest && $0.title == "Demain" }!
+        #expect(evening.fireDate == date(12, 21))
+        #expect(evening.body == "3 tâches, dont 1 urgente · la première à 9 h · 1 encore en retard")
+    }
+
+    @Test func eveningDigestSkipsEmptyTomorrowAndCanBeOff() {
+        let quiet = planner.plan(tasks: [task("a", day: 20, minutes: 9 * 60)], inboxCount: 0, now: date(12, 18))
+        #expect(!quiet.contains { $0.title == "Demain" && $0.fireDate == date(12, 21) })
+        var off = planner
+        off.settings.eveningDigest = false
+        let plan = off.plan(tasks: [task("a", day: 13, minutes: 9 * 60)], inboxCount: 0, now: date(12, 18))
+        #expect(!plan.contains { $0.title == "Demain" })
+    }
+
     @Test func digestSummarisesOverdueAndToday() {
         let tasks = [task("late", day: 11, minutes: 10 * 60), task("today", day: 13, minutes: 14 * 60)]
         let plan = planner.plan(tasks: tasks, inboxCount: 2, now: date(12, 21))

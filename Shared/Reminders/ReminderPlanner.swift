@@ -22,6 +22,9 @@ nonisolated struct ReminderSettings: Sendable, Equatable {
     var quietStart = 22 * 60
     var quietEnd = 7 * 60 + 30
     var midday = 12 * 60
+    /// Résumé du soir : les tâches du lendemain. Après la relance de 20 h, pour ne pas sonner en même temps.
+    var eveningDigest = true
+    var eveningDigestTime = 21 * 60
     /// Week-end : seules l'heure prévue, les reports choisis et les tâches urgentes relancent.
     var calmWeekends = false
     var urgent = ReminderProfile.defaults(for: .urgent)
@@ -203,6 +206,10 @@ nonisolated struct ReminderPlanner: Sendable {
 
         for offset in 0...settings.horizonDays {
             guard let day = calendar.date(byAdding: .day, value: offset, to: today) else { continue }
+            // Le soir d'abord : il a lieu même quand le résumé du matin de ce jour est passé ou vide.
+            if settings.eveningDigest, let evening = eveningDigest(tasks: tasks, day: day, now: now, horizon: horizon) {
+                digests.append(evening)
+            }
             let fire = at(day, settings.morning)
             guard fire > now, fire <= horizon else { continue }
 
@@ -229,6 +236,43 @@ nonisolated struct ReminderPlanner: Sendable {
                 badge: 0))
         }
         return digests
+    }
+
+    /// « Demain » : « 3 tâches, dont 1 urgente · la première à 9 h · 1 encore en retard ». Rien si demain est vide
+    /// et que rien n'est en retard.
+    private func eveningDigest(tasks: [PlannableTask], day: Date, now: Date, horizon: Date) -> PlannedReminder? {
+        let fire = at(day, settings.eveningDigestTime)
+        guard fire > now, fire <= horizon, let tomorrow = calendar.date(byAdding: .day, value: 1, to: day) else { return nil }
+        let planned = tasks.filter { task in
+            guard let d = task.dueDay, let start = calendar.date(from: d) else { return false }
+            return calendar.isDate(start, inSameDayAs: tomorrow)
+        }
+        let overdue = tasks.filter { isOverdue($0, at: fire) }.count
+        guard !planned.isEmpty || overdue > 0 else { return nil }
+
+        var parts: [String] = []
+        if planned.isEmpty {
+            parts.append("Rien de prévu")
+        } else {
+            let urgent = planned.filter { $0.priority == .urgent }.count
+            var count = planned.count == 1 ? "1 tâche" : "\(planned.count) tâches"
+            if urgent > 0 { count += planned.count == 1 ? ", urgente" : ", dont \(urgent) urgente" + (urgent > 1 ? "s" : "") }
+            parts.append(count)
+            if let first = planned.compactMap(\.dueMinutes).min() {
+                parts.append((planned.count == 1 ? "à " : "la première à ") + Self.formatTime(first))
+            }
+        }
+        if overdue > 0 { parts.append("\(overdue) encore en retard") }
+
+        return PlannedReminder(
+            id: "digest|evening|\(Int(fire.timeIntervalSince1970))",
+            taskID: nil,
+            fireDate: fire,
+            kind: .digest,
+            title: "Demain",
+            body: parts.joined(separator: " · "),
+            timeSensitive: false,
+            badge: 0)
     }
 
     /// La plage silencieuse coupe tout, sauf l'échéance elle-même et un report choisi explicitement.
