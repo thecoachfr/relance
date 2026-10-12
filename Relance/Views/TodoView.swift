@@ -11,43 +11,73 @@ struct TodoView: View {
     @State private var showSettings = false
     @State private var editing: TaskItem?
     @State private var justDone: TaskItem?
+    /// iPad : tâche affichée dans la colonne de droite.
+    @State private var selectedID: UUID?
+    @Environment(\.horizontalSizeClass) private var sizeClass
 
     var body: some View {
-        NavigationStack {
-            TimelineView(.everyMinute) { context in
-                let now = context.date
-                let groups = group(now: now)
-                List {
-                    section("En retard", groups.overdue, now: now)
-                    section("Aujourd'hui", groups.today, now: now)
-                    section("Bientôt", groups.later, now: now)
-                }
-                .overlay {
-                    if dated.isEmpty {
-                        ContentUnavailableView("Rien d'urgent", systemImage: "checkmark.circle",
-                                               description: Text("Les tâches avec une date apparaissent ici."))
+        if sizeClass == .regular {
+            NavigationSplitView {
+                list
+                    // Grand écran : la colonne de droite montre d'emblée la tâche la plus urgente.
+                    .onAppear {
+                        if selectedID == nil {
+                            selectedID = dated.min { ($0.dueInstant() ?? .distantFuture) < ($1.dueInstant() ?? .distantFuture) }?.localID
+                        }
                     }
+            } detail: {
+                if let id = selectedID, let item = store.task(id), !item.isTrashed {
+                    NavigationStack { TaskDetailView(item: item) }
+                        .id(id)
+                } else {
+                    ContentUnavailableView("Aucune tâche sélectionnée", systemImage: "checklist",
+                                           description: Text("Choisis une tâche dans la liste pour la voir ici."))
                 }
             }
-            .navigationTitle("À faire")
-            .refreshable { await store.sync() }
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Réglages", systemImage: "gearshape") { showSettings = true }
-                }
-                // La barre d'onglets d'iOS 26 masque la barre d'outils du bas : l'ajout va en haut à droite.
-                ToolbarItem(placement: .primaryAction) {
-                    Button("Nouvelle tâche", systemImage: "plus") { showAdd = true }
-                        .buttonStyle(.borderedProminent)
-                        .keyboardShortcut("n", modifiers: .command)
-                }
-            }
-            .safeAreaInset(edge: .bottom) { undoBanner }
-            .sheet(isPresented: $showAdd) { QuickAddSheet() }
-            .sheet(isPresented: $showSettings) { SettingsView() }
-            .sheet(item: $editing) { TaskEditor(item: $0) }
-            .sensoryFeedback(.success, trigger: justDone)
+        } else {
+            NavigationStack { list }
         }
+    }
+
+    /// Grand écran : la tâche s'ouvre à droite ; iPhone : dans une feuille.
+    private func open(_ item: TaskItem) {
+        if sizeClass == .regular { selectedID = item.localID } else { editing = item }
+    }
+
+    private var list: some View {
+        TimelineView(.everyMinute) { context in
+            let now = context.date
+            let groups = group(now: now)
+            List {
+                section("En retard", groups.overdue, now: now)
+                section("Aujourd'hui", groups.today, now: now)
+                section("Bientôt", groups.later, now: now)
+            }
+            .overlay {
+                if dated.isEmpty {
+                    ContentUnavailableView("Rien d'urgent", systemImage: "checkmark.circle",
+                                           description: Text("Les tâches avec une date apparaissent ici."))
+                }
+            }
+        }
+        .navigationTitle("À faire")
+        .refreshable { await store.sync() }
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button("Réglages", systemImage: "gearshape") { showSettings = true }
+            }
+            // La barre d'onglets d'iOS 26 masque la barre d'outils du bas : l'ajout va en haut à droite.
+            ToolbarItem(placement: .primaryAction) {
+                Button("Nouvelle tâche", systemImage: "plus") { showAdd = true }
+                    .buttonStyle(.borderedProminent)
+                    .keyboardShortcut("n", modifiers: .command)
+            }
+        }
+        .safeAreaInset(edge: .bottom) { undoBanner }
+        .sheet(isPresented: $showAdd) { QuickAddSheet() }
+        .sheet(isPresented: $showSettings) { SettingsView() }
+        .sheet(item: $editing) { TaskEditor(item: $0) }
+        .sensoryFeedback(.success, trigger: justDone)
     }
 
     @ViewBuilder
@@ -56,7 +86,9 @@ struct TodoView: View {
             Section(title) {
                 ForEach(items) { item in
                     TaskRow(item: item, now: now, onDone: markDone)
-                        .taskActions(item, onDone: markDone, onEdit: { editing = $0 })
+                        .taskActions(item, onDone: markDone, onEdit: open)
+                        .listRowBackground(selectedID == item.localID && sizeClass == .regular
+                                           ? Color.accentColor.opacity(0.15) : nil)
                 }
             }
         }

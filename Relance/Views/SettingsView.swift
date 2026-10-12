@@ -7,6 +7,7 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
     @State private var notificationStatus: UNAuthorizationStatus?
+    @State private var remindersHere = ReminderScheduler.isEnabledOnThisDevice
 
     var body: some View {
         NavigationStack {
@@ -21,6 +22,15 @@ struct SettingsView: View {
                         store.signOut()
                         dismiss()
                     }
+                }
+                Section {
+                    Toggle("Relances sur cet appareil", isOn: $remindersHere)
+                        .onChange(of: remindersHere) { _, on in
+                            ReminderScheduler.isEnabledOnThisDevice = on
+                            Task { await store.reschedule() }
+                        }
+                } footer: {
+                    Text("Activé d'origine sur l'iPhone seulement, pour ne pas être relancé deux fois pour la même tâche.")
                 }
                 Section {
                     let s = store.scheduler.settings
