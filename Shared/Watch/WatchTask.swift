@@ -2,6 +2,7 @@ import Foundation
 
 /// Tâche telle que l'iPhone l'envoie à la montre (la montre n'a pas accès à Google).
 nonisolated struct WatchTask: Codable, Hashable, Identifiable, Sendable {
+    /// Identifiant Google de la tâche (ou identifiant local tant qu'elle n'est pas encore chez Google).
     var id: String
     var title: String
     /// Heure prévue, ou fin du jour pour une tâche sans heure ; `nil` = sans date.
@@ -20,6 +21,9 @@ nonisolated enum WatchLink {
     static let titleKey = "title"
     static let dueKey = "due"
     static let hasTimeKey = "hasTime"
+    /// Connexion Google transmise à la montre pour qu'elle parle seule à Google (eSIM).
+    static let refreshTokenKey = "googleRefreshToken"
+    static let clientIDKey = "googleClientID"
 
     enum Action: String {
         case complete, snooze, add

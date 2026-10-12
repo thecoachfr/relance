@@ -93,6 +93,8 @@ targets:
       - Shared/Model/DueText.swift
       - Shared/Model/DateDetection.swift
       - Shared/Reminders/ReminderPlanner.swift
+      - Shared/Google/TasksAPI.swift
+      - Shared/Google/NotesTimeCodec.swift
     dependencies:
       - target: RelanceWatchWidgets
     entitlements:

@@ -22,9 +22,14 @@ final class WatchSync: NSObject, WCSessionDelegate {
 
         let payload = tasks
             .filter { !$0.isCompleted && !$0.isTrashed }
-            .map { WatchTask(id: $0.localID.uuidString, title: $0.title, due: $0.dueInstant(),
+            .map { WatchTask(id: $0.googleID ?? $0.localID.uuidString, title: $0.title, due: $0.dueInstant(),
                              hasTime: $0.dueMinutes != nil, snoozedUntil: $0.snoozedUntil) }
-        try? session.updateApplicationContext([WatchLink.tasksKey: WatchLink.encode(payload)])
+        var context: [String: Any] = [WatchLink.tasksKey: WatchLink.encode(payload)]
+        // Passe par le lien chiffré iPhone ↔ montre ; une chaîne vide dit à la montre d'oublier la connexion.
+        let credentials = store.auth.watchCredentials
+        context[WatchLink.refreshTokenKey] = credentials?.refreshToken ?? ""
+        context[WatchLink.clientIDKey] = credentials?.clientID ?? ""
+        try? session.updateApplicationContext(context)
         // La complication suit l'état en retard : on la prévient, dans la limite du budget quotidien d'Apple.
         if session.isComplicationEnabled, session.remainingComplicationUserInfoTransfers > 0 {
             session.transferCurrentComplicationUserInfo([WatchLink.tasksKey: WatchLink.encode(payload)])
@@ -49,8 +54,8 @@ final class WatchSync: NSObject, WCSessionDelegate {
         guard let raw = message[WatchLink.actionKey] as? String, let action = WatchLink.Action(rawValue: raw) else { return }
         switch action {
         case .complete, .snooze:
-            guard let id = (message[WatchLink.idKey] as? String).flatMap(UUID.init(uuidString:)),
-                  let item = store.task(id) else { return }
+            guard let id = message[WatchLink.idKey] as? String,
+                  let item = UUID(uuidString: id).flatMap(store.task) ?? store.task(googleID: id) else { return }
             if action == .complete {
                 store.complete(item)
             } else {

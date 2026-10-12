@@ -51,6 +51,12 @@ final class GoogleAuth: AccountProvider {
         return try await user.refreshTokensIfNeeded().accessToken.tokenString
     }
 
+    var watchCredentials: (refreshToken: String, clientID: String)? {
+        guard let user = GIDSignIn.sharedInstance.currentUser,
+              let clientID = Bundle.main.object(forInfoDictionaryKey: "GIDClientID") as? String else { return nil }
+        return (user.refreshToken.tokenString, clientID)
+    }
+
     func handle(_ url: URL) {
         GIDSignIn.sharedInstance.handle(url)
     }

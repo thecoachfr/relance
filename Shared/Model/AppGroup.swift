@@ -20,4 +20,6 @@ protocol AccountProvider: AnyObject, Sendable {
     var isSignedIn: Bool { get }
     func accessToken() async throws -> String
     func signOut()
+    /// Pour la montre : jeton de renouvellement et identifiant client OAuth (nil si déconnecté).
+    var watchCredentials: (refreshToken: String, clientID: String)? { get }
 }

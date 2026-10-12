@@ -42,6 +42,10 @@ final class TaskStore {
         return (try? context.fetch(descriptor)) ?? []
     }
 
+    func task(googleID: String) -> TaskItem? {
+        try? context.fetch(FetchDescriptor<TaskItem>(predicate: #Predicate { $0.googleID == googleID })).first
+    }
+
     func task(_ id: UUID) -> TaskItem? {
         try? context.fetch(FetchDescriptor<TaskItem>(predicate: #Predicate { $0.localID == id })).first
     }

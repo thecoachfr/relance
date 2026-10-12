@@ -10,6 +10,7 @@ final class SlowAccount: AccountProvider {
         throw TasksAPIError.notSignedIn
     }
     func signOut() {}
+    var watchCredentials: (refreshToken: String, clientID: String)? { nil }
 }
 
 @MainActor
@@ -24,5 +25,17 @@ struct TaskStoreSyncTests {
         _ = await (first, second, third)
         #expect(!store.isSyncing)
         #expect(store.lastError != nil)
+    }
+}
+
+struct ReminderSchedulerTimeoutTests {
+    /// iOS ne répond parfois jamais aux appels de ménage des notifications : la synchro ne doit pas rester bloquée.
+    @Test(.timeLimit(.minutes(1)))
+    func timeoutReturnsEvenIfOperationNeverFinishes() async {
+        let start = Date.now
+        await ReminderScheduler.withTimeout(seconds: 0.5) {
+            try? await Task.sleep(for: .seconds(3600))  // ne répond pas à temps
+        }
+        #expect(Date.now.timeIntervalSince(start) < 5)
     }
 }

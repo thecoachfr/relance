@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 import UIKit
 import UserNotifications
 
@@ -71,12 +72,32 @@ final class ReminderScheduler {
         for reminder in plan {
             try? await center.add(request(for: reminder))
         }
-        await tidyDelivered(finishedTaskIDs: finishedTaskIDs)
-        try? await center.setBadgeCount(overdueNow)
+        // iOS ne répond parfois jamais à ces deux appels (observé en test) : on ne bloque pas la synchro pour du ménage.
+        await Self.withTimeout(seconds: 3) {
+            let center = UNUserNotificationCenter.current()
+            await Self.tidyDelivered(center: center, finishedTaskIDs: finishedTaskIDs)
+            try? await center.setBadgeCount(overdueNow)
+        }
+    }
+
+    /// Attend `operation` au plus `seconds` secondes, puis continue même si elle n'a pas répondu.
+    nonisolated static func withTimeout(seconds: Double, _ operation: @escaping @Sendable () async -> Void) async {
+        let resumed = Mutex(false)
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            let resumeOnce: @Sendable () -> Void = {
+                let first = resumed.withLock { done in
+                    defer { done = true }
+                    return !done
+                }
+                if first { continuation.resume() }
+            }
+            Task { await operation(); resumeOnce() }
+            Task { try? await Task.sleep(for: .seconds(seconds)); resumeOnce() }
+        }
     }
 
     /// Retire les notifications des tâches terminées, et ne garde que la plus récente par tâche.
-    private func tidyDelivered(finishedTaskIDs: Set<String>) async {
+    nonisolated private static func tidyDelivered(center: UNUserNotificationCenter, finishedTaskIDs: Set<String>) async {
         let delivered = await center.deliveredNotifications()
         var latestByThread: [String: UNNotification] = [:]
         var toRemove: [String] = []

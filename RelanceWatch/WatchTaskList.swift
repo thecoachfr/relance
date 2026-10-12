@@ -19,11 +19,19 @@ struct WatchTaskList: View {
                     section("Aujourd'hui", today, now: now)
                     section("Bientôt", later, now: now)
                     section("Sans date", inbox, now: now)
+                    if let updated = store.lastUpdate, !store.tasks.isEmpty {
+                        Text("Mis à jour \(updated, format: .relative(presentation: .named))")
+                            .font(.footnote).foregroundStyle(.secondary)
+                            .listRowBackground(Color.clear)
+                    }
                 }
+                .refreshable { await store.refreshFromGoogle() }
                 .overlay {
                     if store.tasks.isEmpty {
                         ContentUnavailableView("Rien d'urgent", systemImage: "checkmark.circle",
-                                               description: Text("Ouvre Relance sur l'iPhone pour synchroniser."))
+                                               description: Text(store.google.isAvailable
+                                                                 ? "Aucune tâche à faire."
+                                                                 : "Ouvre Relance sur l'iPhone une fois pour connecter la montre."))
                     }
                 }
             }
