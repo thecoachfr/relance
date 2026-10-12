@@ -8,6 +8,8 @@ import WidgetKit
 /// Les actions s'appliquent tout de suite à l'écran.
 @Observable
 final class WatchStore: NSObject, WCSessionDelegate {
+    /// Une seule instance : l'app et Siri (`WatchAddTaskIntent`) partagent la même liste.
+    static let shared = WatchStore()
     static let snapshotKey = "watchTasks"
     private static let updatedKey = "watchTasksUpdated"
     /// Partagé avec la complication (même identifiant d'App Group que sur l'iPhone, conteneur propre à la montre).
@@ -77,24 +79,24 @@ final class WatchStore: NSObject, WCSessionDelegate {
 
     /// `due` : début du jour (date seule) ou instant précis (avec heure).
     func add(title: String, due: Date?, hasTime: Bool) {
-        if google.isAvailable {
-            Task {
-                let calendar = Calendar.current
-                let minutes = hasTime ? due.map {
-                    let c = calendar.dateComponents([.hour, .minute], from: $0)
-                    return (c.hour ?? 0) * 60 + (c.minute ?? 0)
-                } : nil
-                let fields: [String: Any] = [
-                    "title": title,
-                    "notes": NotesTimeCodec.encode(minutes: minutes, notes: ""),
-                    "due": TasksAPI.due(fromDay: due) ?? NSNull(),
-                ]
-                if (try? await api.insert(fields)) != nil {
-                    await refreshFromGoogle()
-                } else {
-                    sendAdd(title: title, due: due, hasTime: hasTime)
-                }
-            }
+        Task { await insert(title: title, due: due, hasTime: hasTime) }
+    }
+
+    /// Version qu'on peut attendre (Siri répond une fois la tâche partie).
+    func insert(title: String, due: Date?, hasTime: Bool) async {
+        guard google.isAvailable else { return sendAdd(title: title, due: due, hasTime: hasTime) }
+        let calendar = Calendar.current
+        let minutes = hasTime ? due.map {
+            let c = calendar.dateComponents([.hour, .minute], from: $0)
+            return (c.hour ?? 0) * 60 + (c.minute ?? 0)
+        } : nil
+        let fields: [String: Any] = [
+            "title": title,
+            "notes": NotesTimeCodec.encode(minutes: minutes, notes: ""),
+            "due": TasksAPI.due(fromDay: due) ?? NSNull(),
+        ]
+        if (try? await api.insert(fields)) != nil {
+            await refreshFromGoogle()
         } else {
             sendAdd(title: title, due: due, hasTime: hasTime)
         }

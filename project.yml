@@ -95,6 +95,7 @@ targets:
       - Shared/Reminders/ReminderPlanner.swift
       - Shared/Google/TasksAPI.swift
       - Shared/Google/NotesTimeCodec.swift
+      - Shared/Intents/SiriCapture.swift
     dependencies:
       - target: RelanceWatchWidgets
     entitlements:
@@ -109,6 +110,10 @@ targets:
         CFBundleVersion: "1"
         WKApplication: true
         WKCompanionAppBundleIdentifier: fr.alexandrefau.relance
+        INAlternativeAppNames:
+          - INAlternativeAppName: Mes relances
+          - INAlternativeAppName: Relances
+          - INAlternativeAppName: L'appli Relance
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: fr.alexandrefau.relance.watchkitapp

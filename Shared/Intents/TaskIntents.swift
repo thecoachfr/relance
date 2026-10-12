@@ -44,30 +44,28 @@ struct SnoozeTaskIntent: LiveActivityIntent {
     }
 }
 
-/// « Dis Siri, ajoute une tâche dans Relance. »
+/// « Dis Siri, ajoute une tâche dans Relance. » (voir `SiriCapture`)
 struct AddTaskIntent: AppIntent {
     static let title: LocalizedStringResource = "Ajouter une tâche"
-    static let description = IntentDescription("Ajoute une tâche avec son échéance. Relance te relancera jusqu'à ce qu'elle soit faite.")
+    static let description = IntentDescription("Ajoute une tâche, avec ou sans échéance. Relance te relancera jusqu'à ce qu'elle soit faite.")
 
     @Parameter(title: "Tâche", requestValueDialog: "Qu'est-ce que tu dois faire ?")
     var text: String
 
-    @Parameter(title: "Échéance", kind: .dateTime, requestValueDialog: "Pour quand ?")
-    var due: Date
+    /// Demandée seulement si la phrase ne contient pas déjà une date.
+    @Parameter(title: "Échéance")
+    var when: String?
 
     @Dependency private var store: TaskStore
 
     @MainActor func perform() async throws -> some IntentResult & ProvidesDialog {
-        let calendar = Calendar.current
-        let c = calendar.dateComponents([.hour, .minute], from: due)
-        // Siri donne minuit quand on ne précise pas d'heure : on garde alors la date seule.
-        let minutes = (c.hour ?? 0) * 60 + (c.minute ?? 0)
-        let item = store.add(title: text, day: calendar.startOfDay(for: due), minutes: minutes == 0 ? nil : minutes)
+        if when == nil, SiriCapture.needsWhen(text) {
+            when = try await $when.requestValue(IntentDialog(stringLiteral: SiriCapture.whenDialog))
+        }
+        let r = SiriCapture.parse(text: text, when: when)
+        _ = store.add(title: r.title, day: r.day, minutes: r.minutes)
         await store.sync()
-
-        var when = due.formatted(.dateTime.weekday(.wide).day().month(.wide))
-        if let m = item.dueMinutes { when += " à " + ReminderPlanner.formatTime(m) }
-        return .result(dialog: "C'est noté : \(text), \(when).")
+        return .result(dialog: IntentDialog(stringLiteral: SiriCapture.confirmation(r)))
     }
 }
 
@@ -79,6 +77,9 @@ struct OverdueTasksIntent: AppIntent {
     @Dependency private var store: TaskStore
 
     @MainActor func perform() async throws -> some IntentResult & ProvidesDialog {
+        // Une tâche cochée ailleurs il y a cinq minutes ne doit pas être annoncée : synchro d'abord,
+        // mais Siri n'attend pas plus de 4 s (sans réseau, on lit la liste locale).
+        await ReminderScheduler.withTimeout(seconds: 4) { @MainActor in await store.sync() }
         let overdue = store.activeTasks()
             .filter { $0.isOverdue() }
             .sorted { ($0.dueInstant() ?? .distantPast) < ($1.dueInstant() ?? .distantPast) }

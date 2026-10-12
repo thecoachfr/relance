@@ -3,7 +3,7 @@ import WatchKit
 
 @main
 struct RelanceWatchApp: App {
-    @State private var store = WatchStore()
+    @State private var store = WatchStore.shared
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {

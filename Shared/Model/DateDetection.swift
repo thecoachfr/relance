@@ -22,6 +22,12 @@ nonisolated enum DateDetection {
     static func title(of text: String, removing match: Match?) -> String {
         var title = text
         if let match { title.removeSubrange(match.range) }
-        return title.trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
+        title = title.trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
+        // Le détecteur ne prend que « soir » dans « ce soir » : on retire les petits mots restés en fin de phrase.
+        if match != nil {
+            title = title.replacingOccurrences(of: #"(\s+(ce|cet|cette|à|a|le|la|pour|avant|d'ici|dès))+$"#,
+                                               with: "", options: [.regularExpression, .caseInsensitive])
+        }
+        return title
     }
 }
