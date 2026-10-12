@@ -5,7 +5,10 @@ import UserNotifications
 
 /// Traduit le plan du `ReminderPlanner` en notifications locales iOS.
 final class ReminderScheduler {
-    var settings = ReminderSettings()
+    /// Réglages › Relances, gardés sur cet appareil.
+    var settings = ReminderSettings.load(from: AppGroup.defaults) {
+        didSet { settings.save(to: AppGroup.defaults) }
+    }
     private let center = UNUserNotificationCenter.current()
 
     enum Category {

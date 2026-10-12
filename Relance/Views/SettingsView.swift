@@ -24,26 +24,21 @@ struct SettingsView: View {
                     }
                 }
                 Section {
-                    Toggle("Relances sur cet appareil", isOn: $remindersHere)
+                    NavigationLink("Quand et comment relancer") { ReminderSettingsView() }
+                    Toggle("Sur cet appareil", isOn: $remindersHere)
                         .onChange(of: remindersHere) { _, on in
                             ReminderScheduler.isEnabledOnThisDevice = on
                             Task { await store.reschedule() }
                         }
-                } footer: {
-                    Text("Activé d'origine sur l'iPhone seulement, pour ne pas être relancé deux fois pour la même tâche.")
-                }
-                Section {
-                    let s = store.scheduler.settings
-                    LabeledContent("Relances", value: "à l'heure, +1 h, \(ReminderPlanner.formatTime(s.evening))")
-                    LabeledContent("En retard", value: "\(ReminderPlanner.formatTime(s.morning)) et \(ReminderPlanner.formatTime(s.evening))")
-                    LabeledContent("Silence", value: "\(ReminderPlanner.formatTime(s.quietStart)) – \(ReminderPlanner.formatTime(s.quietEnd))")
                     if notificationStatus == .denied {
                         Button("Notifications désactivées : ouvrir les réglages") {
                             openURL(URL(string: UIApplication.openNotificationSettingsURLString)!)
                         }
                     }
                 } header: {
-                    Text("Rythme")
+                    Text("Relances")
+                } footer: {
+                    Text("Activées d'origine sur l'iPhone seulement, pour ne pas être relancé deux fois pour la même tâche.")
                 }
                 Section {
                     let entries = SyncLog.all().prefix(12)

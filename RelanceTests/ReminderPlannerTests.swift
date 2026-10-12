@@ -125,4 +125,53 @@ struct ReminderPlannerTests {
         #expect(plan.filter { $0.taskID == "a" }.allSatisfy { !$0.timeSensitive })
         #expect(taskReminders(plan, "b").isEmpty)
     }
+
+    // MARK: - Réglages par priorité
+
+    @Test func advanceReminderBeforeDue() {
+        var settings = ReminderSettings()
+        settings.normal.advanceMinutes = 15
+        let plan = ReminderPlanner(calendar: calendar, settings: settings)
+            .plan(tasks: [task("a", day: 12, minutes: 15 * 60)], inboxCount: 0, now: date(12, 8))
+        let first = plan.first { $0.taskID == "a" }!
+        #expect(first.fireDate == date(12, 14, 45))
+        #expect(first.kind == .advance)
+        #expect(first.body == "Dans 15 min · prévu à 15 h.")
+    }
+
+    @Test func customProfileRepeatsAndSlots() {
+        var settings = ReminderSettings()
+        settings.normal = ReminderProfile(advanceMinutes: nil, followUpMinutes: 120, followUpRepeats: true,
+                                          slots: [.midday], askTime: false, breakthrough: .never, liveActivity: .never)
+        let plan = ReminderPlanner(calendar: calendar, settings: settings)
+            .plan(tasks: [task("a", day: 12, minutes: 14 * 60)], inboxCount: 0, now: date(12, 8))
+        let sameDay = taskReminders(plan, "a").filter { calendar.isDate($0.0, inSameDayAs: date(12, 0)) }
+        #expect(sameDay.map(\.0) == [date(12, 14), date(12, 16), date(12, 18), date(12, 20)])
+        let nextDay = taskReminders(plan, "a").filter { calendar.isDate($0.0, inSameDayAs: date(13, 0)) }
+        #expect(nextDay.map(\.0) == [date(13, 12)])
+        #expect(plan.filter { $0.taskID == "a" }.allSatisfy { !$0.timeSensitive })
+    }
+
+    /// 17 octobre 2026 = samedi : une Normale ne relance qu'à l'heure, une Urgente comme d'habitude.
+    @Test func calmWeekends() {
+        var settings = ReminderSettings()
+        settings.calmWeekends = true
+        let plan = ReminderPlanner(calendar: calendar, settings: settings)
+            .plan(tasks: [task("n", day: 17, minutes: 15 * 60), task("u", day: 17, minutes: 15 * 60, priority: .urgent)],
+                  inboxCount: 0, now: date(16, 8))
+        let saturday = { (id: String) in self.taskReminders(plan, id).filter { self.calendar.isDate($0.0, inSameDayAs: self.date(17, 0)) } }
+        #expect(saturday("n").map(\.1) == [.due])
+        #expect(saturday("u").count > 1)
+    }
+
+    /// Un réglage absent (ajouté dans une version suivante) garde sa valeur d'origine.
+    @Test func settingsSurviveMissingKeys() throws {
+        var settings = ReminderSettings()
+        settings.evening = 21 * 60
+        settings.urgent.followUpMinutes = 15
+        let data = try JSONEncoder().encode(settings)
+        #expect(try JSONDecoder().decode(ReminderSettings.self, from: data) == settings)
+        let partial = try JSONDecoder().decode(ReminderSettings.self, from: Data(#"{"evening": 1230}"#.utf8))
+        #expect(partial.evening == 1230 && partial.morning == ReminderSettings().morning && partial.low == .defaults(for: .low))
+    }
 }

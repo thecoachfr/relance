@@ -3,24 +3,26 @@ import Foundation
 
 /// Garde une seule activité en direct, avec les tâches les plus urgentes :
 /// en retard d'abord, puis celles prévues dans les deux prochaines heures.
-/// Une tâche Urgente y entre dès le jour prévu et passe devant ; une tâche Basse n'y entre jamais.
+/// Selon le profil de la priorité : dès le jour prévu (Urgente, d'origine), peu avant, ou jamais (Basse).
+/// Les urgentes passent devant.
 /// Les tâches reportées passent après les autres.
 final class LiveActivityManager {
     static let maxItems = 3
     private let upcomingWindow: TimeInterval = 2 * 3600
 
-    func refresh(tasks: [TaskItem], now: Date = .now) {
-        let state = urgentState(tasks: tasks, now: now)
+    func refresh(tasks: [TaskItem], settings: ReminderSettings, now: Date = .now) {
+        let state = urgentState(tasks: tasks, settings: settings, now: now)
         Task { await apply(state, now: now) }
     }
 
-    private func urgentState(tasks: [TaskItem], now: Date) -> TaskActivityAttributes.ContentState? {
+    private func urgentState(tasks: [TaskItem], settings: ReminderSettings, now: Date) -> TaskActivityAttributes.ContentState? {
         let urgent = tasks
             .compactMap { item -> TaskActivityAttributes.ContentState.Item? in
-                guard item.priority != .low, let due = item.dueInstant(), let day = item.dueDay else { return nil }
+                let mode = settings[item.priority].liveActivity
+                guard mode != .never, let due = item.dueInstant(), let day = item.dueDay else { return nil }
                 let isUrgent = item.priority == .urgent
                 guard due.timeIntervalSince(now) <= upcomingWindow
-                        || (isUrgent && day <= Calendar.current.startOfDay(for: now)) else { return nil }
+                        || (mode == .always && day <= Calendar.current.startOfDay(for: now)) else { return nil }
                 return .init(id: item.localID.uuidString, title: item.title, due: due,
                              hasTime: item.dueMinutes != nil, snoozedUntil: item.snoozedUntil, isUrgent: isUrgent)
             }

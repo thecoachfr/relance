@@ -128,6 +128,7 @@ targets:
       - Shared/Model/DueText.swift
       - Shared/Model/DateDetection.swift
       - Shared/Reminders/ReminderPlanner.swift
+      - Shared/Reminders/ReminderProfile.swift
       - Shared/Google/TasksAPI.swift
       - Shared/Google/NotesTimeCodec.swift
       - Shared/Google/GoogleRefreshSession.swift
@@ -164,6 +165,7 @@ targets:
       - Shared/Model/DueText.swift
       - Shared/Model/TaskPriority.swift
       - Shared/Reminders/ReminderPlanner.swift
+      - Shared/Reminders/ReminderProfile.swift
     entitlements:
       path: RelanceWatchWidgets/RelanceWatchWidgets.entitlements
       properties:

@@ -186,9 +186,9 @@ final class TaskStore {
         try? context.save()
         await reschedule()
         if !needTimeNow.isEmpty {
-            // Une tâche Basse n'a pas besoin d'heure : elle n'est relancée que dans le résumé du matin.
+            // Selon le profil de la priorité (une tâche Basse ne demande pas d'heure, d'origine).
             let asks = needTimeNow.compactMap { task($0) }
-                .filter { $0.dueMinutes == nil && !$0.isCompleted && $0.priority != .low }
+                .filter { $0.dueMinutes == nil && !$0.isCompleted && scheduler.settings[$0.priority].askTime }
             needTimeNow = []
             await scheduler.askTimeNow(for: asks.map { $0.plannable() })
         }
