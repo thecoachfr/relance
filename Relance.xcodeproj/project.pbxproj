@@ -20,6 +20,7 @@
 		1080DA40882E6426D8D43BA3 /* TagViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3D83AD9429BAA01C53166A7 /* TagViews.swift */; };
 		134CDA592AB93A092C18F96B /* DemoData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59196264DF41F8F7B0C15A3A /* DemoData.swift */; };
 		13786AEE51D9397701A22CED /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0C65CE1B1707634DEE54856 /* OnboardingView.swift */; };
+		1FAC5E07C8AD2139C13A773A /* CalendarSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 595289CE4264CBC8CBE2415D /* CalendarSection.swift */; };
 		228D62C2B5808AC281A2E867 /* WatchTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECE60A54F2DC6987A632676A /* WatchTask.swift */; };
 		257B9AB2824CB698FD0CA93B /* SiriCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87BBA1DB8D8D2DF9BA98DDCF /* SiriCapture.swift */; };
 		27399E3364901765CBEADF04 /* RelanceWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 0F0B616EE02A4A576189645A /* RelanceWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -113,6 +114,7 @@
 		CD14AB719C3C74C632F62B26 /* TaskIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B19813EA3F6E02B516AA5F8 /* TaskIntents.swift */; };
 		CEB0661B20E19E4D74AF8B84 /* ReminderOverride.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CF4B1AF23ADE07B4C45F7D2 /* ReminderOverride.swift */; };
 		D149D4516671CF0B49D0D5C1 /* InboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA74C2AD3519045DE673C1B1 /* InboxView.swift */; };
+		D156AAA722C8F7A57043FCA6 /* CalendarLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41BF8369B5A6A593F0D8D600 /* CalendarLink.swift */; };
 		D5E83FE8A77DE51C60ADC4FE /* GoogleRefreshSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D9F2F47AFB8AE35410E0899 /* GoogleRefreshSession.swift */; };
 		D68D03B7649D68EDC025CDF1 /* SharedMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AC3C376A9AF6A9087AF2A12 /* SharedMessage.swift */; };
 		DC1B15409C41F6A7EB9FFA5C /* DoneView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2085B3617089E328A5BF3F30 /* DoneView.swift */; };
@@ -236,6 +238,7 @@
 		3EE508F82F326D596EC1A031 /* TaskPriority.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskPriority.swift; sourceTree = "<group>"; };
 		3FEE892B31D1EA6570BFFFB4 /* ReminderSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderSettingsView.swift; sourceTree = "<group>"; };
 		412F18AC79776A3000826C83 /* WatchTaskList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchTaskList.swift; sourceTree = "<group>"; };
+		41BF8369B5A6A593F0D8D600 /* CalendarLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarLink.swift; sourceTree = "<group>"; };
 		4536278168D673F91FE2BD29 /* RelanceWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelanceWatchApp.swift; sourceTree = "<group>"; };
 		4710CF61EBFBFD1A1472103A /* TaskActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskActivityAttributes.swift; sourceTree = "<group>"; };
 		4839CCA69FBABCA6821B8333 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
@@ -243,6 +246,7 @@
 		4DCCE35813EA2892D8D3C8B7 /* SharedMessageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedMessageTests.swift; sourceTree = "<group>"; };
 		58450EAF33557E45B79243CC /* TaskCategory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskCategory.swift; sourceTree = "<group>"; };
 		59196264DF41F8F7B0C15A3A /* DemoData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoData.swift; sourceTree = "<group>"; };
+		595289CE4264CBC8CBE2415D /* CalendarSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarSection.swift; sourceTree = "<group>"; };
 		59F7A908CED23B538B56A391 /* RelanceApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelanceApp.swift; sourceTree = "<group>"; };
 		5C0DA8FD3D838562DDAE1750 /* TaskStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskStore.swift; sourceTree = "<group>"; };
 		5CD9D6E8A5C0731F41756F44 /* SiriCaptureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SiriCaptureTests.swift; sourceTree = "<group>"; };
@@ -420,6 +424,7 @@
 		5EEFE8FECD21EF7D4D739B46 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				595289CE4264CBC8CBE2415D /* CalendarSection.swift */,
 				9E8C4B98CC17E47DEB59005B /* CategoryViews.swift */,
 				7E7598AD45ABC35C0448C201 /* ContactSection.swift */,
 				2085B3617089E328A5BF3F30 /* DoneView.swift */,
@@ -524,6 +529,7 @@
 			isa = PBXGroup;
 			children = (
 				B30F392FC92433C39C1922E7 /* AppDelegate.swift */,
+				41BF8369B5A6A593F0D8D600 /* CalendarLink.swift */,
 				59196264DF41F8F7B0C15A3A /* DemoData.swift */,
 				E5C54AAEC34A872D13A632F8 /* LiveActivityManager.swift */,
 				3C1E3FCC309390331F7A6DDF /* PushRegistration.swift */,
@@ -753,6 +759,8 @@
 			files = (
 				4FF5B1E0BB1083E64764515D /* AppDelegate.swift in Sources */,
 				B62C6C5D2C7AD96BC26CF840 /* AppGroup.swift in Sources */,
+				D156AAA722C8F7A57043FCA6 /* CalendarLink.swift in Sources */,
+				1FAC5E07C8AD2139C13A773A /* CalendarSection.swift in Sources */,
 				2B4EBEAA5425D6FA98BDDD3C /* CategoryViews.swift in Sources */,
 				5D30B5C9319AF1B5A5AD6305 /* ContactSection.swift in Sources */,
 				0BA6085EA060067592580BB7 /* DateDetection.swift in Sources */,

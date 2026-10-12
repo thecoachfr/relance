@@ -22,6 +22,8 @@ final class TaskItem {
     var tagsRaw: String?
     /// Ligne « 🔁 … » des notes : relances propres à la tâche ; `nil` = selon la priorité.
     var remindersRaw: String?
+    /// Événement d'agenda créé depuis CET appareil (identifiant EventKit, propre à l'appareil).
+    var calendarEventID: String?
     var isCompleted: Bool
     var completedAt: Date?
     var snoozedUntil: Date?

@@ -16,6 +16,7 @@ struct TaskEditor: View {
     @State private var reminders: ReminderOverride?
     @State private var tags: [String] = []
     @State private var base: TaskFields?
+    @State private var confirmDelete = false
 
     var body: some View {
         NavigationStack {
@@ -36,6 +37,7 @@ struct TaskEditor: View {
                         }
                     }
                 }
+                CalendarSection(item: item)
                 Section {
                     PriorityPicker(priority: $priority)
                     TaskRemindersRow(reminders: $reminders, priority: priority)
@@ -54,9 +56,9 @@ struct TaskEditor: View {
                         dismiss()
                     }
                     Button("Supprimer", role: .destructive) {
-                        store.delete(item)
-                        dismiss()
+                        if item.calendarEventID != nil { confirmDelete = true } else { store.delete(item); dismiss() }
                     }
+                    .deleteTaskConfirmation(item, isPresented: $confirmDelete) { dismiss() }
                 }
             }
             .navigationTitle("Tâche")

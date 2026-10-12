@@ -19,6 +19,7 @@ struct TaskDetailView: View {
     @State private var loaded = false
     /// État de la tâche au chargement : sert à ne renvoyer que ce que l'utilisateur a changé.
     @State private var base: TaskFields?
+    @State private var confirmDelete = false
 
     var body: some View {
         Form {
@@ -45,6 +46,7 @@ struct TaskDetailView: View {
                     }
                 }
             }
+            CalendarSection(item: item)
             Section {
                 PriorityPicker(priority: $priority)
                 TaskRemindersRow(reminders: $reminders, priority: priority)
@@ -70,8 +72,11 @@ struct TaskDetailView: View {
                     .keyboardShortcut("l", modifiers: .command)
                     Button("Demain matin", systemImage: "sunrise") { store.moveToTomorrow(item) }
                 }
-                Button("Supprimer", systemImage: "trash", role: .destructive) { store.delete(item) }
-                    .keyboardShortcut(.delete, modifiers: .command)
+                Button("Supprimer", systemImage: "trash", role: .destructive) {
+                    if item.calendarEventID != nil { confirmDelete = true } else { store.delete(item) }
+                }
+                .keyboardShortcut(.delete, modifiers: .command)
+                .deleteTaskConfirmation(item, isPresented: $confirmDelete)
             }
         }
         // Le titre est déjà le premier champ : pas de doublon dans la barre.
