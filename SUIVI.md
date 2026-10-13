@@ -59,7 +59,7 @@ Catégories fixes : Administratif, Maison, Santé, Achats, Travail, Famille, Per
 
 ## 2. Reste à faire / à vérifier
 
-0. **Xcode Cloud** (13/10) : en service. Workflow « Default » : push sur `main` → Archive iOS (montre incluse) et Archive macOS pour TestFlight interne, 3 variables secrètes, `ci_scripts/ci_post_clone.sh`. Build 3 installée sur l'iPhone via TestFlight. Conformité chiffrement déclarée dans l'app (`ITSAppUsesNonExemptEncryption = false`). Reste : ajouter le groupe de test interne en post-action dans le workflow (envoi automatique), regarder les avertissements des archives, vérifier qu'un rappel arrive bien via APNs production.
+0. **Xcode Cloud** (13/10) : en service. Workflow « Default » : push sur `main` → Archive iOS (montre incluse) et Archive macOS pour TestFlight interne, 3 variables secrètes, `ci_scripts/ci_post_clone.sh`. Build 3 installée sur l'iPhone via TestFlight. Conformité chiffrement déclarée dans l'app (`ITSAppUsesNonExemptEncryption = false`). Groupe de test interne en post-action (envoi automatique). Reste : regarder les avertissements des archives, vérifier qu'un rappel arrive bien via APNs production.
 
 *Vérifié le 13/10 : le tri de 6 h 45 tourne et lit bien la liste mémo.*
 

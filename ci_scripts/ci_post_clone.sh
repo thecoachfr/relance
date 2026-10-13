@@ -11,7 +11,15 @@ cd "${CI_PRIMARY_REPOSITORY_PATH:-$(dirname "$0")/..}"
 : "${CI_BUILD_NUMBER:?Numéro de build Xcode Cloud absent}"
 
 # Dans un .xcconfig, « // » ouvre un commentaire : on écrit « https:/$()/ » (voir Secrets.example.xcconfig).
-webhook="${RELANCE_WEBHOOK_URL#https://}"
+# La variable du workflow peut avoir été collée sous l'une ou l'autre forme : on garde l'hôte et le chemin.
+webhook=$(printf '%s' "$RELANCE_WEBHOOK_URL" | tr -d '[:space:]')
+webhook="${webhook#https://}"
+webhook="${webhook#'https:/$()/'}"
+case "$webhook" in
+    *'$'*|*://*|*' '*|'')
+        echo "RELANCE_WEBHOOK_URL mal formée : attendu https://hote/chemin" >&2
+        exit 1 ;;
+esac
 cat > Relance/Resources/Secrets.xcconfig <<XCCONFIG
 GOOGLE_CLIENT_ID = ${GOOGLE_CLIENT_ID}
 GOOGLE_REVERSED_CLIENT_ID = ${GOOGLE_REVERSED_CLIENT_ID}
