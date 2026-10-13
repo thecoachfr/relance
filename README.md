@@ -37,6 +37,21 @@ xcodegen generate
 Puis ouvrir `Relance.xcodeproj`, choisir ton iPhone et lancer (⌘R). Schéma `RelanceMac` pour l'app Mac (macOS 15),
 `RelanceWatch` pour la montre.
 
+## Déploiement automatique (Xcode Cloud + TestFlight)
+
+Chaque push sur `main` compile l'app dans le cloud d'Apple et l'envoie sur TestFlight :
+iPhone, iPad, montre (incluse dans l'app iPhone) et Mac se mettent à jour depuis l'app TestFlight.
+
+- `ci_scripts/ci_post_clone.sh` recrée `Secrets.xcconfig` (absent du dépôt public) et donne
+  le numéro de build de Xcode Cloud à l'app et à toutes ses extensions.
+- Variables du workflow (Xcode › Cloud › Workflow › Environnement), toutes **secrètes** :
+  `GOOGLE_CLIENT_ID`, `GOOGLE_REVERSED_CLIENT_ID`, `RELANCE_WEBHOOK_URL` (URL complète, avec `https://`).
+- Workflow iOS : déclencheur « push sur main », action « Archiver » schéma `Relance` (iOS),
+  post-action « TestFlight (test interne) ». Workflow Mac : idem avec le schéma `RelanceMac`.
+- Les builds TestFlight utilisent les notifications push de production : l'app l'annonce
+  au webhook (`environment: production`) et la vigie choisit le bon serveur APNs.
+- L'installation directe (Xcode ou `devicectl`) reste possible pour essayer une correction sur le moment.
+
 ## Organisation du code
 
 | Dossier | Rôle |

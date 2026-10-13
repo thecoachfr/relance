@@ -59,6 +59,8 @@ Catégories fixes : Administratif, Maison, Santé, Achats, Travail, Famille, Per
 
 ## 2. Reste à faire / à vérifier
 
+0. **Xcode Cloud** (13/10) : dépôt prêt (`ci_scripts/ci_post_clone.sh`, archives iOS et Mac vérifiées en Release). À faire par Alexandre : créer l'app dans App Store Connect, le workflow dans Xcode avec les 3 variables secrètes (voir README), installer TestFlight.
+
 *Vérifié le 13/10 : le tri de 6 h 45 tourne et lit bien la liste mémo.*
 
 1. **À tester en vrai** : rappel « à l'approche » d'un lieu, activité en direct 2 h avant une tâche urgente, répétition cochée depuis la montre (la suivante doit se créer), « Pars maintenant » (notification de départ ; piste : partir de la position actuelle quand l'app est ouverte).
