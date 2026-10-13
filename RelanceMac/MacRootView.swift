@@ -25,7 +25,7 @@ struct MacRootView: View {
 
 /// Listes de la barre latérale.
 enum MacSection: Hashable {
-    case todo, inbox, map, done
+    case todo, inbox, toSee, map, done
     case category(String)
     case tag(String)
 
@@ -33,6 +33,7 @@ enum MacSection: Hashable {
         switch self {
         case .todo: "À faire"
         case .inbox: "À trier"
+        case .toSee: "À voir"
         case .map: "Carte"
         case .done: "Fait"
         case .category(let name): name
@@ -61,6 +62,8 @@ struct MacMainView: View {
             Group {
                 if section == .map {
                     TaskMapView(selection: $selectedID, showsSummary: false)
+                } else if section == .toSee {
+                    ToSeeListView(selection: $selectedID)
                 } else {
                     MacTaskList(section: section ?? .todo, search: search, selection: $selectedID)
                 }
@@ -100,7 +103,7 @@ struct MacMainView: View {
         // Clic sur une notification ou sur une tâche de la barre des menus.
         .onChange(of: store.openedTaskID, initial: true) { _, id in
             guard let id, let item = store.task(id) else { return }
-            section = item.isCompleted ? .done : item.needsTriage ? .inbox : .todo
+            section = item.isCompleted ? .done : item.toSee != nil ? .toSee : item.needsTriage ? .inbox : .todo
             search = ""
             // Après le changement de section (qui vide la sélection).
             Task { selectedID = id }
@@ -127,6 +130,9 @@ struct MacMainView: View {
                 Label("À trier", systemImage: "tray")
                     .badge(active.filter(\.needsTriage).count)
                     .tag(MacSection.inbox)
+                Label("À voir", systemImage: "eyeglasses")
+                    .badge(active.filter { $0.toSee != nil }.count)
+                    .tag(MacSection.toSee)
                 Label("Carte", systemImage: "map")
                     .tag(MacSection.map)
                 Label("Fait", systemImage: "checkmark.circle")

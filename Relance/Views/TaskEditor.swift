@@ -28,17 +28,21 @@ struct TaskEditor: View {
                         .lineLimit(3...)
                 }
                 ContactSection(notes: $notes, searching: $searchingPlace)
-                Section("Échéance") {
-                    Toggle("Date", isOn: $hasDay)
-                    if hasDay {
-                        DatePicker("Jour", selection: $day, displayedComponents: .date)
-                        Toggle("Heure", isOn: $hasTime)
-                        if hasTime {
-                            DatePicker("À", selection: $time, displayedComponents: .hourAndMinute)
+                // Un « À voir » n'a pas d'échéance : ni date, ni agenda.
+                if ToSee(notes: notes) == nil {
+                    Section("Échéance") {
+                        Toggle("Date", isOn: $hasDay)
+                        if hasDay {
+                            DatePicker("Jour", selection: $day, displayedComponents: .date)
+                            Toggle("Heure", isOn: $hasTime)
+                            if hasTime {
+                                DatePicker("À", selection: $time, displayedComponents: .hourAndMinute)
+                            }
                         }
                     }
                 }
-                CalendarSection(item: item)
+                ToSeeSection(notes: $notes) { hasDay = false }
+                if ToSee(notes: notes) == nil { CalendarSection(item: item) }
                 Section {
                     PriorityPicker(priority: $priority)
                     TaskRemindersRow(reminders: $reminders, priority: priority)

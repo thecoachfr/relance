@@ -89,7 +89,14 @@ struct TaskRow: View {
     }
 
     @ViewBuilder private var statusLabel: some View {
-        if let status {
+        if let toSee = item.toSee, item.dueDay == nil {
+            HStack(spacing: 5) {
+                Image(systemName: "eyeglasses").imageScale(.small)
+                Text(toSee.text(now: now))
+            }
+            .font(.subheadline)
+            .foregroundStyle(toSee.isOver(now: now) ? Color.secondary : toSee.text(now: now).hasPrefix("Plus que") || toSee.text(now: now) == "Dernier jour" ? Color.orange : Color.secondary)
+        } else if let status {
             // Pas de `Label` : dans une liste, il réserve une colonne d'icône trop large.
             HStack(spacing: 5) {
                 Image(systemName: status.symbol).imageScale(.small)

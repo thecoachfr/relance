@@ -91,3 +91,20 @@ nonisolated struct TaskContact: Equatable, Sendable {
         return c.url
     }
 }
+
+/// « Me le rappeler en passant à côté » : ligne « 🔔 À l'approche » dans les notes, pour que le choix suive
+/// la tâche sur tous les appareils (seul l'appareil qui relance surveille le lieu).
+nonisolated enum NearbyReminder {
+    static let line = "🔔 À l'approche"
+
+    static func isOn(_ notes: String) -> Bool {
+        notes.components(separatedBy: "\n").contains { NoteLines.isHidden($0) && $0.contains("À l'approche") }
+    }
+
+    static func notes(_ notes: String, on: Bool) -> String {
+        var lines = notes.components(separatedBy: "\n").filter { !($0.contains("🔔") && $0.contains("À l'approche")) }
+        while lines.last?.trimmingCharacters(in: .whitespaces).isEmpty == true { lines.removeLast() }
+        if on { lines.append(line) }
+        return lines.joined(separator: "\n")
+    }
+}

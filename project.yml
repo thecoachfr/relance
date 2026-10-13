@@ -56,6 +56,8 @@ targets:
         NSSupportsLiveActivities: true
         # « Relance » est un mot courant : on aide Siri à y reconnaître l'app.
         NSCalendarsFullAccessUsageDescription: Relance ajoute à ton agenda les tâches que tu choisis, et met l'événement à jour quand l'heure de la tâche change.
+        NSLocationWhenInUseUsageDescription: Relance te prévient quand tu passes près du lieu d'une tâche que tu as choisie.
+        NSLocationAlwaysAndWhenInUseUsageDescription: Pour te prévenir quand tu passes près du lieu d'une tâche, même quand Relance est fermée. Ta position reste sur l'iPhone.
         INAlternativeAppNames:
           - INAlternativeAppName: Mes relances
           - INAlternativeAppName: Relances
@@ -106,6 +108,7 @@ targets:
       - Relance/Views/PlaceSearchView.swift
       - Relance/Views/MemoViews.swift
       - Relance/Views/TaskMapView.swift
+      - Relance/Views/ToSeeViews.swift
       - Relance/Views/TaskEditor.swift
     configFiles:
       Debug: Relance/Resources/Secrets.xcconfig
@@ -203,6 +206,7 @@ targets:
       - Shared/Model/DateDetection.swift
       - Shared/Reminders/ReminderPlanner.swift
       - Shared/Reminders/ReminderProfile.swift
+      - Shared/Model/ToSee.swift
       - Shared/Reminders/ReminderOverride.swift
       - Shared/Google/TasksAPI.swift
       - Shared/Google/NotesTimeCodec.swift
@@ -243,6 +247,7 @@ targets:
       - Shared/Model/TaskPriority.swift
       - Shared/Reminders/ReminderPlanner.swift
       - Shared/Reminders/ReminderProfile.swift
+      - Shared/Model/ToSee.swift
       - Shared/Reminders/ReminderOverride.swift
     entitlements:
       path: RelanceWatchWidgets/RelanceWatchWidgets.entitlements

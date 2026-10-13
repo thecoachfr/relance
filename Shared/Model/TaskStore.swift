@@ -164,7 +164,7 @@ final class TaskStore {
 
     func reschedule() async {
         let tasks = activeTasks()
-        let inbox = tasks.filter { $0.dueDay == nil }.count
+        let inbox = tasks.filter { $0.dueDay == nil && $0.toSee == nil }.count
         let completedIDs = Set(((try? context.fetch(FetchDescriptor<TaskItem>(
             predicate: #Predicate { $0.isCompleted || $0.isTrashed }))) ?? []).map(\.localID.uuidString))
         let overdue = tasks.filter { $0.isOverdue() }.count

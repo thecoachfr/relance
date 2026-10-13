@@ -105,3 +105,40 @@ struct NoteLinesTests {
         #expect(NoteLines.visible("📍\u{FE0F} Mairie\nx") == "x")
     }
 }
+
+struct NearbyReminderTests {
+    @Test func toggleLineHiddenFromNotes() {
+        let notes = "Apporter les clés\n📍 Mairie · 1 place de la Mairie, 75002 Paris"
+        let on = NearbyReminder.notes(notes, on: true)
+        #expect(NearbyReminder.isOn(on))
+        #expect(NoteLines.visible(on) == "Apporter les clés")
+        #expect(TaskContact(notes: on)?.name == "Mairie")
+        #expect(NearbyReminder.notes(on, on: false) == notes)
+        #expect(!NearbyReminder.isOn(notes))
+    }
+}
+
+struct ToSeeTests {
+    let calendar = Calendar.current
+    func day(_ d: Int, _ m: Int, _ y: Int) -> Date { calendar.date(from: DateComponents(year: y, month: m, day: d))! }
+
+    @Test func linesRoundTrip() {
+        let expo = ToSee(start: day(10, 9, 2026), end: day(31, 1, 2027))
+        #expect(expo.lines == ["👀 À voir", "🗓 Du 10/09/2026 au 31/01/2027"])
+        let notes = ToSee.notes("MEP, rue de Fourcy", setting: expo)
+        #expect(ToSee(notes: notes) == expo)
+        #expect(NoteLines.visible(notes) == "MEP, rue de Fourcy")
+        #expect(ToSee(notes: "👀 À voir\n🗓 Jusqu'au 31/01/2027") == ToSee(end: day(31, 1, 2027)))
+        #expect(ToSee(notes: "👀 À voir") == ToSee())
+        #expect(ToSee(notes: "rien") == nil)
+        #expect(ToSee.notes(notes, setting: nil) == "MEP, rue de Fourcy")
+    }
+
+    @Test func textAroundThePeriod() {
+        let expo = ToSee(start: day(10, 9, 2026), end: day(31, 1, 2027))
+        #expect(expo.text(now: day(13, 10, 2026)) == "Jusqu'au " + day(31, 1, 2027).formatted(.dateTime.day().month(.abbreviated)))
+        #expect(expo.text(now: day(18, 1, 2027)) == "Plus que 2 semaines")
+        #expect(expo.text(now: day(31, 1, 2027)) == "Dernier jour")
+        #expect(expo.isOver(now: day(1, 2, 2027)))
+    }
+}

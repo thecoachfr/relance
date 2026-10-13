@@ -35,8 +35,11 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         store.travelMinutes = { item in
             await TravelTimes.shared.minutes(for: item, settings: store.scheduler.settings.departure)
         }
+        // Relancée par iOS à l'entrée dans une zone : la surveillance doit reprendre dès le lancement.
+        ProximityReminders.shared.start(store: store)
         store.onTasksChanged = { [liveActivity] in
             let tasks = store.activeTasks()
+            Task { await ProximityReminders.shared.update(tasks: tasks) }
             liveActivity.refresh(tasks: tasks, settings: store.scheduler.settings)
             TaskIndex.update(tasks)
             CalendarLink.shared.reconcile(tasks)

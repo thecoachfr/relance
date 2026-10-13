@@ -41,6 +41,9 @@ struct MainTabs: View {
                 InboxView()
             }
             .badge(active.filter(\.needsTriage).count)
+            Tab("À voir", systemImage: "eyeglasses", value: 4) {
+                NavigationStack { ToSeeListView() }
+            }
             Tab("Carte", systemImage: "map", value: 3) {
                 NavigationStack { TaskMapView(selection: $mapSelection) }
             }

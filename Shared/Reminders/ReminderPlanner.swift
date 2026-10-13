@@ -16,6 +16,8 @@ nonisolated struct PlannableTask: Sendable, Equatable {
     var travelMinutes: Int?
     /// La tâche a une adresse (ligne 📍) : bouton « Itinéraire » plutôt que « Dans 1 h » avant l'heure.
     var hasPlace = false
+    /// « À voir » (sans échéance) : relances seulement autour de sa période.
+    var toSee: ToSee?
 }
 
 nonisolated struct ReminderSettings: Sendable, Equatable {
@@ -27,6 +29,7 @@ nonisolated struct ReminderSettings: Sendable, Equatable {
     /// Résumé du soir : les tâches du lendemain. Après la relance de 20 h, pour ne pas sonner en même temps.
     var eveningDigest = true
     var eveningDigestTime = 21 * 60
+    var toSee = ToSeeSettings()
     /// Week-end : seules l'heure prévue, les reports choisis et les tâches urgentes relancent.
     var calmWeekends = false
     var urgent = ReminderProfile.defaults(for: .urgent)
@@ -70,6 +73,28 @@ nonisolated struct ReminderSettings: Sendable, Equatable {
 
 nonisolated enum ReminderKind: String, Sendable, Equatable {
     case departure, advance, due, followUp, evening, askTime, overdue, snoozed, digest
+    /// « À voir » : ouverture, quelques semaines avant la fin, dernier week-end.
+    case toSeeOpening, toSeeEnding, toSeeLastWeekend
+}
+
+/// Relances des « À voir » : peu nombreuses, autour de la période (Réglages › Relances › À voir).
+nonisolated struct ToSeeSettings: Codable, Equatable, Sendable {
+    var atOpening = true
+    /// Semaines avant la fin ; `nil` = pas de rappel.
+    var weeksBeforeEnd: Int? = 3
+    var lastWeekend = true
+    /// Heure des rappels (minutes depuis minuit).
+    var time = 10 * 60
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        atOpening = try c.decodeIfPresent(Bool.self, forKey: .atOpening) ?? atOpening
+        weeksBeforeEnd = try c.decodeIfPresent(Int.self, forKey: .weeksBeforeEnd)
+        lastWeekend = try c.decodeIfPresent(Bool.self, forKey: .lastWeekend) ?? lastWeekend
+        time = try c.decodeIfPresent(Int.self, forKey: .time) ?? time
+    }
 }
 
 nonisolated struct PlannedReminder: Sendable, Equatable {
@@ -99,6 +124,10 @@ nonisolated struct ReminderPlanner: Sendable {
         var reminders: [PlannedReminder] = []
 
         for task in tasks {
+            if let toSee = task.toSee, task.dueDay == nil {
+                reminders += toSeeReminders(task, toSee, now: now, horizon: horizon)
+                continue
+            }
             guard let dueDay = task.dueDay, let dayStart = calendar.date(from: dueDay) else { continue }
             var events = events(for: task, dayStart: dayStart, horizon: horizon)
 
@@ -280,6 +309,31 @@ nonisolated struct ReminderPlanner: Sendable {
             badge: 0)
     }
 
+    /// Ouverture (si elle est à venir), quelques semaines avant la fin, et le samedi du dernier week-end.
+    private func toSeeReminders(_ task: PlannableTask, _ toSee: ToSee, now: Date, horizon: Date) -> [PlannedReminder] {
+        let s = settings.toSee
+        var events: [(Date, ReminderKind, String)] = []
+        if s.atOpening, let start = toSee.start {
+            events.append((at(start, s.time), .toSeeOpening, "C'est ouvert" + (toSee.end.map { " jusqu'au " + $0.formatted(.dateTime.day().month(.wide)) } ?? "") + "."))
+        }
+        if let end = toSee.end {
+            if let weeks = s.weeksBeforeEnd, let day = calendar.date(byAdding: .day, value: -7 * weeks, to: end) {
+                events.append((at(day, s.time), .toSeeEnding, "Plus que \(weeks) semaine\(weeks > 1 ? "s" : "") : jusqu'au " + end.formatted(.dateTime.day().month(.wide)) + "."))
+            }
+            // Samedi du dernier week-end (ou la veille si la fin tombe un samedi : on garde le samedi lui-même).
+            let weekday = calendar.component(.weekday, from: end)   // 1 = dimanche, 7 = samedi
+            let back = weekday == 7 ? 0 : weekday == 1 ? 1 : weekday
+            if s.lastWeekend, let saturday = calendar.date(byAdding: .day, value: -back, to: end) {
+                events.append((at(saturday, s.time), .toSeeLastWeekend, "Dernier week-end : jusqu'au " + end.formatted(.dateTime.weekday(.wide).day().month(.wide)) + "."))
+            }
+        }
+        return events.filter { $0.0 > now && $0.0 <= horizon && !isMuted($0.0, $0.1) }.map { date, kind, body in
+            PlannedReminder(id: "\(task.id)|\(kind.rawValue)|\(Int(date.timeIntervalSince1970))", taskID: task.id,
+                            fireDate: date, kind: kind, title: task.title, body: body,
+                            timeSensitive: false, badge: 0, subtitle: "À voir", hasPlace: task.hasPlace)
+        }
+    }
+
     /// La plage silencieuse coupe tout, sauf l'échéance elle-même et un report choisi explicitement.
     private func isMuted(_ date: Date, _ kind: ReminderKind) -> Bool {
         // L'heure prévue, le départ et un report choisi passent toujours : rater un départ, c'est rater le rendez-vous.
@@ -309,7 +363,7 @@ nonisolated struct ReminderPlanner: Sendable {
         case .overdue, .snoozed:
             if isOverdue(task, at: date) { return lateText(task, at: date) + "." }
             return "Reporté · prévu\(time)."
-        case .digest: return ""
+        case .digest, .toSeeOpening, .toSeeEnding, .toSeeLastWeekend: return ""
         }
     }
 

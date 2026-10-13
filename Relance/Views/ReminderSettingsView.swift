@@ -99,6 +99,20 @@ struct ReminderSettingsView: View {
             }
 
             Section {
+                Toggle("À l'ouverture", isOn: $settings.toSee.atOpening)
+                Picker("Avant la fin", selection: $settings.toSee.weeksBeforeEnd) {
+                    Text("Non").tag(Int?.none)
+                    ForEach([1, 2, 3, 4], id: \.self) { Text("\($0) semaine\($0 > 1 ? "s" : "")").tag(Int?.some($0)) }
+                }
+                Toggle("Le dernier week-end", isOn: $settings.toSee.lastWeekend)
+                TimeRow(title: "Heure", minutes: $settings.toSee.time)
+            } header: {
+                Text("À voir")
+            } footer: {
+                Text("Pour les expos, films et lieux gardés « À voir » avec une période. Sans période, aucune relance.")
+            }
+
+            Section {
                 Toggle("Week-end calme", isOn: $settings.calmWeekends)
             } footer: {
                 Text("Le samedi et le dimanche, seules l'heure prévue et les tâches urgentes relancent.")

@@ -74,7 +74,9 @@ final class TaskItem {
     }
 
     /// À trier : pas de date, ou une date sans heure.
-    var needsTriage: Bool { dueDay == nil || dueMinutes == nil }
+    /// À garder sans échéance (« 👀 À voir ») : ni dans À trier, ni relancée chaque jour.
+    var toSee: ToSee? { ToSee(notes: notes) }
+    var needsTriage: Bool { (dueDay == nil || dueMinutes == nil) && toSee == nil }
 
     func markChanged() {
         isDirty = true
@@ -90,6 +92,7 @@ final class TaskItem {
             snoozedUntil: snoozedUntil,
             priority: priority,
             reminders: reminderOverride,
-            hasPlace: TaskContact(notes: notes)?.address != nil)
+            hasPlace: TaskContact(notes: notes)?.address != nil,
+            toSee: toSee)
     }
 }

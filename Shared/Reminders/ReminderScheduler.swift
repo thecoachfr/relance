@@ -17,6 +17,8 @@ final class ReminderScheduler {
         static let departure = "DEPARTURE"
         /// Avant l'heure prévue : « Fait » seulement (« Dans 1 h » ajoutait un rappel sans rien décaler).
         static let early = "EARLY"
+        /// Près du lieu d'une tâche (« Me le rappeler en passant à côté »).
+        static let nearby = "NEARBY"
     }
 
     enum Action {
@@ -52,6 +54,7 @@ final class ReminderScheduler {
             UNNotificationCategory(identifier: Category.askTime, actions: times, intentIdentifiers: []),
             UNNotificationCategory(identifier: Category.digest, actions: [], intentIdentifiers: []),
             UNNotificationCategory(identifier: Category.early, actions: [done], intentIdentifiers: []),
+            UNNotificationCategory(identifier: Category.nearby, actions: [done, tomorrow], intentIdentifiers: []),
             UNNotificationCategory(identifier: Category.departure, actions: [
                 UNNotificationAction(identifier: Action.route, title: "Itinéraire", options: .foreground,
                                      icon: UNNotificationActionIcon(systemImageName: "map")),
@@ -159,7 +162,8 @@ final class ReminderScheduler {
         case .askTime: Category.askTime
         case .departure: Category.departure
         // Avant l'heure : Itinéraire s'il y a une adresse, sinon Fait seulement.
-        case .advance: reminder.hasPlace ? Category.departure : Category.early
+        case .advance, .toSeeOpening, .toSeeEnding, .toSeeLastWeekend:
+            reminder.hasPlace ? Category.departure : Category.early
         default: Category.task
         }
         if let taskID = reminder.taskID { content.userInfo = ["taskID": taskID] }

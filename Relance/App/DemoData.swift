@@ -15,9 +15,14 @@ enum DemoData {
         store.add(title: "Acheter un cadeau pour Léa", day: day(0), minutes: nil, priority: .low)
         let garage = store.add(title: "Réserver le contrôle technique", day: day(1), minutes: 9 * 60 + 30, category: "Maison")
         garage.notes = "📍 Mairie du 4e · 2 place Baudoyer, 75004 Paris"
+        let papers = store.add(title: "Déposer le dossier à la mairie", day: day(2), minutes: 11 * 60, category: "Administratif")
+        papers.notes = "📍 Mairie du 4e · 2 place Baudoyer, 75004 Paris"
         let books = store.add(title: "Rendre les livres à la médiathèque", day: day(3), minutes: nil, category: "Perso")
         books.notes = "📍 Bibliothèque de l'Hôtel de Ville · 5 rue de Lobau, 75004 Paris"
         store.add(title: "Trier les papiers de la banque", day: nil, minutes: nil)
+        let expo = store.add(title: "Voir l'expo photo de la MEP", day: nil, minutes: nil, category: "Perso")
+        expo.notes = "📍 Maison européenne de la photographie · 5 rue de Fourcy, 75004 Paris\n"
+            + ToSee(start: day(-30), end: day(19)).lines.joined(separator: "\n")
         let done = store.add(title: "Prendre rendez-vous chez le dentiste", day: day(-1), minutes: 14 * 60)
         store.complete(done)
     }

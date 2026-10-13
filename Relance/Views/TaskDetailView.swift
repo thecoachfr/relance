@@ -39,35 +39,39 @@ struct TaskDetailView: View {
                     .formFieldWithoutLabel()
             }
             ContactSection(notes: $notes, searching: $searchingPlace)
-            Section("Échéance") {
-                #if os(macOS)
-                // Mac : l'interrupteur et la valeur sur la même ligne, comme dans Rappels.
-                LabeledContent("Date") {
-                    HStack {
-                        if hasDay { DatePicker("Jour", selection: $day, displayedComponents: .date).labelsHidden() }
-                        Toggle("Date", isOn: $hasDay).labelsHidden()
-                    }
-                }
-                if hasDay {
-                    LabeledContent("Heure") {
+            // Un « À voir » n'a pas d'échéance : ni date, ni agenda.
+            if ToSee(notes: notes) == nil {
+                Section("Échéance") {
+                    #if os(macOS)
+                    // Mac : l'interrupteur et la valeur sur la même ligne, comme dans Rappels.
+                    LabeledContent("Date") {
                         HStack {
-                            if hasTime { DatePicker("À", selection: $time, displayedComponents: .hourAndMinute).labelsHidden() }
-                            Toggle("Heure", isOn: $hasTime).labelsHidden()
+                            if hasDay { DatePicker("Jour", selection: $day, displayedComponents: .date).labelsHidden() }
+                            Toggle("Date", isOn: $hasDay).labelsHidden()
                         }
                     }
-                }
-                #else
-                Toggle("Date", isOn: $hasDay)
-                if hasDay {
-                    DatePicker("Jour", selection: $day, displayedComponents: .date)
-                    Toggle("Heure", isOn: $hasTime)
-                    if hasTime {
-                        DatePicker("À", selection: $time, displayedComponents: .hourAndMinute)
+                    if hasDay {
+                        LabeledContent("Heure") {
+                            HStack {
+                                if hasTime { DatePicker("À", selection: $time, displayedComponents: .hourAndMinute).labelsHidden() }
+                                Toggle("Heure", isOn: $hasTime).labelsHidden()
+                            }
+                        }
                     }
+                    #else
+                    Toggle("Date", isOn: $hasDay)
+                    if hasDay {
+                        DatePicker("Jour", selection: $day, displayedComponents: .date)
+                        Toggle("Heure", isOn: $hasTime)
+                        if hasTime {
+                            DatePicker("À", selection: $time, displayedComponents: .hourAndMinute)
+                        }
+                    }
+                    #endif
                 }
-                #endif
             }
-            CalendarSection(item: item)
+            ToSeeSection(notes: $notes) { hasDay = false }
+            if ToSee(notes: notes) == nil { CalendarSection(item: item) }
             Section {
                 PriorityPicker(priority: $priority)
                 TaskRemindersRow(reminders: $reminders, priority: priority)
@@ -127,6 +131,8 @@ struct TaskDetailView: View {
         .onChange(of: tags) { save() }
         // Lieu ajouté, changé ou retiré (bouton) : enregistré tout de suite, comme les autres réglages.
         .onChange(of: TaskContact(notes: notes)) { save() }
+        .onChange(of: NearbyReminder.isOn(notes)) { save() }
+        .onChange(of: ToSee(notes: notes)) { save() }
         // Texte : enregistré à la sortie du champ ou de la tâche, pas à chaque frappe (chaque enregistrement synchronise).
         .onSubmit { save() }
         .onDisappear { save() }

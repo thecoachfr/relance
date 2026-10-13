@@ -51,7 +51,7 @@ struct MacTaskList: View {
         let base: [TaskItem] = switch section {
         case .todo: all.filter { !$0.isCompleted && $0.dueDay != nil }
         case .inbox: all.filter { !$0.isCompleted && $0.needsTriage }
-        case .map: []
+        case .map, .toSee: []
         case .done: all.filter(\.isCompleted).sorted { ($0.completedAt ?? .distantPast) > ($1.completedAt ?? .distantPast) }
         case .category(let name): all.filter { !$0.isCompleted && $0.category == name }
         case .tag(let tag): all.filter { !$0.isCompleted && $0.matches(categoryFilter: "#" + tag) }

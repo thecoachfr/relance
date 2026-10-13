@@ -276,3 +276,28 @@ struct ActivityButtonTests {
     }
 }
 
+struct ToSeePlannerTests {
+    let calendar: Calendar = {
+        var c = Calendar(identifier: .gregorian)
+        c.timeZone = TimeZone(identifier: "Europe/Paris")!
+        return c
+    }()
+    func date(_ d: Int, _ m: Int, _ h: Int = 0) -> Date {
+        calendar.date(from: DateComponents(year: 2026, month: m, day: d, hour: h))!
+    }
+
+    @Test func expoRemindersAroundThePeriod() {
+        var planner = ReminderPlanner(calendar: calendar)
+        planner.settings.horizonDays = 60
+        // Fin le dimanche 22/11/2026 : 3 semaines avant = 01/11, dernier week-end = samedi 21/11, à 10 h.
+        let expo = PlannableTask(id: "expo", title: "Expo", toSee: ToSee(start: date(20, 10), end: date(22, 11)))
+        let plan = planner.plan(tasks: [expo], inboxCount: 0, now: date(13, 10, 12))
+        let mine = plan.filter { $0.taskID == "expo" }
+        #expect(mine.map(\.fireDate) == [date(20, 10, 10), date(1, 11, 10), date(21, 11, 10)])
+        #expect(mine.map(\.kind) == [.toSeeOpening, .toSeeEnding, .toSeeLastWeekend])
+        #expect(mine.allSatisfy { $0.subtitle == "À voir" })
+        // Sans période : aucune relance.
+        #expect(planner.plan(tasks: [PlannableTask(id: "x", title: "x", toSee: ToSee())], inboxCount: 0, now: date(13, 10)).isEmpty)
+    }
+}
+

@@ -13,7 +13,7 @@ struct InboxView: View {
     @AppStorage("categoryFilter") private var categoryFilter = ""
 
     private var queue: [TaskItem] {
-        items.filter { $0.matches(categoryFilter: categoryFilter) }.sorted { (skipped.firstIndex(of: $0.localID) ?? -1) < (skipped.firstIndex(of: $1.localID) ?? -1) }
+        items.filter { $0.toSee == nil && $0.matches(categoryFilter: categoryFilter) }.sorted { (skipped.firstIndex(of: $0.localID) ?? -1) < (skipped.firstIndex(of: $1.localID) ?? -1) }
     }
 
     var body: some View {
@@ -75,6 +75,7 @@ struct InboxView: View {
                     ("Aujourd'hui", "sun.max", { setDay(item, offset: 0) }),
                     ("Demain", "sunrise", { setDay(item, offset: 1) }),
                     ("Dans une semaine", "calendar", { setDay(item, offset: 7) }),
+                    ("À voir, sans date", "eyeglasses", { store.setToSee(item, ToSee()) }),
                     ("Choisir…", "calendar.badge.plus", { editing = item }),
                 ])
             } else {

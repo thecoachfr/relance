@@ -36,6 +36,18 @@ struct ContactSection: View {
                     }
                 }
                 // Deux lignes visibles plutôt qu'un menu : retirer un lieu doit se trouver sans chercher.
+                #if os(iOS)
+                if contact.address != nil {
+                    Toggle(isOn: Binding(
+                        get: { NearbyReminder.isOn(notes) },
+                        set: { on in
+                            notes = NearbyReminder.notes(notes, on: on)
+                            if on { ProximityReminders.shared.requestAuthorization() }
+                        })) {
+                        Label("Me le rappeler en passant à côté", systemImage: "location.circle")
+                    }
+                }
+                #endif
                 Button("Changer de lieu", systemImage: "mappin.and.ellipse") { searching = true }
                 Button("Retirer le lieu", systemImage: "mappin.slash", role: .destructive) {
                     notes = TaskContact.notes(notes, setting: nil)
@@ -48,6 +60,8 @@ struct ContactSection: View {
         } footer: {
             if TaskContact(notes: notes) == nil {
                 Text("Avec une adresse, Relance peut te dire quand partir et l'ajouter à l'événement d'agenda.")
+            } else if NearbyReminder.isOn(notes) {
+                Text("L'appareil qui relance te prévient à moins de 200 m, une fois par jour (localisation « Toujours » requise).")
             } else {
                 Text("Dans Google Maps : Enregistrer › À visiter, pour garder le lieu.")
             }
