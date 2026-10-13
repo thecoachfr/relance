@@ -25,7 +25,7 @@ struct MacRootView: View {
 
 /// Listes de la barre latérale.
 enum MacSection: Hashable {
-    case todo, inbox, done
+    case todo, inbox, map, done
     case category(String)
     case tag(String)
 
@@ -33,6 +33,7 @@ enum MacSection: Hashable {
         switch self {
         case .todo: "À faire"
         case .inbox: "À trier"
+        case .map: "Carte"
         case .done: "Fait"
         case .category(let name): name
         case .tag(let tag): "#" + tag
@@ -57,7 +58,13 @@ struct MacMainView: View {
             sidebar
                 .navigationSplitViewColumnWidth(min: 180, ideal: 210, max: 280)
         } content: {
-            MacTaskList(section: section ?? .todo, search: search, selection: $selectedID)
+            Group {
+                if section == .map {
+                    TaskMapView(selection: $selectedID, showsSummary: false)
+                } else {
+                    MacTaskList(section: section ?? .todo, search: search, selection: $selectedID)
+                }
+            }
                 .environment(\.deleteTask, requestDelete)
                 .navigationSplitViewColumnWidth(min: 300, ideal: 380, max: 520)
                 // Au-dessus de la liste ; les actions de la tâche vont au-dessus du détail.
@@ -120,6 +127,8 @@ struct MacMainView: View {
                 Label("À trier", systemImage: "tray")
                     .badge(active.filter(\.needsTriage).count)
                     .tag(MacSection.inbox)
+                Label("Carte", systemImage: "map")
+                    .tag(MacSection.map)
                 Label("Fait", systemImage: "checkmark.circle")
                     .tag(MacSection.done)
             }

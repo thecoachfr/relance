@@ -29,6 +29,7 @@ struct MainTabs: View {
     private var active: [TaskItem]
     /// `-tab 1` au lancement ouvre directement un onglet (captures d'écran).
     @State private var tab = UserDefaults.standard.integer(forKey: "tab")
+    @State private var mapSelection: UUID?
 
     var body: some View {
         @Bindable var store = store
@@ -40,6 +41,9 @@ struct MainTabs: View {
                 InboxView()
             }
             .badge(active.filter(\.needsTriage).count)
+            Tab("Carte", systemImage: "map", value: 3) {
+                NavigationStack { TaskMapView(selection: $mapSelection) }
+            }
             Tab("Fait", systemImage: "checkmark.circle", value: 2) {
                 DoneView()
             }

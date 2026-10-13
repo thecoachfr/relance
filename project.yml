@@ -85,6 +85,7 @@ targets:
       - Relance/Google
       - Relance/App/CalendarLink.swift
       - Relance/App/TravelTimes.swift
+      - Relance/App/PlaceLocator.swift
       - Relance/App/TriageRequest.swift
       - Relance/App/PushRegistration.swift
       - Relance/App/DemoData.swift
@@ -104,6 +105,8 @@ targets:
       - Relance/Views/ReminderDeviceSection.swift
       - Relance/Views/PlaceSearchView.swift
       - Relance/Views/MemoViews.swift
+      - Relance/Views/TaskMapView.swift
+      - Relance/Views/TaskEditor.swift
     configFiles:
       Debug: Relance/Resources/Secrets.xcconfig
       Release: Relance/Resources/Secrets.xcconfig
