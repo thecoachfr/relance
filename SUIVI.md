@@ -58,10 +58,14 @@ Catégories fixes : Administratif, Maison, Santé, Achats, Travail, Famille, Per
 
 ## 2. Reste à faire / à vérifier
 
-1. **Premier tri automatique du matin** : demain 6 h 45 (vérifier dans [la routine](https://claude.ai/code/routines/trig_01GFD6vBExCUvTYDbx9KePm7)).
-2. **Pars maintenant** : vérifier le 13/10 la notification de départ pour le dentiste ; piste : partir de la position actuelle quand l'app est ouverte.
+*Vérifié le 13/10 : le tri de 6 h 45 tourne et lit bien la liste mémo.*
+
+1. **À tester en vrai** : rappel « à l'approche » d'un lieu, activité en direct 2 h avant une tâche urgente, répétition cochée depuis la montre (la suivante doit se créer), « Pars maintenant » (notification de départ ; piste : partir de la position actuelle quand l'app est ouverte).
+2. **Montre** : vérifier que toucher « Aujourd'hui » ouvre toujours la liste (jamais la saisie) et que l'heure du widget est assez discrète.
 3. **Correction des transcriptions Google Home** (activée le 12/10) : vérifier sur une prochaine dictée que les erreurs évidentes sont corrigées (titre d'origine gardé en 🎙) et que les titres corrects ne bougent pas.
-4. **Mémo** : 18 fiches au 12/10 (migration + fiches ajoutées depuis l'iPhone). Quand tout y est, retirer l'ancienne copie de la fin de la consigne de la routine. À compléter au fil de l'eau (locataires des places, comptable, artisans, horaires du kiné). Vérifier au tri du 13/10 que la routine lit bien la liste.
+4. **Mémo** : 18 fiches au 12/10. À compléter au fil de l'eau (locataires des places, comptable, artisans, horaires du kiné) ; quand tout y est, retirer l'ancienne copie de la fin de la consigne de la routine.
+5. **Lieu saisi à la main** : quand le nom du lieu est l'adresse, la ligne 📍 répète l'adresse (« 67 rue … · 67 rue …, 94140 … ») : ne garder qu'une fois.
+6. **Mineur** : limiter la largeur du détail d'une tâche sur Mac.
 
 ## 3. Idées et pistes (non faites)
 
