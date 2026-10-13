@@ -58,6 +58,8 @@
 			<string>Relances</string>
 		</dict>
 	</array>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>NSCalendarsFullAccessUsageDescription</key>
 	<string>Aiguillage ajoute à ton agenda les tâches que tu choisis, et met l'événement à jour quand l'heure de la tâche change.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>

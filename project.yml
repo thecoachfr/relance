@@ -45,6 +45,7 @@ targets:
       path: Relance/Resources/Info.plist
       properties:
         CFBundleDisplayName: Aiguillage
+        ITSAppUsesNonExemptEncryption: false
         CFBundleShortVersionString: "0.3"
         CFBundleVersion: "16"
         UILaunchScreen: {}
@@ -130,6 +131,7 @@ targets:
       path: RelanceMac/Info.plist
       properties:
         CFBundleDisplayName: Aiguillage
+        ITSAppUsesNonExemptEncryption: false
         CFBundleShortVersionString: "0.3"
         CFBundleVersion: "16"
         LSApplicationCategoryType: public.app-category.productivity
