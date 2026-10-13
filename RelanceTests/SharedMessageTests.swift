@@ -134,11 +134,66 @@ struct ToSeeTests {
         #expect(ToSee.notes(notes, setting: nil) == "MEP, rue de Fourcy")
     }
 
+    @Test func periodInAPhrase() {
+        let now = day(13, 10, 2026)
+        let text = "Expo Irving Penn à la MEP du 10/10/2026 au 31/01/2027"
+        let found = ToSee.period(in: text, now: now)
+        #expect(found?.toSee == ToSee(start: day(10, 10, 2026), end: day(31, 1, 2027)))
+        #expect(found.map { String(text[..<$0.range.lowerBound]).trimmingCharacters(in: .whitespaces) } == "Expo Irving Penn à la MEP")
+        #expect(ToSee.period(in: "Festival du 10/07 au 14/07", now: now)?.toSee == ToSee(start: day(10, 7, 2026), end: day(14, 7, 2026)))
+        // Fin sans année avant le début : l'année suivante.
+        #expect(ToSee.period(in: "Expo du 10/10 au 31/01", now: now)?.toSee == ToSee(start: day(10, 10, 2026), end: day(31, 1, 2027)))
+        #expect(ToSee.period(in: "Expo jusqu'au 31/01/2027", now: now)?.toSee == ToSee(end: day(31, 1, 2027)))
+        #expect(ToSee.period(in: "Appeler le garage vendredi", now: now) == nil)
+    }
+
     @Test func textAroundThePeriod() {
         let expo = ToSee(start: day(10, 9, 2026), end: day(31, 1, 2027))
         #expect(expo.text(now: day(13, 10, 2026)) == "Jusqu'au " + day(31, 1, 2027).formatted(.dateTime.day().month(.abbreviated)))
         #expect(expo.text(now: day(18, 1, 2027)) == "Plus que 2 semaines")
         #expect(expo.text(now: day(31, 1, 2027)) == "Dernier jour")
         #expect(expo.isOver(now: day(1, 2, 2027)))
+    }
+}
+
+struct RecurrenceTests {
+    let calendar: Calendar = {
+        var c = Calendar(identifier: .gregorian)
+        c.timeZone = TimeZone(identifier: "Europe/Paris")!
+        c.firstWeekday = 2
+        return c
+    }()
+    func day(_ d: Int, _ m: Int, _ y: Int = 2026) -> Date { calendar.date(from: DateComponents(year: y, month: m, day: d))! }
+
+    @Test func linesRoundTrip() {
+        let rules: [Recurrence] = [.daily(every: 1), .daily(every: 2), .weekly(every: 1, weekdays: [2, 5]),
+                                   .weekly(every: 2, weekdays: []), .monthlyDay(every: 1, day: 5), .monthlyDay(every: 3, day: 0),
+                                   .monthlyWeekday(every: 1, ordinal: 1, weekday: 2), .monthlyWeekday(every: 1, ordinal: -1, weekday: 6),
+                                   .yearly(month: 3, day: 15), .afterDone(amount: 3, unit: .month), .afterDone(amount: 2, unit: .week)]
+        for rule in rules { #expect(Recurrence(line: rule.line) == rule, "\(rule.line)") }
+        #expect(Recurrence.weekly(every: 1, weekdays: [5, 2]).line == "🔄 Toutes les semaines : lundi, jeudi")
+        #expect(Recurrence.monthlyWeekday(every: 1, ordinal: 1, weekday: 2).line == "🔄 Tous les mois le 1er lundi")
+        #expect(Recurrence.yearly(month: 3, day: 15).line == "🔄 Tous les ans le 15/03")
+        #expect(NoteLines.visible(Recurrence.notes("Loyer", setting: .monthlyDay(every: 1, day: 5))) == "Loyer")
+    }
+
+    @Test func nextDays() {
+        let now = day(13, 10)
+        // Le 5 de chaque mois, faite le 13/10 pour le 05/10 : prochaine le 05/11.
+        #expect(Recurrence.monthlyDay(every: 1, day: 5).nextDay(after: day(5, 10), done: now, calendar: calendar) == day(5, 11))
+        // Dernier jour du mois.
+        #expect(Recurrence.monthlyDay(every: 1, day: 0).nextDay(after: day(31, 10), done: now, calendar: calendar) == day(30, 11))
+        // Lundi et jeudi : depuis le lundi 12/10 → jeudi 15/10 ; depuis le jeudi 15/10 → lundi 19/10.
+        let mondayThursday = Recurrence.weekly(every: 1, weekdays: [2, 5])
+        #expect(mondayThursday.nextDay(after: day(12, 10), done: day(12, 10), calendar: calendar) == day(15, 10))
+        #expect(mondayThursday.nextDay(after: day(15, 10), done: day(15, 10), calendar: calendar) == day(19, 10))
+        // 1er lundi du mois.
+        #expect(Recurrence.monthlyWeekday(every: 1, ordinal: 1, weekday: 2).nextDay(after: day(5, 10), done: now, calendar: calendar) == day(2, 11))
+        // Tous les ans.
+        #expect(Recurrence.yearly(month: 3, day: 15).nextDay(after: day(15, 3), done: now, calendar: calendar) == day(15, 3, 2027))
+        // Très en retard : jamais dans le passé.
+        #expect(Recurrence.daily(every: 1).nextDay(after: day(1, 10), done: now, calendar: calendar) == day(14, 10))
+        // Après avoir été faite : à partir du jour fait.
+        #expect(Recurrence.afterDone(amount: 3, unit: .month).nextDay(after: day(1, 9), done: now, calendar: calendar) == day(13, 1, 2027))
     }
 }

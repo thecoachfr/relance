@@ -101,6 +101,10 @@ struct TaskRow: View {
             HStack(spacing: 5) {
                 Image(systemName: status.symbol).imageScale(.small)
                 Text(status.text)
+                if let rule = Recurrence(notes: item.notes) {
+                    Image(systemName: "repeat").imageScale(.small)
+                        .accessibilityLabel(rule.text)
+                }
             }
             .font(.subheadline)
             .foregroundStyle(isSelected || prominence == .increased ? .secondary : status.color)

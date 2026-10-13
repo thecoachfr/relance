@@ -85,7 +85,7 @@ struct MacMainView: View {
         }
         .searchable(text: $search, placement: .toolbar, prompt: "Rechercher")
         .sheet(isPresented: $store.showQuickAdd) {
-            QuickAddSheet()
+            QuickAddSheet(context: quickAddContext, category: { if case .category(let name)? = section { name } else { nil } }())
                 .formStyle(.grouped)
                 .frame(width: 480, height: 540)
         }
@@ -108,6 +108,16 @@ struct MacMainView: View {
             // Après le changement de section (qui vide la sélection).
             Task { selectedID = id }
             store.openedTaskID = nil
+        }
+    }
+
+    /// ⌘N et « + » suivent la section affichée.
+    private var quickAddContext: QuickAddContext {
+        switch section {
+        case .inbox?: .inbox
+        case .toSee?: .toSee
+        case .map?: .map
+        default: .today
         }
     }
 

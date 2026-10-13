@@ -57,6 +57,7 @@ struct TaskDetailView: View {
                                 Toggle("Heure", isOn: $hasTime).labelsHidden()
                             }
                         }
+                        RecurrenceRow(notes: $notes, day: day)
                     }
                     #else
                     Toggle("Date", isOn: $hasDay)
@@ -66,6 +67,7 @@ struct TaskDetailView: View {
                         if hasTime {
                             DatePicker("À", selection: $time, displayedComponents: .hourAndMinute)
                         }
+                        RecurrenceRow(notes: $notes, day: day)
                     }
                     #endif
                 }
@@ -133,6 +135,7 @@ struct TaskDetailView: View {
         .onChange(of: TaskContact(notes: notes)) { save() }
         .onChange(of: NearbyReminder.isOn(notes)) { save() }
         .onChange(of: ToSee(notes: notes)) { save() }
+        .onChange(of: Recurrence(notes: notes)) { save() }
         // Texte : enregistré à la sortie du champ ou de la tâche, pas à chaque frappe (chaque enregistrement synchronise).
         .onSubmit { save() }
         .onDisappear { save() }

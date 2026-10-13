@@ -65,8 +65,9 @@ final class TaskStore {
     // MARK: - Actions
 
     @discardableResult
-    func add(title: String, day: Date?, minutes: Int?, category: String? = nil, priority: TaskPriority = .normal) -> TaskItem {
-        let item = TaskItem(title: title, dueDay: day, dueMinutes: day == nil ? nil : minutes)
+    func add(title: String, day: Date?, minutes: Int?, category: String? = nil, priority: TaskPriority = .normal,
+             notes: String = "") -> TaskItem {
+        let item = TaskItem(title: title, notes: notes, dueDay: day, dueMinutes: day == nil ? nil : minutes)
         item.category = category
         item.priority = priority
         context.insert(item)
@@ -79,14 +80,51 @@ final class TaskStore {
         item.completedAt = .now
         item.snoozedUntil = nil
         item.markChanged()
+        spawnNext(of: item)
         commit()
     }
 
     func reopen(_ item: TaskItem) {
         item.isCompleted = false
         item.completedAt = nil
+        // « Annuler » juste après « Fait » : la suivante d'une récurrente n'a plus lieu d'être.
+        if let nextID = spawned.removeValue(forKey: item.localID), let next = task(nextID), !next.isCompleted {
+            next.isTrashed = true
+            next.markChanged()
+            item.notes = item.notes.components(separatedBy: "\n").filter { $0 != Recurrence.spawnedMarker }.joined(separator: "\n")
+        }
         item.markChanged()
         commit()
+    }
+
+    // MARK: - Récurrence
+
+    /// Suivantes créées pendant cette session (pour « Annuler »).
+    private var spawned: [UUID: UUID] = [:]
+    /// Suivante créée pendant la lecture de Google : à envoyer sans attendre la synchro suivante.
+    private var spawnedDuringPull = false
+
+    /// Crée la tâche suivante d'une récurrente (ligne 🔄) et marque celle-ci « ↪ Suivante créée »,
+    /// pour qu'aucun autre appareil ne la recrée.
+    @discardableResult
+    private func spawnNext(of item: TaskItem) -> TaskItem? {
+        guard let rule = Recurrence(notes: item.notes), let due = item.dueDay,
+              !item.notes.contains(Recurrence.spawnedMarker) else { return nil }
+        // Sans l'agenda (événement propre à la tâche faite) ni la suggestion du tri.
+        let notes = item.notes.components(separatedBy: "\n").filter {
+            !$0.hasPrefix("📅 Dans l'agenda") && !$0.hasPrefix("💡") && $0 != Recurrence.spawnedMarker
+        }.joined(separator: "\n")
+        let next = TaskItem(title: item.title, notes: notes,
+                            dueDay: rule.nextDay(after: due, done: item.completedAt ?? .now), dueMinutes: item.dueMinutes)
+        next.category = item.category
+        next.priority = item.priority
+        next.tags = item.tags
+        next.remindersRaw = item.remindersRaw
+        context.insert(next)
+        item.notes = (item.notes.isEmpty ? "" : item.notes + "\n") + Recurrence.spawnedMarker
+        item.markChanged()
+        spawned[item.localID] = next.localID
+        return next
     }
 
     /// Reporte les relances sans toucher à l'échéance.
@@ -212,6 +250,10 @@ final class TaskStore {
         do {
             try await push()
             try await pull()
+            if spawnedDuringPull {
+                spawnedDuringPull = false
+                try await push()
+            }
             lastError = nil
         } catch {
             lastError = error.localizedDescription
@@ -266,6 +308,7 @@ final class TaskStore {
             guard let id = r.id else { continue }
             let local = byGoogleID[id]
             if local?.isDirty == true { continue }
+            let wasDone = local?.isCompleted ?? true
 
             if r.deleted == true {
                 if let local { context.delete(local) }
@@ -279,6 +322,10 @@ final class TaskStore {
                 return new
             }()
             Self.apply(r, to: item)
+            // Cochée ailleurs (montre, Google) : seul l'appareil qui relance crée la suivante d'une récurrente.
+            if !wasDone, item.isCompleted, ReminderScheduler.isEnabledOnThisDevice, spawnNext(of: item) != nil {
+                spawnedDuringPull = true
+            }
             // Pas à la première synchro complète : on ne questionne que les tâches qui viennent d'arriver.
             if local == nil, since != nil, !item.isCompleted, item.dueDay != nil, item.dueMinutes == nil {
                 needTimeNow.append(item.localID)

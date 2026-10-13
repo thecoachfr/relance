@@ -39,3 +39,29 @@ struct ReminderSchedulerTimeoutTests {
         #expect(Date.now.timeIntervalSince(start) < 5)
     }
 }
+
+@MainActor
+struct RecurringTaskTests {
+    /// « Fait » sur une tâche récurrente : la suivante est créée (même heure, catégorie, lieu),
+    /// la tâche faite est marquée, et « Annuler » retire la suivante.
+    @Test func completingCreatesTheNextOne() throws {
+        let store = TaskStore(auth: SlowAccount(), inMemory: true)
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: .now)
+        let item = store.add(title: "Envoyer les quittances", day: today, minutes: 9 * 60, category: "Administratif")
+        item.notes = "📍 Mairie · 1 place de la Mairie, 75002 Paris\n" + Recurrence.daily(every: 2).line
+
+        store.complete(item)
+        let next = try #require(store.activeTasks().first { $0.title == "Envoyer les quittances" })
+        #expect(next.dueDay == calendar.date(byAdding: .day, value: 2, to: today))
+        #expect(next.dueMinutes == 9 * 60 && next.category == "Administratif")
+        #expect(Recurrence(notes: next.notes) == .daily(every: 2))
+        #expect(TaskContact(notes: next.notes)?.name == "Mairie")
+        #expect(item.notes.contains(Recurrence.spawnedMarker))
+        #expect(!next.notes.contains(Recurrence.spawnedMarker))
+
+        store.reopen(item)
+        #expect(next.isTrashed)
+        #expect(!item.notes.contains(Recurrence.spawnedMarker))
+    }
+}

@@ -18,6 +18,7 @@ struct TaskMapView: View {
     @State private var region: MKCoordinateRegion?
     /// Tâches au même endroit : on les liste (aucun zoom ne les sépare).
     @State private var sameSpot: [UUID]?
+    @State private var adding = false
 
     private var locator: PlaceLocator { .shared }
 
@@ -156,6 +157,21 @@ struct TaskMapView: View {
             .frame(width: 420, height: 360)
             #endif
         }
+        #if os(iOS)
+        // La barre de navigation est masquée sur la carte : « + » flottant, au même endroit qu'ailleurs.
+        .overlay(alignment: .topTrailing) {
+            Button("Nouvelle tâche", systemImage: "plus") { adding = true }
+                .labelStyle(.iconOnly)
+                .font(.title3.weight(.semibold))
+                .frame(width: 48, height: 48)
+                .foregroundStyle(.white)
+                .background(Color.accentColor, in: .circle)
+                .shadow(radius: 3, y: 1)
+                .padding(.trailing, 16)
+                .padding(.top, 8)
+        }
+        .sheet(isPresented: $adding) { QuickAddSheet(context: .map) }
+        #endif
         .navigationTitle("Carte")
         // iPhone, iPad : l'onglet porte déjà le nom ; un grand titre flottait sur le plan sans fond.
         .hiddenNavigationBar()

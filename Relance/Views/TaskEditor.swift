@@ -38,6 +38,7 @@ struct TaskEditor: View {
                             if hasTime {
                                 DatePicker("À", selection: $time, displayedComponents: .hourAndMinute)
                             }
+                            RecurrenceRow(notes: $notes, day: day)
                         }
                     }
                 }
@@ -85,7 +86,9 @@ struct TaskEditor: View {
                     .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }
-            .onAppear(perform: load)
+            // Une seule fois : au retour d'un sous-écran (Répéter, Tags, Relances), onAppear revient
+            // et rechargeait la tâche enregistrée, ce qui effaçait le choix pas encore validé.
+            .onAppear { if base == nil { load() } }
             .placeSearch(isPresented: $searchingPlace, notes: $notes)
         }
     }

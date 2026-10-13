@@ -63,6 +63,7 @@ struct ToSeeListView: View {
     @Query(filter: #Predicate<TaskItem> { !$0.isCompleted && !$0.isTrashed })
     private var active: [TaskItem]
     @State private var editing: TaskItem?
+    @State private var adding = false
     var selection: Binding<UUID?>?
 
     static func groups(_ items: [TaskItem], now: Date = .now) -> [(title: String, items: [TaskItem])] {
@@ -104,5 +105,10 @@ struct ToSeeListView: View {
         }
         .navigationTitle("À voir")
         .sheet(item: $editing) { TaskEditor(item: $0) }
+        #if os(iOS)
+        // Sur Mac, le « + » de la colonne suit déjà la section.
+        .toolbar { AddTaskToolbarButton(context: .toSee, isPresented: $adding) }
+        .sheet(isPresented: $adding) { QuickAddSheet(context: .toSee) }
+        #endif
     }
 }

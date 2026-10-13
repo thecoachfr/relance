@@ -86,11 +86,7 @@ struct TodoView: View {
                 }
             }
             // La barre d'onglets d'iOS 26 masque la barre d'outils du bas : l'ajout va en haut à droite.
-            ToolbarItem(placement: .primaryAction) {
-                Button("Nouvelle tâche", systemImage: "plus") { showAdd = true }
-                    .buttonStyle(.borderedProminent)
-                    .keyboardShortcut("n", modifiers: .command)
-            }
+            AddTaskToolbarButton(context: .today, isPresented: $showAdd)
         }
         .safeAreaInset(edge: .bottom) { undoBanner }
         .sheet(isPresented: $showAdd) { QuickAddSheet() }

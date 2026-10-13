@@ -10,6 +10,7 @@ struct InboxView: View {
     /// Tâches passées pour l'instant : elles reviennent en fin de file.
     @State private var skipped: [UUID] = []
     @State private var editing: TaskItem?
+    @State private var adding = false
     @AppStorage("categoryFilter") private var categoryFilter = ""
 
     private var queue: [TaskItem] {
@@ -38,7 +39,9 @@ struct InboxView: View {
             .navigationTitle("À trier")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) { CategoryFilterMenu(filter: $categoryFilter) }
+                AddTaskToolbarButton(context: .inbox, isPresented: $adding)
             }
+            .sheet(isPresented: $adding) { QuickAddSheet(context: .inbox) }
             .refreshable { await store.sync() }
             .sheet(item: $editing) { TaskEditor(item: $0) }
         }

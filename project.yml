@@ -109,6 +109,7 @@ targets:
       - Relance/Views/MemoViews.swift
       - Relance/Views/TaskMapView.swift
       - Relance/Views/ToSeeViews.swift
+      - Relance/Views/RecurrenceViews.swift
       - Relance/Views/TaskEditor.swift
     configFiles:
       Debug: Relance/Resources/Secrets.xcconfig
