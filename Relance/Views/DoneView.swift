@@ -7,18 +7,26 @@ struct DoneView: View {
            sort: \TaskItem.completedAt, order: .reverse)
     private var items: [TaskItem]
     @State private var width: CGFloat = 0
+    @State private var editing: TaskItem?
 
     var body: some View {
         NavigationStack {
             List(items.prefix(100)) { item in
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(item.title).strikethrough().foregroundStyle(.secondary)
-                    if let date = item.completedAt {
-                        Text(date, format: .relative(presentation: .named))
-                            .font(.subheadline).foregroundStyle(.secondary)
+                // Toucher la ligne ouvre le détail : notes, lieu, catégorie… et « Marquer à faire ».
+                Button { editing = item } label: {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(item.title).strikethrough().foregroundStyle(.secondary)
+                        if let date = item.completedAt {
+                            Text(date, format: .relative(presentation: .named))
+                                .font(.subheadline).foregroundStyle(.secondary)
+                        }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
                 .accessibilityElement(children: .combine)
+                .accessibilityHint("Ouvre le détail de la tâche")
                 .swipeActions(edge: .leading, allowsFullSwipe: true) {
                     Button("Remettre à faire", systemImage: "arrow.uturn.backward") { store.reopen(item) }
                         .tint(.blue)
@@ -38,6 +46,7 @@ struct DoneView: View {
                 }
             }
             .navigationTitle("Fait")
+            .sheet(item: $editing) { TaskEditor(item: $0) }
         }
     }
 }
