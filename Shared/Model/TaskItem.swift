@@ -76,7 +76,15 @@ final class TaskItem {
     /// À trier : pas de date, ou une date sans heure.
     /// À garder sans échéance (« 👀 À voir ») : ni dans À trier, ni relancée chaque jour.
     var toSee: ToSee? { ToSee(notes: notes) }
-    var needsTriage: Bool { (dueDay == nil || dueMinutes == nil) && toSee == nil }
+    /// À trier : sans date, ou datée d'aujourd'hui (ou d'avant) sans heure — là, l'heure devient utile.
+    /// Une tâche datée plus tard sans heure reste dans À faire ; le matin du jour, une notification demande l'heure.
+    var needsTriage: Bool { needsTriage() }
+
+    func needsTriage(now: Date = .now, calendar: Calendar = .current) -> Bool {
+        guard toSee == nil else { return false }
+        guard let dueDay else { return true }
+        return dueMinutes == nil && calendar.startOfDay(for: dueDay) <= calendar.startOfDay(for: now)
+    }
 
     func markChanged() {
         isDirty = true

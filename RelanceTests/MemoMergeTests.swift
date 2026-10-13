@@ -99,4 +99,18 @@ struct MemoShareDraftTests {
                                              birthday: DateComponents(month: 3, day: 7), note: "ami")
         #expect(card.details == "anniversaire le 07/03 — ami")
     }
+
+}
+
+@Suite("À trier")
+struct TriageRuleTests {
+    @Test func datedLaterWithoutTimeIsNotToTriage() {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: .now)
+        #expect(TaskItem(title: "Sans date").needsTriage(now: .now))
+        #expect(TaskItem(title: "Aujourd'hui sans heure", dueDay: today).needsTriage(now: .now))
+        #expect(TaskItem(title: "Hier sans heure", dueDay: calendar.date(byAdding: .day, value: -1, to: today)).needsTriage(now: .now))
+        #expect(!TaskItem(title: "Dans un mois sans heure", dueDay: calendar.date(byAdding: .day, value: 30, to: today)).needsTriage(now: .now))
+        #expect(!TaskItem(title: "Aujourd'hui à 15 h", dueDay: today, dueMinutes: 900).needsTriage(now: .now))
+    }
 }

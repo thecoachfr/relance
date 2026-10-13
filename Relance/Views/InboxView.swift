@@ -14,7 +14,7 @@ struct InboxView: View {
     @AppStorage("categoryFilter") private var categoryFilter = ""
 
     private var queue: [TaskItem] {
-        items.filter { $0.toSee == nil && $0.matches(categoryFilter: categoryFilter) }.sorted { (skipped.firstIndex(of: $0.localID) ?? -1) < (skipped.firstIndex(of: $1.localID) ?? -1) }
+        items.filter { $0.needsTriage && $0.matches(categoryFilter: categoryFilter) }.sorted { (skipped.firstIndex(of: $0.localID) ?? -1) < (skipped.firstIndex(of: $1.localID) ?? -1) }
     }
 
     var body: some View {
@@ -33,7 +33,7 @@ struct InboxView: View {
                     .animation(.default, value: current.localID)
                 } else {
                     ContentUnavailableView("Rien à trier", systemImage: "tray",
-                                           description: Text("Les tâches sans date ou sans heure arrivent ici."))
+                                           description: Text("Les tâches sans date arrivent ici, et celles du jour qui n'ont pas encore d'heure."))
                 }
             }
             .navigationTitle("À trier")
@@ -51,27 +51,10 @@ struct InboxView: View {
 
     private func card(for item: TaskItem) -> some View {
         VStack(alignment: .leading, spacing: 16) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text(item.dueDay == nil ? "Quand faut-il le faire ?" : "À quelle heure ?")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                Text(item.title.isEmpty ? "Sans titre" : item.title)
-                    .font(.title2.bold())
-                if !NoteLines.visible(item.notes).isEmpty {
-                    Text(NoteLines.visible(item.notes)).font(.body).foregroundStyle(.secondary).lineLimit(3)
-                }
-                if let day = item.dueDay {
-                    Label(dayText(day), systemImage: "calendar")
-                        .font(.subheadline).foregroundStyle(.secondary)
-                }
-                if item.category != nil || item.priority != .normal || !item.tags.isEmpty {
-                    HStack(spacing: 6) {
-                        PriorityChip(priority: item.priority)
-                        if let category = item.category { CategoryChip(name: category) }
-                        TagsText(tags: item.tags)
-                    }
-                }
-            }
+            // Le haut de la carte ouvre le détail de la tâche (notes, lieu, catégorie…), sans passer par « Autre heure ».
+            Button { editing = item } label: { header(for: item) }
+                .buttonStyle(.plain)
+                .accessibilityHint("Ouvre le détail de la tâche")
 
             if item.dueDay == nil {
                 choiceGrid([
@@ -101,6 +84,38 @@ struct InboxView: View {
         }
         .padding(20)
         .background(.background.secondary, in: .rect(cornerRadius: 20))
+    }
+
+    private func header(for item: TaskItem) -> some View {
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(item.dueDay == nil ? "Quand faut-il le faire ?" : "À quelle heure ?")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                Text(item.title.isEmpty ? "Sans titre" : item.title)
+                    .font(.title2.bold())
+                if !NoteLines.visible(item.notes).isEmpty {
+                    Text(NoteLines.visible(item.notes)).font(.body).foregroundStyle(.secondary).lineLimit(3)
+                }
+                if let day = item.dueDay {
+                    Label(dayText(day), systemImage: "calendar")
+                        .font(.subheadline).foregroundStyle(.secondary)
+                }
+                if item.category != nil || item.priority != .normal || !item.tags.isEmpty {
+                    HStack(spacing: 6) {
+                        PriorityChip(priority: item.priority)
+                        if let category = item.category { CategoryChip(name: category) }
+                        TagsText(tags: item.tags)
+                    }
+                }
+            }
+            Spacer(minLength: 8)
+            Image(systemName: "chevron.right")
+                .font(.body.weight(.semibold))
+                .foregroundStyle(.tertiary)
+                .padding(.top, 2)
+        }
+        .contentShape(Rectangle())
     }
 
     private func choiceGrid(_ choices: [(String, String, () -> Void)]) -> some View {
