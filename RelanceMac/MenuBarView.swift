@@ -8,11 +8,11 @@ struct MenuBarLabel: View {
     var body: some View {
         if status.overdue > 0 {
             // Le nombre seul se lit mal en VoiceOver : on le dit en clair.
-            Label("\(status.overdue)", systemImage: "checklist")
+            Label("\(status.overdue)", systemImage: "gauge.with.needle")
                 .labelStyle(.titleAndIcon)
-                .accessibilityLabel("Relance, \(status.overdue) en retard")
+                .accessibilityLabel("Aiguillage, \(status.overdue) en retard")
         } else {
-            Image(systemName: "checklist").accessibilityLabel("Relance")
+            Image(systemName: "gauge.with.needle").accessibilityLabel("Aiguillage")
         }
     }
 }
@@ -34,7 +34,7 @@ struct MenuBarView: View {
                 Divider()
                 TimelineView(.everyMinute) { context in tasks(now: context.date) }
             } else {
-                Text("Connecte-toi à Google dans la fenêtre de Relance.")
+                Text("Connecte-toi à Google dans la fenêtre d'Aiguillage.")
                     .foregroundStyle(.secondary)
                     .padding()
             }
@@ -105,7 +105,7 @@ struct MenuBarView: View {
 
     private var footer: some View {
         HStack {
-            Button("Ouvrir Relance") {
+            Button("Ouvrir Aiguillage") {
                 openWindow(id: MacAppDelegate.mainWindowID)
                 NSApp.activate()
             }
@@ -115,7 +115,7 @@ struct MenuBarView: View {
                 Button("Synchroniser") { Task { await store.sync() } }
                 SettingsLink { Text("Réglages…") }
                 Divider()
-                Button("Quitter Relance") { NSApp.terminate(nil) }
+                Button("Quitter Aiguillage") { NSApp.terminate(nil) }
             } label: {
                 Image(systemName: "ellipsis.circle")
             }

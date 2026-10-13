@@ -35,7 +35,7 @@ final class CalendarLink {
     func add(_ item: TaskItem, taskStore: TaskStore) async -> String? {
         guard let start = item.dueInstant(), item.dueMinutes != nil else { return "Donne d'abord une heure à la tâche." }
         if !isAuthorized, !(await requestAccess()) {
-            return "Relance n'a pas accès au Calendrier. Autorise-le dans Réglages › Relance."
+            return "Aiguillage n'a pas accès au Calendrier. Autorise-le dans Réglages › Aiguillage."
         }
         guard let calendar = store.defaultCalendarForNewEvents else { return "Aucun agenda par défaut sur cet appareil." }
         let event = EKEvent(eventStore: store)
@@ -83,7 +83,7 @@ final class CalendarLink {
         event.url = contact?.link
         event.notes = item.notes.components(separatedBy: .newlines)
             .filter { !$0.hasPrefix(Self.marker) }
-            .joined(separator: "\n") + "\n\nCréé par Relance."
+            .joined(separator: "\n") + "\n\nCréé par Aiguillage."
         event.alarms = []
     }
 }

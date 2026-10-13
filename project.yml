@@ -44,9 +44,9 @@ targets:
     info:
       path: Relance/Resources/Info.plist
       properties:
-        CFBundleDisplayName: Relance
+        CFBundleDisplayName: Aiguillage
         CFBundleShortVersionString: "0.3"
-        CFBundleVersion: "12"
+        CFBundleVersion: "14"
         UILaunchScreen: {}
         UISupportedInterfaceOrientations~iphone: [UIInterfaceOrientationPortrait]
         UISupportedInterfaceOrientations~ipad:
@@ -54,14 +54,14 @@ targets:
            UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
         UIBackgroundModes: [fetch, remote-notification]
         NSSupportsLiveActivities: true
-        # « Relance » est un mot courant : on aide Siri à y reconnaître l'app.
-        NSCalendarsFullAccessUsageDescription: Relance ajoute à ton agenda les tâches que tu choisis, et met l'événement à jour quand l'heure de la tâche change.
-        NSLocationWhenInUseUsageDescription: Relance te prévient quand tu passes près du lieu d'une tâche que tu as choisie.
-        NSLocationAlwaysAndWhenInUseUsageDescription: Pour te prévenir quand tu passes près du lieu d'une tâche, même quand Relance est fermée. Ta position reste sur l'iPhone.
+        # Ancien nom et variantes : Siri reconnaît toujours « nouvelle Relance ».
+        NSCalendarsFullAccessUsageDescription: Aiguillage ajoute à ton agenda les tâches que tu choisis, et met l'événement à jour quand l'heure de la tâche change.
+        NSLocationWhenInUseUsageDescription: Aiguillage te prévient quand tu passes près du lieu d'une tâche que tu as choisie.
+        NSLocationAlwaysAndWhenInUseUsageDescription: Pour te prévenir quand tu passes près du lieu d'une tâche, même quand Aiguillage est fermée. Ta position reste sur l'iPhone.
         INAlternativeAppNames:
           - INAlternativeAppName: Mes relances
+          - INAlternativeAppName: Relance
           - INAlternativeAppName: Relances
-          - INAlternativeAppName: L'appli Relance
         BGTaskSchedulerPermittedIdentifiers: [fr.alexandrefau.relance.refresh]
         GIDClientID: $(GOOGLE_CLIENT_ID)
         RelanceWebhookURL: $(RELANCE_WEBHOOK_URL)
@@ -74,6 +74,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: fr.alexandrefau.relance
         TARGETED_DEVICE_FAMILY: "1,2"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
   RelanceMac:
     type: application
     platform: macOS
@@ -128,11 +129,11 @@ targets:
     info:
       path: RelanceMac/Info.plist
       properties:
-        CFBundleDisplayName: Relance
+        CFBundleDisplayName: Aiguillage
         CFBundleShortVersionString: "0.3"
-        CFBundleVersion: "12"
+        CFBundleVersion: "14"
         LSApplicationCategoryType: public.app-category.productivity
-        NSCalendarsFullAccessUsageDescription: Relance ajoute à ton agenda les tâches que tu choisis, et met l'événement à jour quand l'heure de la tâche change.
+        NSCalendarsFullAccessUsageDescription: Aiguillage ajoute à ton agenda les tâches que tu choisis, et met l'événement à jour quand l'heure de la tâche change.
         GIDClientID: $(GOOGLE_CLIENT_ID)
         RelanceWebhookURL: $(RELANCE_WEBHOOK_URL)
         CFBundleURLTypes:
@@ -141,8 +142,9 @@ targets:
       base:
         # Même identifiant que l'app iOS : le client OAuth Google est lié à cet identifiant.
         PRODUCT_BUNDLE_IDENTIFIER: fr.alexandrefau.relance
-        PRODUCT_NAME: Relance
+        PRODUCT_NAME: Aiguillage
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         ENABLE_HARDENED_RUNTIME: YES
   RelanceShare:
     type: app-extension
@@ -163,9 +165,9 @@ targets:
     info:
       path: RelanceShare/Info.plist
       properties:
-        CFBundleDisplayName: Relance
+        CFBundleDisplayName: Aiguillage
         CFBundleShortVersionString: "0.3"
-        CFBundleVersion: "12"
+        CFBundleVersion: "14"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.share-services
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ShareViewController
@@ -187,9 +189,9 @@ targets:
     info:
       path: RelanceWidgets/Info.plist
       properties:
-        CFBundleDisplayName: Relance
+        CFBundleDisplayName: Aiguillage
         CFBundleShortVersionString: "0.3"
-        CFBundleVersion: "12"
+        CFBundleVersion: "14"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:
@@ -216,6 +218,7 @@ targets:
       - Shared/Model/TaskPriority.swift
       - Shared/Model/TaskCategory.swift
       - Shared/Model/TaskTag.swift
+      - Shared/WatchApp
     dependencies:
       - target: RelanceWatchWidgets
     entitlements:
@@ -225,25 +228,30 @@ targets:
     info:
       path: RelanceWatch/Info.plist
       properties:
-        CFBundleDisplayName: Relance
+        CFBundleDisplayName: Aiguillage
         CFBundleShortVersionString: "0.3"
-        CFBundleVersion: "12"
+        CFBundleVersion: "14"
         WKApplication: true
+        CFBundleURLTypes:
+          - CFBundleURLName: fr.alexandrefau.relance.watch
+            CFBundleURLSchemes: [relance]
         WKCompanionAppBundleIdentifier: fr.alexandrefau.relance
         INAlternativeAppNames:
           - INAlternativeAppName: Mes relances
+          - INAlternativeAppName: Relance
           - INAlternativeAppName: Relances
-          - INAlternativeAppName: L'appli Relance
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: fr.alexandrefau.relance.watchkitapp
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
   RelanceWatchWidgets:
     type: app-extension
     platform: watchOS
     sources:
       - RelanceWatchWidgets
       - Shared/Watch
+      - Shared/WatchApp
       - Shared/Model/DueText.swift
       - Shared/Model/TaskPriority.swift
       - Shared/Reminders/ReminderPlanner.swift
@@ -257,9 +265,9 @@ targets:
     info:
       path: RelanceWatchWidgets/Info.plist
       properties:
-        CFBundleDisplayName: Relance
+        CFBundleDisplayName: Aiguillage
         CFBundleShortVersionString: "0.3"
-        CFBundleVersion: "12"
+        CFBundleVersion: "14"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:

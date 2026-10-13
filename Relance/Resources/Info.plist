@@ -9,7 +9,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Relance</string>
+	<string>Aiguillage</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -40,7 +40,7 @@
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>12</string>
+	<string>14</string>
 	<key>GIDClientID</key>
 	<string>$(GOOGLE_CLIENT_ID)</string>
 	<key>INAlternativeAppNames</key>
@@ -51,19 +51,19 @@
 		</dict>
 		<dict>
 			<key>INAlternativeAppName</key>
-			<string>Relances</string>
+			<string>Relance</string>
 		</dict>
 		<dict>
 			<key>INAlternativeAppName</key>
-			<string>L'appli Relance</string>
+			<string>Relances</string>
 		</dict>
 	</array>
 	<key>NSCalendarsFullAccessUsageDescription</key>
-	<string>Relance ajoute à ton agenda les tâches que tu choisis, et met l'événement à jour quand l'heure de la tâche change.</string>
+	<string>Aiguillage ajoute à ton agenda les tâches que tu choisis, et met l'événement à jour quand l'heure de la tâche change.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>Pour te prévenir quand tu passes près du lieu d'une tâche, même quand Relance est fermée. Ta position reste sur l'iPhone.</string>
+	<string>Pour te prévenir quand tu passes près du lieu d'une tâche, même quand Aiguillage est fermée. Ta position reste sur l'iPhone.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Relance te prévient quand tu passes près du lieu d'une tâche que tu as choisie.</string>
+	<string>Aiguillage te prévient quand tu passes près du lieu d'une tâche que tu as choisie.</string>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>RelanceWebhookURL</key>

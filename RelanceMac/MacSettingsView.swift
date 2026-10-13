@@ -66,7 +66,7 @@ private struct SyncLogSettings: View {
                     }
                 }
             } footer: {
-                Text("Relance synchronise à l'ouverture, toutes les 5 minutes et au réveil du Mac.")
+                Text("Aiguillage synchronise à l'ouverture, toutes les 5 minutes et au réveil du Mac.")
                     .foregroundStyle(.secondary)
             }
             Section {

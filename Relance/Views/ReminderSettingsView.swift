@@ -70,7 +70,7 @@ struct ReminderSettingsView: View {
             } header: {
                 Text("Départ")
             } footer: {
-                Text("Pour une tâche avec une heure et une adresse : Relance calcule le trajet avec Plans et te prévient quand il faut partir. L'adresse de départ reste sur cet appareil.")
+                Text("Pour une tâche avec une heure et une adresse : Aiguillage calcule le trajet avec Plans et te prévient quand il faut partir. L'adresse de départ reste sur cet appareil.")
             }
 
             Section {

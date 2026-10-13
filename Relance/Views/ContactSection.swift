@@ -59,7 +59,7 @@ struct ContactSection: View {
             Text("Lieu")
         } footer: {
             if TaskContact(notes: notes) == nil {
-                Text("Avec une adresse, Relance peut te dire quand partir et l'ajouter à l'événement d'agenda.")
+                Text("Avec une adresse, Aiguillage peut te dire quand partir et l'ajouter à l'événement d'agenda.")
             } else if NearbyReminder.isOn(notes) {
                 Text("L'appareil qui relance te prévient à moins de 200 m, une fois par jour (localisation « Toujours » requise).")
             } else {

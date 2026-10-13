@@ -15,7 +15,7 @@ struct RecurrenceRow: View {
     }
 }
 
-/// Choix de la répétition. À chaque « Fait », Relance crée la tâche suivante.
+/// Choix de la répétition. À chaque « Fait », Aiguillage crée la tâche suivante.
 struct RecurrenceView: View {
     @Binding var notes: String
     let day: Date
@@ -66,7 +66,7 @@ struct RecurrenceView: View {
             } footer: {
                 Text(kind == .afterDone
                      ? "La suivante part du jour où tu coches : pratique pour un filtre ou une sauvegarde, même si tu es en retard."
-                     : "À chaque « Fait », Relance crée la suivante, avec la même heure, catégorie, priorité et lieu.")
+                     : "À chaque « Fait », Aiguillage crée la suivante, avec la même heure, catégorie, priorité et lieu.")
             }
             if let rule { details(rule) }
         }

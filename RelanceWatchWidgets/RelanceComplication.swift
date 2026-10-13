@@ -1,3 +1,4 @@
+import AppIntents
 import SwiftUI
 import WidgetKit
 
@@ -11,6 +12,34 @@ struct ComplicationEntry: TimelineEntry {
     }
     var next: WatchTask? {
         tasks.filter { $0.due != nil }.sorted { $0.due! < $1.due! }.first
+    }
+
+    /// En retard (hors reports en cours) puis à faire aujourd'hui ; l'urgent d'abord.
+    var today: [WatchTask] {
+        let calendar = Calendar.current
+        return tasks.filter { task in
+            guard let due = task.due, (task.snoozedUntil ?? .distantPast) <= date else { return false }
+            let day = task.hasTime ? due : due.addingTimeInterval(-1)
+            return task.isLate(at: date) || calendar.isDate(day, inSameDayAs: date)
+        }
+        .sorted { a, b in
+            let lateA = a.isLate(at: date), lateB = b.isLate(at: date)
+            if lateA != lateB { return lateA }
+            if a.isUrgent != b.isUrgent { return a.isUrgent }
+            return a.due! < b.due!
+        }
+    }
+
+    /// Place du widget dans la pile intelligente : en tête quand une tâche est en retard
+    /// ou arrive dans l'heure, discret quand tout est à jour.
+    var relevance: TimelineEntryRelevance? {
+        if !late.isEmpty { return TimelineEntryRelevance(score: 100) }
+        let soon = tasks.compactMap { task -> Date? in
+            guard task.hasTime, let due = task.due, due > date, due.timeIntervalSince(date) <= 3600 else { return nil }
+            return due
+        }.min()
+        if let soon { return TimelineEntryRelevance(score: 80, duration: soon.timeIntervalSince(date)) }
+        return TimelineEntryRelevance(score: today.isEmpty ? 0 : 20)
     }
 }
 
@@ -32,7 +61,9 @@ struct ComplicationProvider: TimelineProvider {
         let horizon = now.addingTimeInterval(24 * 3600)
         var dates = Set([now])
         for task in tasks {
-            for date in [task.due, task.snoozedUntil].compactMap({ $0 }) where date > now && date < horizon {
+            // Une heure avant une tâche avec heure, le widget remonte dans la pile intelligente.
+            let early = task.hasTime ? task.due?.addingTimeInterval(-3600) : nil
+            for date in [task.due, task.snoozedUntil, early].compactMap({ $0 }) where date > now && date < horizon {
                 dates.insert(date)
             }
         }
@@ -51,6 +82,7 @@ struct RelanceComplication: Widget {
         StaticConfiguration(kind: "fr.alexandrefau.relance.complication", provider: ComplicationProvider()) { entry in
             ComplicationView(entry: entry)
                 .containerBackground(.background, for: .widget)
+                .widgetURL(WatchQuickAdd.listURL)
         }
         .configurationDisplayName("En retard")
         .description("Le nombre de tâches en retard et la prochaine.")
@@ -86,7 +118,7 @@ struct ComplicationView: View {
             }
         default:
             VStack(alignment: .leading, spacing: 1) {
-                Text(late > 0 ? "\(late) en retard" : "Relance").font(.headline).widgetAccentable()
+                Text(late > 0 ? "\(late) en retard" : "Aiguillage").font(.headline).widgetAccentable()
                 if let next = entry.next, let due = next.due {
                     Text(next.title).font(.caption).lineLimit(1)
                     Text(DueText.short(due: due, hasTime: next.hasTime, now: entry.date))
@@ -100,9 +132,127 @@ struct ComplicationView: View {
     }
 }
 
+/// Les tâches du jour (3 au plus) : le widget qui remonte dans la pile intelligente.
+struct TodayWidget: Widget {
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: "fr.alexandrefau.relance.today", provider: ComplicationProvider()) { entry in
+            TodayView(entry: entry)
+                .containerBackground(.background, for: .widget)
+                .widgetURL(WatchQuickAdd.listURL)
+        }
+        .configurationDisplayName("Aujourd'hui")
+        .description("Les tâches en retard et celles du jour, l'urgent d'abord.")
+        .supportedFamilies([.accessoryRectangular])
+    }
+}
+
+struct TodayView: View {
+    let entry: ComplicationEntry
+
+    var body: some View {
+        let tasks = entry.today
+        VStack(alignment: .leading, spacing: 1) {
+            HStack {
+                Text("Aujourd'hui").font(.headline)
+                    .foregroundStyle(Color(red: 1, green: 0.478, blue: 0.314))  // orange de la charte (#FF7A50)
+                    .widgetAccentable()
+                Spacer(minLength: 4)
+                if tasks.count > 3 {
+                    Text("+\(tasks.count - 3)").font(.caption2.monospacedDigit()).foregroundStyle(.secondary)
+                }
+            }
+            if tasks.isEmpty {
+                Text("Rien d'autre aujourd'hui").font(.caption).foregroundStyle(.secondary)
+            }
+            ForEach(tasks.prefix(3)) { task in
+                let late = task.isLate(at: entry.date)
+                HStack(spacing: 4) {
+                    Circle()
+                        .fill(late || task.isUrgent ? AnyShapeStyle(.red) : AnyShapeStyle(.secondary))
+                        .frame(width: 5, height: 5)
+                    Text(task.title).font(.caption).lineLimit(1)
+                    Spacer(minLength: 2)
+                    if late {
+                        Text("retard").font(.system(size: 12)).foregroundStyle(.red).layoutPriority(1)
+                    } else if task.hasTime, let due = task.due {
+                        // Plus discrète que le titre : c'est la tâche qu'on doit lire d'abord.
+                        Text(DueText.clock(due)).font(.system(size: 12).monospacedDigit()).foregroundStyle(.secondary)
+                            .layoutPriority(1)
+                    }
+                }
+                .accessibilityElement(children: .combine)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+}
+
+/// Complication « + » : ouvre directement la saisie d'une tâche.
+struct AddComplication: Widget {
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: "fr.alexandrefau.relance.add", provider: AddProvider()) { _ in
+            AddView()
+                .containerBackground(.background, for: .widget)
+                .widgetURL(WatchQuickAdd.url)
+        }
+        .configurationDisplayName("Nouvelle tâche")
+        .description("Ouvre la saisie d'une tâche.")
+        .supportedFamilies([.accessoryCircular, .accessoryCorner])
+    }
+}
+
+struct AddProvider: TimelineProvider {
+    struct Entry: TimelineEntry { var date: Date }
+    func placeholder(in context: Context) -> Entry { Entry(date: .now) }
+    func getSnapshot(in context: Context, completion: @escaping (Entry) -> Void) { completion(Entry(date: .now)) }
+    func getTimeline(in context: Context, completion: @escaping (Timeline<Entry>) -> Void) {
+        completion(Timeline(entries: [Entry(date: .now)], policy: .never))
+    }
+}
+
+struct AddView: View {
+    @Environment(\.widgetFamily) private var family
+
+    var body: some View {
+        switch family {
+        case .accessoryCorner:
+            Image(systemName: "plus").font(.title.bold())
+                .widgetAccentable()
+                .widgetLabel("Nouvelle tâche")
+                .accessibilityLabel("Nouvelle tâche")
+        default:
+            ZStack {
+                AccessoryWidgetBackground()
+                Image(systemName: "plus").font(.title2.bold())
+            }
+            .widgetAccentable()
+            .accessibilityLabel("Nouvelle tâche")
+        }
+    }
+}
+
+/// Centre de contrôle et bouton Action de la montre (watchOS 26).
+@available(watchOS 26.0, *)
+struct WatchNewTaskControl: ControlWidget {
+    var body: some ControlWidgetConfiguration {
+        StaticControlConfiguration(kind: "fr.alexandrefau.relance.watch.newtask") {
+            ControlWidgetButton(action: WatchNewTaskIntent()) {
+                Label("Nouvelle tâche", systemImage: "plus.circle")
+            }
+        }
+        .displayName("Nouvelle tâche")
+        .description("Note une tâche dans Aiguillage.")
+    }
+}
+
 @main
 struct RelanceWatchWidgets: WidgetBundle {
     var body: some Widget {
         RelanceComplication()
+        TodayWidget()
+        AddComplication()
+        if #available(watchOS 26.0, *) {
+            WatchNewTaskControl()
+        }
     }
 }

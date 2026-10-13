@@ -53,7 +53,7 @@ struct CalendarSection: View {
             } else if item.dueMinutes == nil, item.calendarEventID == nil {
                 Text("Donne une heure à la tâche pour l'ajouter à l'agenda.")
             } else if item.calendarEventID == nil, !CalendarLink.isLinked(item.notes) {
-                Text("Événement d'1 h dans \(link.defaultCalendarName.map { "« \($0) »" } ?? "ton agenda par défaut"), sans alerte : c'est Relance qui relance.")
+                Text("Événement d'1 h dans \(link.defaultCalendarName.map { "« \($0) »" } ?? "ton agenda par défaut"), sans alerte : c'est Aiguillage qui relance.")
             } else {
                 Text("L'événement suit l'heure et le titre de la tâche.")
             }

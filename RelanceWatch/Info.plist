@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Relance</string>
+	<string>Aiguillage</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -18,8 +18,19 @@
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
 	<string>0.3</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>fr.alexandrefau.relance.watch</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>relance</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleVersion</key>
-	<string>12</string>
+	<string>14</string>
 	<key>INAlternativeAppNames</key>
 	<array>
 		<dict>
@@ -28,11 +39,11 @@
 		</dict>
 		<dict>
 			<key>INAlternativeAppName</key>
-			<string>Relances</string>
+			<string>Relance</string>
 		</dict>
 		<dict>
 			<key>INAlternativeAppName</key>
-			<string>L'appli Relance</string>
+			<string>Relances</string>
 		</dict>
 	</array>
 	<key>WKApplication</key>

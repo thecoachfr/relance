@@ -20,6 +20,6 @@ struct NewTaskControl: ControlWidget {
             }
         }
         .displayName("Nouvelle tâche")
-        .description("Note une tâche dans Relance.")
+        .description("Note une tâche dans Aiguillage.")
     }
 }

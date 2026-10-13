@@ -17,17 +17,22 @@ struct WatchAddView: View {
         let match = DateDetection.firstMatch(in: text)
         ScrollView {
             VStack(alignment: .leading, spacing: 10) {
-                // Une app SwiftUI ne peut pas ouvrir la dictée seule : on indique où est le micro.
-                // Plus rapide : Siri (« nouvelle Relance ») ou le bouton Action réglé sur le raccourci.
-                TextField("Que faut-il faire ?", text: $text, prompt: Text("Toucher, puis 🎤"))
+                // Une app SwiftUI ne peut pas ouvrir la dictée seule. Depuis watchOS 26, elle se choisit
+                // avec le bouton en bas à droite de l'écran de saisie ; la montre retient ensuite ce mode.
+                // Plus rapide : Siri (« nouvelle tâche dans Aiguillage ») ou le bouton Action.
+                TextField("Que faut-il faire ?", text: $text, prompt: Text("Toucher, puis Dictée en bas à droite"),
+                          axis: .vertical)
+                    .lineLimit(1...5)
 
                 if let match {
                     Label(DueText.long(due: dueInstant(match), hasTime: match.hasTime), systemImage: "calendar")
                         .font(.footnote).foregroundStyle(.secondary)
                 } else if !text.isEmpty {
+                    // Une ligne « Échéance · Aujourd'hui » qui ouvre la liste : la roue est trop petite ici.
                     Picker("Échéance", selection: $choice) {
                         ForEach(DayChoice.allCases) { Text($0.rawValue).tag($0) }
                     }
+                    .pickerStyle(.navigationLink)
                 }
 
                 Button("Ajouter") { save(match) }

@@ -14,7 +14,7 @@ struct MacSignInView: View {
                 .accessibilityHidden(true)
             VStack(spacing: 8) {
                 Text("Tes tâches Google, sur le Mac").font(.title.bold())
-                Text("Relance lit la liste « Mes tâches », où arrivent les rappels dictés à Google Home.")
+                Text("Aiguillage lit la liste « Mes tâches », où arrivent les rappels dictés à Google Home.")
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }

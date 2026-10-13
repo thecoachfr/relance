@@ -5,7 +5,7 @@ struct RelanceMacApp: App {
     @NSApplicationDelegateAdaptor private var delegate: MacAppDelegate
 
     var body: some Scene {
-        Window("Relance", id: MacAppDelegate.mainWindowID) {
+        Window("Aiguillage", id: MacAppDelegate.mainWindowID) {
             MacRootView()
                 .environment(delegate.store)
                 .environment(delegate.auth)

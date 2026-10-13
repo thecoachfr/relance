@@ -3,6 +3,7 @@ import SwiftUI
 struct WatchTaskList: View {
     @Environment(WatchStore.self) private var store
     @State private var showAdd = false
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         NavigationStack {
@@ -32,18 +33,33 @@ struct WatchTaskList: View {
                         ContentUnavailableView("Rien d'urgent", systemImage: "checkmark.circle",
                                                description: Text(store.google.isAvailable
                                                                  ? "Aucune tâche à faire."
-                                                                 : "Ouvre Relance sur l'iPhone une fois pour connecter la montre."))
+                                                                 : "Ouvre Aiguillage sur l'iPhone une fois pour connecter la montre."))
                     }
                 }
             }
-            .navigationTitle("Relance")
+            .navigationTitle("Aiguillage")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Nouvelle tâche", systemImage: "plus") { showAdd = true }
                 }
             }
-            .sheet(isPresented: $showAdd) { WatchAddView() }
+            .sheet(isPresented: $showAdd) { NavigationStack { WatchAddView() } }
+            // Complication « + » et commande « Nouvelle tâche » : ouvrent directement la saisie.
+            .onOpenURL { url in
+                WatchQuickAdd.defaults.removeObject(forKey: WatchQuickAdd.pendingKey)
+                showAdd = url == WatchQuickAdd.url
+            }
+            .onReceive(NotificationCenter.default.publisher(for: WatchQuickAdd.notification)) { _ in openPendingAdd() }
+            .onChange(of: scenePhase) { _, phase in if phase == .active { openPendingAdd() } }
+            .onAppear { openPendingAdd() }
         }
+    }
+
+    private func openPendingAdd() {
+        let requested = WatchQuickAdd.defaults.double(forKey: WatchQuickAdd.pendingKey)
+        guard requested > 0 else { return }
+        WatchQuickAdd.defaults.removeObject(forKey: WatchQuickAdd.pendingKey)
+        if Date.now.timeIntervalSince1970 - requested < 10 { showAdd = true }
     }
 
     @ViewBuilder
@@ -95,9 +111,10 @@ struct WatchTaskRow: View {
                     let category = TaskCategory(name: name)
                     HStack(spacing: 3) {
                         Image(systemName: category?.symbol ?? "tag").foregroundStyle(category?.color ?? .gray)
-                        Text(name).foregroundStyle(.secondary)
+                        // La catégorie garde sa ligne ; ce sont les tags qui se tronquent.
+                        Text(name).foregroundStyle(.secondary).lineLimit(1).fixedSize()
                         if let tags = task.tags {
-                            Text(tags.map { "#" + $0 }.joined(separator: " ")).foregroundStyle(.secondary)
+                            Text(tags.map { "#" + $0 }.joined(separator: " ")).foregroundStyle(.secondary).lineLimit(1)
                         }
                     }
                     .font(.caption2)

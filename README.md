@@ -1,6 +1,8 @@
-# Relance
+# Aiguillage
 
-App iPhone, iPad, Apple Watch et Mac de rappels qui insistent jusqu'à ce que ce soit fait, branchée sur Google Tasks.
+*Anciennement « Relance ». Le code, les cibles Xcode, l'identifiant `fr.alexandrefau.relance` et les noms côté Home Assistant gardent l'ancien nom.*
+
+App iPhone, iPad, Apple Watch et Mac qui aiguille les tâches (à faire, à trier, à voir) et insiste jusqu'à ce que ce soit fait jusqu'à ce que ce soit fait, branchée sur Google Tasks.
 Voir [CADRAGE.md](CADRAGE.md) pour le besoin et les choix, [SUIVI.md](SUIVI.md) pour l'état du projet.
 
 ## Mise en route
@@ -12,7 +14,7 @@ Sur [console.cloud.google.com](https://console.cloud.google.com), avec ton compt
 1. **Créer un projet** nommé « Relance ».
 2. **API et services → Bibliothèque** : chercher « Google Tasks API » → **Activer**.
 3. **Google Auth Platform** (écran de consentement OAuth) :
-   - *Branding* : nom « Relance », ton e-mail comme adresse d'assistance et de contact.
+   - *Branding* : nom « Aiguillage », ton e-mail comme adresse d'assistance et de contact.
    - *Audience* : type **Externe**.
    - *Accès aux données* : ajouter le champ d'application `https://www.googleapis.com/auth/tasks`.
    - *Audience* → **Publier l'application** (statut « En production »). Sinon Google coupe la connexion tous les 7 jours. Pas besoin de demander la validation Google : tu verras juste un écran « application non vérifiée » à la première connexion (Paramètres avancés → Accéder à Relance).

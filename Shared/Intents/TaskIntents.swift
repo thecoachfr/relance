@@ -68,7 +68,7 @@ struct HideTaskIntent: LiveActivityIntent {
 /// « Dis Siri, ajoute une tâche dans Relance. » (voir `SiriCapture`)
 struct AddTaskIntent: AppIntent {
     static let title: LocalizedStringResource = "Ajouter une tâche"
-    static let description = IntentDescription("Ajoute une tâche, avec ou sans échéance. Relance te relancera jusqu'à ce qu'elle soit faite.")
+    static let description = IntentDescription("Ajoute une tâche, avec ou sans échéance. Aiguillage te relancera jusqu'à ce qu'elle soit faite.")
 
     @Parameter(title: "Tâche", requestValueDialog: "Qu'est-ce que tu dois faire ?")
     var text: String
@@ -120,7 +120,7 @@ struct OverdueTasksIntent: AppIntent {
 /// dans l'App Group que l'app lit en passant au premier plan.
 struct NewTaskIntent: AppIntent {
     static let title: LocalizedStringResource = "Nouvelle tâche"
-    static let description = IntentDescription("Ouvre Relance sur la saisie d'une nouvelle tâche.")
+    static let description = IntentDescription("Ouvre Aiguillage sur la saisie d'une nouvelle tâche.")
     static let openAppWhenRun = true
 
     static let pendingKey = "pendingQuickAdd"

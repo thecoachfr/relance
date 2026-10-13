@@ -40,7 +40,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Journal de synchro")
                 } footer: {
-                    Text("Si « Push de la vigie reçu » n'apparaît jamais, vérifie Réglages iOS → Général → Actualisation en arrière-plan → Relance, et le mode Économie d'énergie.")
+                    Text("Si « Push de la vigie reçu » n'apparaît jamais, vérifie Réglages iOS → Général → Actualisation en arrière-plan → Aiguillage, et le mode Économie d'énergie.")
                 }
             }
             .navigationTitle("Réglages")

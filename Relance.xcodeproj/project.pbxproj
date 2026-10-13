@@ -46,6 +46,7 @@
 		2B4EBEAA5425D6FA98BDDD3C /* CategoryViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E8C4B98CC17E47DEB59005B /* CategoryViews.swift */; };
 		2B570BF6BA12EF4960F1ACD3 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 99A3E8623A59510F508D7421 /* Assets.xcassets */; };
 		2D05224E0D502D9B3094B864 /* TravelTimes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CB106E929FD91C07948C23D /* TravelTimes.swift */; };
+		2D0C9C926A8F11F4C130D0D9 /* WatchQuickAdd.swift in Sources */ = {isa = PBXBuildFile; fileRef = 967ED0E0B086490E32E03E0B /* WatchQuickAdd.swift */; };
 		2FFD58C76AEB38E084377310 /* LiveActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5C54AAEC34A872D13A632F8 /* LiveActivityManager.swift */; };
 		3045DA43E86521578947124D /* ReminderDeviceSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98189E62C7922E8F582E78C1 /* ReminderDeviceSection.swift */; };
 		305E38E51F2369415D44951D /* MacSignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A52A26E7A17146871684BD99 /* MacSignInView.swift */; };
@@ -87,6 +88,7 @@
 		596D3593EAE2393FB72C1014 /* RelanceMacApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1357E622C532038DFAE8D909 /* RelanceMacApp.swift */; };
 		59D184F4DD3047DCE4FBAF66 /* RelanceApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59F7A908CED23B538B56A391 /* RelanceApp.swift */; };
 		5AFC2FE6F6F4C53E1D72D6D9 /* ContactSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E7598AD45ABC35C0448C201 /* ContactSection.swift */; };
+		5AFCF7DFF64F6862DF44F094 /* WatchQuickAdd.swift in Sources */ = {isa = PBXBuildFile; fileRef = 967ED0E0B086490E32E03E0B /* WatchQuickAdd.swift */; };
 		5D30B5C9319AF1B5A5AD6305 /* ContactSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E7598AD45ABC35C0448C201 /* ContactSection.swift */; };
 		5E211E65AE023F62D9DE7DAD /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4839CCA69FBABCA6821B8333 /* ShareViewController.swift */; };
 		5EAC1A94052E8B1E3BBC6184 /* RelanceWidgetsBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FD7A3A536C16BA93AFF03B6 /* RelanceWidgetsBundle.swift */; };
@@ -133,6 +135,7 @@
 		95209752641755F1E477430C /* DateDetection.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFB0E54140635703273C5FC6 /* DateDetection.swift */; };
 		97287B1F4C527AE7E94A875C /* TaskStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C0DA8FD3D838562DDAE1750 /* TaskStore.swift */; };
 		9806C34F20938A733C11A1F7 /* TaskPriority.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EE508F82F326D596EC1A031 /* TaskPriority.swift */; };
+		9884961AF4E75B79E213257D /* WatchQuickAdd.swift in Sources */ = {isa = PBXBuildFile; fileRef = 967ED0E0B086490E32E03E0B /* WatchQuickAdd.swift */; };
 		98A2CDF1A6E8F5FD9A8E2153 /* WatchTaskList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 412F18AC79776A3000826C83 /* WatchTaskList.swift */; };
 		9BF4AC3B0A036B34D882952A /* ReminderDevice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41948BB9E52BE960048216FD /* ReminderDevice.swift */; };
 		9CA8D9FF92184B04154BC2B1 /* SiriCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87BBA1DB8D8D2DF9BA98DDCF /* SiriCapture.swift */; };
@@ -173,6 +176,7 @@
 		C281C4319DC1D8B48972AF47 /* PushRegistration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C1E3FCC309390331F7A6DDF /* PushRegistration.swift */; };
 		C3FBCB9EE6DB4E5B9B4E527D /* DateDetection.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFB0E54140635703273C5FC6 /* DateDetection.swift */; };
 		C3FF5C7FBA7C3C77DC664A59 /* RelanceWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4536278168D673F91FE2BD29 /* RelanceWatchApp.swift */; };
+		C47762D7E07EA6871FFE6D32 /* WatchQuickAdd.swift in Sources */ = {isa = PBXBuildFile; fileRef = 967ED0E0B086490E32E03E0B /* WatchQuickAdd.swift */; };
 		C642E4D5DAD4DB03124288CE /* TaskFields.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C219EEDD1BA5AF2BD37ABCA /* TaskFields.swift */; };
 		C6F18DD0DD71D893DB5B93A1 /* TaskPriority.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EE508F82F326D596EC1A031 /* TaskPriority.swift */; };
 		CAF23669994EDF45727FB2A7 /* TaskMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 428A54223E0ADAC3553B38D1 /* TaskMapView.swift */; };
@@ -367,6 +371,7 @@
 		8F8E56D78749EDCE34DF8385 /* RelanceMac.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = RelanceMac.entitlements; sourceTree = "<group>"; };
 		90710C68F0B11F5A74C59129 /* TaskDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskDetailView.swift; sourceTree = "<group>"; };
 		965A3B9A7F0371E3299ADA39 /* TasksAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksAPI.swift; sourceTree = "<group>"; };
+		967ED0E0B086490E32E03E0B /* WatchQuickAdd.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchQuickAdd.swift; sourceTree = "<group>"; };
 		98189E62C7922E8F582E78C1 /* ReminderDeviceSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderDeviceSection.swift; sourceTree = "<group>"; };
 		99A3E8623A59510F508D7421 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		9AF3B2A793608CF0B2A9F70C /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -539,6 +544,14 @@
 			);
 			sourceTree = "<group>";
 		};
+		47E675BD4C489C41EDC28989 /* WatchApp */ = {
+			isa = PBXGroup;
+			children = (
+				967ED0E0B086490E32E03E0B /* WatchQuickAdd.swift */,
+			);
+			path = WatchApp;
+			sourceTree = "<group>";
+		};
 		57ABABF1CE3C6C71908FE9ED /* LiveActivity */ = {
 			isa = PBXGroup;
 			children = (
@@ -641,6 +654,7 @@
 				F5437000C0093293A69E1BB7 /* Reminders */,
 				1C3F4A5F9CB9E16C37CBF3CC /* Share */,
 				E84D6FDD58388985C35ED7F2 /* Watch */,
+				47E675BD4C489C41EDC28989 /* WatchApp */,
 			);
 			path = Shared;
 			sourceTree = "<group>";
@@ -1012,6 +1026,7 @@
 				2D05224E0D502D9B3094B864 /* TravelTimes.swift in Sources */,
 				49371094B35A54ABB18B1134 /* TriageRequest.swift in Sources */,
 				92BEB50FEBAF86DA3ACEBCF1 /* TriageViews.swift in Sources */,
+				2D0C9C926A8F11F4C130D0D9 /* WatchQuickAdd.swift in Sources */,
 				7A1BFC405E0E04A81B9A4D1D /* WatchSync.swift in Sources */,
 				A2BAA37719C5BF46CFE1799B /* WatchTask.swift in Sources */,
 			);
@@ -1124,6 +1139,7 @@
 				CB7FB1123F4B6504E127FE88 /* ReminderProfile.swift in Sources */,
 				9806C34F20938A733C11A1F7 /* TaskPriority.swift in Sources */,
 				9032B55802F93C7ADD108C2E /* ToSee.swift in Sources */,
+				C47762D7E07EA6871FFE6D32 /* WatchQuickAdd.swift in Sources */,
 				228D62C2B5808AC281A2E867 /* WatchTask.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1148,6 +1164,7 @@
 				3F8D144215F91E1F3FF80CAD /* ToSee.swift in Sources */,
 				EACD7A26CDE728DACD37189D /* WatchAddView.swift in Sources */,
 				4E9091608C543191CA1D7B55 /* WatchIntents.swift in Sources */,
+				5AFCF7DFF64F6862DF44F094 /* WatchQuickAdd.swift in Sources */,
 				349BC19B237A6CEC02A88CFD /* WatchStore.swift in Sources */,
 				8ED4503F2019E2A275CD180A /* WatchTask.swift in Sources */,
 				98A2CDF1A6E8F5FD9A8E2153 /* WatchTaskList.swift in Sources */,
@@ -1188,6 +1205,7 @@
 				8686BBA3310AAFEBD960E91F /* TasksProvider.swift in Sources */,
 				7F86D58B0EDB2CF5DB187562 /* TasksWidget.swift in Sources */,
 				C00AC755247DC8A1AD49583A /* ToSee.swift in Sources */,
+				9884961AF4E75B79E213257D /* WatchQuickAdd.swift in Sources */,
 				A7B49F2D96188F30EF0EBC5E /* WatchTask.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1262,6 +1280,7 @@
 			baseConfigurationReference = AEAE6516E008CA0F6431F7FC /* Secrets.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Relance/Resources/Relance.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				INFOPLIST_FILE = Relance/Resources/Info.plist;
@@ -1280,6 +1299,7 @@
 			baseConfigurationReference = AEAE6516E008CA0F6431F7FC /* Secrets.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = RelanceMac/RelanceMac.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -1289,7 +1309,7 @@
 					"@executable_path/../Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = fr.alexandrefau.relance;
-				PRODUCT_NAME = Relance;
+				PRODUCT_NAME = Aiguillage;
 				SDKROOT = macosx;
 			};
 			name = Debug;
@@ -1299,6 +1319,7 @@
 			baseConfigurationReference = AEAE6516E008CA0F6431F7FC /* Secrets.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Relance/Resources/Relance.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				INFOPLIST_FILE = Relance/Resources/Info.plist;
@@ -1349,6 +1370,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = RelanceWatch/RelanceWatch.entitlements;
 				INFOPLIST_FILE = RelanceWatch/Info.plist;
 				PRODUCT_BUNDLE_IDENTIFIER = fr.alexandrefau.relance.watchkitapp;
@@ -1429,6 +1451,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = RelanceWatch/RelanceWatch.entitlements;
 				INFOPLIST_FILE = RelanceWatch/Info.plist;
 				PRODUCT_BUNDLE_IDENTIFIER = fr.alexandrefau.relance.watchkitapp;
@@ -1510,6 +1533,7 @@
 			baseConfigurationReference = AEAE6516E008CA0F6431F7FC /* Secrets.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = RelanceMac/RelanceMac.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -1519,7 +1543,7 @@
 					"@executable_path/../Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = fr.alexandrefau.relance;
-				PRODUCT_NAME = Relance;
+				PRODUCT_NAME = Aiguillage;
 				SDKROOT = macosx;
 			};
 			name = Release;

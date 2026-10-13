@@ -1,6 +1,6 @@
 # Cadrage — app de rappels qui insiste
 
-*Version 1 — 11 octobre 2026. Nom provisoire : **Relance**.*
+*Version 1 — 11 octobre 2026. Nom provisoire : **Relance**, devenu **Aiguillage** le 13/10/2026.*
 
 ## 1. Le problème
 
@@ -123,7 +123,7 @@ Détail et suite dans [SUIVI.md](SUIVI.md).
 
 ## 8. Décisions (validées le 11/10/2026)
 
-1. Nom : **Relance**.
+1. Nom : **Relance** (renommée **Aiguillage** le 13/10/2026, quand l'app a dépassé les simples relances : tri, à voir, carte, répétitions).
 2. Liste suivie : **« Mes tâches »** pour commencer.
 3. Rythme : **à l'heure, à +1 h, puis 20 h** si pas fait ; en retard : **7 h 30 et 20 h** chaque jour.
 4. Plage silencieuse : **22 h – 7 h 30**.

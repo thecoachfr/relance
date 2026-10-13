@@ -17,7 +17,7 @@ struct OnboardingView: View {
 
             if auth.isSignedIn {
                 step(title: "Des relances jusqu'à ce que ce soit fait",
-                     text: "Relance te prévient à l'heure prévue, une heure après, puis le soir à 20 h tant que la tâche n'est pas cochée. Rien à programmer.")
+                     text: "Aiguillage te prévient à l'heure prévue, une heure après, puis le soir à 20 h tant que la tâche n'est pas cochée. Rien à programmer.")
                 Button("Autoriser les notifications") {
                     Task {
                         _ = await store.scheduler.requestAuthorization()
@@ -29,7 +29,7 @@ struct OnboardingView: View {
                 .controlSize(.large)
             } else {
                 step(title: "Tes tâches Google, avec des relances qui insistent",
-                     text: "Relance lit la liste « Mes tâches », où arrivent les rappels dictés à Google Home.")
+                     text: "Aiguillage lit la liste « Mes tâches », où arrivent les rappels dictés à Google Home.")
                 Button("Se connecter avec Google") {
                     Task {
                         do { try await auth.signIn() } catch { self.error = error.localizedDescription }

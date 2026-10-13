@@ -15,7 +15,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "E4CD071668D01A85FE32D2B4"
-               BuildableName = "Relance.app"
+               BuildableName = "Aiguillage.app"
                BlueprintName = "RelanceMac"
                ReferencedContainer = "container:Relance.xcodeproj">
             </BuildableReference>
@@ -31,7 +31,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "E4CD071668D01A85FE32D2B4"
-            BuildableName = "Relance.app"
+            BuildableName = "Aiguillage.app"
             BlueprintName = "RelanceMac"
             ReferencedContainer = "container:Relance.xcodeproj">
          </BuildableReference>
@@ -54,7 +54,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "E4CD071668D01A85FE32D2B4"
-            BuildableName = "Relance.app"
+            BuildableName = "Aiguillage.app"
             BlueprintName = "RelanceMac"
             ReferencedContainer = "container:Relance.xcodeproj">
          </BuildableReference>
@@ -71,7 +71,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "E4CD071668D01A85FE32D2B4"
-            BuildableName = "Relance.app"
+            BuildableName = "Aiguillage.app"
             BlueprintName = "RelanceMac"
             ReferencedContainer = "container:Relance.xcodeproj">
          </BuildableReference>

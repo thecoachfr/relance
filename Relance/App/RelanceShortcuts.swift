@@ -12,6 +12,7 @@ struct RelanceShortcuts: AppShortcutsProvider {
                 "Ajoute à \(.applicationName)",
                 "Ajoute une tâche dans \(.applicationName)",
                 "\(.applicationName) nouvelle tâche",
+                "Nouvelle tâche dans \(.applicationName)",
             ],
             shortTitle: "Ajouter une tâche",
             systemImageName: "plus.circle")
