@@ -59,7 +59,7 @@ Catégories fixes : Administratif, Maison, Santé, Achats, Travail, Famille, Per
 
 ## 2. Reste à faire / à vérifier
 
-0. **Xcode Cloud** (13/10) : dépôt prêt (`ci_scripts/ci_post_clone.sh`, archives iOS et Mac vérifiées en Release). À faire par Alexandre : créer l'app dans App Store Connect, le workflow dans Xcode avec les 3 variables secrètes (voir README), installer TestFlight.
+0. **Xcode Cloud** (13/10) : dépôt prêt (`ci_scripts/ci_post_clone.sh`, archives iOS et Mac vérifiées en Release). App créée dans App Store Connect (nom App Store distinct d'« Aiguillage », déjà pris), workflow « Default » : push sur `main` → Archive iOS (montre incluse) pour TestFlight interne, 3 variables secrètes. Premier build : échec voulu du script (variables absentes), corrigé. Reste : vérifier le premier build complet, puis ajouter le groupe de test interne en post-action (il n'apparaît dans Xcode qu'après une première build).
 
 *Vérifié le 13/10 : le tri de 6 h 45 tourne et lit bien la liste mémo.*
 
