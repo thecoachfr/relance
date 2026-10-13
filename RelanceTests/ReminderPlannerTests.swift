@@ -237,3 +237,42 @@ struct ReminderPlannerTests {
         #expect(!plan.contains { $0.kind == .departure })
     }
 }
+
+struct ActivityButtonTests {
+    typealias Item = TaskActivityAttributes.ContentState.Item
+    let now = Date(timeIntervalSince1970: 1_800_000_000)
+
+    func item(dueIn hours: Double, route: Bool = false, hasTime: Bool = true) -> Item {
+        Item(id: "a", title: "a", due: now.addingTimeInterval(hours * 3600), hasTime: hasTime,
+             routeURL: route ? URL(string: "https://maps.apple.com/?daddr=x") : nil)
+    }
+
+    @Test func secondButtonFollowsTheClock() {
+        if case .later = item(dueIn: 4).secondAction(at: now) {} else { Issue.record("loin avant : Plus tard") }
+        if case .later = item(dueIn: 4, route: true).secondAction(at: now) {} else { Issue.record("loin avant, lieu : Plus tard") }
+        if case .route = item(dueIn: 1, route: true).secondAction(at: now) {} else { Issue.record("2 h avant, lieu : Itinéraire") }
+        if case .later = item(dueIn: 1).secondAction(at: now) {} else { Issue.record("2 h avant, sans lieu : Plus tard") }
+        if case .snooze = item(dueIn: -1).secondAction(at: now) {} else { Issue.record("en retard : Dans 1 h") }
+        if case .snooze = item(dueIn: 4, hasTime: false).secondAction(at: now) {} else { Issue.record("sans heure : Dans 1 h") }
+    }
+
+    @Test func laterHidesUntilTwoHoursBeforeOrDue() {
+        let due = now.addingTimeInterval(5 * 3600)
+        #expect(ActivityHiding.laterDate(due: due, now: now) == due.addingTimeInterval(-2 * 3600))
+        let soon = now.addingTimeInterval(3600)
+        #expect(ActivityHiding.laterDate(due: soon, now: now) == soon)
+    }
+
+    @Test func urgentLiveActivityMigratesOnce() throws {
+        var old = ReminderSettings()
+        old.urgent.liveActivity = .always
+        var json = try JSONSerialization.jsonObject(with: JSONEncoder().encode(old)) as! [String: Any]
+        json.removeValue(forKey: "version")
+        let migrated = try JSONDecoder().decode(ReminderSettings.self, from: JSONSerialization.data(withJSONObject: json))
+        #expect(migrated.urgent.liveActivity == .upcoming)
+        // Choix fait après la migration (version 2) : gardé.
+        let kept = try JSONDecoder().decode(ReminderSettings.self, from: JSONEncoder().encode(old))
+        #expect(kept.urgent.liveActivity == .always)
+    }
+}
+

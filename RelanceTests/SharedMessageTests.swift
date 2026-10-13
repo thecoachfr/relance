@@ -85,6 +85,9 @@ struct TaskContactTests {
         #expect(street.line == "📍 3 place de la Mairie, 75002 Paris")
         #expect(TaskContact(notes: street.line)?.address == "3 place de la Mairie, 75002 Paris")
         #expect(TaskContact(notes: street.line)?.mapsURL != nil)
+        // Google Maps : nom et adresse, sans doublon quand l'adresse sert de nom.
+        #expect(place.googleMapsURL?.absoluteString.contains("query=Pharmacie%20du%20Centre,%203%20place") == true)
+        #expect(street.googleMapsURL?.absoluteString.hasSuffix("query=3%20place%20de%20la%20Mairie,%2075002%20Paris") == true)
     }
 }
 

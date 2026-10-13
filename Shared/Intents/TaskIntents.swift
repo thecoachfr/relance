@@ -44,6 +44,27 @@ struct SnoozeTaskIntent: LiveActivityIntent {
     }
 }
 
+/// Bouton « Plus tard » de l'activité en direct, avant l'heure prévue : retire la tâche de l'activité
+/// jusqu'à 2 h avant (ou jusqu'à l'heure), sans ajouter de rappel.
+struct HideTaskIntent: LiveActivityIntent {
+    static let title: LocalizedStringResource = "Masquer une tâche jusqu'à plus tard"
+    static let isDiscoverable = false
+
+    @Parameter(title: "Tâche") var taskID: String
+    @Dependency private var store: TaskStore
+
+    init() {}
+    init(taskID: String) { self.taskID = taskID }
+
+    @MainActor func perform() async throws -> some IntentResult {
+        if let id = UUID(uuidString: taskID), let item = store.task(id), let due = item.dueInstant() {
+            ActivityHiding.hide(taskID, until: ActivityHiding.laterDate(due: due))
+            await store.reschedule()
+        }
+        return .result()
+    }
+}
+
 /// « Dis Siri, ajoute une tâche dans Relance. » (voir `SiriCapture`)
 struct AddTaskIntent: AppIntent {
     static let title: LocalizedStringResource = "Ajouter une tâche"

@@ -19,12 +19,16 @@ final class LiveActivityManager {
         let urgent = tasks
             .compactMap { item -> TaskActivityAttributes.ContentState.Item? in
                 let mode = settings[item.priority].liveActivity
-                guard mode != .never, let due = item.dueInstant(), let day = item.dueDay else { return nil }
+                guard mode != .never, let due = item.dueInstant(), let day = item.dueDay,
+                      ActivityHiding.hiddenUntil(item.localID.uuidString, now: now) == nil else { return nil }
                 let isUrgent = item.priority == .urgent
                 guard due.timeIntervalSince(now) <= upcomingWindow
                         || (mode == .always && day <= Calendar.current.startOfDay(for: now)) else { return nil }
+                let route = TaskContact(notes: item.notes)?.address
+                    .flatMap { TravelTimes.mapsURL(to: $0, settings: settings.departure) }
                 return .init(id: item.localID.uuidString, title: item.title, due: due,
-                             hasTime: item.dueMinutes != nil, snoozedUntil: item.snoozedUntil, isUrgent: isUrgent)
+                             hasTime: item.dueMinutes != nil, snoozedUntil: item.snoozedUntil, isUrgent: isUrgent,
+                             routeURL: route)
             }
             .sorted { a, b in
                 let (sa, sb) = (a.isSnoozed(at: now), b.isSnoozed(at: now))
@@ -44,7 +48,9 @@ final class LiveActivityManager {
             return
         }
         // Prochain changement d'affichage : une tâche qui passe en retard ou un report qui se termine.
-        let changes = state.items.flatMap { [$0.due, $0.snoozedUntil].compactMap { $0 } }.filter { $0 > now }
+        // (et 2 h avant l'heure, quand le second bouton passe de « Plus tard » à « Itinéraire »).
+        let changes = state.items.flatMap { [$0.due, $0.snoozedUntil, $0.due.addingTimeInterval(-2 * 3600)].compactMap { $0 } }
+            .filter { $0 > now }
         let content = ActivityContent(state: state, staleDate: changes.min())
 
         if let activity = current.first {

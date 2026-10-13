@@ -105,10 +105,7 @@ private struct SingleTaskView: View {
                     Label("Fait", systemImage: "checkmark").frame(maxWidth: .infinity)
                 }
                 .tint(.green)
-                Button(intent: SnoozeTaskIntent(taskID: item.id)) {
-                    Label("Dans 1 h", systemImage: "clock").frame(maxWidth: .infinity)
-                }
-                .tint(.orange)
+                SecondButton(item: item, short: false)
             }
             .buttonStyle(.borderedProminent)
             .font(.subheadline.weight(.semibold))
@@ -164,15 +161,7 @@ private struct TaskLine: View {
                 .foregroundStyle(late ? .red : .secondary)
                 .lineLimit(1)
 
-            Button(intent: SnoozeTaskIntent(taskID: item.id)) {
-                Image(systemName: "clock.arrow.circlepath")
-                    .font(.subheadline)
-                    .frame(width: 34, height: 34)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(.orange)
-            .accessibilityLabel("Reporter « \(item.title) » d'une heure")
+            SecondIconButton(item: item)
         }
         .frame(height: 34)
     }
@@ -200,10 +189,7 @@ private struct SmallSingleTaskView: View {
                     Label("Fait", systemImage: "checkmark").frame(maxWidth: .infinity)
                 }
                 .tint(.green)
-                Button(intent: SnoozeTaskIntent(taskID: item.id)) {
-                    Label("1 h", systemImage: "clock").frame(maxWidth: .infinity)
-                }
-                .tint(.orange)
+                SecondButton(item: item, short: true)
             }
             .buttonStyle(.borderedProminent)
             .font(.caption.weight(.semibold))
@@ -249,5 +235,65 @@ private struct UrgentMark: View {
             .font(.caption.weight(.heavy))
             .foregroundStyle(.red)
             .accessibilityLabel("Urgente")
+    }
+}
+
+// MARK: - Second bouton, selon le moment
+
+/// Avant l'heure : « Plus tard » (retire la tâche de l'activité) ou « Itinéraire » dans les 2 h s'il y a
+/// une adresse. À l'heure ou en retard : « Dans 1 h ». (Avant l'heure, « Dans 1 h » ajoutait un rappel
+/// sans rien décaler.)
+private struct SecondButton: View {
+    let item: ActivityItem
+    let short: Bool
+
+    var body: some View {
+        switch item.secondAction(at: .now) {
+        case .later:
+            Button(intent: HideTaskIntent(taskID: item.id)) {
+                Label("Plus tard", systemImage: "eye.slash").frame(maxWidth: .infinity)
+            }
+            .tint(.gray)
+        case .route(let url):
+            Button(intent: OpenURLIntent(url)) {
+                Label(short ? "Trajet" : "Itinéraire", systemImage: "map").frame(maxWidth: .infinity)
+            }
+            .tint(.blue)
+        case .snooze:
+            Button(intent: SnoozeTaskIntent(taskID: item.id)) {
+                Label(short ? "1 h" : "Dans 1 h", systemImage: "clock").frame(maxWidth: .infinity)
+            }
+            .tint(.orange)
+        }
+    }
+}
+
+/// Même choix en icône seule, pour les lignes de la liste.
+private struct SecondIconButton: View {
+    let item: ActivityItem
+
+    var body: some View {
+        switch item.secondAction(at: .now) {
+        case .later:
+            icon(intent: HideTaskIntent(taskID: item.id), symbol: "eye.slash", color: .secondary,
+                 label: "Masquer « \(item.title) » jusqu'à plus tard")
+        case .route(let url):
+            icon(intent: OpenURLIntent(url), symbol: "map", color: .blue, label: "Itinéraire vers « \(item.title) »")
+        case .snooze:
+            icon(intent: SnoozeTaskIntent(taskID: item.id), symbol: "clock.arrow.circlepath", color: .orange,
+                 label: "Reporter « \(item.title) » d'une heure")
+        }
+    }
+
+    private func icon(intent: some AppIntent, symbol: String, color: Color, label: String) -> some View {
+        Button(intent: intent) {
+            Image(systemName: symbol)
+                .font(.subheadline)
+                .frame(width: 34, height: 34)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(color)
+        .accessibilityLabel(label)
     }
 }

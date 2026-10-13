@@ -14,6 +14,8 @@ nonisolated struct PlannableTask: Sendable, Equatable {
     var reminders: ReminderOverride?
     /// Temps de trajet jusqu'à l'adresse de la tâche (Plans), pour « Pars maintenant ».
     var travelMinutes: Int?
+    /// La tâche a une adresse (ligne 📍) : bouton « Itinéraire » plutôt que « Dans 1 h » avant l'heure.
+    var hasPlace = false
 }
 
 nonisolated struct ReminderSettings: Sendable, Equatable {
@@ -83,6 +85,8 @@ nonisolated struct PlannedReminder: Sendable, Equatable {
     var badge: Int
     /// « Urgente » sous le titre ; vide sinon.
     var subtitle = ""
+    /// La tâche a une adresse (boutons de la notification).
+    var hasPlace = false
 }
 
 /// Calcule toutes les relances à programmer. Fonction pure : mêmes tâches + même instant = même plan.
@@ -114,7 +118,8 @@ nonisolated struct ReminderPlanner: Sendable {
                     body: body(for: task, kind: kind, at: date),
                     timeSensitive: isTimeSensitive(task.priority, kind),
                     badge: 0,
-                    subtitle: task.priority == .urgent ? TaskPriority.urgent.rawValue : ""))
+                    subtitle: task.priority == .urgent ? TaskPriority.urgent.rawValue : "",
+                    hasPlace: task.hasPlace))
             }
         }
 

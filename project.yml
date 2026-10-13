@@ -46,7 +46,7 @@ targets:
       properties:
         CFBundleDisplayName: Relance
         CFBundleShortVersionString: "0.3"
-        CFBundleVersion: "10"
+        CFBundleVersion: "12"
         UILaunchScreen: {}
         UISupportedInterfaceOrientations~iphone: [UIInterfaceOrientationPortrait]
         UISupportedInterfaceOrientations~ipad:
@@ -123,7 +123,7 @@ targets:
       properties:
         CFBundleDisplayName: Relance
         CFBundleShortVersionString: "0.3"
-        CFBundleVersion: "10"
+        CFBundleVersion: "12"
         LSApplicationCategoryType: public.app-category.productivity
         NSCalendarsFullAccessUsageDescription: Relance ajoute à ton agenda les tâches que tu choisis, et met l'événement à jour quand l'heure de la tâche change.
         GIDClientID: $(GOOGLE_CLIENT_ID)
@@ -158,7 +158,7 @@ targets:
       properties:
         CFBundleDisplayName: Relance
         CFBundleShortVersionString: "0.3"
-        CFBundleVersion: "10"
+        CFBundleVersion: "12"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.share-services
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ShareViewController
@@ -182,7 +182,7 @@ targets:
       properties:
         CFBundleDisplayName: Relance
         CFBundleShortVersionString: "0.3"
-        CFBundleVersion: "10"
+        CFBundleVersion: "12"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:
@@ -219,7 +219,7 @@ targets:
       properties:
         CFBundleDisplayName: Relance
         CFBundleShortVersionString: "0.3"
-        CFBundleVersion: "10"
+        CFBundleVersion: "12"
         WKApplication: true
         WKCompanionAppBundleIdentifier: fr.alexandrefau.relance
         INAlternativeAppNames:
@@ -250,7 +250,7 @@ targets:
       properties:
         CFBundleDisplayName: Relance
         CFBundleShortVersionString: "0.3"
-        CFBundleVersion: "10"
+        CFBundleVersion: "12"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:

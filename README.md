@@ -1,7 +1,7 @@
 # Relance
 
-App iOS/iPadOS de rappels qui insistent jusqu'à ce que ce soit fait, branchée sur Google Tasks.
-Voir [CADRAGE.md](CADRAGE.md) pour le besoin et les choix.
+App iPhone, iPad, Apple Watch et Mac de rappels qui insistent jusqu'à ce que ce soit fait, branchée sur Google Tasks.
+Voir [CADRAGE.md](CADRAGE.md) pour le besoin et les choix, [SUIVI.md](SUIVI.md) pour l'état du projet.
 
 ## Mise en route
 
@@ -32,7 +32,8 @@ Ce fichier n'est pas versionné (`.gitignore`).
 xcodegen generate
 ```
 
-Puis ouvrir `Relance.xcodeproj`, choisir ton iPhone et lancer (⌘R).
+Puis ouvrir `Relance.xcodeproj`, choisir ton iPhone et lancer (⌘R). Schéma `RelanceMac` pour l'app Mac (macOS 15),
+`RelanceWatch` pour la montre.
 
 ## Organisation du code
 
@@ -43,8 +44,11 @@ Puis ouvrir `Relance.xcodeproj`, choisir ton iPhone et lancer (⌘R).
 | `Shared/Google/` | API REST Google Tasks, heure rangée dans les notes |
 | `Shared/Model/` | Cache local SwiftData (App Group) et synchronisation |
 | `Shared/Intents/` | Actions Siri, widgets et activité en direct |
-| `Relance/` | App : connexion Google, écrans SwiftUI, activité en direct, push |
+| `Relance/` | App iPhone/iPad : connexion Google, écrans SwiftUI, activité en direct, push |
+| `RelanceMac/` | App Mac native : fenêtre en trois colonnes, barre des menus, menus et raccourcis (reprend `Shared/` et les vues de tâche de `Relance/Views/`) |
 | `RelanceWidgets/` | Widgets, activité en direct, commande « Nouvelle tâche » |
+| `RelanceShare/` | Extension de partage (WhatsApp, Mail, Safari…) |
+| `RelanceWatch/`, `RelanceWatchWidgets/` | App et complications Apple Watch |
 | `homeassistant/` | Vigie AppDaemon (phase 3) |
 | `RelanceTests/` | Tests (Swift Testing) |
 
@@ -57,6 +61,11 @@ Google Tasks ──(1 min)── HA : intégration Google Tasks ── AppDaemon
                                                               ▲
 Relance ──(jeton push)──► webhook HA ──► événement relance_register ┘
 ```
+
+Elle rafraîchit aussi la liste mémo de la routine de tri (`todo.relance_memo`), lance la routine après chaque nouvelle tâche
+et à la demande de l'app (« Retrier avec Claude », champ `action: triage` du webhook).
+Pour la mettre à jour : monter le partage `smb://homeassistant.local/addon_configs` dans le Finder et copier
+`relance_vigie.py` dans `a0d7b954_appdaemon/apps/` (AppDaemon la recharge seul).
 
 Déjà en place sur Home Assistant : l'app **AppDaemon** (avec `httpx[http2]` et `pyjwt[crypto]`)
 et l'automatisation **« Relance : enregistrer un appareil »** (déclencheur webhook).

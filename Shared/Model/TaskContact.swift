@@ -74,6 +74,15 @@ nonisolated struct TaskContact: Equatable, Sendable {
         phone.flatMap { URL(string: "tel:" + $0.filter { $0.isNumber || $0 == "+" }) }
     }
 
+    /// Fiche du lieu dans Google Maps (app si installée, sinon navigateur), pour l'enregistrer « À visiter ».
+    /// Google ne permet pas d'ajouter un lieu à une liste depuis une autre app : il reste un toucher.
+    var googleMapsURL: URL? {
+        var c = URLComponents(string: "https://www.google.com/maps/search/")!
+        let query = [name, address].compactMap { $0 }.reduce(into: [String]()) { if !$0.contains($1) { $0.append($1) } }
+        c.queryItems = [URLQueryItem(name: "api", value: "1"), URLQueryItem(name: "query", value: query.joined(separator: ", "))]
+        return c.url
+    }
+
     /// Itinéraire dans Plans.
     var mapsURL: URL? {
         guard let address else { return nil }

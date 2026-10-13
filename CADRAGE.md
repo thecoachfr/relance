@@ -116,6 +116,11 @@ Connexion Google, synchro, écran *À faire*, ajout rapide, moteur de relances, 
 **Phase 3 — vigie Home Assistant**
 Intégration Google Tasks dans HA ; à chaque tâche créée ou cochée, HA envoie un push silencieux (APNs) qui réveille l'app → les dictées Google Home sont prises en compte en quelques minutes, et un « Fait » sur un appareil coupe les relances de l'autre.
 
+**Au-delà (réalisé le 12/10)**
+Apple Watch autonome, extension de partage, priorités et relances réglables, tri par Claude (routine) avec catégories, tags,
+lieu et mémo de contexte, agenda, « Pars maintenant », app Mac native avec barre des menus, résumé du soir.
+Détail et suite dans [SUIVI.md](SUIVI.md).
+
 ## 8. Décisions (validées le 11/10/2026)
 
 1. Nom : **Relance**.
@@ -123,3 +128,9 @@ Intégration Google Tasks dans HA ; à chaque tâche créée ou cochée, HA envo
 3. Rythme : **à l'heure, à +1 h, puis 20 h** si pas fait ; en retard : **7 h 30 et 20 h** chaque jour.
 4. Plage silencieuse : **22 h – 7 h 30**.
 5. Résumé du matin : **7 h 30**.
+
+### Décisions du 12/10/2026
+6. **Un seul appareil relance** (iPhone d'origine), choisi dans les réglages de n'importe quel appareil, partagé par iCloud.
+7. **L'heure n'est pas propagée à Google** : l'API Google Tasks ne la gère pas, et ce serait doubler les rappels. Pour la voir dans Google Agenda, bouton « Ajouter au calendrier ».
+8. **Mémo de contexte** de la routine dans une liste Google Tasks à part (« Relance · mémo »), lue en lecture seule par la routine.
+9. **App Mac native** (SwiftUI) plutôt que l'app iPad sur Mac : trois colonnes, barre des menus, raccourcis.

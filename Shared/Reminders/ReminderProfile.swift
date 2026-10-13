@@ -40,7 +40,8 @@ nonisolated struct ReminderProfile: Codable, Equatable, Sendable {
         case .urgent:
             ReminderProfile(advanceMinutes: nil, followUpMinutes: 30, followUpRepeats: true,
                             slots: [.morning, .midday, .evening], askTime: true,
-                            breakthrough: .always, liveActivity: .always)
+                            // 2 h avant, comme les normales : toute la journée, c'était trop envahissant (13/10).
+                            breakthrough: .always, liveActivity: .upcoming)
         case .normal:
             ReminderProfile(advanceMinutes: nil, followUpMinutes: 60, followUpRepeats: false,
                             slots: [.evening], askTime: true,
@@ -95,7 +96,7 @@ nonisolated struct DepartureSettings: Codable, Equatable, Sendable {
 extension ReminderSettings: Codable {
     private enum Keys: String, CodingKey {
         case morning, evening, midday, quietStart, quietEnd, calmWeekends, urgent, normal, low, departure
-        case eveningDigest, eveningDigestTime
+        case eveningDigest, eveningDigestTime, version
     }
 
     /// Chaque champ est facultatif : un réglage ajouté plus tard prend sa valeur d'origine.
@@ -114,6 +115,11 @@ extension ReminderSettings: Codable {
         departure = (try? c.decodeIfPresent(DepartureSettings.self, forKey: .departure)) ?? departure
         eveningDigest = try c.decodeIfPresent(Bool.self, forKey: .eveningDigest) ?? eveningDigest
         eveningDigestTime = try c.decodeIfPresent(Int.self, forKey: .eveningDigestTime) ?? eveningDigestTime
+        // v2 (13/10) : les urgentes n'occupent plus l'écran verrouillé toute la journée, mais 2 h avant.
+        // On ne change que l'ancienne valeur d'origine ; un choix fait depuis reste tel quel.
+        if (try c.decodeIfPresent(Int.self, forKey: .version) ?? 1) < 2, urgent.liveActivity == .always {
+            urgent.liveActivity = .upcoming
+        }
     }
 
     func encode(to encoder: Encoder) throws {
@@ -130,6 +136,7 @@ extension ReminderSettings: Codable {
         try c.encode(departure, forKey: .departure)
         try c.encode(eveningDigest, forKey: .eveningDigest)
         try c.encode(eveningDigestTime, forKey: .eveningDigestTime)
+        try c.encode(2, forKey: .version)
     }
 
     private static let key = "reminderSettings"

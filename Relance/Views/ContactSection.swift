@@ -25,6 +25,9 @@ struct ContactSection: View {
                 if let url = contact.mapsURL {
                     Button { openURL(url) } label: { Label("Itinéraire", systemImage: "map") }
                 }
+                if let url = contact.googleMapsURL {
+                    Button { openURL(url) } label: { Label("Ouvrir dans Google Maps", systemImage: "mappin.circle") }
+                }
                 if let url = contact.link {
                     if contact.isBookingLink {
                         Button { openURL(url) } label: { Label("Prendre rendez-vous", systemImage: "calendar.badge.plus") }
@@ -45,6 +48,8 @@ struct ContactSection: View {
         } footer: {
             if TaskContact(notes: notes) == nil {
                 Text("Avec une adresse, Relance peut te dire quand partir et l'ajouter à l'événement d'agenda.")
+            } else {
+                Text("Dans Google Maps : Enregistrer › À visiter, pour garder le lieu.")
             }
         }
     }

@@ -17,8 +17,9 @@ struct WatchAddView: View {
         let match = DateDetection.firstMatch(in: text)
         ScrollView {
             VStack(alignment: .leading, spacing: 10) {
-                // Sur la montre, toucher le champ propose la dictée en premier.
-                TextField("Que faut-il faire ?", text: $text)
+                // Une app SwiftUI ne peut pas ouvrir la dictée seule : on indique où est le micro.
+                // Plus rapide : Siri (« nouvelle Relance ») ou le bouton Action réglé sur le raccourci.
+                TextField("Que faut-il faire ?", text: $text, prompt: Text("Toucher, puis 🎤"))
 
                 if let match {
                     Label(DueText.long(due: dueInstant(match), hasTime: match.hasTime), systemImage: "calendar")

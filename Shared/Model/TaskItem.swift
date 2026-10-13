@@ -89,6 +89,7 @@ final class TaskItem {
             dueMinutes: dueMinutes,
             snoozedUntil: snoozedUntil,
             priority: priority,
-            reminders: reminderOverride)
+            reminders: reminderOverride,
+            hasPlace: TaskContact(notes: notes)?.address != nil)
     }
 }
