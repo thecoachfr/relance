@@ -18,7 +18,9 @@ nonisolated struct TaskContact: Equatable, Sendable {
     /// « 📍 Nom · adresse · téléphone · lien » (parties vides omises, « · » retiré des valeurs).
     var line: String {
         // Une simple adresse : écrite une fois (« 📍 67 rue X, 94140 Ville »), pas en nom puis en adresse.
-        let parts = [name, address == name ? nil : address, phone, link?.absoluteString]
+        // Idem quand le nom n'est que le début de l'adresse (« 67 rue X » puis « 67 rue X, 94140 Ville »).
+        let addressOnly = address.map { $0 == name || $0.lowercased().hasPrefix(name.lowercased()) } ?? false
+        let parts = [addressOnly ? address : name, addressOnly ? nil : address, phone, link?.absoluteString]
             .compactMap { $0?.replacingOccurrences(of: " · ", with: ", ").trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty }
         return Self.marker + " " + parts.joined(separator: " · ")

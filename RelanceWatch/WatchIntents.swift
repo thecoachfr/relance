@@ -28,6 +28,27 @@ struct WatchAddTaskIntent: AppIntent {
     }
 }
 
+/// « Ajoute au mémo dans Aiguillage » au poignet : la montre écrit la fiche directement chez Google.
+struct WatchAddMemoIntent: AppIntent {
+    static let title: LocalizedStringResource = "Ajouter au mémo"
+    static let description = IntentDescription("Ajoute une fiche au mémo de tri, ou complète celle qui porte le même sujet.")
+
+    @Parameter(title: "Sujet", requestValueDialog: "Quel est le sujet de la fiche ?")
+    var subject: String
+
+    @Parameter(title: "Détails", requestValueDialog: "Qu'est-ce que je dois retenir ?")
+    var details: String
+
+    @MainActor func perform() async throws -> some IntentResult & ProvidesDialog {
+        let store = WatchStore.shared
+        guard store.google.isAvailable else {
+            return .result(dialog: "Ouvre Aiguillage sur l'iPhone une fois pour connecter la montre à Google.")
+        }
+        let outcome = try? await store.remember(title: subject, details: details)
+        return .result(dialog: IntentDialog(stringLiteral: MemoMerge.confirmation(outcome, subject: subject)))
+    }
+}
+
 /// Mêmes phrases que sur l'iPhone. Apple impose le nom de l'app dans chaque phrase.
 struct RelanceWatchShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
@@ -43,5 +64,16 @@ struct RelanceWatchShortcuts: AppShortcutsProvider {
             ],
             shortTitle: "Ajouter une tâche",
             systemImageName: "plus.circle")
+        AppShortcut(
+            intent: WatchAddMemoIntent(),
+            phrases: [
+                "Ajoute au mémo dans \(.applicationName)",
+                "Ajoute au mémo d'\(.applicationName)",
+                "Note dans le mémo d'\(.applicationName)",
+                "Nouvelle fiche dans \(.applicationName)",
+                "\(.applicationName) mémo",
+            ],
+            shortTitle: "Ajouter au mémo",
+            systemImageName: "text.book.closed")
     }
 }

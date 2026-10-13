@@ -17,6 +17,17 @@ struct RelanceShortcuts: AppShortcutsProvider {
             shortTitle: "Ajouter une tâche",
             systemImageName: "plus.circle")
         AppShortcut(
+            intent: AddMemoIntent(),
+            phrases: [
+                "Ajoute au mémo dans \(.applicationName)",
+                "Ajoute au mémo d'\(.applicationName)",
+                "Note dans le mémo d'\(.applicationName)",
+                "Nouvelle fiche dans \(.applicationName)",
+                "\(.applicationName) mémo",
+            ],
+            shortTitle: "Ajouter au mémo",
+            systemImageName: "text.book.closed")
+        AppShortcut(
             intent: CompleteTaskByNameIntent(),
             phrases: [
                 "Marque \(\.$task) comme fait dans \(.applicationName)",

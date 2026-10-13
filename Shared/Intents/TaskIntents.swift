@@ -90,6 +90,26 @@ struct AddTaskIntent: AppIntent {
     }
 }
 
+/// « Dis Siri, ajoute au mémo dans Aiguillage » : une fiche pour la routine de tri,
+/// ou la fiche du même sujet complétée.
+struct AddMemoIntent: AppIntent {
+    static let title: LocalizedStringResource = "Ajouter au mémo"
+    static let description = IntentDescription("Ajoute une fiche au mémo de tri, ou complète celle qui porte le même sujet.")
+
+    @Parameter(title: "Sujet", requestValueDialog: "Quel est le sujet de la fiche ?")
+    var subject: String
+
+    @Parameter(title: "Détails", requestValueDialog: "Qu'est-ce que je dois retenir ?")
+    var details: String
+
+    @Dependency private var store: TaskStore
+
+    @MainActor func perform() async throws -> some IntentResult & ProvidesDialog {
+        let outcome = await store.memo.remember(title: subject, details: details)
+        return .result(dialog: IntentDialog(stringLiteral: MemoMerge.confirmation(outcome, subject: subject)))
+    }
+}
+
 /// « Dis Siri, qu'est-ce qui est en retard dans Relance ? »
 struct OverdueTasksIntent: AppIntent {
     static let title: LocalizedStringResource = "Tâches en retard"

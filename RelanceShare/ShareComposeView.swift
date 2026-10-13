@@ -4,6 +4,7 @@ import SwiftUI
 /// Elle reste courte : le message complet part dans les notes, le tri range la catégorie.
 struct ShareComposeView: View {
     let original: String
+    @Binding var mode: ShareMode
     let onDone: () -> Void
     let onCancel: () -> Void
 
@@ -19,6 +20,13 @@ struct ShareComposeView: View {
     var body: some View {
         NavigationStack {
             Form {
+                if MemoShareDraft.isNotesLink(original) {
+                    Section {
+                        Label("Notes n'a envoyé qu'un lien vers la note. Pour en récupérer le texte : Annuler, puis dans la feuille de partage de Notes, choisir « Envoyer une copie » au lieu de « Collaborer ».",
+                              systemImage: "info.circle")
+                            .font(.callout)
+                    }
+                }
                 Section {
                     TextField("Titre", text: $title, axis: .vertical)
                         .font(.headline)
@@ -60,6 +68,9 @@ struct ShareComposeView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Annuler", action: onCancel)
+                }
+                ToolbarItem(placement: .principal) {
+                    ShareModePicker(mode: $mode)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     if sending {

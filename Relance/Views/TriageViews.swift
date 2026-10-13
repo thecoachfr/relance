@@ -21,9 +21,11 @@ struct RetriageSection: View {
             }
             .disabled(state == .sending)
             NavigationLink {
-                MemoEditor(entry: nil, fromTask: item.title)
+                MemoEditor(entry: nil, fromTask: item.title,
+                           draft: MemoMerge.draft(title: item.title, notes: item.notes,
+                                                  category: item.category, tags: item.tags))
             } label: {
-                Label("Retenir pour le tri…", systemImage: "text.book.closed")
+                Label("Envoyer au mémo…", systemImage: "text.book.closed")
             }
         } footer: {
             Text(state.footer(single: true))

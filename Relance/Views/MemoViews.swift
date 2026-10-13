@@ -4,6 +4,7 @@ import SwiftUI
 struct MemoListView: View {
     @Environment(TaskStore.self) private var store
     @State private var adding = false
+    @State private var importing = false
 
     private var memo: MemoStore { store.memo }
 
@@ -53,11 +54,17 @@ struct MemoListView: View {
         #if os(iOS)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Button("Nouvelle fiche", systemImage: "plus") { adding = true }
+                Menu("Ajouter", systemImage: "plus") {
+                    Button("Nouvelle fiche", systemImage: "square.and.pencil") { adding = true }
+                    Button("Depuis Contacts…", systemImage: "person.2") { importing = true }
+                }
             }
         }
         #endif
         .navigationDestination(isPresented: $adding) { MemoEditor(entry: nil) }
+        #if os(iOS)
+        .sheet(isPresented: $importing) { MemoContactsImportView() }
+        #endif
         .task { await memo.load() }
         .refreshable { await memo.load() }
     }
@@ -70,6 +77,8 @@ struct MemoEditor: View {
     let entry: MemoEntry?
     /// Tâche d'où l'on vient (« Retenir pour le tri ») : rappelée en tête, pour s'en inspirer.
     var fromTask: String?
+    /// Fiche préremplie depuis une tâche (« Envoyer au mémo »).
+    var draft: (title: String, details: String)?
 
     @State private var title = ""
     @State private var details = ""
@@ -81,7 +90,7 @@ struct MemoEditor: View {
                 Section {
                     Label(fromTask, systemImage: "checklist").foregroundStyle(.secondary)
                 } footer: {
-                    Text("Ce que la routine devrait savoir pour bien ranger ce genre de tâche.")
+                    Text("Retouche ce que la routine devrait retenir. Si une fiche porte déjà ce sujet, elle est complétée.")
                 }
             }
             Section {
@@ -112,8 +121,9 @@ struct MemoEditor: View {
             }
         }
         .onAppear {
-            title = entry?.title ?? ""
-            details = entry?.details ?? ""
+            guard title.isEmpty, details.isEmpty else { return }
+            title = entry?.title ?? draft?.title ?? ""
+            details = entry?.details ?? draft?.details ?? ""
         }
     }
 
@@ -127,7 +137,8 @@ struct MemoEditor: View {
                 entry.details = details
                 await store.memo.update(entry)
             } else {
-                await store.memo.add(title: title, details: details)
+                // Un sujet déjà présent est complété plutôt que doublé.
+                await store.memo.remember(title: title, details: details)
             }
             saving = false
             if store.memo.lastError == nil { dismiss() }

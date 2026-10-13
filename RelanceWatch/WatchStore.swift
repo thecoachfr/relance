@@ -81,6 +81,11 @@ final class WatchStore: NSObject, WCSessionDelegate {
     }
 
     /// `due` : début du jour (date seule) ou instant précis (avec heure).
+    /// Fiche du mémo de tri, écrite directement chez Google (même règle que l'iPhone : un même sujet est complété).
+    func remember(title: String, details: String) async throws -> MemoMerge.Outcome {
+        try await api.remember(title: title, details: details)
+    }
+
     func add(title: String, due: Date?, hasTime: Bool, priority: TaskPriority = .normal) {
         Task { await insert(title: title, due: due, hasTime: hasTime, priority: priority) }
     }

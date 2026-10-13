@@ -46,7 +46,7 @@ targets:
       properties:
         CFBundleDisplayName: Aiguillage
         CFBundleShortVersionString: "0.3"
-        CFBundleVersion: "14"
+        CFBundleVersion: "16"
         UILaunchScreen: {}
         UISupportedInterfaceOrientations~iphone: [UIInterfaceOrientationPortrait]
         UISupportedInterfaceOrientations~ipad:
@@ -131,7 +131,7 @@ targets:
       properties:
         CFBundleDisplayName: Aiguillage
         CFBundleShortVersionString: "0.3"
-        CFBundleVersion: "14"
+        CFBundleVersion: "16"
         LSApplicationCategoryType: public.app-category.productivity
         NSCalendarsFullAccessUsageDescription: Aiguillage ajoute à ton agenda les tâches que tu choisis, et met l'événement à jour quand l'heure de la tâche change.
         GIDClientID: $(GOOGLE_CLIENT_ID)
@@ -153,6 +153,7 @@ targets:
       - RelanceShare
       - Shared/Share
       - Shared/Google
+      - Shared/Model/MemoMerge.swift
       - Shared/Model/DateDetection.swift
       - Shared/Model/TaskPriority.swift
       - Shared/Reminders/ReminderOverride.swift
@@ -167,7 +168,7 @@ targets:
       properties:
         CFBundleDisplayName: Aiguillage
         CFBundleShortVersionString: "0.3"
-        CFBundleVersion: "14"
+        CFBundleVersion: "16"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.share-services
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ShareViewController
@@ -191,7 +192,7 @@ targets:
       properties:
         CFBundleDisplayName: Aiguillage
         CFBundleShortVersionString: "0.3"
-        CFBundleVersion: "14"
+        CFBundleVersion: "16"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:
@@ -218,6 +219,8 @@ targets:
       - Shared/Model/TaskPriority.swift
       - Shared/Model/TaskCategory.swift
       - Shared/Model/TaskTag.swift
+      - Shared/Model/MemoMerge.swift
+      - Shared/Google/MemoRemote.swift
       - Shared/WatchApp
     dependencies:
       - target: RelanceWatchWidgets
@@ -230,7 +233,7 @@ targets:
       properties:
         CFBundleDisplayName: Aiguillage
         CFBundleShortVersionString: "0.3"
-        CFBundleVersion: "14"
+        CFBundleVersion: "16"
         WKApplication: true
         CFBundleURLTypes:
           - CFBundleURLName: fr.alexandrefau.relance.watch
@@ -267,7 +270,7 @@ targets:
       properties:
         CFBundleDisplayName: Aiguillage
         CFBundleShortVersionString: "0.3"
-        CFBundleVersion: "14"
+        CFBundleVersion: "16"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:
