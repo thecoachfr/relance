@@ -22,10 +22,11 @@ final class WatchSync: NSObject, WCSessionDelegate {
 
         let payload = tasks
             .filter { !$0.isCompleted && !$0.isTrashed }
-            .map { WatchTask(id: $0.googleID ?? $0.localID.uuidString, title: $0.title, due: $0.dueInstant(),
+            .map { WatchTask(id: store.isHAActive ? $0.localID.uuidString : ($0.googleID ?? $0.localID.uuidString), title: $0.title, due: $0.dueInstant(),
                              hasTime: $0.dueMinutes != nil, snoozedUntil: $0.snoozedUntil, priority: $0.priority,
                              category: $0.category, tags: $0.tags.isEmpty ? nil : $0.tags) }
-        var context: [String: Any] = [WatchLink.tasksKey: WatchLink.encode(payload)]
+        var context: [String: Any] = [WatchLink.tasksKey: WatchLink.encode(payload),
+                                      WatchLink.tasksInHAKey: store.isHAActive]
         // Passe par le lien chiffré iPhone ↔ montre ; une chaîne vide dit à la montre d'oublier la connexion.
         let credentials = store.auth.watchCredentials
         context[WatchLink.refreshTokenKey] = credentials?.refreshToken ?? ""

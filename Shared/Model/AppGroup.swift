@@ -8,9 +8,11 @@ nonisolated enum AppGroup {
     static var defaults: UserDefaults { UserDefaults(suiteName: id) ?? .standard }
 
     static func modelContainer(inMemory: Bool = false) -> ModelContainer {
+        // Sans `cloudKitDatabase: .none`, SwiftData active seul la synchro CloudKit dès que l'app a la
+        // capacité iCloud (fallback de DonneesHA), et refuse alors le modèle : plantage au lancement.
         let configuration = inMemory
-            ? ModelConfiguration(isStoredInMemoryOnly: true)
-            : ModelConfiguration(groupContainer: .identifier(id))
+            ? ModelConfiguration(isStoredInMemoryOnly: true, cloudKitDatabase: .none)
+            : ModelConfiguration(groupContainer: .identifier(id), cloudKitDatabase: .none)
         return try! ModelContainer(for: TaskItem.self, configurations: configuration)
     }
 }

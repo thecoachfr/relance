@@ -134,3 +134,6 @@ Détail et suite dans [SUIVI.md](SUIVI.md).
 7. **L'heure n'est pas propagée à Google** : l'API Google Tasks ne la gère pas, et ce serait doubler les rappels. Pour la voir dans Google Agenda, bouton « Ajouter au calendrier ».
 8. **Mémo de contexte** de la routine dans une liste Google Tasks à part (« Relance · mémo »), lue en lecture seule par la routine.
 9. **App Mac native** (SwiftUI) plutôt que l'app iPad sur Mac : trois colonnes, barre des menus, raccourcis.
+
+### Décision du 15/10/2026
+10. **Tâches dans Home Assistant, découpage hybride** : les tâches passent dans l'intégration `donnees_apps` (espace `aiguillage`) par le paquet `DonneesHA` (fallback iCloud, dernier écrit gagne), pas dans une liste Local To-do (sans identifiant renvoyé à la création, ni idempotence, ni date de modification). Google Tasks reste la boîte d'entrée des dictées Google Home, vidée par la vigie ; le mémo reste dans Google pour l'instant.

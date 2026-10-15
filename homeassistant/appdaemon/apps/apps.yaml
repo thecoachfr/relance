@@ -13,3 +13,9 @@ relance_vigie:
   # Routine Claude « Relance · tri » lancée à chaque nouvelle tâche. Le jeton (déclencheur API de la routine,
   # créé sur claude.ai) se met dans /config/relance_routine_token, jamais dans ce fichier.
   routine_id: trig_01GFD6vBExCUvTYDbx9KePm7
+  # Tâches dans Home Assistant (intégration donnees_apps, voir le dépôt ha-donnees-apps) :
+  # push à chaque modification de l'espace. N'activer qu'une fois l'app passée sur Home Assistant.
+  # ha_espace: aiguillage
+  # La liste Google devient la boîte d'entrée des dictées Google Home, vidée dans HA (état dans
+  # /config/relance_inbox.json). Ne démarre qu'après la migration de l'app.
+  # inbox: true

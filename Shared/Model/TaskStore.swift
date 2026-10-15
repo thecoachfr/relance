@@ -1,9 +1,11 @@
+import DonneesHA
 import Foundation
 import SwiftData
 import WidgetKit
 
 /// Point d'entrée unique pour lire et modifier les tâches.
-/// Chaque modification est enregistrée localement, puis envoyée à Google et suivie d'un recalcul des relances.
+/// Chaque modification est enregistrée localement, puis envoyée (Home Assistant, ou Google Tasks tant que HA
+/// n'est pas activé sur l'appareil) et suivie d'un recalcul des relances.
 @Observable
 final class TaskStore {
     let container: ModelContainer
@@ -11,8 +13,8 @@ final class TaskStore {
     let scheduler = ReminderScheduler()
     /// Mémo de contexte de la routine de tri (liste Google Tasks à part).
     @ObservationIgnored lazy var memo = MemoStore(auth: auth)
-    private(set) var isSyncing = false
-    private(set) var lastError: String?
+    var isSyncing = false
+    var lastError: String?
     /// Tâche à ouvrir (touche sur une notification).
     var openedTaskID: UUID?
     /// Ouvre la saisie rapide (commande du Centre de contrôle).
@@ -23,13 +25,17 @@ final class TaskStore {
     var travelMinutes: ((TaskItem) async -> Int?)?
     /// Données d'exemple, sans réseau (captures d'écran, revue de design).
     var isDemo = false
+    /// Synchroniseur Home Assistant (espace `aiguillage`), créé à la première synchro une fois HA activé.
+    var synchro: Synchroniseur?
+    /// Forcé par les tests, sans toucher au réglage partagé de l'appareil (que l'app hôte lit aussi).
+    var haActiveOverride: Bool?
 
-    private var context: ModelContext { container.mainContext }
-    private var api: TasksAPI { TasksAPI(token: { [auth] in try await auth.accessToken() }) }
+    var context: ModelContext { container.mainContext }
+    var api: TasksAPI { TasksAPI(token: { [auth] in try await auth.accessToken() }) }
 
     /// v2 : la base a déménagé dans l'App Group, il faut une synchro complète.
     private static let lastSyncKey = "lastSync.v2"
-    private var lastSync: Date? {
+    var lastSync: Date? {
         get { AppGroup.defaults.object(forKey: Self.lastSyncKey) as? Date }
         set { AppGroup.defaults.set(newValue, forKey: Self.lastSyncKey) }
     }
@@ -102,12 +108,12 @@ final class TaskStore {
     /// Suivantes créées pendant cette session (pour « Annuler »).
     private var spawned: [UUID: UUID] = [:]
     /// Suivante créée pendant la lecture de Google : à envoyer sans attendre la synchro suivante.
-    private var spawnedDuringPull = false
+    var spawnedDuringPull = false
 
     /// Crée la tâche suivante d'une récurrente (ligne 🔄) et marque celle-ci « ↪ Suivante créée »,
     /// pour qu'aucun autre appareil ne la recrée.
     @discardableResult
-    private func spawnNext(of item: TaskItem) -> TaskItem? {
+    func spawnNext(of item: TaskItem) -> TaskItem? {
         guard let rule = Recurrence(notes: item.notes), let due = item.dueDay,
               !item.notes.contains(Recurrence.spawnedMarker) else { return nil }
         // Sans l'agenda (événement propre à la tâche faite) ni la suggestion du tri.
@@ -225,7 +231,7 @@ final class TaskStore {
 
     private var syncTask: Task<Void, Never>?
     /// Arrivées de Google pendant la dernière synchro avec une date mais sans heure.
-    private var needTimeNow: [UUID] = []
+    var needTimeNow: [UUID] = []
 
     /// Une seule synchro à la fois ; un appel pendant une synchro attend la fin puis relance la sienne.
     func sync() async {
@@ -241,6 +247,10 @@ final class TaskStore {
     }
 
     private func performSync() async {
+        if isHAActive, !isDemo {
+            await performHASync()
+            return await afterSync()
+        }
         guard auth.isSignedIn, !isDemo else {
             if isDemo { await reschedule() }
             return
@@ -259,6 +269,11 @@ final class TaskStore {
             lastError = error.localizedDescription
         }
         try? context.save()
+        await afterSync()
+    }
+
+    /// Relances recalculées, puis question « À quelle heure ? » pour les tâches arrivées datées sans heure.
+    private func afterSync() async {
         await reschedule()
         if !needTimeNow.isEmpty {
             // Selon le profil de la priorité (une tâche Basse ne demande pas d'heure, d'origine).
@@ -269,14 +284,18 @@ final class TaskStore {
         }
     }
 
-    private func push() async throws {
-        // Partagées depuis une autre app sans réseau (extension) : elles deviennent des tâches à envoyer.
+    /// Partagées depuis une autre app sans réseau (extension) : elles deviennent des tâches à envoyer.
+    func insertPendingShares() {
         for shared in PendingShares.takeAll() {
             let item = TaskItem(title: shared.title, notes: shared.notes, dueDay: shared.day,
                                 dueMinutes: shared.day == nil ? nil : shared.minutes)
             item.priority = shared.priority
             context.insert(item)
         }
+    }
+
+    private func push() async throws {
+        insertPendingShares()
         let dirty = try context.fetch(FetchDescriptor<TaskItem>(predicate: #Predicate { $0.isDirty }))
         for item in dirty {
             if item.isTrashed {
@@ -375,6 +394,8 @@ final class TaskStore {
 
     func signOut() {
         auth.signOut()
+        // Les tâches sont dans HA : la connexion Google ne sert plus qu'au mémo.
+        guard !isHAActive else { return }
         try? context.delete(model: TaskItem.self)
         try? context.save()
         lastSync = nil
