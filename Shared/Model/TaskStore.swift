@@ -29,6 +29,8 @@ final class TaskStore {
     var synchro: Synchroniseur?
     /// Forcé par les tests, sans toucher au réglage partagé de l'appareil (que l'app hôte lit aussi).
     var haActiveOverride: Bool?
+    /// Crée le synchroniseur (remplacé dans les tests par un faux Home Assistant).
+    var makeSynchroniser: () async -> Synchroniseur? = { await HAConfig.makeSynchroniser(withFallback: true) }
 
     var context: ModelContext { container.mainContext }
     var api: TasksAPI { TasksAPI(token: { [auth] in try await auth.accessToken() }) }

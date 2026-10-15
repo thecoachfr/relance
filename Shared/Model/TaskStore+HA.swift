@@ -13,6 +13,10 @@ extension TaskStore {
     /// Les tâches de cet appareil sont dans HA (réglage de l'appareil, ou forçage des tests).
     var isHAActive: Bool { haActiveOverride ?? HAConfig.isActive }
 
+    private func setHAActive(_ active: Bool) {
+        if haActiveOverride != nil { haActiveOverride = active } else { HAConfig.isActive = active }
+    }
+
     /// État lisible de la synchro HA (réglages, barre d'état).
     var haStatus: String? {
         guard isHAActive else { return nil }
@@ -28,7 +32,7 @@ extension TaskStore {
     /// Le synchroniseur, créé une fois ; `nil` si l'URL ou le jeton manque.
     func haSynchroniser() async -> Synchroniseur? {
         if let synchro { return synchro }
-        synchro = await HAConfig.makeSynchroniser(withFallback: true)
+        synchro = await makeSynchroniser()
         return synchro
     }
 
@@ -130,22 +134,46 @@ extension TaskStore {
 
     // MARK: - Passage de Google Tasks à Home Assistant
 
-    /// Bascule cet appareil sur HA : une dernière synchro Google (pour ne rien perdre), puis toutes
-    /// les tâches locales sont envoyées à HA (identifiant Google gardé, pour que la vigie ne les
-    /// réimporte pas depuis la boîte d'entrée Google). Renvoie un message d'erreur, ou `nil`.
+    /// Bascule cet appareil sur HA : une dernière synchro Google (pour ne rien perdre), puis une
+    /// lecture de HA. Une tâche Google déjà migrée par un autre appareil (même `google_id`) reprend sa
+    /// clé et la version de HA ; les autres partent avec une clé dérivée de leur identifiant Google
+    /// (la même sur chaque appareil et dans la vigie) : pas de doublon, même si deux appareils migrent
+    /// en même temps. Renvoie un message d'erreur, ou `nil`.
     func activateHA() async -> String? {
-        guard HAConfig.isConfigured else { return "Renseigne l'URL et le jeton de Home Assistant." }
         guard !isHAActive else { return nil }
         if auth.isSignedIn {
             await sync()
             if let lastError { return "Synchro Google impossible, rien n'a changé : \(lastError)" }
         }
-        let items = (try? context.fetch(FetchDescriptor<TaskItem>(predicate: #Predicate { !$0.isTrashed }))) ?? []
-        for item in items { item.isDirty = true }
-        try? context.save()
         resetHA()
-        HAConfig.isActive = true
-        SyncLog.add("Tâches passées dans Home Assistant (\(items.count))")
+        guard let synchro = await haSynchroniser() else { return "Home Assistant : URL ou jeton manquant." }
+        await synchro.synchroniser()
+        guard synchro.etat == .aJour else {
+            resetHA()
+            return "Home Assistant injoignable, rien n'a changé (\(haStatus ?? "?"))."
+        }
+        var keyForGoogleID: [String: UUID] = [:]
+        for record in (try? synchro.base.tous()) ?? [] {
+            guard let id = UUID(uuidString: record.cle), let googleID = (try? TacheHA(valeur: record.valeur))?.googleID,
+                  keyForGoogleID[googleID] == nil else { continue }
+            keyForGoogleID[googleID] = id
+        }
+        let items = (try? context.fetch(FetchDescriptor<TaskItem>(predicate: #Predicate { !$0.isTrashed }))) ?? []
+        var adopted = 0
+        for item in items {
+            if let googleID = item.googleID, let id = keyForGoogleID[googleID] {
+                // Déjà dans HA : la copie de HA sera recopiée ici à la synchro.
+                item.localID = id
+                item.isDirty = false
+                adopted += 1
+            } else {
+                if let googleID = item.googleID { item.localID = TacheHA.key(googleID: googleID) }
+                item.isDirty = true
+            }
+        }
+        try? context.save()
+        setHAActive(true)
+        SyncLog.add("Tâches passées dans Home Assistant (\(items.count - adopted) envoyées, \(adopted) déjà présentes)")
         await sync()
         return nil
     }
@@ -167,7 +195,7 @@ extension TaskStore {
             item.isDirty = true
         }
         try? context.save()
-        HAConfig.isActive = false
+        setHAActive(false)
         resetHA()
         lastSync = nil
         SyncLog.add("Retour à Google Tasks (\(items.count) tâches)")

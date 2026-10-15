@@ -26,6 +26,11 @@ struct TacheHATests {
         #expect(copy.remindersRaw == "Prévenir 1 jour avant" && copy.googleID == "abc" && !copy.isDirty)
     }
 
+    /// Même clé que la vigie (`uuid.uuid5(INBOX_NAMESPACE, "g1")` en Python).
+    @Test func keyFromGoogleIDMatchesTheVigie() {
+        #expect(TacheHA.key(googleID: "g1").uuidString.lowercased() == "071cad17-b943-5462-a98a-8d5fa1b7ca11")
+    }
+
     /// Champs absents non écrits ; une tâche écrite par la vigie (sans `v` ni `fait`) se relit.
     @Test func compactJSONAndLenientDecoding() throws {
         let json = String(decoding: try JSONEncoder().encode(TacheHA(titre: "Pain")), as: UTF8.self)
@@ -109,6 +114,38 @@ struct TaskStoreHATests {
         #expect(pad.task(item.localID) == nil)
     }
 
+    /// L'iPhone et l'iPad migrent chacun leur copie des mêmes tâches Google (identifiants locaux
+    /// différents) : une seule clé par tâche dans HA (constaté le 15/10 : 24 doublons avant correction).
+    @Test(.timeLimit(.minutes(1)))
+    func twoDevicesMigratingTheSameGoogleTasksMakeNoDuplicate() async throws {
+        let server = FakeHA()
+        let folder = temporaryFolder()
+        func device(_ name: String) throws -> TaskStore {
+            let store = TaskStore(auth: SignedOut(), inMemory: true)
+            store.haActiveOverride = false
+            let synchro = try makeSynchro(device: name, server: server, fallback: folder)
+            store.makeSynchroniser = { synchro }
+            for (googleID, title) in [("g1", "Garage"), ("g2", "Impôts")] {
+                let item = store.add(title: title, day: nil, minutes: nil)
+                item.googleID = googleID
+                item.isDirty = false
+            }
+            return store
+        }
+        let phone = try device("iphone-test")
+        let pad = try device("ipad-test")
+
+        #expect(await phone.activateHA() == nil)
+        #expect(await pad.activateHA() == nil)
+        await phone.sync()
+
+        let keys = await server.liveKeys()
+        #expect(keys.count == 2)
+        #expect(Set(keys) == Set(["g1", "g2"].map { TacheHA.key(googleID: $0).uuidString.lowercased() }))
+        #expect(phone.activeTasks().count == 2 && pad.activeTasks().count == 2)
+        #expect(Set(phone.activeTasks().map(\.localID)) == Set(pad.activeTasks().map(\.localID)))
+    }
+
     // MARK: - Outils
 
     private func haStore() -> TaskStore {
@@ -130,6 +167,14 @@ struct TaskStoreHATests {
     }
 }
 
+/// Sans compte Google (la migration saute alors la dernière synchro Google).
+final class SignedOut: AccountProvider {
+    var isSignedIn: Bool { false }
+    func accessToken() async throws -> String { throw TasksAPIError.notSignedIn }
+    func signOut() {}
+    var watchCredentials: (refreshToken: String, clientID: String)? { nil }
+}
+
 /// Horloge des appareils, réglable (« la plus récente gagne » dépend de `modifie_le`).
 nonisolated final class TestClock: @unchecked Sendable {
     private let lock = NSLock()
@@ -148,6 +193,7 @@ actor FakeHA: ServeurDonnees {
 
     func setOnline(_ value: Bool) { online = value }
     func record(_ key: String) -> Enregistrement? { records[key] }
+    func liveKeys() -> [String] { records.values.filter { !$0.supprime }.map(\.cle) }
 
     func changements(espace: String, depuisSeq: Int) async throws -> ReponseChangements {
         guard online else { throw ErreurHA.injoignable("coupé") }
