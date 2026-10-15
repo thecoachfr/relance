@@ -119,6 +119,18 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationC
                 NSWorkspace.shared.open(url)
             }
             return
+        case ReminderScheduler.Action.open:
+            if let link = ToSee.link(in: item.notes) {
+                NSWorkspace.shared.open(link)
+            } else {
+                store.openedTaskID = id
+                Self.showMainWindow()
+            }
+            return
+        case ReminderScheduler.Action.later:
+            store.scheduler.skipSuggestion(idString)
+            await store.reschedule()
+            return
         case UNNotificationDefaultActionIdentifier:
             store.openedTaskID = id
             Self.showMainWindow()

@@ -110,6 +110,14 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
                 await UIApplication.shared.open(url)
             }
             return
+        case ReminderScheduler.Action.open:
+            // Le lien de l'envie (vidéo, album, article), sinon sa fiche.
+            if let link = ToSee.link(in: item.notes) { await UIApplication.shared.open(link) } else { store.openedTaskID = id }
+            return
+        case ReminderScheduler.Action.later:
+            store.scheduler.skipSuggestion(idString)
+            await store.reschedule()
+            return
         case UNNotificationDefaultActionIdentifier:
             store.openedTaskID = id
         default:

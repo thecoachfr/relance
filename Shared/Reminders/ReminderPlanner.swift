@@ -18,6 +18,8 @@ nonisolated struct PlannableTask: Sendable, Equatable {
     var hasPlace = false
     /// « À voir » (sans échéance) : relances seulement autour de sa période.
     var toSee: ToSee?
+    /// Site du premier lien des notes (« youtube.com ») : montré dans une suggestion d'envie.
+    var linkHost: String?
 }
 
 nonisolated struct ReminderSettings: Sendable, Equatable {
@@ -30,6 +32,8 @@ nonisolated struct ReminderSettings: Sendable, Equatable {
     var eveningDigest = true
     var eveningDigestTime = 21 * 60
     var toSee = ToSeeSettings()
+    /// Suggestions d'envies (à lire, à écouter, à regarder) à heure fixe.
+    var suggestions = EnvieSuggestions()
     /// Week-end : seules l'heure prévue, les reports choisis et les tâches urgentes relancent.
     var calmWeekends = false
     var urgent = ReminderProfile.defaults(for: .urgent)
@@ -75,6 +79,8 @@ nonisolated enum ReminderKind: String, Sendable, Equatable {
     case departure, advance, due, followUp, evening, askTime, overdue, snoozed, digest
     /// « À voir » : ouverture, quelques semaines avant la fin, dernier week-end.
     case toSeeOpening, toSeeEnding, toSeeLastWeekend
+    /// Une envie proposée au bon moment (« Un moment pour lire ce soir ? »).
+    case suggestion
 }
 
 /// Relances des « À voir » : peu nombreuses, autour de la période (Réglages › Relances › À voir).
@@ -118,6 +124,8 @@ nonisolated struct PlannedReminder: Sendable, Equatable {
 nonisolated struct ReminderPlanner: Sendable {
     var calendar: Calendar
     var settings = ReminderSettings()
+    /// Suggestions déjà faites sur cet appareil (rotation, « Pas maintenant »).
+    var history = EnvieHistory()
 
     func plan(tasks: [PlannableTask], inboxCount: Int, now: Date) -> [PlannedReminder] {
         let horizon = calendar.date(byAdding: .day, value: settings.horizonDays, to: now)!
@@ -153,6 +161,7 @@ nonisolated struct ReminderPlanner: Sendable {
         }
 
         reminders += digests(tasks: tasks, inboxCount: inboxCount, now: now, horizon: horizon)
+        reminders += suggestions(tasks: tasks, history: history, now: now, horizon: horizon)
 
         reminders.sort { $0.fireDate < $1.fireDate }
         // iOS garde au plus 64 notifications : l'heure prévue, les rappels « avant », les reports choisis
@@ -363,7 +372,7 @@ nonisolated struct ReminderPlanner: Sendable {
         case .overdue, .snoozed:
             if isOverdue(task, at: date) { return lateText(task, at: date) + "." }
             return "Reporté · prévu\(time)."
-        case .digest, .toSeeOpening, .toSeeEnding, .toSeeLastWeekend: return ""
+        case .digest, .toSeeOpening, .toSeeEnding, .toSeeLastWeekend, .suggestion: return ""
         }
     }
 

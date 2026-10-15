@@ -101,6 +101,7 @@ final class TaskItem {
             priority: priority,
             reminders: reminderOverride,
             hasPlace: TaskContact(notes: notes)?.address != nil,
-            toSee: toSee)
+            toSee: toSee,
+            linkHost: toSee == nil ? nil : ToSee.link(in: notes)?.host()?.replacingOccurrences(of: "www.", with: ""))
     }
 }

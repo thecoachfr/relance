@@ -112,6 +112,12 @@ struct ReminderSettingsView: View {
                 Text("Pour les envies avec une période (expo, festival, film en salle). Sans période, aucune relance.")
             }
 
+            ForEach(EnvieSuggestions.kinds) { kind in
+                SuggestionSection(kind: kind, slot: Binding(
+                    get: { settings.suggestions[kind]! }, set: { settings.suggestions[kind] = $0 }),
+                    isFirst: kind == EnvieSuggestions.kinds.first, isLast: kind == EnvieSuggestions.kinds.last)
+            }
+
             Section {
                 Toggle("Week-end calme", isOn: $settings.calmWeekends)
             } footer: {
@@ -229,6 +235,63 @@ private struct SlotToggle: View {
 }
 
 /// Heure en minutes depuis minuit, réglée avec la roue d'iOS.
+/// Suggestions d'un type d'envie : interrupteur, heure, jours.
+private struct SuggestionSection: View {
+    let kind: ToSee.Kind
+    @Binding var slot: EnvieSuggestions.Slot
+    var isFirst = false
+    var isLast = false
+
+    var body: some View {
+        Section {
+            Toggle(isOn: $slot.enabled) {
+                Label(kind.title, systemImage: kind.symbol)
+            }
+            if slot.enabled {
+                TimeRow(title: "Heure", minutes: $slot.minutes)
+                WeekdayPicker(selection: $slot.weekdays)
+            }
+        } header: {
+            if isFirst { Text("Suggestions d'envies") }
+        } footer: {
+            if isLast {
+                Text("Une envie de ce type, proposée sans son à cette heure les jours choisis : celle proposée il y a le plus longtemps. « Pas maintenant » l'écarte une semaine. Rien pendant la plage silencieuse, ni quand la liste est vide.")
+            }
+        }
+    }
+}
+
+/// Jours de la semaine, du lundi au dimanche (valeurs de `Calendar` : 1 = dimanche).
+private struct WeekdayPicker: View {
+    @Binding var selection: Set<Int>
+    private static let days: [(Int, String, String)] = [
+        (2, "L", "lundi"), (3, "M", "mardi"), (4, "M", "mercredi"), (5, "J", "jeudi"),
+        (6, "V", "vendredi"), (7, "S", "samedi"), (1, "D", "dimanche"),
+    ]
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(Self.days, id: \.0) { day, letter, name in
+                let on = selection.contains(day)
+                Button {
+                    if on { selection.remove(day) } else { selection.insert(day) }
+                } label: {
+                    Text(letter)
+                        .font(.subheadline.weight(.semibold))
+                        .frame(width: 34, height: 34)
+                        .background(Circle().fill(on ? Color.accentColor : Color.secondary.opacity(0.15)))
+                        .foregroundStyle(on ? Color.white : Color.primary)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(name)
+                .accessibilityAddTraits(on ? .isSelected : [])
+            }
+        }
+    }
+}
+
 private struct TimeRow: View {
     let title: String
     @Binding var minutes: Int

@@ -19,6 +19,8 @@ final class ReminderScheduler {
         static let early = "EARLY"
         /// Près du lieu d'une tâche (« Me le rappeler en passant à côté »).
         static let nearby = "NEARBY"
+        /// Envie proposée : une catégorie par type, pour « Lu », « Vu », « Écouté ».
+        static func suggestion(_ kind: ToSee.Kind) -> String { "SUGGEST_" + kind.rawValue }
     }
 
     enum Action {
@@ -28,6 +30,10 @@ final class ReminderScheduler {
         static let tomorrow = "TOMORROW"
         static let timePrefix = "TIME_"
         static let route = "ROUTE"
+        /// Envie : ouvrir son lien (ou la fiche s'il n'y en a pas).
+        static let open = "OPEN"
+        /// Envie : ne plus la proposer pendant une semaine.
+        static let later = "LATER"
     }
 
     static let askTimeChoices = [9 * 60, 12 * 60, 15 * 60, 18 * 60]
@@ -49,7 +55,19 @@ final class ReminderScheduler {
                                  title: ReminderPlanner.formatTime(minutes),
                                  icon: UNNotificationActionIcon(systemImageName: "clock"))
         }
-        center.setNotificationCategories([
+        let open = UNNotificationAction(identifier: Action.open, title: "Ouvrir", options: .foreground,
+                                        icon: UNNotificationActionIcon(systemImageName: "arrow.up.right.square"))
+        let later = UNNotificationAction(identifier: Action.later, title: "Pas maintenant",
+                                         icon: UNNotificationActionIcon(systemImageName: "clock.arrow.circlepath"))
+        let suggestions = EnvieSuggestions.kinds.map { kind in
+            UNNotificationCategory(identifier: Category.suggestion(kind), actions: [
+                open,
+                UNNotificationAction(identifier: Action.done, title: kind.doneTitle,
+                                     icon: UNNotificationActionIcon(systemImageName: "checkmark.circle")),
+                later,
+            ], intentIdentifiers: [])
+        }
+        center.setNotificationCategories(Set(suggestions).union([
             UNNotificationCategory(identifier: Category.task, actions: [done, plusOne, tonight, tomorrow], intentIdentifiers: []),
             UNNotificationCategory(identifier: Category.askTime, actions: times, intentIdentifiers: []),
             UNNotificationCategory(identifier: Category.digest, actions: [], intentIdentifiers: []),
@@ -60,7 +78,14 @@ final class ReminderScheduler {
                                      icon: UNNotificationActionIcon(systemImageName: "map")),
                 done,
             ], intentIdentifiers: []),
-        ])
+        ]))
+    }
+
+    /// « Pas maintenant » sur une suggestion : l'envie n'est plus proposée pendant une semaine.
+    func skipSuggestion(_ taskID: String, now: Date = .now) {
+        var history = EnvieHistory.load(from: AppGroup.defaults)
+        history.skip(taskID, now: now)
+        history.save(to: AppGroup.defaults)
     }
 
     /// Demandée une fois l'utilité expliquée (écran d'accueil), jamais au lancement à froid.
@@ -73,9 +98,16 @@ final class ReminderScheduler {
     }
 
     func apply(tasks: [PlannableTask], inboxCount: Int, finishedTaskIDs: Set<String>, overdueNow: Int) async {
+        let now = Date.now
+        var history = EnvieHistory.load(from: AppGroup.defaults)
+        history.recordShown(now: now)
+        history.keepOnly(Set(tasks.filter { $0.toSee != nil }.map(\.id)), now: now)
         let plan = Self.isEnabledOnThisDevice
-            ? ReminderPlanner(calendar: .current, settings: settings).plan(tasks: tasks, inboxCount: inboxCount, now: .now)
+            ? ReminderPlanner(calendar: .current, settings: settings, history: history).plan(tasks: tasks, inboxCount: inboxCount, now: now)
             : []
+        history.planned = Dictionary(plan.filter { $0.kind == .suggestion }.compactMap { r in r.taskID.map { ($0, r.fireDate) } },
+                                     uniquingKeysWith: min)
+        history.save(to: AppGroup.defaults)
 
         center.removeAllPendingNotificationRequests()
         for reminder in plan {
@@ -156,6 +188,11 @@ final class ReminderScheduler {
         content.sound = .default
         content.badge = NSNumber(value: reminder.badge)
         content.interruptionLevel = reminder.timeSensitive ? .timeSensitive : .active
+        // Une envie proposée n'insiste pas : sans son, dans le centre de notifications.
+        if reminder.kind == .suggestion {
+            content.sound = nil
+            content.interruptionLevel = .passive
+        }
         content.threadIdentifier = reminder.taskID ?? "digest"
         content.categoryIdentifier = switch reminder.kind {
         case .digest: Category.digest
@@ -164,6 +201,8 @@ final class ReminderScheduler {
         // Avant l'heure : Itinéraire s'il y a une adresse, sinon Fait seulement.
         case .advance, .toSeeOpening, .toSeeEnding, .toSeeLastWeekend:
             reminder.hasPlace ? Category.departure : Category.early
+        case .suggestion:
+            Category.suggestion(ToSee.Kind.allCases.first { $0.title == reminder.subtitle } ?? .read)
         default: Category.task
         }
         if let taskID = reminder.taskID { content.userInfo = ["taskID": taskID] }

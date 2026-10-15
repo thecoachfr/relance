@@ -96,7 +96,7 @@ nonisolated struct DepartureSettings: Codable, Equatable, Sendable {
 extension ReminderSettings: Codable {
     private enum Keys: String, CodingKey {
         case morning, evening, midday, quietStart, quietEnd, calmWeekends, urgent, normal, low, departure
-        case eveningDigest, eveningDigestTime, version, toSee
+        case eveningDigest, eveningDigestTime, version, toSee, suggestions
     }
 
     /// Chaque champ est facultatif : un réglage ajouté plus tard prend sa valeur d'origine.
@@ -116,6 +116,7 @@ extension ReminderSettings: Codable {
         eveningDigest = try c.decodeIfPresent(Bool.self, forKey: .eveningDigest) ?? eveningDigest
         eveningDigestTime = try c.decodeIfPresent(Int.self, forKey: .eveningDigestTime) ?? eveningDigestTime
         toSee = (try? c.decodeIfPresent(ToSeeSettings.self, forKey: .toSee)) ?? toSee
+        suggestions = (try? c.decodeIfPresent(EnvieSuggestions.self, forKey: .suggestions)) ?? suggestions
         // v2 (13/10) : les urgentes n'occupent plus l'écran verrouillé toute la journée, mais 2 h avant.
         // On ne change que l'ancienne valeur d'origine ; un choix fait depuis reste tel quel.
         if (try c.decodeIfPresent(Int.self, forKey: .version) ?? 1) < 2, urgent.liveActivity == .always {
@@ -139,6 +140,7 @@ extension ReminderSettings: Codable {
         try c.encode(eveningDigestTime, forKey: .eveningDigestTime)
         try c.encode(2, forKey: .version)
         try c.encode(toSee, forKey: .toSee)
+        try c.encode(suggestions, forKey: .suggestions)
     }
 
     private static let key = "reminderSettings"

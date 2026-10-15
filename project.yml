@@ -234,6 +234,7 @@ targets:
       - Shared/Model/DueText.swift
       - Shared/Model/DateDetection.swift
       - Shared/Reminders/ReminderPlanner.swift
+      - Shared/Reminders/EnvieSuggestions.swift
       - Shared/Reminders/ReminderProfile.swift
       - Shared/Model/ToSee.swift
       - Shared/Reminders/ReminderOverride.swift
@@ -283,6 +284,7 @@ targets:
       - Shared/Model/DueText.swift
       - Shared/Model/TaskPriority.swift
       - Shared/Reminders/ReminderPlanner.swift
+      - Shared/Reminders/EnvieSuggestions.swift
       - Shared/Reminders/ReminderProfile.swift
       - Shared/Model/ToSee.swift
       - Shared/Reminders/ReminderOverride.swift
