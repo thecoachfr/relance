@@ -123,6 +123,7 @@ class RelanceVigie(Hass):
         self._inbox = bool(self.args.get("inbox")) and bool(self._espace)
         self._inbox_path = Path(self.args.get("inbox_file", "/config/relance_inbox.json"))
         self._push_handle = None
+        self._changes = 0
         if self._espace:
             self.listen_event(self.on_data_changed, "donnees_apps_modifie", espace=self._espace)
         self._refreshes = 0
@@ -170,12 +171,15 @@ class RelanceVigie(Hass):
 
     def on_data_changed(self, event_name, data, **kwargs):
         """Écriture dans l'espace (app, extension, autre appareil, boîte d'entrée) : réveil des appareils."""
+        self._changes += 1
         if self._push_handle:
             self.cancel_timer(self._push_handle)
         self._push_handle = self.run_in(self._push_after_change, PUSH_DEBOUNCE)
 
     def _push_after_change(self, **kwargs):
         self._push_handle = None
+        self.log(f"{self._espace} : {self._changes} modification(s) dans Home Assistant, réveil des appareils")
+        self._changes = 0
         self.push_all()
 
     def import_inbox(self, **kwargs):
