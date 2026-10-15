@@ -1,5 +1,5 @@
 {
-  "originHash" : "68aa00e3cba36db2e0a76f54dbc84d1f079d8aa9a19bfa9fce02d6286bd620b7",
+  "originHash" : "41733c34d7eef2ddd0c1dc397a8a9dac5e8fa5fbe9ccbd61e84439ff290316cd",
   "pins" : [
     {
       "identity" : "app-check",
@@ -53,6 +53,15 @@
       "state" : {
         "revision" : "5d7d66f647400952b1758b230e019b07c0b4b22a",
         "version" : "4.1.1"
+      }
+    },
+    {
+      "identity" : "ha-donnees-apps",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/thecoachfr/ha-donnees-apps",
+      "state" : {
+        "revision" : "dca4d57c1e6e366eac5a1a27f4e95e91f0a940be",
+        "version" : "0.1.0"
       }
     },
     {

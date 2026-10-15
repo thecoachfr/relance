@@ -18,6 +18,9 @@ final class WatchStore: NSObject, WCSessionDelegate {
     private(set) var tasks: [WatchTask] = WatchStore.loadSnapshot()
     private(set) var lastUpdate: Date? = WatchStore.defaults.object(forKey: WatchStore.updatedKey) as? Date
     private(set) var isRefreshing = false
+    private static let tasksInHAKey = "watchTasksInHA"
+    /// Tâches dans Home Assistant (dit par l'iPhone) : lecture, coche et ajout passent par l'iPhone.
+    private var tasksInHA: Bool { Self.defaults.bool(forKey: Self.tasksInHAKey) }
 
     let google = GoogleRefreshSession()
     private var api: TasksAPI { TasksAPI(token: { [google] in try await google.validAccessToken() }) }
@@ -33,7 +36,7 @@ final class WatchStore: NSObject, WCSessionDelegate {
 
     /// Recharge la liste depuis Google. Sans connexion Google, on garde la dernière liste de l'iPhone.
     func refreshFromGoogle() async {
-        guard google.isAvailable, !isRefreshing else { return }
+        guard google.isAvailable, !tasksInHA, !isRefreshing else { return }
         isRefreshing = true
         defer { isRefreshing = false }
         guard let remote = try? await api.fetch(updatedMin: nil) else { return }
@@ -64,7 +67,7 @@ final class WatchStore: NSObject, WCSessionDelegate {
         save()
         // Prévient aussi l'iPhone (tout de suite s'il est là, plus tard sinon) pour couper ses relances.
         send([WatchLink.actionKey: WatchLink.Action.complete.rawValue, WatchLink.idKey: task.id])
-        guard google.isAvailable, UUID(uuidString: task.id) == nil else { return }
+        guard google.isAvailable, !tasksInHA, UUID(uuidString: task.id) == nil else { return }
         Task {
             _ = try? await api.patch(id: task.id, ["status": "completed",
                                                     "completed": TasksAPI.timestamp(.now)])
@@ -92,7 +95,7 @@ final class WatchStore: NSObject, WCSessionDelegate {
 
     /// Version qu'on peut attendre (Siri répond une fois la tâche partie).
     func insert(title: String, due: Date?, hasTime: Bool, priority: TaskPriority = .normal) async {
-        guard google.isAvailable else { return sendAdd(title: title, due: due, hasTime: hasTime, priority: priority) }
+        guard google.isAvailable, !tasksInHA else { return sendAdd(title: title, due: due, hasTime: hasTime, priority: priority) }
         let calendar = Calendar.current
         let minutes = hasTime ? due.map {
             let c = calendar.dateComponents([.hour, .minute], from: $0)
@@ -154,6 +157,7 @@ final class WatchStore: NSObject, WCSessionDelegate {
         if let token = payload.refreshToken, let clientID = payload.clientID {
             google.store(refreshToken: token, clientID: clientID)
         }
+        if let inHA = payload.tasksInHA { Self.defaults.set(inHA, forKey: Self.tasksInHAKey) }
         if let tasks = payload.tasks { receive(tasks) }
     }
 
@@ -181,8 +185,10 @@ nonisolated private struct Payload: Sendable {
     var tasks: [WatchTask]?
     var refreshToken: String?
     var clientID: String?
+    var tasksInHA: Bool?
 
     init(_ dictionary: [String: Any]) {
+        tasksInHA = dictionary[WatchLink.tasksInHAKey] as? Bool
         tasks = (dictionary[WatchLink.tasksKey] as? Data).map { WatchLink.decode($0) }
         refreshToken = dictionary[WatchLink.refreshTokenKey] as? String
         clientID = dictionary[WatchLink.clientIDKey] as? String

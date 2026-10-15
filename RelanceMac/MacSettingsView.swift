@@ -34,7 +34,7 @@ private struct GeneralSettings: View {
         Form {
             Section("Compte Google") {
                 LabeledContent("Connecté", value: auth.email ?? "—")
-                LabeledContent("Liste suivie", value: "Mes tâches")
+                LabeledContent("Liste suivie", value: HAConfig.isActive ? "Mémo seulement" : "Mes tâches")
                 if let error = store.lastError {
                     Text(error).font(.footnote).foregroundStyle(.red)
                 }
@@ -42,10 +42,11 @@ private struct GeneralSettings: View {
                     Button("Se déconnecter", role: .destructive) { store.signOut() }
                 }
             }
+            HASettingsSection()
             ReminderDeviceSection()
         }
         .formStyle(.grouped)
-        .frame(width: 520, height: 380)
+        .frame(width: 520, height: 620)
     }
 }
 

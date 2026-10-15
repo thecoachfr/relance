@@ -12,7 +12,7 @@ struct SettingsView: View {
             Form {
                 Section("Compte Google") {
                     LabeledContent("Connecté", value: auth.email ?? "—")
-                    LabeledContent("Liste suivie", value: "Mes tâches")
+                    LabeledContent("Liste suivie", value: HAConfig.isActive ? "Mémo seulement" : "Mes tâches")
                     if let error = store.lastError {
                         Text(error).font(.footnote).foregroundStyle(.red)
                     }
@@ -21,6 +21,7 @@ struct SettingsView: View {
                         dismiss()
                     }
                 }
+                HASettingsSection()
                 ReminderDeviceSection()
                 Section {
                     NavigationLink("Quand et comment relancer") { ReminderSettingsView() }

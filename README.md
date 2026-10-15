@@ -2,7 +2,7 @@
 
 *Anciennement « Relance ». Le code, les cibles Xcode, l'identifiant `fr.alexandrefau.relance` et les noms côté Home Assistant gardent l'ancien nom.*
 
-App iPhone, iPad, Apple Watch et Mac qui aiguille les tâches (à faire, à trier, à voir) et insiste jusqu'à ce que ce soit fait jusqu'à ce que ce soit fait, branchée sur Google Tasks.
+App iPhone, iPad, Apple Watch et Mac qui aiguille les tâches (à faire, à trier, à voir) et insiste jusqu'à ce que ce soit fait, branchée sur Google Tasks, et bientôt sur Home Assistant (voir « Tâches dans Home Assistant »).
 Voir [CADRAGE.md](CADRAGE.md) pour le besoin et les choix, [SUIVI.md](SUIVI.md) pour l'état du projet.
 
 ## Mise en route
@@ -37,6 +37,25 @@ xcodegen generate
 Puis ouvrir `Relance.xcodeproj`, choisir ton iPhone et lancer (⌘R). Schéma `RelanceMac` pour l'app Mac (macOS 15),
 `RelanceWatch` pour la montre.
 
+### 3. Tâches dans Home Assistant (en essai, branche `migration-ha`)
+
+Les tâches peuvent quitter Google Tasks pour l'intégration `donnees_apps` de Home Assistant (espace `aiguillage`),
+par le paquet Swift `DonneesHA` (dépôt privé `thecoachfr/ha-donnees-apps`, étiquette `0.1.0`). Hors connexion,
+les écritures restent sur l'appareil et une copie part dans iCloud (conteneur `iCloud.fr.alexandrefau.relance`) ;
+tout repart vers Home Assistant dès qu'il répond, la modification la plus récente gagnant en cas de conflit.
+
+Sur chaque appareil (iPhone, iPad, Mac) : **Réglages › Home Assistant** :
+
+1. Adresse de Home Assistant (URL Nabu Casa) et jeton de l'utilisateur non administrateur `apps-perso`
+   (ils restent sur l'appareil : App Group et trousseau, jamais dans ce dépôt public).
+2. **Enregistrer et tester**, puis **Passer les tâches dans Home Assistant** : une dernière synchro Google,
+   puis toutes les tâches de l'appareil partent dans Home Assistant (avec leur identifiant Google).
+3. « Revenir à Google Tasks » renvoie les tâches de l'appareil dans Google en cas de souci.
+
+Google Tasks garde deux rôles : la **boîte d'entrée** des dictées Google Home (la vigie les reprend dans Home Assistant,
+après le tri, puis les retire de Google) et le **mémo** de la routine de tri, inchangé.
+La montre passe alors par l'iPhone pour les tâches ; l'extension de partage écrit dans la base locale partagée.
+
 ## Déploiement automatique (Xcode Cloud + TestFlight)
 
 Chaque push sur `main` compile l'app dans le cloud d'Apple et l'envoie sur TestFlight :
@@ -51,6 +70,8 @@ iPhone, iPad, montre (incluse dans l'app iPhone) et Mac se mettent à jour depui
 - Les builds TestFlight utilisent les notifications push de production : l'app l'annonce
   au webhook (`environment: production`) et la vigie choisit le bon serveur APNs.
 - L'installation directe (Xcode ou `devicectl`) reste possible pour essayer une correction sur le moment.
+- Le paquet `DonneesHA` vient d'un dépôt **privé** : Xcode Cloud doit avoir reçu l'accès à `thecoachfr/ha-donnees-apps`
+  (App Store Connect › Xcode Cloud › Réglages › Dépôts, ou Xcode le propose au premier build qui échoue).
 
 ## Organisation du code
 
@@ -59,14 +80,15 @@ iPhone, iPad, montre (incluse dans l'app iPhone) et Mac se mettent à jour depui
 | `Shared/Reminders/ReminderPlanner.swift` | Règles des relances (fonction pure, testée) |
 | `Shared/Reminders/ReminderScheduler.swift` | Traduction en notifications iOS, boutons d'action |
 | `Shared/Google/` | API REST Google Tasks, heure rangée dans les notes |
-| `Shared/Model/` | Cache local SwiftData (App Group) et synchronisation |
+| `Shared/Model/` | Cache local SwiftData (App Group) et synchronisation (`TaskStore+HA.swift` : Home Assistant) |
+| `Shared/HA/` | Réglages Home Assistant (URL, jeton, appareil) et format JSON d'une tâche (`TacheHA`) |
 | `Shared/Intents/` | Actions Siri, widgets et activité en direct |
 | `Relance/` | App iPhone/iPad : connexion Google, écrans SwiftUI, activité en direct, push |
 | `RelanceMac/` | App Mac native : fenêtre en trois colonnes, barre des menus, menus et raccourcis (reprend `Shared/` et les vues de tâche de `Relance/Views/`) |
 | `RelanceWidgets/` | Widgets, activité en direct, commande « Nouvelle tâche » |
 | `RelanceShare/` | Extension de partage (WhatsApp, Mail, Safari…) |
 | `RelanceWatch/`, `RelanceWatchWidgets/` | App et complications Apple Watch |
-| `homeassistant/` | Vigie AppDaemon (phase 3) |
+| `homeassistant/` | Vigie AppDaemon (phase 3) : push, tri, boîte d'entrée Google → Home Assistant |
 | `RelanceTests/` | Tests (Swift Testing) |
 
 ## Vigie Home Assistant (phase 3)
@@ -83,6 +105,11 @@ Elle rafraîchit aussi la liste mémo de la routine de tri (`todo.relance_memo`)
 et à la demande de l'app (« Retrier avec Claude », champ `action: triage` du webhook).
 Pour la mettre à jour : monter le partage `smb://homeassistant.local/addon_configs` dans le Finder et copier
 `relance_vigie.py` dans `a0d7b954_appdaemon/apps/` (AppDaemon la recharge seul).
+
+Avec les tâches dans Home Assistant (`ha_espace: aiguillage` et `inbox: true` dans `apps.yaml`, à activer **après** la
+migration de l'app) : push à chaque événement `donnees_apps_modifie` de l'espace, et la liste Google vidée dans Home
+Assistant à chaque rafraîchissement (une dictée non triée attend la routine 15 min au plus ; état dans
+`/config/relance_inbox.json`). La vigie appelle `donnees_apps` par l'API interne de Home Assistant (jeton de l'add-on).
 
 Déjà en place sur Home Assistant : l'app **AppDaemon** (avec `httpx[http2]` et `pyjwt[crypto]`)
 et l'automatisation **« Relance : enregistrer un appareil »** (déclencheur webhook).

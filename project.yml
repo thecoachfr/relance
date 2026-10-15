@@ -10,6 +10,10 @@ packages:
   GoogleSignIn:
     url: https://github.com/google/GoogleSignIn-iOS
     from: 8.0.0
+  # Stockage des tâches dans Home Assistant avec fallback iCloud (dépôt privé : Xcode Cloud doit y avoir accès).
+  DonneesHA:
+    url: https://github.com/thecoachfr/ha-donnees-apps
+    from: 0.1.0
 settings:
   base:
     DEVELOPMENT_TEAM: GD6W292ZXP
@@ -26,6 +30,7 @@ targets:
       Release: Relance/Resources/Secrets.xcconfig
     dependencies:
       - package: GoogleSignIn
+      - package: DonneesHA
       - target: RelanceWidgets
       - target: RelanceWatch
       - target: RelanceShare
@@ -37,6 +42,10 @@ targets:
         # Choix de l'appareil qui relance, partagé entre l'iPhone, l'iPad et le Mac.
         com.apple.developer.ubiquity-kvstore-identifier: $(TeamIdentifierPrefix)fr.alexandrefau.relance
         com.apple.security.application-groups: [group.fr.alexandrefau.relance]
+        # Fallback de DonneesHA : instantané des tâches dans iCloud quand Home Assistant ne répond pas.
+        com.apple.developer.icloud-container-identifiers: [iCloud.fr.alexandrefau.relance]
+        com.apple.developer.icloud-services: [CloudDocuments]
+        com.apple.developer.ubiquity-container-identifiers: [iCloud.fr.alexandrefau.relance]
         # Le groupe propre de l'app d'abord (connexion Google existante), puis celui partagé avec l'extension.
         keychain-access-groups:
           - $(AppIdentifierPrefix)fr.alexandrefau.relance
@@ -86,6 +95,7 @@ targets:
       - Shared/Google
       - Shared/Reminders
       - Shared/Share
+      - Shared/HA
       - Relance/Google
       - Relance/App/CalendarLink.swift
       - Relance/App/TravelTimes.swift
@@ -113,11 +123,13 @@ targets:
       - Relance/Views/ToSeeViews.swift
       - Relance/Views/RecurrenceViews.swift
       - Relance/Views/TaskEditor.swift
+      - Relance/Views/HASettingsSection.swift
     configFiles:
       Debug: Relance/Resources/Secrets.xcconfig
       Release: Relance/Resources/Secrets.xcconfig
     dependencies:
       - package: GoogleSignIn
+      - package: DonneesHA
     entitlements:
       path: RelanceMac/RelanceMac.entitlements
       properties:
@@ -126,6 +138,10 @@ targets:
         com.apple.security.personal-information.calendars: true
         com.apple.developer.ubiquity-kvstore-identifier: $(TeamIdentifierPrefix)fr.alexandrefau.relance
         com.apple.security.application-groups: [group.fr.alexandrefau.relance]
+        # Fallback de DonneesHA : instantané des tâches dans iCloud quand Home Assistant ne répond pas.
+        com.apple.developer.icloud-container-identifiers: [iCloud.fr.alexandrefau.relance]
+        com.apple.developer.icloud-services: [CloudDocuments]
+        com.apple.developer.ubiquity-container-identifiers: [iCloud.fr.alexandrefau.relance]
         keychain-access-groups: [$(AppIdentifierPrefix)fr.alexandrefau.relance]
     info:
       path: RelanceMac/Info.plist
@@ -160,6 +176,10 @@ targets:
       - Shared/Model/TaskPriority.swift
       - Shared/Reminders/ReminderOverride.swift
       - Shared/Model/TaskTag.swift
+      - Shared/HA/HAConfig.swift
+      - Shared/HA/TacheHA.swift
+    dependencies:
+      - package: DonneesHA
     entitlements:
       path: RelanceShare/RelanceShare.entitlements
       properties:
@@ -185,6 +205,8 @@ targets:
     type: app-extension
     platform: iOS
     sources: [RelanceWidgets, Shared]
+    dependencies:
+      - package: DonneesHA
     entitlements:
       path: RelanceWidgets/RelanceWidgets.entitlements
       properties:
@@ -285,6 +307,7 @@ targets:
     sources: [RelanceTests]
     dependencies:
       - target: Relance
+      - package: DonneesHA
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES

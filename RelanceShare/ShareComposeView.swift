@@ -118,13 +118,17 @@ struct ShareComposeView: View {
         }
     }
 
-    /// Directement chez Google (la vigie réveille ensuite l'iPhone) ; sinon file d'attente pour l'app.
+    /// Dans Home Assistant si l'app y range ses tâches, sinon directement chez Google (la vigie réveille
+    /// ensuite l'iPhone) ; sans réponse de Google, file d'attente pour l'app.
     private func add() async {
         sending = true
         let c = Calendar.current.dateComponents([.hour, .minute], from: time)
         let minutes = day != nil && hasTime ? (c.hour ?? 0) * 60 + (c.minute ?? 0) : nil
         let cleanTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         let notes = SharedMessage.notes(original: original, titleEdited: cleanTitle != proposedTitle)
+        if HAConfig.isActive, await addToHA(title: cleanTitle, notes: notes, minutes: minutes) {
+            return onDone()
+        }
         let fields: [String: Any] = [
             "title": cleanTitle,
             "notes": NotesTimeCodec.encode(minutes: minutes, priority: priority, notes: notes),
@@ -142,6 +146,25 @@ struct ShareComposeView: View {
             PendingShares.add(.init(title: cleanTitle, notes: notes, day: day, minutes: minutes, priority: priority))
         }
         onDone()
+    }
+
+    /// Écrite dans la base locale partagée avec l'app (App Group) : elle part vers HA tout de suite si
+    /// possible, sinon à la prochaine synchro de l'app (qui dépose aussi la copie iCloud). `false` si HA
+    /// n'est pas réglé ou si la base est inaccessible.
+    private func addToHA(title: String, notes: String, minutes: Int?) async -> Bool {
+        guard let synchro = await HAConfig.makeSynchroniser(withFallback: false) else { return false }
+        var tache = TacheHA(titre: title)
+        tache.notes = notes
+        tache.jour = TacheHA.jour(day)
+        tache.heure = day == nil ? nil : TacheHA.heure(minutes)
+        tache.priorite = priority == .normal ? nil : priority.rawValue
+        guard let valeur = try? tache.valeur(),
+              (try? synchro.ecrire(UUID().uuidString.lowercased(), valeur)) != nil else { return false }
+        _ = await Self.within(seconds: 8) { @MainActor in
+            await synchro.synchroniser()
+            return true
+        }
+        return true
     }
 
     /// Une feuille de partage ne doit pas rester bloquée : sans réponse de Google, on passe par la file d'attente.
