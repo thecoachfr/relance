@@ -37,8 +37,6 @@ PUSH_AFTER_TRIAGE = 180
 MAX_TRIAGES_PER_DAY = 20
 # API de Home Assistant vue depuis une app (add-on) avec `homeassistant_api: true`.
 CORE_API = "http://supervisor/core/api"
-# Une dictée pas encore triée attend la routine au plus ce temps avant d'être reprise telle quelle.
-UNTRIAGED_GRACE = 15 * 60
 # Clés et op_id dérivés de l'identifiant Google : une reprise après une coupure ne crée pas de doublon.
 INBOX_NAMESPACE = uuid.UUID("6f1c2a3e-1d8b-4e5f-9a7c-2b4d6e8f0a1c")
 # Plusieurs événements d'affilée (lot de l'app) : un seul push.
@@ -124,8 +122,11 @@ class RelanceVigie(Hass):
         self._inbox_path = Path(self.args.get("inbox_file", "/config/relance_inbox.json"))
         self._push_handle = None
         self._changes = 0
+        # Clés connues de l'espace : une clé nouvelle (tâche créée dans l'app ou reprise de Google) lance le tri.
+        self._known_keys = None
         if self._espace:
             self.listen_event(self.on_data_changed, "donnees_apps_modifie", espace=self._espace)
+            self.run_in(lambda **_kw: self._load_known_keys(), 1)
         self._refreshes = 0
         self._triage_handle = None
         self._triage_day = None
@@ -152,11 +153,11 @@ class RelanceVigie(Hass):
         if old in UNAVAILABLE or new in UNAVAILABLE or old == new:
             return
         if self._inbox:
-            # La liste Google n'est plus qu'une boîte d'entrée : le push part quand la tâche arrive dans HA.
+            # La liste Google n'est plus qu'une boîte d'entrée : push et tri partent quand la tâche arrive dans HA.
             self.log(f"{entity} : {old} → {new} dans la boîte d'entrée Google")
-        else:
-            self.log(f"{entity} : {old} → {new} tâches à faire, réveil des appareils")
-            self.push_all()
+            return
+        self.log(f"{entity} : {old} → {new} tâches à faire, réveil des appareils")
+        self.push_all()
         if self._as_int(new) > self._as_int(old):
             self.schedule_triage()
 
@@ -170,7 +171,13 @@ class RelanceVigie(Hass):
     # MARK: - Tâches dans Home Assistant
 
     def on_data_changed(self, event_name, data, **kwargs):
-        """Écriture dans l'espace (app, extension, autre appareil, boîte d'entrée) : réveil des appareils."""
+        """Écriture dans l'espace (app, extension, autre appareil, boîte d'entrée) : réveil des appareils,
+        et tri si c'est une tâche nouvelle."""
+        key = data.get("cle")
+        if self._known_keys is not None and key and self._is_task_key(key) and key not in self._known_keys:
+            self._known_keys.add(key)
+            self.log(f"{self._espace} : nouvelle tâche ({key[:8]}…), tri demandé")
+            self.schedule_triage()
         self._changes += 1
         if self._push_handle:
             self.cancel_timer(self._push_handle)
@@ -182,13 +189,30 @@ class RelanceVigie(Hass):
         self._changes = 0
         self.push_all()
 
+    def _load_known_keys(self):
+        try:
+            records = self._service("donnees_apps", "changements", {"espace": self._espace, "depuis_seq": 0})
+        except Exception as error:  # noqa: BLE001
+            self.log(f"Clés de l'espace illisibles, tri des nouvelles tâches inactif : {error!r}", level="WARNING")
+            return
+        self._known_keys = {r["cle"] for r in records.get("enregistrements", [])}
+
+    @staticmethod
+    def _is_task_key(key):
+        """Les tâches ont pour clé un UUID ; les autres clés (essais) sont ignorées."""
+        try:
+            uuid.UUID(key)
+        except ValueError:
+            return False
+        return True
+
     def import_inbox(self, **kwargs):
         """Vide la liste Google (dictées Google Home) dans l'espace HA, sans doublon.
 
         Ne démarre qu'après la migration de l'app (au moins une tâche de l'espace porte un
         `google_id`) : sinon les tâches Google seraient reprises deux fois. Une tâche déjà dans HA
-        (migrée ou importée) est seulement retirée de Google. Une dictée non triée attend la
-        routine jusqu'à `UNTRIAGED_GRACE`, pour que le tri la trouve encore dans Google.
+        (migrée ou importée) est seulement retirée de Google. Une dictée est reprise telle quelle :
+        la routine la trie ensuite dans HA (clé nouvelle, voir `on_data_changed`).
         """
         try:
             items = self._service("todo", "get_items", {"entity_id": self._todo, "status": "needs_action"})
@@ -210,7 +234,6 @@ class RelanceVigie(Hass):
             return
 
         state = self._load_inbox()
-        now = time.time()
         for item in items:
             uid = item.get("uid")
             if not uid:
@@ -219,9 +242,6 @@ class RelanceVigie(Hass):
                 self._remove_from_google(uid, state)
                 continue
             tache = tache_depuis_google(item)
-            first_seen = state["first_seen"].setdefault(uid, now)
-            if "categorie" not in tache and self.args.get("routine_id") and now - first_seen < UNTRIAGED_GRACE:
-                continue
             try:
                 result = self._service("donnees_apps", "ecrire", {
                     "espace": self._espace,
@@ -247,14 +267,13 @@ class RelanceVigie(Hass):
             return
         if uid not in state["processed"]:
             state["processed"].append(uid)
-        state["first_seen"].pop(uid, None)
 
     def _load_inbox(self):
         try:
             state = json.loads(self._inbox_path.read_text())
         except (FileNotFoundError, json.JSONDecodeError):
             state = {}
-        return {"processed": state.get("processed", []), "first_seen": state.get("first_seen", {})}
+        return {"processed": state.get("processed", [])}
 
     def _save_inbox(self, state):
         state["processed"] = state["processed"][-500:]

@@ -71,7 +71,8 @@ Code fait et fusionné dans `main` (désactivé tant qu'on ne bascule pas dans l
 - **Vigie déployée sur le NUC le 15/10** (`ha_espace: aiguillage`, `inbox: true` ; anciennes versions gardées à côté : `relance_vigie.py.avant-ha-20261015`, `apps.yaml.avant-ha-20261015`). Premier passage : les 11 tâches encore dans Google, toutes déjà dans HA, retirées de Google sans réimport ; push vérifié sur écriture dans l'espace (journal « aiguillage : n modification(s) dans Home Assistant, réveil des appareils »). Clé d'essai `essai-vigie` écrite puis supprimée (ignorée par l'app).
 - Tests : 89 verts (dont deux appareils qui migrent les mêmes tâches), dont hors ligne → iCloud → HA sans doublon, deux appareils (la plus récente gagne), suppression propagée ; vigie : 3 essais hors HA. Compilé et signé pour iPhone et Mac (conteneur iCloud créé).
 
-**Pas encore adaptés** (lisent toujours `todo.mes_taches`, qui ne contiendra plus que la boîte d'entrée) : la **routine de tri** (tâches créées dans l'app : « ✨ Tri en attente », « Retrier avec Claude » sans effet) et l'**écran du Nest Hub**. À faire avant de basculer pour de bon.
+- **Écran du Nest Hub passé sur HA le 15/10** : la carte lit l'espace `aiguillage` (`tasks: aiguillage`) et coche par `donnees_apps.ecrire` ; elle est maintenant servie depuis `/config/www/nest-hub/` (fiche `CLAUDE-nest-hub-entree.md`, hors Git). Vérifié par une capture 1024 × 600.
+- **Routine de tri** : nouvelle consigne écrite (lit et écrit l'espace `aiguillage`, mêmes règles A à M, champs JSON au lieu des lignes `⏰ 🏷 🔖 ❗`), **pas encore appliquée** (attend l'accord d'Alexandre). La vigie correspondante (dictées reprises tout de suite, tri lancé à chaque nouvelle tâche de l'espace) est dans le dépôt mais **pas encore déployée** : les deux partent ensemble. « Retrier avec Claude » ne réveille plus la routine si la tâche n'est pas encore arrivée dans HA.
 
 ## 2. Reste à faire / à vérifier
 
