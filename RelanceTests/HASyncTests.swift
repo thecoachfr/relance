@@ -123,6 +123,7 @@ struct TaskStoreHATests {
         func device(_ name: String) throws -> TaskStore {
             let store = TaskStore(auth: SignedOut(), inMemory: true)
             store.haActiveOverride = false
+            store.schedulesReminders = false
             let synchro = try makeSynchro(device: name, server: server, fallback: folder)
             store.makeSynchroniser = { synchro }
             for (googleID, title) in [("g1", "Garage"), ("g2", "Impôts")] {
@@ -151,6 +152,7 @@ struct TaskStoreHATests {
     private func haStore() -> TaskStore {
         let store = TaskStore(auth: SlowAccount(), inMemory: true)
         store.haActiveOverride = true
+        store.schedulesReminders = false
         return store
     }
 

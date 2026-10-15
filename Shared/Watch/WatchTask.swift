@@ -37,7 +37,12 @@ nonisolated enum WatchLink {
 
     enum Action: String {
         case complete, snooze, add
+        /// Fiche du mémo de tri (tâches dans Home Assistant) : l'iPhone l'enregistre et répond `outcomeKey`.
+        case memo
     }
+    static let detailsKey = "details"
+    /// Réponse de l'iPhone à une fiche du mémo : `added`, `completed`, `unchanged` ou `failed`.
+    static let outcomeKey = "outcome"
 
     static func encode(_ tasks: [WatchTask]) -> Data {
         (try? JSONEncoder().encode(tasks)) ?? Data()

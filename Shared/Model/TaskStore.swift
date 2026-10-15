@@ -29,6 +29,8 @@ final class TaskStore {
     var synchro: Synchroniseur?
     /// Forcé par les tests, sans toucher au réglage partagé de l'appareil (que l'app hôte lit aussi).
     var haActiveOverride: Bool?
+    /// Coupé par les tests de synchro : le centre de notifications du simulateur peut bloquer des dizaines de secondes.
+    var schedulesReminders = true
     /// Crée le synchroniseur (remplacé dans les tests par un faux Home Assistant).
     var makeSynchroniser: () async -> Synchroniseur? = { await HAConfig.makeSynchroniser(withFallback: true) }
 
@@ -209,6 +211,7 @@ final class TaskStore {
     // MARK: - Relances
 
     func reschedule() async {
+        guard schedulesReminders else { return }
         let tasks = activeTasks()
         let inbox = tasks.filter { $0.dueDay == nil && $0.toSee == nil }.count
         let completedIDs = Set(((try? context.fetch(FetchDescriptor<TaskItem>(

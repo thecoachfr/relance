@@ -65,7 +65,7 @@ Catégories fixes : Administratif, Maison, Santé, Achats, Travail, Famille, Per
 
 ### Mémo du tri dans Home Assistant (15/10 au soir)
 - Liste Local To-do « Aiguillage · mémo » (`todo.aiguillage_memo`) créée sur le NUC ; les 57 fiches de la liste Google y ont été copiées (titres et détails identiques). Page d'édition et d'ajout : celle de Home Assistant (Listes de tâches), aussi dans l'app HA.
-- App (iPhone, iPad, Mac) en mode HA : `MemoStore` et l'extension de partage lisent et écrivent cette liste (`MemoHA`, REST `todo.*` avec le jeton `apps-perso` ; une fiche s'écrit en ligne). La montre écrit encore dans la liste Google : la vigie (`memo_ha_entity`) reprend ces fiches dans HA (même sujet complété, sans accents ni majuscules) puis les coche dans Google.
+- App (iPhone, iPad, Mac) en mode HA : `MemoStore` et l'extension de partage lisent et écrivent cette liste (`MemoHA`, REST `todo.*` avec le jeton `apps-perso` ; une fiche s'écrit en ligne). La montre (Siri « Ajoute au mémo dans Aiguillage ») envoie maintenant ses fiches à l'iPhone, qui les écrit dans HA et répond « ajoutée / complétée » ; iPhone injoignable : la fiche attend dans la file de WatchConnectivity. Pour une montre pas encore à jour, la vigie (`memo_ha_entity`) reprend encore les fiches de la liste Google du mémo dans HA puis les coche. Une fois la montre à jour, la liste Google « Relance · mémo » et cette reprise peuvent être supprimées.
 - Routine de tri : lit `todo.aiguillage_memo` (consigne mise à jour et vérifiée le 15/10).
 
 ### Tâches dans Home Assistant (15/10, sur `main`, désactivé par défaut)

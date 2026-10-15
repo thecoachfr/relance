@@ -19,8 +19,8 @@ final class WatchStore: NSObject, WCSessionDelegate {
     private(set) var lastUpdate: Date? = WatchStore.defaults.object(forKey: WatchStore.updatedKey) as? Date
     private(set) var isRefreshing = false
     private static let tasksInHAKey = "watchTasksInHA"
-    /// Tâches dans Home Assistant (dit par l'iPhone) : lecture, coche et ajout passent par l'iPhone.
-    private var tasksInHA: Bool { Self.defaults.bool(forKey: Self.tasksInHAKey) }
+    /// Tâches dans Home Assistant (dit par l'iPhone) : lecture, coche, ajout et mémo passent par l'iPhone.
+    var tasksInHA: Bool { Self.defaults.bool(forKey: Self.tasksInHAKey) }
 
     let google = GoogleRefreshSession()
     private var api: TasksAPI { TasksAPI(token: { [google] in try await google.validAccessToken() }) }
@@ -87,6 +87,34 @@ final class WatchStore: NSObject, WCSessionDelegate {
     /// Fiche du mémo de tri, écrite directement chez Google (même règle que l'iPhone : un même sujet est complété).
     func remember(title: String, details: String) async throws -> MemoMerge.Outcome {
         try await api.remember(title: title, details: details)
+    }
+
+    /// Tâches dans HA : la fiche part à l'iPhone, qui l'enregistre dans le mémo de HA. Réponse de l'iPhone s'il est
+    /// joignable ; sinon `nil`, et la fiche attend dans la file de WatchConnectivity (livrée dès qu'il revient).
+    func rememberViaPhone(title: String, details: String) async -> MemoMerge.Outcome?? {
+        let message: [String: Any] = [WatchLink.actionKey: WatchLink.Action.memo.rawValue,
+                                      WatchLink.titleKey: title, WatchLink.detailsKey: details]
+        let session = WCSession.default
+        guard session.activationState == .activated else { return nil }
+        guard session.isReachable else {
+            session.transferUserInfo(message)
+            return nil
+        }
+        let reponse: String? = await withCheckedContinuation { continuation in
+            session.sendMessage(message, replyHandler: { reply in
+                continuation.resume(returning: reply[WatchLink.outcomeKey] as? String)
+            }, errorHandler: { _ in
+                session.transferUserInfo(message)
+                continuation.resume(returning: nil)
+            })
+        }
+        switch reponse {
+        case "added": return .some(.added)
+        case "completed": return .some(.completed)
+        case "unchanged": return .some(.unchanged)
+        case "failed": return .some(nil)
+        default: return nil
+        }
     }
 
     func add(title: String, due: Date?, hasTime: Bool, priority: TaskPriority = .normal) {

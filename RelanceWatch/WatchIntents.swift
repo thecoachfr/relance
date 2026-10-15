@@ -31,7 +31,8 @@ struct WatchAddTaskIntent: AppIntent {
     }
 }
 
-/// « Ajoute au mémo dans Aiguillage » au poignet : la montre écrit la fiche directement chez Google.
+/// « Ajoute au mémo dans Aiguillage » au poignet : la fiche part à l'iPhone (tâches dans Home Assistant),
+/// ou s'écrit directement chez Google.
 struct WatchAddMemoIntent: AppIntent {
     static let title: LocalizedStringResource = "Ajouter au mémo"
     static let description = IntentDescription("Ajoute une fiche au mémo de tri, ou complète celle qui porte le même sujet.")
@@ -44,6 +45,14 @@ struct WatchAddMemoIntent: AppIntent {
 
     @MainActor func perform() async throws -> some IntentResult & ProvidesDialog {
         let store = WatchStore.shared
+        if store.tasksInHA {
+            switch await store.rememberViaPhone(title: subject, details: details) {
+            case .some(let outcome):
+                return .result(dialog: IntentDialog(stringLiteral: MemoMerge.confirmation(outcome, subject: subject)))
+            case .none:
+                return .result(dialog: "C'est noté : la fiche « \(subject) » partira vers le mémo dès que l'iPhone sera joignable.")
+            }
+        }
         guard store.google.isAvailable else {
             return .result(dialog: "Ouvre Aiguillage sur l'iPhone une fois pour connecter la montre à Google.")
         }

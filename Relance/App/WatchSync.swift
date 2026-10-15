@@ -46,15 +46,41 @@ final class WatchSync: NSObject, WCSessionDelegate {
         Task { @MainActor in await handle(message.value) }
     }
 
+    /// Fiche du mémo envoyée par la montre, qui attend la réponse (ajoutée, complétée…).
+    nonisolated func session(_ session: WCSession, didReceiveMessage message: [String: Any],
+                             replyHandler: @escaping ([String: Any]) -> Void) {
+        let message = SendableMessage(message)
+        let reply = SendableReply(replyHandler)
+        Task { @MainActor in
+            let outcome = await handleMemo(message.value)
+            reply.send([WatchLink.outcomeKey: outcome])
+        }
+    }
+
     /// Envoyé en file d'attente quand l'iPhone n'était pas joignable.
     nonisolated func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any] = [:]) {
         let message = SendableMessage(userInfo)
         Task { @MainActor in await handle(message.value) }
     }
 
+    /// Enregistre une fiche du mémo venue de la montre ; renvoie `added`, `completed`, `unchanged` ou `failed`.
+    private func handleMemo(_ message: [String: Any]) async -> String {
+        guard let title = message[WatchLink.titleKey] as? String, !title.isEmpty else { return "failed" }
+        let details = message[WatchLink.detailsKey] as? String ?? ""
+        switch await store.memo.remember(title: title, details: details) {
+        case .added?: return "added"
+        case .completed?: return "completed"
+        case .unchanged?: return "unchanged"
+        case nil: return "failed"
+        }
+    }
+
     private func handle(_ message: [String: Any]) async {
         guard let raw = message[WatchLink.actionKey] as? String, let action = WatchLink.Action(rawValue: raw) else { return }
         switch action {
+        case .memo:
+            _ = await handleMemo(message)
+            return
         case .complete, .snooze:
             guard let id = message[WatchLink.idKey] as? String,
                   let item = UUID(uuidString: id).flatMap(store.task) ?? store.task(googleID: id) else { return }
@@ -96,6 +122,12 @@ final class WatchSync: NSObject, WCSessionDelegate {
     nonisolated func sessionWatchStateDidChange(_ session: WCSession) {
         Task { @MainActor in send(store.activeTasks()) }
     }
+}
+
+/// La réponse à la montre, appelée une fois depuis le fil principal.
+nonisolated private struct SendableReply: @unchecked Sendable {
+    let send: ([String: Any]) -> Void
+    init(_ send: @escaping ([String: Any]) -> Void) { self.send = send }
 }
 
 /// Les dictionnaires WatchConnectivity ne contiennent que des types plist : on peut les passer d'un fil à l'autre.
