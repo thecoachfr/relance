@@ -78,7 +78,7 @@ Boutons sur chaque notification (avec icône SF Symbol) : **Fait** · **+1 h** �
    - Appui long = menu contextuel (Fait, Reporter, Modifier, Supprimer).
    - Après « Fait » : retour haptique + bandeau **Annuler** pendant quelques secondes plutôt qu'une confirmation (HIG : préférer l'annulation).
    - Bouton **Nouvelle tâche** en bas de l'écran, comme dans Rappels ; ⌘N sur iPad avec clavier.
-2. **À trier** — tâches sans date ou sans heure, présentées une à une avec des boutons rapides (Aujourd'hui, Demain, heure, Supprimer). Chaque geste a son bouton équivalent (VoiceOver, Contrôle de sélection).
+2. **À trier** — tâches sans date ou sans heure (depuis le 13/10 : sans date, ou datées d'aujourd'hui ou d'avant sans heure ; une tâche datée plus tard sans heure reste dans À faire), présentées une à une avec des boutons rapides (Aujourd'hui, Demain, heure, Supprimer). Chaque geste a son bouton équivalent (VoiceOver, Contrôle de sélection).
 3. **Ajout rapide** (feuille) — un champ texte avec la date reconnue dans la phrase (« appeler le garage vendredi 15 h ») surlignée, + puces Aujourd'hui / Demain / heure. La reconnaissance du français sera testée tôt ; les puces servent de solution de repli.
 4. **Fait** — historique récent, pour annuler une erreur.
 5. **Réglages** — compte Google, liste(s) Google suivie(s), plage silencieuse, rythme, appareil qui relance.
