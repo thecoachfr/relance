@@ -90,12 +90,18 @@ final class WatchStore: NSObject, WCSessionDelegate {
     }
 
     /// Tâches dans HA : la fiche part à l'iPhone, qui l'enregistre dans le mémo de HA. Réponse de l'iPhone s'il est
-    /// joignable ; sinon `nil`, et la fiche attend dans la file de WatchConnectivity (livrée dès qu'il revient).
+    /// joignable ; sinon `nil`, et la fiche attend dans la file de WatchConnectivity (livrée dès qu'il revient) ;
+    /// `.some(nil)` si elle n'a pas pu partir du tout.
     func rememberViaPhone(title: String, details: String) async -> MemoMerge.Outcome?? {
         let message: [String: Any] = [WatchLink.actionKey: WatchLink.Action.memo.rawValue,
                                       WatchLink.titleKey: title, WatchLink.detailsKey: details]
         let session = WCSession.default
-        guard session.activationState == .activated else { return nil }
+        // Siri lance souvent la montre à froid : la session s'active et le lien avec l'iPhone revient en un instant.
+        for _ in 0..<30 where session.activationState != .activated || !session.isReachable {
+            try? await Task.sleep(for: .milliseconds(100))
+        }
+        // Session toujours inactive : impossible même de mettre la fiche en file d'attente.
+        guard session.activationState == .activated else { return .some(nil) }
         guard session.isReachable else {
             session.transferUserInfo(message)
             return nil
