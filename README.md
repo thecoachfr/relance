@@ -37,7 +37,7 @@ xcodegen generate
 Puis ouvrir `Relance.xcodeproj`, choisir ton iPhone et lancer (⌘R). Schéma `RelanceMac` pour l'app Mac (macOS 15),
 `RelanceWatch` pour la montre.
 
-### 3. Tâches dans Home Assistant (en essai, branche `migration-ha`)
+### 3. Tâches dans Home Assistant (en essai, désactivé par défaut)
 
 Les tâches peuvent quitter Google Tasks pour l'intégration `donnees_apps` de Home Assistant (espace `aiguillage`),
 par le paquet Swift `DonneesHA` (dépôt privé `thecoachfr/ha-donnees-apps`, étiquette `0.1.0`). Hors connexion,

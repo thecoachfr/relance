@@ -59,8 +59,8 @@ Catégories fixes : Administratif, Maison, Santé, Achats, Travail, Famille, Per
 - L'activité en direct ne peut **démarrer** qu'app ouverte (elle se met ensuite à jour seule).
 - Applis installées en **développement** (Xcode) : à réinstaller quand le profil de développement expire (environ 1 an) ; APNs en environnement « sandbox ».
 
-### Tâches dans Home Assistant (15/10, branche `migration-ha`, pas encore sur `main`)
-Code fait, pas encore essayé sur les appareils :
+### Tâches dans Home Assistant (15/10, sur `main`, désactivé par défaut)
+Code fait et fusionné dans `main` (désactivé tant qu'on ne bascule pas dans les réglages), pas encore essayé sur les appareils :
 - **App** : Réglages › Home Assistant (URL, jeton dans le trousseau partagé, test, bascule « Passer les tâches dans Home Assistant », retour possible vers Google). En mode HA, `TaskStore` envoie chaque modification à la base `DonneesHA` (App Group, outbox) puis synchronise ; SwiftData reste la copie des écrans. Une tâche = une clé (`localID`), valeur JSON `TacheHA` (`titre`, `notes`, `jour`, `heure`, `categorie`, `priorite`, `tags`, `relances`, `fait`, `fait_le`, `google_id`) : plus de lignes `⏰ 🏷 🔖 ❗ 🔁` dans les notes.
 - **Hors ligne** : instantané dans iCloud (`iCloud.fr.alexandrefau.relance/Documents/DonneesHA/aiguillage/<appareil>.json`), repris au retour de HA ; conflit : la plus récente gagne.
 - **Extension de partage** : écrit dans la base locale partagée et tente l'envoi (8 s) ; sinon l'app l'envoie. **Montre** : passe par l'iPhone pour les tâches (le mémo reste direct chez Google).
@@ -71,7 +71,7 @@ Code fait, pas encore essayé sur les appareils :
 
 ## 2. Reste à faire / à vérifier
 
-0. **Migration Home Assistant** : (a) donner à Xcode Cloud l'accès au dépôt privé `ha-donnees-apps` ; (b) installer la branche sur l'iPhone, régler Home Assistant et basculer ; (c) critère : écrire une tâche en mode Avion → instantané visible dans iCloud Drive (Fichiers) ; retour en ligne → tâche dans HA ; même tâche modifiée sur deux appareils → la plus récente gagne ; (d) déployer la vigie avec `ha_espace` et `inbox` ; (e) adapter la routine de tri et l'écran Nest Hub ; (f) fusionner dans `main`.
+0. **Migration Home Assistant** : (a) vérifier que le premier build Xcode Cloud récupère le dépôt privé `ha-donnees-apps` (sinon « Grant Access » dans App Store Connect) ; (b) installer le build TestFlight sur l'iPhone, régler Home Assistant et basculer ; (c) critère : écrire une tâche en mode Avion → instantané visible dans iCloud Drive (Fichiers) ; retour en ligne → tâche dans HA ; même tâche modifiée sur deux appareils → la plus récente gagne ; (d) déployer la vigie avec `ha_espace` et `inbox` ; (e) adapter la routine de tri et l'écran Nest Hub.
 
 0. **Xcode Cloud** (13/10) : en service. Workflow « Default » : push sur `main` → Archive iOS (montre incluse) et Archive macOS pour TestFlight interne, 3 variables secrètes, `ci_scripts/ci_post_clone.sh`. Build 3 installée sur l'iPhone via TestFlight. Conformité chiffrement déclarée dans l'app (`ITSAppUsesNonExemptEncryption = false`). Groupe de test interne en post-action (envoi automatique). À savoir : la liste des builds de Xcode ne se rafraîchit pas seule (cliquer sur « main ») ; Xcode Cloud ne fait qu'un build par commit (un lancement manuel remplace celui du push). Procédure complète réutilisable : skill personnel `testflight-xcode-cloud`. Reste : regarder les avertissements des archives (13 par build), vérifier qu'un rappel arrive bien via APNs production.
 
