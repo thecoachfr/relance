@@ -31,6 +31,10 @@ nonisolated enum WatchLink {
     /// Connexion Google transmise à la montre pour qu'elle parle seule à Google (eSIM).
     static let refreshTokenKey = "googleRefreshToken"
     static let clientIDKey = "googleClientID"
+    /// Tâches dans HA : URL de Home Assistant et jeton apps-perso, pour que la montre écrive seule le mémo
+    /// (Siri lance la montre en arrière-plan, où l'iPhone n'est pas « joignable »). Chaînes vides = à oublier.
+    static let haURLKey = "haURL"
+    static let haTokenKey = "haToken"
     /// Les tâches sont dans Home Assistant : la montre ne lit et n'écrit plus les tâches chez Google
     /// (elle n'y verrait que la boîte d'entrée des dictées) et passe par l'iPhone ; le mémo reste chez Google.
     static let tasksInHAKey = "tasksInHA"

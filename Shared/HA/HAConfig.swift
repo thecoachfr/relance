@@ -122,3 +122,12 @@ nonisolated enum HAConfig {
                              serveur: HAClient(url: url, jeton: token), fallback: fallback)
     }
 }
+
+extension MemoHA {
+    /// Le mémo dans HA si l'appareil est passé sur HA et que l'URL et le jeton sont réglés (pas sur la montre,
+    /// qui reçoit l'URL et le jeton de l'iPhone : `WatchStore`).
+    static var current: MemoHA? {
+        guard HAConfig.isActive, let url = HAConfig.url, let token = HAConfig.token, !token.isEmpty else { return nil }
+        return MemoHA(url: url, token: token)
+    }
+}

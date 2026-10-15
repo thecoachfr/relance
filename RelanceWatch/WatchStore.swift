@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import Security
 import WatchConnectivity
 import WidgetKit
 
@@ -93,6 +94,10 @@ final class WatchStore: NSObject, WCSessionDelegate {
     /// joignable ; sinon `nil`, et la fiche attend dans la file de WatchConnectivity (livrée dès qu'il revient) ;
     /// `.some(nil)` si elle n'a pas pu partir du tout.
     func rememberViaPhone(title: String, details: String) async -> MemoMerge.Outcome?? {
+        // D'abord directement dans Home Assistant (réseau de la montre), comme l'app.
+        if let ha = WatchHA.memo, let outcome = try? await ha.remember(title: title, details: details) {
+            return .some(outcome)
+        }
         let message: [String: Any] = [WatchLink.actionKey: WatchLink.Action.memo.rawValue,
                                       WatchLink.titleKey: title, WatchLink.detailsKey: details]
         let session = WCSession.default
@@ -192,6 +197,7 @@ final class WatchStore: NSObject, WCSessionDelegate {
             google.store(refreshToken: token, clientID: clientID)
         }
         if let inHA = payload.tasksInHA { Self.defaults.set(inHA, forKey: Self.tasksInHAKey) }
+        if let url = payload.haURL, let token = payload.haToken { WatchHA.store(url: url, token: token) }
         if let tasks = payload.tasks { receive(tasks) }
     }
 
@@ -220,11 +226,57 @@ nonisolated private struct Payload: Sendable {
     var refreshToken: String?
     var clientID: String?
     var tasksInHA: Bool?
+    var haURL: String?
+    var haToken: String?
 
     init(_ dictionary: [String: Any]) {
+        haURL = dictionary[WatchLink.haURLKey] as? String
+        haToken = dictionary[WatchLink.haTokenKey] as? String
         tasksInHA = dictionary[WatchLink.tasksInHAKey] as? Bool
         tasks = (dictionary[WatchLink.tasksKey] as? Data).map { WatchLink.decode($0) }
         refreshToken = dictionary[WatchLink.refreshTokenKey] as? String
         clientID = dictionary[WatchLink.clientIDKey] as? String
+    }
+}
+
+/// URL de Home Assistant (préférences de la montre) et jeton apps-perso (trousseau de la montre), reçus de l'iPhone.
+nonisolated enum WatchHA {
+    private static let urlKey = "haURL"
+    private static let service = "fr.alexandrefau.relance.ha"
+    private static var defaults: UserDefaults { UserDefaults(suiteName: "group.fr.alexandrefau.relance") ?? .standard }
+
+    static var memo: MemoHA? {
+        guard let texte = defaults.string(forKey: urlKey), let url = URL(string: texte),
+              let token = token(), !token.isEmpty else { return nil }
+        return MemoHA(url: url, token: token)
+    }
+
+    /// Chaînes vides : l'iPhone n'est plus en mode HA, on oublie tout.
+    static func store(url: String, token: String) {
+        guard !url.isEmpty, !token.isEmpty else {
+            defaults.removeObject(forKey: urlKey)
+            SecItemDelete(query as CFDictionary)
+            return
+        }
+        defaults.set(url, forKey: urlKey)
+        guard self.token() != token else { return }
+        SecItemDelete(query as CFDictionary)
+        var item = query
+        item[kSecValueData as String] = Data(token.utf8)
+        item[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        SecItemAdd(item as CFDictionary, nil)
+    }
+
+    private static var query: [String: Any] {
+        [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service]
+    }
+
+    private static func token() -> String? {
+        var q = query
+        q[kSecReturnData as String] = true
+        q[kSecMatchLimit as String] = kSecMatchLimitOne
+        var result: AnyObject?
+        guard SecItemCopyMatching(q as CFDictionary, &result) == errSecSuccess, let data = result as? Data else { return nil }
+        return String(data: data, encoding: .utf8)
     }
 }

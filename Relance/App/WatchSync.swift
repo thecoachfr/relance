@@ -31,6 +31,9 @@ final class WatchSync: NSObject, WCSessionDelegate {
         let credentials = store.auth.watchCredentials
         context[WatchLink.refreshTokenKey] = credentials?.refreshToken ?? ""
         context[WatchLink.clientIDKey] = credentials?.clientID ?? ""
+        let ha = store.isHAActive ? MemoHA.current : nil
+        context[WatchLink.haURLKey] = ha?.url.absoluteString ?? ""
+        context[WatchLink.haTokenKey] = ha?.token ?? ""
         try? session.updateApplicationContext(context)
         // La complication suit l'état en retard : on la prévient, dans la limite du budget quotidien d'Apple.
         if session.isComplicationEnabled, session.remainingComplicationUserInfoTransfers > 0 {

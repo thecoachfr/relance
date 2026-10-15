@@ -22,12 +22,6 @@ nonisolated struct MemoHA: Sendable {
     let url: URL
     let token: String
 
-    /// Le mémo dans HA si l'appareil est passé sur HA et que l'URL et le jeton sont réglés.
-    static var current: MemoHA? {
-        guard HAConfig.isActive, let url = HAConfig.url, let token = HAConfig.token, !token.isEmpty else { return nil }
-        return MemoHA(url: url, token: token)
-    }
-
     /// Fiches non retirées, par ordre alphabétique.
     func fiches() async throws -> [Fiche] {
         let reponse = try await call("get_items", ["entity_id": Self.entity, "status": "needs_action"], response: true)

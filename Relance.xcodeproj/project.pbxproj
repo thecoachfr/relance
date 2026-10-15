@@ -117,6 +117,7 @@
 		6019D643F65413468B619C80 /* DateDetection.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFB0E54140635703273C5FC6 /* DateDetection.swift */; };
 		614FCED5DB203287B10A9376 /* SyncLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 110B163FAF813ACD416300F7 /* SyncLog.swift */; };
 		65ECAE714A9E3FFDCCD76999 /* TaskItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6A4EF6EA4834A24EB534187 /* TaskItem.swift */; };
+		6739E0D505663CF06124620A /* MemoHA.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F9BBE7BB317EE70061CDB73 /* MemoHA.swift */; };
 		67A4FDCDD524644D106A829B /* GoogleRefreshSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D9F2F47AFB8AE35410E0899 /* GoogleRefreshSession.swift */; };
 		67B127B18E5CC48E3A37338B /* ShareRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8DD169C267E52E75DD38AAD /* ShareRootView.swift */; };
 		68BB883966A2910F6A6B2879 /* NotesTimeCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05822D2ACADE5BC42570E7F5 /* NotesTimeCodec.swift */; };
@@ -1325,6 +1326,7 @@
 				77DEA0A194FDEAC25ACD8DFA /* DueText.swift in Sources */,
 				60069D6FE824F0929DFC25E4 /* EnvieSuggestions.swift in Sources */,
 				797F8B78DDCECD8C3583DBB0 /* GoogleRefreshSession.swift in Sources */,
+				6739E0D505663CF06124620A /* MemoHA.swift in Sources */,
 				411AD1D6E476601C8926F5F3 /* MemoMerge.swift in Sources */,
 				2881FCDA8614373C9D68FE76 /* MemoRemote.swift in Sources */,
 				68BB883966A2910F6A6B2879 /* NotesTimeCodec.swift in Sources */,

@@ -248,6 +248,7 @@ targets:
       - Shared/Model/TaskTag.swift
       - Shared/Model/MemoMerge.swift
       - Shared/Google/MemoRemote.swift
+      - Shared/HA/MemoHA.swift
       - Shared/WatchApp
     dependencies:
       - target: RelanceWatchWidgets
