@@ -16,7 +16,6 @@ import os
 import threading
 import time
 from pathlib import Path
-import unicodedata
 import uuid
 
 import httpx
@@ -86,25 +85,6 @@ def tache_depuis_google(item):
     return tache
 
 
-def meme_sujet(a, b):
-    """Même sujet de fiche, sans tenir compte des majuscules ni des accents (comme MemoMerge.sameSubject)."""
-    def plat(s):
-        s = unicodedata.normalize("NFD", (s or "").strip())
-        return "".join(c for c in s if unicodedata.category(c) != "Mn").casefold()
-    return plat(a) == plat(b)
-
-
-def details_fusionnes(existants, nouveaux, separateur=" — "):
-    """Détails complétés des seules parties nouvelles (comme MemoMerge.merged) ; None si rien de neuf."""
-    connus = (existants or "").lower()
-    frais = [p.strip() for p in (nouveaux or "").split(separateur)]
-    frais = [p for p in frais if p and p.lower() not in connus]
-    if not frais:
-        return None
-    base = (existants or "").strip()
-    return separateur.join(([base] if base else []) + frais)
-
-
 def _heure(text):
     parts = text.split(":")
     if len(parts) != 2 or not all(p.isdigit() for p in parts):
@@ -121,7 +101,7 @@ class RelanceVigie(Hass):
                 return
 
         self._todo = self.args["todo_entity"]
-        # Mémo de la routine de tri : Home Assistant le garde en cache, on le rafraîchit avec les tâches
+        # Mémo de la routine de tri dans Google (seulement sans tâches dans HA) : Home Assistant le garde en cache, on le rafraîchit avec les tâches
         # pour que la routine lise les fiches ajoutées depuis l'app.
         self._memo = self.args.get("memo_entity", "todo.relance_memo")
         self._bundle_id = self.args["bundle_id"]
@@ -140,8 +120,6 @@ class RelanceVigie(Hass):
         self._espace = self.args.get("ha_espace")
         self._inbox = bool(self.args.get("inbox")) and bool(self._espace)
         self._inbox_path = Path(self.args.get("inbox_file", "/config/relance_inbox.json"))
-        # Mémo du tri dans HA (liste Local To-do) : les fiches encore écrites dans la liste Google (montre) y sont reprises.
-        self._memo_ha = self.args.get("memo_ha_entity")
         self._push_handle = None
         self._changes = 0
         # Clés connues de l'espace : une clé nouvelle (tâche créée dans l'app ou reprise de Google) lance le tri.
@@ -164,14 +142,14 @@ class RelanceVigie(Hass):
         if self._refreshes == 1:
             self.log("Rafraîchissement automatique de Google Tasks actif")
         try:
-            self.call_service("homeassistant/update_entity", entity_id=[self._todo, self._memo])
+            # Tâches dans HA : le mémo est une liste Local To-do de HA, plus rien à rafraîchir chez Google.
+            entites = [self._todo] if self._espace else [self._todo, self._memo]
+            self.call_service("homeassistant/update_entity", entity_id=entites)
         except Exception as error:  # noqa: BLE001 — on veut voir toute erreur dans le journal
             self.log(f"Rafraîchissement impossible : {error!r}", level="WARNING")
         if self._inbox:
             # Le temps que Home Assistant ait relu Google.
             self.run_in(self.import_inbox, 5)
-        if self._memo_ha:
-            self.run_in(self.import_memo, 7)
 
     def on_tasks_changed(self, entity, attribute, old, new, **kwargs):
         if old in UNAVAILABLE or new in UNAVAILABLE or old == new:
@@ -282,46 +260,6 @@ class RelanceVigie(Hass):
                 self.log(f"Boîte d'entrée : « {tache['titre']} » reprise dans Home Assistant")
                 self._remove_from_google(uid, state)
         self._save_inbox(state)
-
-    def import_memo(self, **kwargs):
-        """Fiches de la liste Google du mémo (écrites par la montre) reprises dans la liste HA : une fiche du même
-        sujet est complétée, sinon ajoutée ; la fiche Google est ensuite cochée (réversible)."""
-        try:
-            google = self._service("todo", "get_items", {"entity_id": self._memo, "status": "needs_action"})
-            google = (google or {}).get(self._memo, {}).get("items", [])
-            if not google:
-                return
-            ha = self._service("todo", "get_items", {"entity_id": self._memo_ha, "status": "needs_action"})
-            ha = (ha or {}).get(self._memo_ha, {}).get("items", [])
-        except Exception as error:  # noqa: BLE001
-            self.log(f"Mémo : lecture impossible : {error!r}", level="WARNING")
-            return
-        for item in google:
-            sujet, details = item.get("summary") or "", item.get("description") or ""
-            if not sujet or not item.get("uid"):
-                continue
-            try:
-                fiche = next((f for f in ha if meme_sujet(f.get("summary"), sujet)), None)
-                if fiche:
-                    fusion = details_fusionnes(fiche.get("description"), details)
-                    if fusion:
-                        self._service("todo", "update_item", {"entity_id": self._memo_ha, "item": fiche["uid"],
-                                                               "description": fusion}, response=False)
-                        fiche["description"] = fusion
-                        self.log(f"Mémo : fiche « {fiche['summary']} » complétée")
-                else:
-                    data = {"entity_id": self._memo_ha, "item": sujet}
-                    if details:
-                        data["description"] = details
-                    self._service("todo", "add_item", data, response=False)
-                    # Relue pour connaître son uid (une autre fiche du même sujet peut suivre).
-                    ha = (self._service("todo", "get_items", {"entity_id": self._memo_ha, "status": "needs_action"})
-                          or {}).get(self._memo_ha, {}).get("items", [])
-                    self.log(f"Mémo : fiche « {sujet} » ajoutée")
-                self._service("todo", "update_item", {"entity_id": self._memo, "item": item["uid"],
-                                                       "status": "completed"}, response=False)
-            except Exception as error:  # noqa: BLE001
-                self.log(f"Mémo : « {sujet} » non reprise : {error!r}", level="WARNING")
 
     def _remove_from_google(self, uid, state):
         try:

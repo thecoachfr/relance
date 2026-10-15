@@ -132,7 +132,7 @@ Détail et suite dans [SUIVI.md](SUIVI.md).
 ### Décisions du 12/10/2026
 6. **Un seul appareil relance** (iPhone d'origine), choisi dans les réglages de n'importe quel appareil, partagé par iCloud.
 7. **L'heure n'est pas propagée à Google** : l'API Google Tasks ne la gère pas, et ce serait doubler les rappels. Pour la voir dans Google Agenda, bouton « Ajouter au calendrier ».
-8. **Mémo de contexte** de la routine dans une liste Google Tasks à part (« Relance · mémo »), lue en lecture seule par la routine.
+8. **Mémo de contexte** de la routine dans une liste Google Tasks à part (« Relance · mémo »), lue en lecture seule par la routine. *Remplacé le 15/10/2026 : liste Local To-do « Aiguillage · mémo » dans Home Assistant (éditable depuis HA).*
 9. **App Mac native** (SwiftUI) plutôt que l'app iPad sur Mac : trois colonnes, barre des menus, raccourcis.
 
 ### Décision du 15/10/2026

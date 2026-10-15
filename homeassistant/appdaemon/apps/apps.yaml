@@ -19,6 +19,3 @@ relance_vigie:
   # La liste Google devient la boîte d'entrée des dictées Google Home, vidée dans HA (état dans
   # /config/relance_inbox.json). Ne démarre qu'après la migration de l'app.
   # inbox: true
-  # Mémo du tri dans HA (liste Local To-do « Aiguillage · mémo ») : les fiches encore écrites dans la liste Google
-  # du mémo (montre) y sont reprises (même sujet complété), puis cochées dans Google.
-  # memo_ha_entity: todo.aiguillage_memo

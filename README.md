@@ -55,8 +55,7 @@ Sur chaque appareil (iPhone, iPad, Mac) : **Réglages › Home Assistant** :
 Google Tasks n'est plus que la **boîte d'entrée** des dictées Google Home (la vigie les reprend dans Home Assistant, puis
 les retire de Google). Le **mémo** de la routine de tri est dans Home Assistant depuis le 15/10 : liste Local To-do
 « Aiguillage · mémo » (`todo.aiguillage_memo`), qu'on modifie aussi dans Home Assistant (panneau **Listes de tâches**, titre
-= sujet, description = détails). Les fiches que la montre écrit encore dans la liste Google du mémo y sont reprises par la
-vigie.
+= sujet, description = détails). La montre y écrit directement (URL et jeton transmis par l'iPhone).
 La montre passe alors par l'iPhone pour les tâches ; l'extension de partage écrit dans la base locale partagée.
 
 ## Déploiement automatique (Xcode Cloud + TestFlight)
@@ -105,7 +104,7 @@ Google Tasks ──(1 min)── HA : intégration Google Tasks ── AppDaemon
 Relance ──(jeton push)──► webhook HA ──► événement relance_register ┘
 ```
 
-Elle rafraîchit aussi la liste mémo de la routine de tri (`todo.relance_memo`), lance la routine après chaque nouvelle tâche
+Sans tâches dans HA, elle rafraîchit aussi la liste Google du mémo (`todo.relance_memo`) ; elle lance la routine après chaque nouvelle tâche
 et à la demande de l'app (« Retrier avec Claude », champ `action: triage` du webhook).
 Pour la mettre à jour : monter le partage `smb://homeassistant.local/addon_configs` dans le Finder et copier
 `relance_vigie.py` dans `a0d7b954_appdaemon/apps/` (AppDaemon la recharge seul).
