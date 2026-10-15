@@ -16,6 +16,10 @@ struct ShareComposeView: View {
     @State private var body_ = ""
     @State private var proposedTitle = ""
     @State private var sending = false
+    /// Envie reconnue d'après le lien (YouTube → À regarder…) ; `nil` = une tâche.
+    @State private var kind: ToSee.Kind?
+    /// Titre lu sur la page pendant que la fiche s'affiche.
+    @State private var fetchingTitle = false
 
     var body: some View {
         NavigationStack {
@@ -28,14 +32,27 @@ struct ShareComposeView: View {
                     }
                 }
                 Section {
-                    TextField("Titre", text: $title, axis: .vertical)
-                        .font(.headline)
+                    HStack {
+                        TextField("Titre", text: $title, axis: .vertical)
+                            .font(.headline)
+                        if fetchingTitle { ProgressView() }
+                    }
                 } footer: {
                     if !body_.isEmpty {
                         Text(body_).lineLimit(4)
                     }
                 }
 
+                Section {
+                    Picker("Ranger dans", selection: $kind) {
+                        Text("Tâche").tag(ToSee.Kind?.none)
+                        ForEach(ToSee.Kind.allCases) { Label($0.title, systemImage: $0.symbol).tag(Optional($0)) }
+                    }
+                } footer: {
+                    if kind != nil { Text("Gardé dans Envies, sans échéance ni relance.") }
+                }
+
+                if kind == nil {
                 Section("Échéance") {
                     Picker("Jour", selection: dayChoice) {
                         Text("Aujourd'hui").tag(DayChoice.today)
@@ -56,6 +73,8 @@ struct ShareComposeView: View {
                     }
                 }
 
+                }
+
                 Section("Priorité") {
                     Picker("Priorité", selection: $priority) {
                         ForEach(TaskPriority.allCases) { Text($0.rawValue).tag($0) }
@@ -63,7 +82,7 @@ struct ShareComposeView: View {
                     .pickerStyle(.segmented)
                 }
             }
-            .navigationTitle("Nouvelle tâche")
+            .navigationTitle(kind?.title ?? "Nouvelle tâche")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -116,6 +135,20 @@ struct ShareComposeView: View {
             hasTime = true
             time = Calendar.current.date(bySettingHour: m / 60, minute: m % 60, second: 0, of: .now)!
         }
+        // Un lien (vidéo, album, article) : une envie, avec le titre de la page si on n'a partagé que le lien.
+        guard let url = SharedLink.url(in: original) else { return }
+        let linkOnly = draft.body.trimmingCharacters(in: .whitespacesAndNewlines) == url.absoluteString
+        kind = SharedLink.kind(for: url, linkOnly: linkOnly)
+        if kind != nil { day = nil }
+        guard linkOnly else { return }
+        fetchingTitle = true
+        Task {
+            if let pageTitle = await SharedLink.title(of: url), title == proposedTitle {
+                title = String(pageTitle.prefix(SharedMessage.maxTitleLength * 2))
+                proposedTitle = title
+            }
+            fetchingTitle = false
+        }
     }
 
     /// Dans Home Assistant si l'app y range ses tâches, sinon directement chez Google (la vigie réveille
@@ -125,7 +158,11 @@ struct ShareComposeView: View {
         let c = Calendar.current.dateComponents([.hour, .minute], from: time)
         let minutes = day != nil && hasTime ? (c.hour ?? 0) * 60 + (c.minute ?? 0) : nil
         let cleanTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        let notes = SharedMessage.notes(original: original, titleEdited: cleanTitle != proposedTitle)
+        var notes = SharedMessage.notes(original: original, titleEdited: cleanTitle != proposedTitle)
+        if let kind {
+            notes = ToSee.notes(notes, setting: ToSee(kind))
+            day = nil
+        }
         if HAConfig.isActive, await addToHA(title: cleanTitle, notes: notes, minutes: minutes) {
             return onDone()
         }

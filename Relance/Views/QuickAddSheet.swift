@@ -6,8 +6,8 @@ enum QuickAddContext: Equatable {
     case today
     /// À trier : sans date.
     case inbox
-    /// À voir : sans échéance, période facultative.
-    case toSee
+    /// Envies : sans échéance, du type du filtre, période facultative.
+    case toSee(ToSee.Kind)
     /// Carte : sans date, le lieu d'abord.
     case map
 }
@@ -35,18 +35,28 @@ struct QuickAddSheet: View {
     init(context: QuickAddContext = .today, category: String? = nil) {
         self.context = context
         _day = State(initialValue: context == .today ? Calendar.current.startOfDay(for: .now) : nil)
-        _notes = State(initialValue: context == .toSee ? ToSee.notes("", setting: ToSee()) : "")
+        if case .toSee(let kind) = context {
+            _notes = State(initialValue: ToSee.notes("", setting: ToSee(kind)))
+        } else {
+            _notes = State(initialValue: "")
+        }
         _category = State(initialValue: category)
     }
 
     private var isToSee: Bool { ToSee(notes: notes) != nil }
+    /// Type de l'envie en cours, ou celui de l'onglet.
+    private var kind: ToSee.Kind {
+        if let toSee = ToSee(notes: notes) { return toSee.kind }
+        if case .toSee(let kind) = context { return kind }
+        return .outing
+    }
 
     /// Exemple dans le champ, selon l'onglet.
     private var placeholder: String {
         switch context {
         case .today: "Appeler le garage vendredi 15 h"
         case .inbox: "Rappeler le plombier"
-        case .toSee: "Expo photo à la MEP"
+        case .toSee(let kind): kind.example
         case .map: "Déposer le colis à la poste"
         }
     }
@@ -73,13 +83,13 @@ struct QuickAddSheet: View {
                             day = nil
                             manual = true
                         } label: {
-                            Label("Ranger dans « À voir », " + period.toSee.periodText, systemImage: "eyeglasses")
+                            Label("Ranger dans « À voir », " + period.toSee.periodText, systemImage: ToSee.Kind.outing.symbol)
                         }
                     } footer: {
                         Text("Une période a été reconnue dans la phrase : c'est plutôt quelque chose à voir qu'une échéance.")
                     }
                 }
-                ToSeeSection(notes: $notes) { day = nil; manual = true }
+                ToSeeSection(notes: $notes, kind: kind) { day = nil; manual = true }
                 if !isToSee {
                 Section("Échéance") {
                     Picker("Jour", selection: dayChoice) {
@@ -117,7 +127,7 @@ struct QuickAddSheet: View {
                 }
             }
             .placeSearch(isPresented: $searchingPlace, notes: $notes)
-            .navigationTitle(isToSee ? "À voir" : "Nouvelle tâche")
+            .navigationTitle(isToSee ? kind.title : "Nouvelle tâche")
             .inlineNavigationTitle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Annuler") { dismiss() } }
@@ -162,10 +172,26 @@ struct QuickAddSheet: View {
     private var detected: DateDetection.Match? { DateDetection.firstMatch(in: text) }
 
     /// Période écrite dans la phrase (« du 10/10 au 31/01 »).
-    private var period: (range: Range<String.Index>, toSee: ToSee)? { ToSee.period(in: text) }
+    private var period: (range: Range<String.Index>, toSee: ToSee)? {
+        ToSee.period(in: text).map { found in
+            var toSee = found.toSee
+            if isToSee { toSee.kind = kind }
+            return (found.range, toSee)
+        }
+    }
+
+    /// « Dune à regarder » : le type dit dans la phrase.
+    private var spokenKind: (range: Range<String.Index>, kind: ToSee.Kind)? { ToSee.kind(in: text) }
 
     private func detect() {
-        // « À voir » : la période de la phrase remplit le début et la fin ; pas d'échéance à reconnaître.
+        // « … à lire » : la phrase range une envie de ce type.
+        if let spokenKind, ToSee(notes: notes)?.kind != spokenKind.kind {
+            var toSee = ToSee(notes: notes) ?? ToSee()
+            toSee.kind = spokenKind.kind
+            notes = ToSee.notes(notes, setting: toSee)
+            day = nil
+        }
+        // Envie : la période de la phrase remplit le début et la fin ; pas d'échéance à reconnaître.
         guard !isToSee else {
             if !manualPriority { priority = TaskPriority.detect(in: text)?.priority ?? .normal }
             if let period { notes = ToSee.notes(notes, setting: period.toSee) }
@@ -186,7 +212,8 @@ struct QuickAddSheet: View {
 
     private var cleanTitle: String {
         var title = text
-        if isToSee, let period { title.removeSubrange(period.range) }
+        if let spokenKind { title.removeSubrange(spokenKind.range) }
+        if isToSee, let period = ToSee.period(in: title) { title.removeSubrange(period.range) }
         else if !manual, period == nil, let found = detected { title.removeSubrange(found.range) }
         if !manualPriority { title = TaskPriority.removing(TaskPriority.detect(in: title), from: title) }
         return title.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -209,9 +236,11 @@ struct AddTaskToolbarButton: ToolbarContent {
     let context: QuickAddContext
     @Binding var isPresented: Bool
 
+    private var isToSee: Bool { if case .toSee = context { true } else { false } }
+
     var body: some ToolbarContent {
         ToolbarItem(placement: .primaryAction) {
-            Button(context == .toSee ? "Nouvel « À voir »" : "Nouvelle tâche", systemImage: "plus") { isPresented = true }
+            Button(isToSee ? "Nouvelle envie" : "Nouvelle tâche", systemImage: "plus") { isPresented = true }
                 .buttonStyle(.borderedProminent)
                 .keyboardShortcut("n", modifiers: .command)
         }

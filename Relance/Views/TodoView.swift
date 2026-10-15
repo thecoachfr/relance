@@ -6,9 +6,12 @@ struct TodoView: View {
     @Query(filter: #Predicate<TaskItem> { !$0.isCompleted && !$0.isTrashed && $0.dueDay != nil },
            sort: \TaskItem.dueDay)
     private var dated: [TaskItem]
+    @Query(filter: #Predicate<TaskItem> { $0.isCompleted && !$0.isTrashed })
+    private var completed: [TaskItem]
 
     @State private var showAdd = false
     @State private var showSettings = false
+    @State private var showDone = false
     @State private var editing: TaskItem?
     @State private var justDone: TaskItem?
     /// iPad : tâche affichée dans la colonne de droite.
@@ -57,6 +60,7 @@ struct TodoView: View {
                 section("En retard", groups.overdue, now: now)
                 section("Aujourd'hui", groups.today, now: now)
                 section("Bientôt", groups.later, now: now)
+                doneLink(now: now)
             }
             .overlay {
                 if dated.isEmpty {
@@ -91,6 +95,7 @@ struct TodoView: View {
         .safeAreaInset(edge: .bottom) { undoBanner }
         .sheet(isPresented: $showAdd) { QuickAddSheet() }
         .sheet(isPresented: $showSettings) { SettingsView() }
+        .sheet(isPresented: $showDone) { DoneView() }
         .sheet(item: $editing) { TaskEditor(item: $0) }
         .sensoryFeedback(.success, trigger: justDone)
     }
@@ -106,6 +111,24 @@ struct TodoView: View {
                 }
             }
         }
+    }
+
+    /// Dernière ligne : l'historique de ce qui est fait (il n'a plus d'onglet).
+    private func doneLink(now: Date) -> some View {
+        let today = completed.filter { $0.completedAt.map { Calendar.current.isDate($0, inSameDayAs: now) } ?? false }.count
+        return Section {
+            Button { showDone = true } label: {
+                LabeledContent {
+                    if today > 0 { Text("\(today) aujourd'hui") }
+                } label: {
+                    Label("Fait", systemImage: "checkmark.circle")
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint("Ouvre l'historique des tâches faites")
+        }
+        .selectionDisabled()
     }
 
     private func group(now: Date) -> (overdue: [TaskItem], today: [TaskItem], later: [TaskItem]) {

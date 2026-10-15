@@ -23,7 +23,10 @@ struct WatchAddTaskIntent: AppIntent {
         let due = r.day.map { day in
             r.minutes.flatMap { Calendar.current.date(byAdding: .minute, value: $0, to: day) } ?? day
         }
-        await WatchStore.shared.insert(title: r.title, due: due, hasTime: r.minutes != nil, priority: r.priority)
+        // La montre n'écrit pas les lignes des notes : une envie garde « à regarder » dans le titre,
+        // et la routine de tri la range (règle N).
+        let title = r.kind.map { "\(r.title) (\($0.title.lowercased()))" } ?? r.title
+        await WatchStore.shared.insert(title: title, due: due, hasTime: r.minutes != nil, priority: r.priority)
         return .result(dialog: IntentDialog(stringLiteral: SiriCapture.confirmation(r)))
     }
 }

@@ -71,6 +71,7 @@
 		3BE40C9DBDE64A6F5F2546B3 /* TaskMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 428A54223E0ADAC3553B38D1 /* TaskMapView.swift */; };
 		3C7EB414FE5B94778AFA7C21 /* MemoMerge.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8DEDB1DC8F3AC484AE105AB /* MemoMerge.swift */; };
 		3D5E9A6C58E227587722DF17 /* CalendarLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41BF8369B5A6A593F0D8D600 /* CalendarLink.swift */; };
+		3DA6C0DD8DD1319B6B56BFF9 /* ToSee.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A3B053B5BF69150A21C6DA2 /* ToSee.swift */; };
 		3DF1925113495E486AC32BCC /* HAConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FADF69313D958AAEDF4ED3 /* HAConfig.swift */; };
 		3F8D144215F91E1F3FF80CAD /* ToSee.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A3B053B5BF69150A21C6DA2 /* ToSee.swift */; };
 		3FFA6E47ADFC793D3579268E /* TagViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3D83AD9429BAA01C53166A7 /* TagViews.swift */; };
@@ -113,6 +114,7 @@
 		67A4FDCDD524644D106A829B /* GoogleRefreshSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D9F2F47AFB8AE35410E0899 /* GoogleRefreshSession.swift */; };
 		67B127B18E5CC48E3A37338B /* ShareRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8DD169C267E52E75DD38AAD /* ShareRootView.swift */; };
 		68BB883966A2910F6A6B2879 /* NotesTimeCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05822D2ACADE5BC42570E7F5 /* NotesTimeCodec.swift */; };
+		6AA5932FC7F3E572A6671008 /* SharedLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761FC1F3864FB766BF0A6485 /* SharedLink.swift */; };
 		6C347CDDC471D2DA7774E38D /* MemoMerge.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8DEDB1DC8F3AC484AE105AB /* MemoMerge.swift */; };
 		6C7478733E97564534724799 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 95845BE823BDEEB575973A70 /* GoogleSignIn */; };
 		6D2D64BDB84B7CC6C8504611 /* Recurrence.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57E018902DF086E23048C8AE /* Recurrence.swift */; };
@@ -153,6 +155,7 @@
 		8F2F0A6D92079980C1F53D2B /* PriorityViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = C668853F8DA6D5749B17B534 /* PriorityViews.swift */; };
 		9032B55802F93C7ADD108C2E /* ToSee.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A3B053B5BF69150A21C6DA2 /* ToSee.swift */; };
 		92BEB50FEBAF86DA3ACEBCF1 /* TriageViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = B94FACB36938B4FB532C381F /* TriageViews.swift */; };
+		92D5E44DE928EBC19ED6E5D4 /* SharedLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761FC1F3864FB766BF0A6485 /* SharedLink.swift */; };
 		9459DAF4A91A5AAD43963E9E /* MemoMerge.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8DEDB1DC8F3AC484AE105AB /* MemoMerge.swift */; };
 		95209752641755F1E477430C /* DateDetection.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFB0E54140635703273C5FC6 /* DateDetection.swift */; };
 		97287B1F4C527AE7E94A875C /* TaskStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C0DA8FD3D838562DDAE1750 /* TaskStore.swift */; };
@@ -190,8 +193,10 @@
 		B1E59BEF8722E7FE18322099 /* TaskActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4710CF61EBFBFD1A1472103A /* TaskActivityAttributes.swift */; };
 		B4F3FCB485FC24BA04D9D92D /* ReminderDeviceSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98189E62C7922E8F582E78C1 /* ReminderDeviceSection.swift */; };
 		B62C6C5D2C7AD96BC26CF840 /* AppGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A12D2947BB91F0172F0ED7C /* AppGroup.swift */; };
+		B7190007DF592BE54D7C7FC7 /* SharedLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761FC1F3864FB766BF0A6485 /* SharedLink.swift */; };
 		B9C9D5D3F29EE0806E9D6F01 /* ReminderOverride.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CF4B1AF23ADE07B4C45F7D2 /* ReminderOverride.swift */; };
 		BAF8EF5A4B0C929FE0261B7F /* QuickAddSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD9D4E32E198251993005BCC /* QuickAddSheet.swift */; };
+		BB2D3E72F85A27A82A60C7B1 /* EnviesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C3F65EA3092E1881DEA6CE5 /* EnviesTests.swift */; };
 		BC8E1D24312B29365D78F691 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D537FFD88362EBC0053D6B55 /* RootView.swift */; };
 		BCD919ED7BBA041D4A2E510D /* TasksAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 965A3B9A7F0371E3299ADA39 /* TasksAPI.swift */; };
 		BD23A3EBFE23CFFB26111FED /* ReminderScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13C930EA8E752F00D8973CDF /* ReminderScheduler.swift */; };
@@ -209,6 +214,7 @@
 		C4DADCA5789A103FC6CE009E /* TacheHA.swift in Sources */ = {isa = PBXBuildFile; fileRef = 719434D8C63A56B7090C5E3F /* TacheHA.swift */; };
 		C642E4D5DAD4DB03124288CE /* TaskFields.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C219EEDD1BA5AF2BD37ABCA /* TaskFields.swift */; };
 		C6F18DD0DD71D893DB5B93A1 /* TaskPriority.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EE508F82F326D596EC1A031 /* TaskPriority.swift */; };
+		C79EB0F3703A561BF58D7F3E /* SharedLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761FC1F3864FB766BF0A6485 /* SharedLink.swift */; };
 		C858D4E004FC4E97118EAD02 /* MemoMerge.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8DEDB1DC8F3AC484AE105AB /* MemoMerge.swift */; };
 		CAF23669994EDF45727FB2A7 /* TaskMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 428A54223E0ADAC3553B38D1 /* TaskMapView.swift */; };
 		CB7FB1123F4B6504E127FE88 /* ReminderProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8FDF7A0D1D79E016D9F07AA /* ReminderProfile.swift */; };
@@ -355,6 +361,7 @@
 		1AC3C376A9AF6A9087AF2A12 /* SharedMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedMessage.swift; sourceTree = "<group>"; };
 		1ACA9CCEB1971063F8141552 /* ShareComposeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareComposeView.swift; sourceTree = "<group>"; };
 		1B19813EA3F6E02B516AA5F8 /* TaskIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskIntents.swift; sourceTree = "<group>"; };
+		1C3F65EA3092E1881DEA6CE5 /* EnviesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnviesTests.swift; sourceTree = "<group>"; };
 		1D5B40F509B64DF9DF0291C1 /* MemoMergeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoMergeTests.swift; sourceTree = "<group>"; };
 		2085B3617089E328A5BF3F30 /* DoneView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoneView.swift; sourceTree = "<group>"; };
 		297D48117D9F85F84A3B1F2F /* WatchSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSync.swift; sourceTree = "<group>"; };
@@ -404,6 +411,7 @@
 		7330833E3C0E5C180D91AC6A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		745CB36B5E1C4CC59E0B3317 /* MacRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacRootView.swift; sourceTree = "<group>"; };
 		74643B8064742A8000773BDB /* Relance.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Relance.entitlements; sourceTree = "<group>"; };
+		761FC1F3864FB766BF0A6485 /* SharedLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedLink.swift; sourceTree = "<group>"; };
 		77112E8A0B99D6D1C55C2D66 /* NotesTimeCodecTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotesTimeCodecTests.swift; sourceTree = "<group>"; };
 		7AC4D232F9F0F91D89576CCA /* RecurrenceViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurrenceViews.swift; sourceTree = "<group>"; };
 		7E7598AD45ABC35C0448C201 /* ContactSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactSection.swift; sourceTree = "<group>"; };
@@ -546,6 +554,7 @@
 			isa = PBXGroup;
 			children = (
 				E4DC1239718727B09A71BA21 /* DueTextTests.swift */,
+				1C3F65EA3092E1881DEA6CE5 /* EnviesTests.swift */,
 				8BB210515A561BDDE66887DD /* HASyncTests.swift */,
 				1D5B40F509B64DF9DF0291C1 /* MemoMergeTests.swift */,
 				77112E8A0B99D6D1C55C2D66 /* NotesTimeCodecTests.swift */,
@@ -562,6 +571,7 @@
 			isa = PBXGroup;
 			children = (
 				DF29C342D7BB3A0E61FDF60D /* MemoShareDraft.swift */,
+				761FC1F3864FB766BF0A6485 /* SharedLink.swift */,
 				1AC3C376A9AF6A9087AF2A12 /* SharedMessage.swift */,
 			);
 			path = Share;
@@ -1115,6 +1125,7 @@
 				583A3DA69F84352B8BA39E85 /* ReminderSettingsView.swift in Sources */,
 				BC8E1D24312B29365D78F691 /* RootView.swift in Sources */,
 				30B420CBEF3DC2A1CB0FE161 /* SettingsView.swift in Sources */,
+				92D5E44DE928EBC19ED6E5D4 /* SharedLink.swift in Sources */,
 				30BD36CAB51B171449076E31 /* SharedMessage.swift in Sources */,
 				257B9AB2824CB698FD0CA93B /* SiriCapture.swift in Sources */,
 				43C8AFEDD5A2B15E0EB802CC /* SyncLog.swift in Sources */,
@@ -1195,6 +1206,7 @@
 				A4B3BDAD0534826FFFAC7AFE /* ReminderProfile.swift in Sources */,
 				BD23A3EBFE23CFFB26111FED /* ReminderScheduler.swift in Sources */,
 				5718D57DDE6C4FB43D513F31 /* ReminderSettingsView.swift in Sources */,
+				C79EB0F3703A561BF58D7F3E /* SharedLink.swift in Sources */,
 				DED92B856FA78FAE4B00D64F /* SharedMessage.swift in Sources */,
 				614FCED5DB203287B10A9376 /* SyncLog.swift in Sources */,
 				AA5DF43C8963DCD3BDDCD321 /* TacheHA+TaskItem.swift in Sources */,
@@ -1239,11 +1251,13 @@
 				03042DD444E64B5E71EE600E /* ShareComposeView.swift in Sources */,
 				67B127B18E5CC48E3A37338B /* ShareRootView.swift in Sources */,
 				5E211E65AE023F62D9DE7DAD /* ShareViewController.swift in Sources */,
+				B7190007DF592BE54D7C7FC7 /* SharedLink.swift in Sources */,
 				D68D03B7649D68EDC025CDF1 /* SharedMessage.swift in Sources */,
 				25C1676B0FC5CF26CD5223E9 /* TacheHA.swift in Sources */,
 				41EBD33208FA87542196B0BE /* TaskPriority.swift in Sources */,
 				3362342481463FD9326874F8 /* TaskTag.swift in Sources */,
 				4F8A2831200436876A3FB14B /* TasksAPI.swift in Sources */,
+				3DA6C0DD8DD1319B6B56BFF9 /* ToSee.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1252,6 +1266,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				E760D750ADA9349B536A92E7 /* DueTextTests.swift in Sources */,
+				BB2D3E72F85A27A82A60C7B1 /* EnviesTests.swift in Sources */,
 				473D512C7BA222A224D6CE94 /* HASyncTests.swift in Sources */,
 				754F56298037383538A680A5 /* MemoMergeTests.swift in Sources */,
 				B124EB00A072E175CD261404 /* NotesTimeCodecTests.swift in Sources */,
@@ -1330,6 +1345,7 @@
 				02D12DB891B37A57CB157A49 /* ReminderPlanner.swift in Sources */,
 				4106F764A65EB2E06BE8BCEA /* ReminderProfile.swift in Sources */,
 				412BC7568FCDEC431BEBB542 /* ReminderScheduler.swift in Sources */,
+				6AA5932FC7F3E572A6671008 /* SharedLink.swift in Sources */,
 				A9D25158884B43503A37002A /* SharedMessage.swift in Sources */,
 				9CA8D9FF92184B04154BC2B1 /* SiriCapture.swift in Sources */,
 				8D23FD08D27F1D9D42DCA1CA /* SyncLog.swift in Sources */,

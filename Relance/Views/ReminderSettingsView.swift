@@ -107,9 +107,9 @@ struct ReminderSettingsView: View {
                 Toggle("Le dernier week-end", isOn: $settings.toSee.lastWeekend)
                 TimeRow(title: "Heure", minutes: $settings.toSee.time)
             } header: {
-                Text("À voir")
+                Text("Envies")
             } footer: {
-                Text("Pour les expos, films et lieux gardés « À voir » avec une période. Sans période, aucune relance.")
+                Text("Pour les envies avec une période (expo, festival, film en salle). Sans période, aucune relance.")
             }
 
             Section {

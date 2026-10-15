@@ -10,6 +10,8 @@ struct InboxView: View {
     /// Tâches passées pour l'instant : elles reviennent en fin de file.
     @State private var skipped: [UUID] = []
     @State private var editing: TaskItem?
+    /// « Envie, sans date » : quel type ?
+    @State private var choosingKind: TaskItem?
     @State private var adding = false
     @AppStorage("categoryFilter") private var categoryFilter = ""
 
@@ -44,6 +46,12 @@ struct InboxView: View {
             .sheet(isPresented: $adding) { QuickAddSheet(context: .inbox) }
             .refreshable { await store.sync() }
             .sheet(item: $editing) { TaskEditor(item: $0) }
+            .confirmationDialog("Ranger dans Envies", isPresented: Binding(
+                get: { choosingKind != nil }, set: { if !$0 { choosingKind = nil } }), presenting: choosingKind) { item in
+                ForEach(ToSee.Kind.allCases) { kind in
+                    Button(kind.title) { store.setToSee(item, ToSee(kind)) }
+                }
+            }
         }
     }
 
@@ -61,7 +69,7 @@ struct InboxView: View {
                     ("Aujourd'hui", "sun.max", { setDay(item, offset: 0) }),
                     ("Demain", "sunrise", { setDay(item, offset: 1) }),
                     ("Dans une semaine", "calendar", { setDay(item, offset: 7) }),
-                    ("À voir, sans date", "eyeglasses", { store.setToSee(item, ToSee()) }),
+                    ("Envie, sans date", "bookmark", { choosingKind = item }),
                     ("Choisir…", "calendar.badge.plus", { editing = item }),
                 ])
             } else {

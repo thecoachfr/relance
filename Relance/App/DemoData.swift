@@ -23,6 +23,17 @@ enum DemoData {
         let expo = store.add(title: "Voir l'expo photo de la MEP", day: nil, minutes: nil, category: "Perso")
         expo.notes = "📍 Maison européenne de la photographie · 5 rue de Fourcy, 75004 Paris\n"
             + ToSee(start: day(-30), end: day(19)).lines.joined(separator: "\n")
+        store.add(title: "Perfect Days", day: nil, minutes: nil, category: "Perso",
+                  notes: "📩 Message partagé\nhttps://www.youtube.com/watch?v=exemple\n" + ToSee(.watch).lines.joined(separator: "\n"))
+        store.add(title: "Le film de Kore-eda au cinéma", day: nil, minutes: nil, category: "Perso",
+                  notes: ToSee(.watch, end: day(12)).lines.joined(separator: "\n"))
+        store.add(title: "L'Anomalie, Hervé Le Tellier", day: nil, minutes: nil, category: "Perso",
+                  notes: ToSee(.read).lines.joined(separator: "\n"))
+        store.add(title: "Le dernier album de Feist", day: nil, minutes: nil, category: "Perso",
+                  notes: "https://open.spotify.com/album/exemple\n" + ToSee(.listen).lines.joined(separator: "\n"))
+        let read = store.add(title: "Un article sur la photo argentique", day: nil, minutes: nil,
+                             notes: ToSee(.read).lines.joined(separator: "\n"))
+        store.complete(read)
         let done = store.add(title: "Prendre rendez-vous chez le dentiste", day: day(-1), minutes: 14 * 60)
         store.complete(done)
     }

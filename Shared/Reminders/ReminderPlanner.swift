@@ -314,7 +314,7 @@ nonisolated struct ReminderPlanner: Sendable {
         let s = settings.toSee
         var events: [(Date, ReminderKind, String)] = []
         if s.atOpening, let start = toSee.start {
-            events.append((at(start, s.time), .toSeeOpening, "C'est ouvert" + (toSee.end.map { " jusqu'au " + $0.formatted(.dateTime.day().month(.wide)) } ?? "") + "."))
+            events.append((at(start, s.time), .toSeeOpening, (toSee.kind == .outing ? "C'est ouvert" : "C'est disponible") + (toSee.end.map { " jusqu'au " + $0.formatted(.dateTime.day().month(.wide)) } ?? "") + "."))
         }
         if let end = toSee.end {
             if let weeks = s.weeksBeforeEnd, let day = calendar.date(byAdding: .day, value: -7 * weeks, to: end) {
@@ -330,7 +330,7 @@ nonisolated struct ReminderPlanner: Sendable {
         return events.filter { $0.0 > now && $0.0 <= horizon && !isMuted($0.0, $0.1) }.map { date, kind, body in
             PlannedReminder(id: "\(task.id)|\(kind.rawValue)|\(Int(date.timeIntervalSince1970))", taskID: task.id,
                             fireDate: date, kind: kind, title: task.title, body: body,
-                            timeSensitive: false, badge: 0, subtitle: "À voir", hasPlace: task.hasPlace)
+                            timeSensitive: false, badge: 0, subtitle: toSee.kind.title, hasPlace: task.hasPlace)
         }
     }
 

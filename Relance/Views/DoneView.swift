@@ -1,8 +1,10 @@
 import SwiftData
 import SwiftUI
 
+/// Historique de ce qui est fait, ouvert depuis le bas de « À faire » (feuille).
 struct DoneView: View {
     @Environment(TaskStore.self) private var store
+    @Environment(\.dismiss) private var dismiss
     @Query(filter: #Predicate<TaskItem> { $0.isCompleted && !$0.isTrashed },
            sort: \TaskItem.completedAt, order: .reverse)
     private var items: [TaskItem]
@@ -46,6 +48,9 @@ struct DoneView: View {
                 }
             }
             .navigationTitle("Fait")
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) { Button("OK") { dismiss() } }
+            }
             .sheet(item: $editing) { TaskEditor(item: $0) }
         }
     }

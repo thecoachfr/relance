@@ -41,15 +41,13 @@ struct MainTabs: View {
                 InboxView()
             }
             .badge(active.filter(\.needsTriage).count)
-            Tab("À voir", systemImage: "eyeglasses", value: 4) {
+            Tab("Envies", systemImage: "bookmark", value: 4) {
                 NavigationStack { ToSeeListView() }
             }
             Tab("Carte", systemImage: "map", value: 3) {
                 NavigationStack { TaskMapView(selection: $mapSelection) }
             }
-            Tab("Fait", systemImage: "checkmark.circle", value: 2) {
-                DoneView()
-            }
+            // « Fait » n'a plus d'onglet : il s'ouvre depuis le bas de « À faire ».
         }
         .tabViewStyle(.sidebarAdaptable)
         .sheet(isPresented: $store.showQuickAdd) { QuickAddSheet() }

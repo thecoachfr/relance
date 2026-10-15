@@ -1,23 +1,94 @@
 import Foundation
 
-/// « À voir » : à garder sans échéance (expo, film, lieu à découvrir), éventuellement avec une période
-/// (« du 10/09/2026 au 31/01/2027 »). Deux lignes des notes, cachées du champ Notes :
-/// « 👀 À voir » et « 🗓 Du 10/09/2026 au 31/01/2027 » (ou « 🗓 Jusqu'au … », « 🗓 À partir du … »).
+/// Une envie, gardée sans échéance : une sortie « À voir » (expo, lieu, festival), ou quelque chose
+/// « À lire », « À écouter », « À regarder », éventuellement avec une période (« du 10/09/2026 au 31/01/2027 »).
+/// Deux lignes des notes, cachées du champ Notes : le type (« 👀 À voir », « 📖 À lire », « 🎧 À écouter »,
+/// « 🎬 À regarder ») et « 🗓 Du 10/09/2026 au 31/01/2027 » (ou « 🗓 Jusqu'au … », « 🗓 À partir du … »).
+/// Lignes lues aussi par la routine de tri et l'écran du Nest Hub : garder les marqueurs.
 nonisolated struct ToSee: Equatable, Sendable {
-    static let marker = "👀 À voir"
+    enum Kind: String, CaseIterable, Identifiable, Sendable {
+        case outing, read, listen, watch
+
+        var id: Self { self }
+
+        var marker: String {
+            switch self {
+            case .outing: "👀 À voir"
+            case .read: "📖 À lire"
+            case .listen: "🎧 À écouter"
+            case .watch: "🎬 À regarder"
+            }
+        }
+
+        /// « À voir », « À lire »… (la ligne des notes sans l'emoji).
+        var title: String { String(marker.drop { $0 != " " }.dropFirst()) }
+
+        /// Libellé court du filtre.
+        var shortTitle: String {
+            switch self {
+            case .outing: "Voir"
+            case .read: "Lire"
+            case .listen: "Écouter"
+            case .watch: "Regarder"
+            }
+        }
+
+        var symbol: String {
+            switch self {
+            case .outing: "ticket"
+            case .read: "book"
+            case .listen: "headphones"
+            case .watch: "play.tv"
+            }
+        }
+
+        /// Le bouton « Fait » : « Vu », « Lu », « Écouté ».
+        var doneTitle: String {
+            switch self {
+            case .outing, .watch: "Vu"
+            case .read: "Lu"
+            case .listen: "Écouté"
+            }
+        }
+
+        /// Titre de la section des envies faites.
+        var doneSection: String {
+            switch self {
+            case .outing, .watch: "Déjà vu"
+            case .read: "Déjà lu"
+            case .listen: "Déjà écouté"
+            }
+        }
+
+        /// Exemple dans le champ de la saisie rapide.
+        var example: String {
+            switch self {
+            case .outing: "Expo photo à la MEP"
+            case .read: "L'Anomalie, Hervé Le Tellier"
+            case .listen: "Le dernier album de Feist"
+            case .watch: "Perfect Days, Wim Wenders"
+            }
+        }
+    }
+
+    /// Ancienne et première ligne : une sortie.
+    static let marker = Kind.outing.marker
+    static let markers = Kind.allCases.map(\.marker)
     static let periodMarker = "🗓"
 
+    var kind: Kind
     /// Premier et dernier jour (début de journée), facultatifs.
     var start: Date?
     var end: Date?
 
-    init(start: Date? = nil, end: Date? = nil) {
-        (self.start, self.end) = (start, end)
+    init(_ kind: Kind = .outing, start: Date? = nil, end: Date? = nil) {
+        (self.kind, self.start, self.end) = (kind, start, end)
     }
 
     init?(notes: String) {
         let lines = notes.components(separatedBy: "\n").map(Self.clean)
-        guard lines.contains(where: { $0.hasPrefix(Self.marker) }) else { return nil }
+        guard let kind = Kind.allCases.first(where: { k in lines.contains { $0.hasPrefix(k.marker) } }) else { return nil }
+        self.kind = kind
         guard let period = lines.first(where: { $0.hasPrefix(Self.periodMarker) }) else { return }
         let dates = Self.dates(in: period)
         if period.contains("Jusqu") {
@@ -30,10 +101,33 @@ nonisolated struct ToSee: Equatable, Sendable {
         }
     }
 
+    /// « Dune à regarder », « à lire : L'Anomalie », « l'album de Feist, à écouter » : le type dit dans la phrase,
+    /// au début ou à la fin, et la plage à retirer du titre.
+    static func kind(in text: String) -> (range: Range<String.Index>, kind: Kind)? {
+        let verbs: [(String, Kind)] = [("lire", .read), ("[ée]couter", .listen), ("regarder", .watch), ("voir", .outing)]
+        for (verb, kind) in verbs {
+            for pattern in [#"[\s,;:–-]*\b(?:à|a)\s+"# + verb + #"\s*[.!]?\s*$"#, #"^\s*(?:à|a)\s+"# + verb + #"\s*[:,–-]\s*"#] {
+                guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
+                      let m = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
+                      let range = Range(m.range, in: text), range.lowerBound > text.startIndex || range.upperBound < text.endIndex
+                else { continue }
+                return (range, kind)
+            }
+        }
+        return nil
+    }
+
+    /// Premier lien des notes (article, vidéo, album, site de l'expo) : le bouton « Ouvrir ».
+    static func link(in notes: String) -> URL? {
+        guard let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue) else { return nil }
+        return detector.matches(in: notes, range: NSRange(notes.startIndex..., in: notes))
+            .compactMap(\.url).first { $0.scheme == "http" || $0.scheme == "https" }
+    }
+
     // MARK: - Lignes des notes
 
     var lines: [String] {
-        var lines = [Self.marker]
+        var lines = [kind.marker]
         switch (start, end) {
         case let (s?, e?): lines.append("\(Self.periodMarker) Du \(Self.format(s)) au \(Self.format(e))")
         case let (nil, e?): lines.append("\(Self.periodMarker) Jusqu'au \(Self.format(e))")
@@ -47,7 +141,7 @@ nonisolated struct ToSee: Equatable, Sendable {
     static func notes(_ notes: String, setting toSee: ToSee?) -> String {
         var lines = notes.components(separatedBy: "\n").filter {
             let c = clean($0)
-            return !c.hasPrefix(marker) && !c.hasPrefix(periodMarker)
+            return !markers.contains { c.hasPrefix($0) } && !c.hasPrefix(periodMarker)
         }
         while lines.last?.trimmingCharacters(in: .whitespaces).isEmpty == true { lines.removeLast() }
         if let toSee { lines += toSee.lines }

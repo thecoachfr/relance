@@ -176,6 +176,7 @@ targets:
       - Shared/Model/TaskPriority.swift
       - Shared/Reminders/ReminderOverride.swift
       - Shared/Model/TaskTag.swift
+      - Shared/Model/ToSee.swift
       - Shared/HA/HAConfig.swift
       - Shared/HA/TacheHA.swift
     dependencies:

@@ -33,7 +33,7 @@ enum MacSection: Hashable {
         switch self {
         case .todo: "À faire"
         case .inbox: "À trier"
-        case .toSee: "À voir"
+        case .toSee: "Envies"
         case .map: "Carte"
         case .done: "Fait"
         case .category(let name): name
@@ -115,7 +115,7 @@ struct MacMainView: View {
     private var quickAddContext: QuickAddContext {
         switch section {
         case .inbox?: .inbox
-        case .toSee?: .toSee
+        case .toSee?: .toSee(ToSee.Kind(rawValue: UserDefaults.standard.string(forKey: "enviesFilter") ?? "") ?? .outing)
         case .map?: .map
         default: .today
         }
@@ -140,7 +140,7 @@ struct MacMainView: View {
                 Label("À trier", systemImage: "tray")
                     .badge(active.filter(\.needsTriage).count)
                     .tag(MacSection.inbox)
-                Label("À voir", systemImage: "eyeglasses")
+                Label("Envies", systemImage: "bookmark")
                     .badge(active.filter { $0.toSee != nil }.count)
                     .tag(MacSection.toSee)
                 Label("Carte", systemImage: "map")
