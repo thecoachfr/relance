@@ -108,9 +108,10 @@ Pour la mettre à jour : monter le partage `smb://homeassistant.local/addon_conf
 `relance_vigie.py` dans `a0d7b954_appdaemon/apps/` (AppDaemon la recharge seul).
 
 Avec les tâches dans Home Assistant (`ha_espace: aiguillage` et `inbox: true` dans `apps.yaml`, à activer **après** la
-migration de l'app) : push à chaque événement `donnees_apps_modifie` de l'espace, et la liste Google vidée dans Home
-Assistant à chaque rafraîchissement (une dictée non triée attend la routine 15 min au plus ; état dans
-`/config/relance_inbox.json`). La vigie appelle `donnees_apps` par l'API interne de Home Assistant (jeton de l'add-on).
+migration de l'app) : push à chaque événement `donnees_apps_modifie` de l'espace, liste Google vidée dans Home
+Assistant à chaque rafraîchissement (état dans `/config/relance_inbox.json`), et routine de tri lancée dès qu'une
+nouvelle tâche apparaît dans l'espace (créée dans l'app ou reprise de Google). La routine lit et écrit elle-même
+l'espace `aiguillage` (`donnees_apps.lire` / `ecrire`). La vigie appelle `donnees_apps` par l'API interne de Home Assistant (jeton de l'add-on).
 
 Déjà en place sur Home Assistant : l'app **AppDaemon** (avec `httpx[http2]` et `pyjwt[crypto]`)
 et l'automatisation **« Relance : enregistrer un appareil »** (déclencheur webhook).
