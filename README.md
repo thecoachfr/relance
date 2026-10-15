@@ -64,7 +64,8 @@ iPhone, iPad, montre (incluse dans l'app iPhone) et Mac se mettent à jour depui
 - `ci_scripts/ci_post_clone.sh` recrée `Secrets.xcconfig` (absent du dépôt public) et donne
   le numéro de build de Xcode Cloud à l'app et à toutes ses extensions.
 - Variables du workflow (Xcode › Cloud › Workflow › Environnement), toutes **secrètes** :
-  `GOOGLE_CLIENT_ID`, `GOOGLE_REVERSED_CLIENT_ID`, `RELANCE_WEBHOOK_URL` (URL complète, avec `https://`).
+  `GOOGLE_CLIENT_ID`, `RELANCE_WEBHOOK_URL` (URL complète, avec `https://`). Le schéma d'URL Google
+  (`GOOGLE_REVERSED_CLIENT_ID`) est déduit de l'ID client par le script ; une variable de ce nom est ignorée.
 - Workflow iOS : déclencheur « push sur main », action « Archiver » schéma `Relance` (iOS),
   post-action « TestFlight (test interne) ». Workflow Mac : idem avec le schéma `RelanceMac`.
 - Les builds TestFlight utilisent les notifications push de production : l'app l'annonce

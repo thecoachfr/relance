@@ -51,6 +51,7 @@ Notes libres…
 Catégories fixes : Administratif, Maison, Santé, Achats, Travail, Famille, Perso (`Shared/Model/TaskCategory.swift` et prompt de la routine).
 
 ### Limites connues
+- **Connexion Google dans les builds TestFlight jusqu'au 15/10** : la variable Xcode Cloud `GOOGLE_REVERSED_CLIENT_ID` avait perdu son « c » initial (`om.googleusercontent.apps…`) ; GoogleSignIn lève alors une exception et l'app plante dès qu'on touche « Se connecter » (vu sur le Mac avec l'app iPad, build 12 ; invisible sur l'iPhone déjà connecté). Corrigé : `ci_post_clone.sh` déduit le schéma de l'ID client.
 - **Google Home garde l'heure pour lui** : il comprend « vendredi à 15 h », retire l'expression du titre et ne transmet que la date (l'API Google Tasks n'expose pas l'heure). Constaté le 12/10. Contournements : la question « À quelle heure ? » de l'iPhone juste après la dictée, ou Siri (iPhone, montre), qui garde l'heure.
 - **Pas d'heure côté Google, et c'est voulu** : l'API Google Tasks ne lit ni n'écrit l'heure (date seule). Décision du 12/10 : ne pas chercher à la propager (impossible, et ce serait doubler les rappels de Relance). L'heure vit dans la ligne ⏰ ; pour la voir dans Google Agenda, bouton « Ajouter au calendrier ».
 - **Home Assistant garde les listes Google en cache** (intégration rafraîchie toutes les 30 min) : la vigie force le rafraîchissement de `todo.mes_taches` et `todo.relance_memo` chaque minute.

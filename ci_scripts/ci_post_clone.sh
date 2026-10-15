@@ -6,7 +6,6 @@ set -eu
 cd "${CI_PRIMARY_REPOSITORY_PATH:-$(dirname "$0")/..}"
 
 : "${GOOGLE_CLIENT_ID:?Variable GOOGLE_CLIENT_ID manquante dans le workflow Xcode Cloud}"
-: "${GOOGLE_REVERSED_CLIENT_ID:?Variable GOOGLE_REVERSED_CLIENT_ID manquante dans le workflow Xcode Cloud}"
 : "${RELANCE_WEBHOOK_URL:?Variable RELANCE_WEBHOOK_URL manquante dans le workflow Xcode Cloud}"
 : "${CI_BUILD_NUMBER:?Numéro de build Xcode Cloud absent}"
 
@@ -20,9 +19,18 @@ case "$webhook" in
         echo "RELANCE_WEBHOOK_URL mal formée : attendu https://hote/chemin" >&2
         exit 1 ;;
 esac
+# Schéma d'URL de retour de la connexion Google : déduit de l'ID client plutôt que repris d'une variable
+# (le 15/10, la variable collée avait perdu son « c » initial : la connexion Google plantait l'app).
+client_id=$(printf '%s' "$GOOGLE_CLIENT_ID" | tr -d '[:space:]')
+case "$client_id" in
+    *.apps.googleusercontent.com) ;;
+    *) echo "GOOGLE_CLIENT_ID mal formée : attendu …apps.googleusercontent.com" >&2; exit 1 ;;
+esac
+reversed_client_id="com.googleusercontent.apps.${client_id%.apps.googleusercontent.com}"
+
 cat > Relance/Resources/Secrets.xcconfig <<XCCONFIG
-GOOGLE_CLIENT_ID = ${GOOGLE_CLIENT_ID}
-GOOGLE_REVERSED_CLIENT_ID = ${GOOGLE_REVERSED_CLIENT_ID}
+GOOGLE_CLIENT_ID = ${client_id}
+GOOGLE_REVERSED_CLIENT_ID = ${reversed_client_id}
 RELANCE_WEBHOOK_URL = https:/\$()/${webhook}
 XCCONFIG
 
