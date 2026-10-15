@@ -96,6 +96,7 @@ targets:
       - Shared/Reminders
       - Shared/Share
       - Shared/HA
+      - Shared/Divers
       - Relance/Google
       - Relance/App/CalendarLink.swift
       - Relance/App/TravelTimes.swift
@@ -249,6 +250,7 @@ targets:
       - Shared/Model/MemoMerge.swift
       - Shared/Google/MemoRemote.swift
       - Shared/HA/MemoHA.swift
+      - Shared/Divers
       - Shared/WatchApp
     dependencies:
       - target: RelanceWatchWidgets

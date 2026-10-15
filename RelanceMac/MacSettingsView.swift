@@ -71,6 +71,7 @@ private struct SyncLogSettings: View {
                     .foregroundStyle(.secondary)
             }
             Section {
+                LabeledContent("Version", value: AppVersion.text)
                 Button("Synchroniser maintenant") { Task { await store.sync() } }
                     .disabled(store.isSyncing)
             }

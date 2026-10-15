@@ -38,6 +38,8 @@ struct SettingsView: View {
                         }
                         .font(.footnote)
                     }
+                    LabeledContent("Version", value: AppVersion.text)
+                        .font(.footnote)
                 } header: {
                     Text("Journal de synchro")
                 } footer: {

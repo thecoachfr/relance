@@ -26,6 +26,11 @@ struct WatchTaskList: View {
                             .font(.footnote).foregroundStyle(.secondary)
                             .listRowBackground(Color.clear)
                     }
+                    if !store.tasks.isEmpty {
+                        Text("Version \(AppVersion.text)")
+                            .font(.footnote).foregroundStyle(.tertiary)
+                            .listRowBackground(Color.clear)
+                    }
                 }
                 .refreshable { await store.refreshFromGoogle() }
                 .overlay {
@@ -33,7 +38,8 @@ struct WatchTaskList: View {
                         ContentUnavailableView("Rien d'urgent", systemImage: "checkmark.circle",
                                                description: Text(store.google.isAvailable
                                                                  ? "Aucune tâche à faire."
-                                                                 : "Ouvre Aiguillage sur l'iPhone une fois pour connecter la montre."))
+                                                                 : "Ouvre Aiguillage sur l'iPhone une fois pour connecter la montre.")
+                                               + Text("\nVersion \(AppVersion.text)").foregroundStyle(.tertiary))
                     }
                 }
             }
