@@ -9,9 +9,10 @@ nonisolated struct MemoEntry: Identifiable, Equatable, Sendable {
     var details: String
 }
 
-/// Mémo de contexte de la routine de tri, rangé dans une liste Google Tasks à part (« Relance · mémo ») :
-/// une tâche par fiche. La routine le lit à chaque tri (lecture seule) ; on l'enrichit depuis l'app,
-/// Google Tasks, ou à la voix. Retirer une fiche la coche (réversible dans Google Tasks).
+/// Mémo de contexte de la routine de tri : une fiche par élément d'une liste, dans Home Assistant
+/// (`todo.aiguillage_memo`, voir `MemoHA`) quand l'appareil y range ses tâches, sinon dans la liste Google Tasks
+/// « Relance · mémo ». La routine le lit à chaque tri (lecture seule) ; on l'enrichit depuis l'app, depuis HA
+/// ou à la voix. Retirer une fiche la coche (réversible).
 @Observable
 final class MemoStore {
     static let listTitle = MemoMerge.listTitle
@@ -45,6 +46,9 @@ final class MemoStore {
     }
 
     func add(title: String, details: String) async {
+        if let ha = MemoHA.current {
+            return await run { try await ha.add(title: title, details: details); try await reload() }
+        }
         await run {
             _ = try await api().insert(["title": title, "notes": details])
             try await reload()
@@ -55,6 +59,13 @@ final class MemoStore {
     @discardableResult
     func remember(title: String, details: String) async -> MemoMerge.Outcome? {
         var outcome: MemoMerge.Outcome?
+        if let ha = MemoHA.current {
+            await run {
+                outcome = try await ha.remember(title: title, details: details)
+                try await reload()
+            }
+            return lastError == nil ? outcome : nil
+        }
         await run {
             try await reload()
             if let entry = entries.first(where: { MemoMerge.sameSubject($0.title, title) }) {
@@ -74,6 +85,9 @@ final class MemoStore {
     }
 
     func update(_ entry: MemoEntry) async {
+        if let ha = MemoHA.current {
+            return await run { try await ha.update(id: entry.id, title: entry.title, details: entry.details); try await reload() }
+        }
         await run {
             _ = try await api().patch(id: entry.id, ["title": entry.title, "notes": entry.details])
             try await reload()
@@ -82,10 +96,15 @@ final class MemoStore {
 
     func remove(_ entry: MemoEntry) async {
         entries.removeAll { $0.id == entry.id }
+        if let ha = MemoHA.current { return await run { try await ha.complete(id: entry.id) } }
         await run { _ = try await api().patch(id: entry.id, ["status": "completed"]) }
     }
 
     private func reload() async throws {
+        if let ha = MemoHA.current {
+            entries = try await ha.fiches().map { MemoEntry(id: $0.id, title: $0.title, details: $0.details) }
+            return
+        }
         let tasks = try await api().fetch(updatedMin: nil)
         entries = tasks.compactMap { task in
             guard let id = task.id, let title = task.title, !title.isEmpty else { return nil }

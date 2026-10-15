@@ -52,8 +52,11 @@ Sur chaque appareil (iPhone, iPad, Mac) : **Réglages › Home Assistant** :
    puis toutes les tâches de l'appareil partent dans Home Assistant (avec leur identifiant Google).
 3. « Revenir à Google Tasks » renvoie les tâches de l'appareil dans Google en cas de souci.
 
-Google Tasks garde deux rôles : la **boîte d'entrée** des dictées Google Home (la vigie les reprend dans Home Assistant,
-après le tri, puis les retire de Google) et le **mémo** de la routine de tri, inchangé.
+Google Tasks n'est plus que la **boîte d'entrée** des dictées Google Home (la vigie les reprend dans Home Assistant, puis
+les retire de Google). Le **mémo** de la routine de tri est dans Home Assistant depuis le 15/10 : liste Local To-do
+« Aiguillage · mémo » (`todo.aiguillage_memo`), qu'on modifie aussi dans Home Assistant (panneau **Listes de tâches**, titre
+= sujet, description = détails). Les fiches que la montre écrit encore dans la liste Google du mémo y sont reprises par la
+vigie.
 La montre passe alors par l'iPhone pour les tâches ; l'extension de partage écrit dans la base locale partagée.
 
 ## Déploiement automatique (Xcode Cloud + TestFlight)

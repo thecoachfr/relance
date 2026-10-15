@@ -33,7 +33,7 @@ nonisolated enum MemoMerge {
         case .added: "C'est noté dans le mémo : « \(subject) »."
         case .completed: "J'ai complété la fiche « \(subject) »."
         case .unchanged: "La fiche « \(subject) » le dit déjà."
-        case nil: "Je n'ai pas pu joindre Google. Réessaie dans un moment."
+        case nil: "Je n'ai pas pu enregistrer la fiche. Réessaie dans un moment."
         }
     }
 }

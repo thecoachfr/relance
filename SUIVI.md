@@ -63,6 +63,11 @@ Catégories fixes : Administratif, Maison, Santé, Achats, Travail, Famille, Per
 - L'activité en direct ne peut **démarrer** qu'app ouverte (elle se met ensuite à jour seule).
 - Applis installées en **développement** (Xcode) : à réinstaller quand le profil de développement expire (environ 1 an) ; APNs en environnement « sandbox ».
 
+### Mémo du tri dans Home Assistant (15/10 au soir)
+- Liste Local To-do « Aiguillage · mémo » (`todo.aiguillage_memo`) créée sur le NUC ; les 57 fiches de la liste Google y ont été copiées (titres et détails identiques). Page d'édition et d'ajout : celle de Home Assistant (Listes de tâches), aussi dans l'app HA.
+- App (iPhone, iPad, Mac) en mode HA : `MemoStore` et l'extension de partage lisent et écrivent cette liste (`MemoHA`, REST `todo.*` avec le jeton `apps-perso` ; une fiche s'écrit en ligne). La montre écrit encore dans la liste Google : la vigie (`memo_ha_entity`) reprend ces fiches dans HA (même sujet complété, sans accents ni majuscules) puis les coche dans Google.
+- Routine de tri : lit `todo.aiguillage_memo` (consigne mise à jour et vérifiée le 15/10).
+
 ### Tâches dans Home Assistant (15/10, sur `main`, désactivé par défaut)
 Code fait et fusionné dans `main` (désactivé tant qu'on ne bascule pas dans les réglages), pas encore essayé sur les appareils :
 - **App** : Réglages › Home Assistant (URL, jeton dans le trousseau partagé, test, bascule « Passer les tâches dans Home Assistant », retour possible vers Google). En mode HA, `TaskStore` envoie chaque modification à la base `DonneesHA` (App Group, outbox) puis synchronise ; SwiftData reste la copie des écrans. Une tâche = une clé (`localID`), valeur JSON `TacheHA` (`titre`, `notes`, `jour`, `heure`, `categorie`, `priorite`, `tags`, `relances`, `fait`, `fait_le`, `google_id`) : plus de lignes `⏰ 🏷 🔖 ❗ 🔁` dans les notes.

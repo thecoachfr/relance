@@ -37,7 +37,9 @@ struct MemoListView: View {
                     }
                 }
             } footer: {
-                Text("Une fiche par personne, lieu, activité ou règle. La routine de tri les lit pour choisir la catégorie et les tags, et ajouter le lieu ou le contact d'une tâche. Elles sont rangées dans la liste Google Tasks « \(MemoStore.listTitle) », jamais ailleurs.")
+                Text("Une fiche par personne, lieu, activité ou règle. La routine de tri les lit pour choisir la catégorie et les tags, et ajouter le lieu ou le contact d'une tâche. " + (HAConfig.isActive
+                    ? "Elles sont rangées dans Home Assistant, liste « Aiguillage · mémo » : on peut aussi les modifier ou en ajouter depuis Home Assistant (Listes de tâches)."
+                    : "Elles sont rangées dans la liste Google Tasks « \(MemoStore.listTitle) », jamais ailleurs."))
             }
             if let error = memo.lastError {
                 Section { Text(error).foregroundStyle(.red) }

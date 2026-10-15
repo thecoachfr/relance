@@ -46,7 +46,7 @@ struct MemoShareView: View {
                         }
                     }
                 }
-                if !session.isAvailable {
+                if MemoHA.current == nil, !session.isAvailable {
                     Section {
                         Text("Ouvre Aiguillage une fois pour connecter le partage à Google.").foregroundStyle(.secondary)
                     }
@@ -66,7 +66,7 @@ struct MemoShareView: View {
                         ProgressView()
                     } else {
                         Button(existing != nil ? "Compléter" : "Ajouter") { Task { await save() } }
-                            .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty || !session.isAvailable)
+                            .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty || (MemoHA.current == nil && !session.isAvailable))
                     }
                 }
             }
@@ -82,6 +82,10 @@ struct MemoShareView: View {
                 if title.isEmpty { subjectFocused = true }
             }
             .task {
+                if let ha = MemoHA.current {
+                    subjects = (try? await ha.fiches().map(\.title)) ?? []
+                    return
+                }
                 guard session.isAvailable else { return }
                 subjects = (try? await api.memoSubjects()) ?? []
             }
@@ -110,11 +114,15 @@ struct MemoShareView: View {
         let title = title.trimmingCharacters(in: .whitespacesAndNewlines)
         let details = details.trimmingCharacters(in: .whitespacesAndNewlines)
         do {
-            _ = try await api.remember(title: title, details: details)
+            if let ha = MemoHA.current {
+                _ = try await ha.remember(title: title, details: details)
+            } else {
+                _ = try await api.remember(title: title, details: details)
+            }
             onDone()
         } catch {
             // Rien n'est perdu : la feuille reste ouverte, on peut réessayer ou copier le texte.
-            failure = "Google ne répond pas. Vérifie la connexion et réessaie."
+            failure = (MemoHA.current == nil ? "Google" : "Home Assistant") + " ne répond pas. Vérifie la connexion et réessaie."
         }
     }
 }

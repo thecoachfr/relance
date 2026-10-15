@@ -179,6 +179,7 @@ targets:
       - Shared/Model/ToSee.swift
       - Shared/HA/HAConfig.swift
       - Shared/HA/TacheHA.swift
+      - Shared/HA/MemoHA.swift
     dependencies:
       - package: DonneesHA
     entitlements:

@@ -12,7 +12,7 @@ struct SettingsView: View {
             Form {
                 Section("Compte Google") {
                     LabeledContent("Connecté", value: auth.email ?? "—")
-                    LabeledContent("Liste suivie", value: HAConfig.isActive ? "Mémo seulement" : "Mes tâches")
+                    LabeledContent("Liste suivie", value: HAConfig.isActive ? "Boîte d'entrée des dictées" : "Mes tâches")
                     if let error = store.lastError {
                         Text(error).font(.footnote).foregroundStyle(.red)
                     }
