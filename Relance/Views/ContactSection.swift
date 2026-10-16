@@ -1,3 +1,5 @@
+import CoreLocation
+import MapKit
 import SwiftUI
 
 /// Lieu de la tâche (ligne « 📍 » des notes) : appeler, itinéraire, prendre rendez-vous ;
@@ -10,11 +12,18 @@ struct ContactSection: View {
     /// Catégorie et tags de la tâche, repris dans la fiche « Garder dans le mémo » ;
     /// `nil` = pas de bouton (saisie rapide : la tâche n'existe pas encore).
     var memoSource: (category: String?, tags: [String])?
+    /// Titre de la tâche : pour une envie de lieu sans lieu, Plans propose le lieu d'après lui (P9-A5).
+    var title = ""
     @Environment(\.openURL) private var openURL
     @Environment(TaskStore.self) private var store
     @State private var remembering = false
     /// Résultat du dernier « Garder dans le mémo », pour le lieu de ce nom.
     @State private var remembered: (name: String, outcome: MemoMerge.Outcome?)?
+    /// Lieu proposé par Plans pour une envie de lieu sans lieu.
+    @State private var suggestion: PlaceSuggestion?
+
+    /// Envie de lieu (resto, magasin, spot, sortie) encore sans lieu : on demande à Plans.
+    private var wantsSuggestion: Bool { TaskContact(notes: notes) == nil && ToSee(notes: notes)?.kind.isPlace == true }
 
     var body: some View {
         Section {
@@ -64,6 +73,9 @@ struct ContactSection: View {
                     notes = TaskContact.notes(notes, setting: nil)
                 }
             } else {
+                if wantsSuggestion, let suggestion {
+                    PlaceSuggestionRow(suggestion: suggestion, notes: $notes)
+                }
                 Button("Ajouter un lieu", systemImage: "mappin.and.ellipse") { searching = true }
             }
         } header: {
@@ -78,6 +90,14 @@ struct ContactSection: View {
             } else {
                 Text("Dans Google Maps : Enregistrer › À visiter, pour garder le lieu.")
             }
+        }
+        // Sur la section (toujours affichée) : une rangée vide ne lance pas sa tâche.
+        .task(id: wantsSuggestion ? title : "") {
+            guard wantsSuggestion else { suggestion = nil; return }
+            // Le titre change pendant la frappe : on attend qu'il se pose.
+            try? await Task.sleep(for: .milliseconds(600))
+            guard !Task.isCancelled else { return }
+            suggestion = await PlaceSuggestion.search(title)
         }
     }
 
@@ -119,5 +139,62 @@ extension View {
         sheet(isPresented: isPresented) {
             PlaceSearchView { notes.wrappedValue = TaskContact.notes(notes.wrappedValue, setting: $0) }
         }
+    }
+}
+
+/// Lieu proposé par Plans pour une envie de lieu sans lieu (souvent dictée), d'après son titre, autour de moi.
+struct PlaceSuggestion {
+    let contact: TaskContact
+    /// « bar », « épicerie »… (catégorie de Plans).
+    let label: String?
+    let category: String?
+
+    /// Premier lieu de Plans pour ce titre, dans les 20 km autour de moi (sinon sans zone).
+    static func search(_ title: String) async -> PlaceSuggestion? {
+        let query = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard query.count >= 3 else { return nil }
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = query
+        request.resultTypes = .pointOfInterest
+        if let here = CLLocationManager().location?.coordinate {
+            request.region = MKCoordinateRegion(center: here, latitudinalMeters: 20_000, longitudinalMeters: 20_000)
+        }
+        guard let item = try? await MKLocalSearch(request: request).start().mapItems.first, let name = item.name
+        else { return nil }
+        let category = item.pointOfInterestCategory?.rawValue
+        let contact = TaskContact(name: name, address: PlaceSearchView.address(of: item), phone: item.phoneNumber, link: item.url)
+        return PlaceSuggestion(contact: contact, label: SharedPlace.envie(forCategory: category)?.label, category: category)
+    }
+}
+
+/// « Express de Lyon · Proposé par Plans · bar · 1 Rue de Lyon » ; un toucher l'ajoute, avec la sorte de lieu
+/// sur la ligne du type si elle correspond.
+struct PlaceSuggestionRow: View {
+    let suggestion: PlaceSuggestion
+    @Binding var notes: String
+
+    var body: some View {
+        Button {
+            notes = TaskContact.notes(notes, setting: suggestion.contact)
+            if var toSee = ToSee(notes: notes), toSee.note == nil,
+               let envie = SharedPlace.envie(forCategory: suggestion.category), envie.kind == toSee.kind, let label = envie.label {
+                toSee.note = label
+                notes = ToSee.notes(notes, setting: toSee)
+            }
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "sparkle.magnifyingglass").foregroundStyle(Color.accentColor)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(suggestion.contact.name).foregroundStyle(.primary)
+                    Text(["Proposé par Plans", suggestion.label, suggestion.contact.address].compactMap { $0 }.joined(separator: " · "))
+                        .font(.subheadline).foregroundStyle(.secondary).lineLimit(2)
+                }
+                Spacer()
+                Text("Ajouter").fontWeight(.semibold).foregroundStyle(Color.accentColor)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Ajouter le lieu proposé par Plans : \(suggestion.contact.name)")
     }
 }

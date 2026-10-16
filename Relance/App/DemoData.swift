@@ -27,6 +27,9 @@ enum DemoData {
         store.add(title: "Chez Janou", day: nil, minutes: nil, category: "Perso",
                   notes: "📍 Chez Janou · https://maps.apple.com/?ll=48.8566,2.3683&q=Chez%20Janou\n"
                       + ToSee(.restaurant).lines.joined(separator: "\n"))
+        // Resto dicté, sans lieu : Plans le propose dans la fiche.
+        store.add(title: "Express de Lyon", day: nil, minutes: nil, category: "Perso",
+                  notes: ToSee(.restaurant).lines.joined(separator: "\n"))
         store.add(title: "La papeterie du Marais", day: nil, minutes: nil, category: "Achats",
                   notes: "📍 Papeterie · https://maps.apple.com/?ll=48.8578,2.3560&q=Papeterie\n"
                       + ToSee(.shop).lines.joined(separator: "\n"))

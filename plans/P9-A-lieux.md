@@ -55,6 +55,7 @@ Toutes passent par `RelanceShare`, qui propose ensuite le type (resto, magasin, 
 - **Accepté quand** : test avec 40 lieux simulés (simulateur, positions GPX) : les zones surveillées suivent le déplacement ; une notification arrive en entrant dans une zone ; aucune au-delà de 20 zones demandées à iOS.
 
 ### A5 — Tri et enrichissement
+*Fait le 16/10, autrement que prévu : le choix du type est dans la règle K de la routine (A2) ; le lien Plans ne peut pas venir de la routine (ni carte ni web), c'est l'app qui propose le lieu trouvé par Plans d'après le titre, dans la fiche d'une envie de lieu sans lieu.*
 - Paragraphes pour la routine de tri (A2) : choix du type, ajout du lien Plans si absent.
 - Horaires d'ouverture : hors périmètre v1 (la routine n'a que l'outil Home Assistant).
 

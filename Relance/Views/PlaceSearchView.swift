@@ -106,7 +106,7 @@ struct PlaceSearchView: View {
                            link: item.url)
     }
 
-    private static func address(of item: MKMapItem) -> String? {
+    static func address(of item: MKMapItem) -> String? {
         let text: String?
         if #available(iOS 26, macOS 26, *) {
             text = item.address?.fullAddress
