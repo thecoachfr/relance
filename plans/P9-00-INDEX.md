@@ -1,4 +1,4 @@
-# P9 — Aiguillage : lieux, « À regarder », app Android TV, actions
+# P9 — Aiguillage : lieux, « À regarder », app Android TV, actions, listes de courses
 
 *Rédigé le 16/10/2026 dans le chat Claude, à partir de l'étude P9 du document « Idées à traiter — études et plans » et d'une lecture du code de `relance` le même jour. À donner à Claude Code avec le plan du chantier en cours. Ce fichier est commun à tous les plans P9 : il fixe l'ordre, le modèle de données partagé et les règles.*
 
@@ -12,10 +12,11 @@
 | D — Actions par tâche (socle, playlist Spotify, préparation de la TVA par une routine) | `P9-D-actions.md` | relance + HA + routine | 4–6 soirées |
 | E — Audit de la consommation de batterie (mesure de référence, puis après P9) | `P9-E-audit-batterie.md` | relance + HA | 1–2 soirées, plus deux semaines de mesure |
 | F — Présence à la maison (Hue MotionAware, puis Bermuda) | `P9-F-presence-maison.md` | HA + relance | 1 soirée (16/10) |
+| G — Listes de courses (articles cochables, tout coché → Fait, recette → ingrédients) | `P9-G-listes-courses.md` | relance + routine | G1 2–3 soirées, G2 1, G3 1–2, G4 à la carte |
 
-**Ordre** : lot 0 ci-dessous (avec E1, la mesure de référence), puis A, B, C, D, et E2 après A4 et D3. C dépend de B (liens testés sur le Player, champs `envie`). D réutilise « Sur la TV » (B) comme une action. F, d'abord une piste, a été fait après D.
+**Ordre** : lot 0 ci-dessous (avec E1, la mesure de référence), puis A, B, C, D, et E2 après A4 et D3. C dépend de B (liens testés sur le Player, champs `envie`). D réutilise « Sur la TV » (B) comme une action. F, d'abord une piste, a été fait après D. G (ajouté le 16/10, déposé le 16/10 à 22 h) vient ensuite, indépendant des autres plans.
 
-**État au 16/10 au soir** : lot 0 fait sauf P2 (reporté) ; A, B, C, D et F faits, avec des essais réels restants ; E1 en mesure (relevé vers le 23/10), E2 à suivre. Détail de ce qui reste : SUIVI.md, section 2, « P9 : ce qui reste ».
+**État au 16/10 au soir** : lot 0 fait sauf P2 (reporté) ; A, B, C, D et F faits, avec des essais réels restants ; E1 en mesure (relevé vers le 23/10), E2 à suivre. G pas commencé. Détail de ce qui reste : SUIVI.md, section 2, « P9 : ce qui reste ».
 
 ## 2. Lot 0 — préalables (avant A)
 
@@ -28,7 +29,7 @@
 
 ## 3. Modèle de données commun (TacheHA, `v: 2`)
 
-Les tâches sont dans l'espace `aiguillage` de `donnees_apps` (`Shared/HA/TacheHA.swift`). P9 ajoute **trois champs facultatifs**. Les plans A, B, C et D les utilisent tous : ne pas en créer d'autres sans mettre ce fichier à jour.
+Les tâches sont dans l'espace `aiguillage` de `donnees_apps` (`Shared/HA/TacheHA.swift`). P9 ajoute **quatre champs facultatifs** (`lieu`, `envie`, `actions`, et `liste` pour le plan G). Les plans A, B, C et D utilisent les trois premiers : ne pas en créer d'autres sans mettre ce fichier à jour.
 
 ```json
 {
@@ -61,6 +62,7 @@ Les tâches sont dans l'espace `aiguillage` de `donnees_apps` (`Shared/HA/TacheH
 - `envie.type` : `voir`, `lire`, `ecouter`, `regarder` (existants) et `resto`, `magasin`, `spot_photo` (nouveaux, plan A). Champs `plateforme`, `id_titre`, `tmdb`, `dispo_fr`, `dispo_maj` : plan B.
 - `envie` (B1, 16/10) : l'app garde tels quels les champs qu'elle ne connaît pas (`tmdb`, `dispo_fr`, `dispo_maj`…), pour que la vigie puisse les écrire sans qu'une réécriture de l'app les efface.
 - `actions` : plan D (B ajoute seulement l'action `sur_tv` déclenchée au toucher).
+- `liste` : plan G (16/10), facultatif : `{"articles": [{"id", "texte", "quantite", "rayon", "coche", "maj", "source"}], "parts", "recettes": [{"titre", "lien"}]}` ; quantités indicatives en texte libre ; copie lisible `🛒 Liste : 3/12 cochés` dans les notes ; fusion des coches article par article (détail et tests dans `P9-G-listes-courses.md`). La routine de tri doit connaître ce champ avant sa mise en service (section 4).
 - **Compatibilité, obligatoire pendant la transition** : continuer d'écrire les lignes techniques des notes (`📍 …`, `👀 À voir`, `🎬 À regarder`… et les nouvelles `🍽 À tester`, `🛍 Magasin`, `📷 Spot photo`), car la vigie, la routine de tri, la carte du Nest Hub (`nest-hub-entree-card`) et le mode Google Tasks les lisent. Le champ structuré fait foi ; la ligne en est une copie. Lecture : si le champ manque, le déduire de la ligne (anciennes tâches), sans réécrire toutes les tâches d'un coup.
 - **Mode Google Tasks** (« Revenir à Google Tasks ») : les nouveaux champs n'y existent pas. Les fonctions P9 ne sont proposées qu'en mode HA ; en mode Google, seules les lignes des notes sont gardées.
 - **Taille** : 64 Ko maximum par enregistrement (limite de `donnees_apps`) ; garder `resultat` des actions court (voir D).
