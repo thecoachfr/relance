@@ -2,8 +2,10 @@ import CoreLocation
 import UserNotifications
 
 /// Rappels à l'approche d'un lieu : iOS surveille jusqu'à 20 zones de 200 m autour des tâches marquées
-/// « Me le rappeler en passant à côté », et réveille l'app quand on y entre, même fermée.
-/// Seulement sur l'appareil qui relance, avec la localisation « Toujours ».
+/// « Me le rappeler en passant à côté » (ou d'un type d'envie activé par défaut, comme les spots photo),
+/// et réveille l'app quand on y entre, même fermée. Avec plus de 20 lieux, les plus proches de moi
+/// (`ProximityPlanner`), recalculés aux déplacements importants. Seulement sur l'appareil qui relance,
+/// avec la localisation « Toujours ».
 @MainActor
 final class ProximityReminders: NSObject, CLLocationManagerDelegate {
     static let shared = ProximityReminders()
@@ -15,6 +17,10 @@ final class ProximityReminders: NSObject, CLLocationManagerDelegate {
     // Surveillance de zones classique : CLMonitor (iOS 17) s'arrêtait net au lancement (12/10).
     private let location = CLLocationManager()
     private weak var store: TaskStore?
+    /// Dernier recalcul déclenché par un déplacement (iOS en envoie au plus toutes les 5 min environ).
+    private var lastMoveUpdate = Date.distantPast
+    /// Pour ne noter dans le journal que les changements.
+    private var lastSummary = ""
 
     var authorization: CLAuthorizationStatus { location.authorizationStatus }
 
@@ -30,26 +36,47 @@ final class ProximityReminders: NSObject, CLLocationManagerDelegate {
         location.requestAlwaysAuthorization()
     }
 
-    /// Zones à surveiller : tâches à faire marquées, urgentes puis les plus proches de l'échéance.
+    /// Le rappel à l'approche est-il actif pour cette tâche (choix écrit, sinon défaut du type d'envie) ?
+    func isOn(_ item: TaskItem) -> Bool {
+        let defaults = store?.scheduler.settings.toSee ?? ToSeeSettings()
+        return NearbyReminder.isOn(item.notes, byDefault: defaults.nearbyByDefault(item.toSee?.kind))
+    }
+
+    /// Zones à surveiller : quelques tâches urgentes, puis les lieux les plus proches de moi.
     func update(tasks: [TaskItem]) async {
         guard CLLocationManager.isMonitoringAvailable(for: CLCircularRegion.self) else { return }
-        let marked = tasks.filter { NearbyReminder.isOn($0.notes) && TaskContact(notes: $0.notes) != nil }
+        let marked = tasks.filter { TaskContact(notes: $0.notes) != nil && isOn($0) }
         await PlaceLocator.shared.locate(PlaceLocator.addresses(of: marked))
         let allowed = authorization == .authorizedAlways || authorization == .authorizedWhenInUse
-        let wanted: [CLCircularRegion] = (ReminderScheduler.isEnabledOnThisDevice && allowed) ? marked
-            .sorted { a, b in
-                if a.priority.rank != b.priority.rank { return a.priority.rank < b.priority.rank }
-                return (a.dueInstant() ?? .distantFuture) < (b.dueInstant() ?? .distantFuture)
-            }
-            .compactMap { item -> CLCircularRegion? in
-                guard let center = PlaceLocator.shared.coordinate(for: item) else { return nil }
-                let region = CLCircularRegion(center: center, radius: Self.radius,
-                                              identifier: Self.prefix + item.localID.uuidString)
-                region.notifyOnEntry = true
-                region.notifyOnExit = false
-                return region
-            }
-            .prefix(Self.maxRegions).map { $0 } : []
+        let active = ReminderScheduler.isEnabledOnThisDevice && allowed
+        var centers: [String: CLLocationCoordinate2D] = [:]
+        let candidates = marked.compactMap { item -> ProximityPlanner.Candidate? in
+            guard let center = PlaceLocator.shared.coordinate(for: item) else { return nil }
+            centers[item.localID.uuidString] = center
+            return .init(id: item.localID.uuidString, latitude: center.latitude, longitude: center.longitude,
+                         urgent: item.priority == .urgent, due: item.dueInstant())
+        }
+        let here = location.location.map { (latitude: $0.coordinate.latitude, longitude: $0.coordinate.longitude) }
+        let chosen = active ? ProximityPlanner.choose(candidates, near: here, max: Self.maxRegions) : []
+        let wanted = chosen.compactMap { id -> CLCircularRegion? in
+            guard let center = centers[id] else { return nil }
+            let region = CLCircularRegion(center: center, radius: Self.radius, identifier: Self.prefix + id)
+            region.notifyOnEntry = true
+            region.notifyOnExit = false
+            return region
+        }
+        // Plus de lieux que de zones : suivre les déplacements importants (antennes, peu de batterie) pour
+        // garder les plus proches. Sinon, inutile.
+        if active && candidates.count > Self.maxRegions {
+            location.startMonitoringSignificantLocationChanges()
+        } else {
+            location.stopMonitoringSignificantLocationChanges()
+        }
+        let summary = "Rappels à l'approche : \(wanted.count) zone(s) sur \(candidates.count) lieu(x)"
+        if summary != lastSummary {
+            lastSummary = summary
+            SyncLog.add(summary)
+        }
 
         let current = location.monitoredRegions.filter { $0.identifier.hasPrefix(Self.prefix) }
         let keep = Set(wanted.map(\.identifier))
@@ -65,6 +92,15 @@ final class ProximityReminders: NSObject, CLLocationManagerDelegate {
         Task { @MainActor in await notify(taskID: String(id.dropFirst(Self.prefix.count))) }
     }
 
+    /// Déplacement important : on garde les lieux les plus proches.
+    nonisolated func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        Task { @MainActor in
+            guard let store, Date.now.timeIntervalSince(lastMoveUpdate) > 120 else { return }
+            lastMoveUpdate = .now
+            await update(tasks: store.activeTasks())
+        }
+    }
+
     nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         Task { @MainActor in
             if let store { await update(tasks: store.activeTasks()) }
@@ -75,7 +111,7 @@ final class ProximityReminders: NSObject, CLLocationManagerDelegate {
     private func notify(taskID: String) async {
         guard let store, ReminderScheduler.isEnabledOnThisDevice,
               let id = UUID(uuidString: taskID), let item = store.task(id), !item.isCompleted, !item.isTrashed,
-              NearbyReminder.isOn(item.notes), let contact = TaskContact(notes: item.notes) else { return }
+              isOn(item), let contact = TaskContact(notes: item.notes) else { return }
         let today = Calendar.current.startOfDay(for: .now).timeIntervalSince1970
         var notified = AppGroup.defaults.dictionary(forKey: Self.notifiedKey) as? [String: Double] ?? [:]
         guard notified[taskID] != today else { return }
@@ -88,7 +124,10 @@ final class ProximityReminders: NSObject, CLLocationManagerDelegate {
         let content = UNMutableNotificationContent()
         content.title = item.title
         content.subtitle = "Tu es près de \(contact.name)"
-        content.body = item.dueInstant().map { "Prévu " + DueText.long(due: $0, hasTime: item.dueMinutes != nil).lowercased() + "." } ?? "Sans date."
+        // Une envie : sa note (« Au couchant, en automne » pour un spot photo), sinon son type.
+        let envie = item.toSee.map { toSee in toSee.note.map { $0.prefix(1).uppercased() + $0.dropFirst() + "." } ?? toSee.kind.title + "." }
+        content.body = item.dueInstant().map { "Prévu " + DueText.long(due: $0, hasTime: item.dueMinutes != nil).lowercased() + "." }
+            ?? envie ?? "Sans date."
         content.sound = quiet ? nil : .default
         content.interruptionLevel = quiet ? .passive : .timeSensitive
         content.threadIdentifier = taskID

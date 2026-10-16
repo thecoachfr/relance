@@ -91,8 +91,13 @@ nonisolated struct ToSeeSettings: Codable, Equatable, Sendable {
     var lastWeekend = true
     /// Heure des rappels (minutes depuis minuit).
     var time = 10 * 60
+    /// Types d'envie dont le rappel à l'approche est activé sans rien faire (P9-A4) : les spots photo,
+    /// où l'on passe sans y penser. Chaque envie peut ensuite l'activer ou le couper.
+    var nearbyKinds: [String] = [ToSee.Kind.photoSpot.rawValue]
 
     init() {}
+
+    func nearbyByDefault(_ kind: ToSee.Kind?) -> Bool { kind.map { nearbyKinds.contains($0.rawValue) } ?? false }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -100,6 +105,7 @@ nonisolated struct ToSeeSettings: Codable, Equatable, Sendable {
         weeksBeforeEnd = try c.decodeIfPresent(Int.self, forKey: .weeksBeforeEnd)
         lastWeekend = try c.decodeIfPresent(Bool.self, forKey: .lastWeekend) ?? lastWeekend
         time = try c.decodeIfPresent(Int.self, forKey: .time) ?? time
+        nearbyKinds = try c.decodeIfPresent([String].self, forKey: .nearbyKinds) ?? nearbyKinds
     }
 }
 

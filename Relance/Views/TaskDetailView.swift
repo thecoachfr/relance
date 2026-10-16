@@ -133,7 +133,7 @@ struct TaskDetailView: View {
         .onChange(of: tags) { save() }
         // Lieu ajouté, changé ou retiré (bouton) : enregistré tout de suite, comme les autres réglages.
         .onChange(of: TaskContact(notes: notes)) { save() }
-        .onChange(of: NearbyReminder.isOn(notes)) { save() }
+        .onChange(of: NearbyReminder.choice(notes)) { save() }
         .onChange(of: ToSee(notes: notes)) { save() }
         .onChange(of: Recurrence(notes: notes)) { save() }
         // Texte : enregistré à la sortie du champ ou de la tâche, pas à chaque frappe (chaque enregistrement synchronise).

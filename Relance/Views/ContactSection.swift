@@ -22,6 +22,9 @@ struct ContactSection: View {
     /// Lieu proposé par Plans pour une envie de lieu sans lieu.
     @State private var suggestion: PlaceSuggestion?
 
+    /// Rappel à l'approche activé d'office pour ce type d'envie (Réglages › Quand et comment relancer).
+    private var nearbyDefault: Bool { store.scheduler.settings.toSee.nearbyByDefault(ToSee(notes: notes)?.kind) }
+
     /// Envie de lieu (resto, magasin, spot, sortie) encore sans lieu : on demande à Plans.
     private var wantsSuggestion: Bool { TaskContact(notes: notes) == nil && ToSee(notes: notes)?.kind.isPlace == true }
 
@@ -59,9 +62,9 @@ struct ContactSection: View {
                 #if os(iOS)
                 if contact.destination != nil {
                     Toggle(isOn: Binding(
-                        get: { NearbyReminder.isOn(notes) },
+                        get: { NearbyReminder.isOn(notes, byDefault: nearbyDefault) },
                         set: { on in
-                            notes = NearbyReminder.notes(notes, on: on)
+                            notes = NearbyReminder.notes(notes, on: on, byDefault: nearbyDefault)
                             if on { ProximityReminders.shared.requestAuthorization() }
                         })) {
                         Label("Me le rappeler en passant à côté", systemImage: "location.circle")
@@ -85,7 +88,7 @@ struct ContactSection: View {
                 Text(memoFooter(remembered.outcome, name: contact.name))
             } else if TaskContact(notes: notes) == nil {
                 Text("Avec une adresse, Aiguillage peut te dire quand partir et l'ajouter à l'événement d'agenda.")
-            } else if NearbyReminder.isOn(notes) {
+            } else if NearbyReminder.isOn(notes, byDefault: nearbyDefault) {
                 Text("L'appareil qui relance te prévient à moins de 200 m, une fois par jour (localisation « Toujours » requise).")
             } else {
                 Text("Dans Google Maps : Enregistrer › À visiter, pour garder le lieu.")

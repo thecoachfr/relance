@@ -49,6 +49,16 @@ enum DemoData {
         store.complete(read)
         let done = store.add(title: "Prendre rendez-vous chez le dentiste", day: day(-1), minutes: 14 * 60)
         store.complete(done)
+        // `-demo-lieux` : 40 spots photo en ligne est-ouest (environ 370 m entre deux), pour voir les
+        // 20 zones à l'approche suivre un déplacement (P9-A4).
+        if ProcessInfo.processInfo.arguments.contains("-demo-lieux") {
+            for i in 0..<40 {
+                let lon = 2.25 + Double(i) * 0.005
+                store.add(title: "Spot \(i + 1)", day: nil, minutes: nil, category: "Perso",
+                          notes: "📍 Spot \(i + 1) · https://maps.apple.com/?ll=48.85,\(lon)&q=Spot\n"
+                              + ToSee(.photoSpot, note: "essai").lines.joined(separator: "\n"))
+            }
+        }
     }
 }
 #endif

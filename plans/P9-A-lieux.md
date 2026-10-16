@@ -48,6 +48,7 @@ Toutes passent par `RelanceShare`, qui propose ensuite le type (resto, magasin, 
 - **Accepté quand** : un lien Plans, un lien Google Maps (court et long), une photo avec position et un texte de coordonnées créent chacun une envie placée au bon endroit (écart < 50 m avec le lieu réel) ; tests unitaires de tous les formats sur des exemples réels.
 
 ### A4 — Proximité par distance
+*Fait le 16/10 (tests sur 40 lieux simulés ; le simulateur ne surveille pas de zones : essai réel sur l'iPhone). Réserve des urgentes : 5. Recalcul aux déplacements significatifs seulement au-delà de 20 lieux. Coupure par envie : ligne `🔕 Pas à l'approche`.*
 - Avec des dizaines de lieux, les 20 zones triées par priorité ne suffisent plus : choisir **les plus proches de la position actuelle**, en réservant quelques places aux tâches urgentes qui ont déjà l'alerte (proposition : 5), et recalculer à chaque **changement de position significatif** (`startMonitoringSignificantLocationChanges`) et à chaque modification des tâches.
 - L'alerte de proximité reste un choix par tâche (« Me le rappeler en passant à côté ») ; ajouter un réglage par type pour l'activer par défaut (ex. spots photo : oui, magasins : non).
 - Spot photo : le texte de la notification reprend la `note` (« Pont de Charenton : au couchant »).

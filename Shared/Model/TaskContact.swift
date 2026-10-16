@@ -121,18 +121,27 @@ nonisolated struct TaskContact: Equatable, Sendable {
 
 
 /// « Me le rappeler en passant à côté » : ligne « 🔔 À l'approche » dans les notes, pour que le choix suive
-/// la tâche sur tous les appareils (seul l'appareil qui relance surveille le lieu).
+/// la tâche sur tous les appareils (seul l'appareil qui relance surveille le lieu). Pour un type d'envie activé
+/// par défaut (spots photo, P9-A4), « 🔕 Pas à l'approche » le coupe pour cette envie seulement.
 nonisolated enum NearbyReminder {
     static let line = "🔔 À l'approche"
+    static let offLine = "🔕 Pas à l'approche"
 
-    static func isOn(_ notes: String) -> Bool {
-        notes.components(separatedBy: "\n").contains { NoteLines.isHidden($0) && $0.contains("À l'approche") }
+    /// Choix écrit dans les notes : `true`, `false`, ou `nil` (rien : le défaut du type s'applique).
+    static func choice(_ notes: String) -> Bool? {
+        let lines = notes.components(separatedBy: "\n").filter(NoteLines.isHidden)
+        if lines.contains(where: { $0.contains("Pas à l'approche") }) { return false }
+        if lines.contains(where: { $0.contains("À l'approche") }) { return true }
+        return nil
     }
 
-    static func notes(_ notes: String, on: Bool) -> String {
-        var lines = notes.components(separatedBy: "\n").filter { !($0.contains("🔔") && $0.contains("À l'approche")) }
+    static func isOn(_ notes: String, byDefault: Bool = false) -> Bool { choice(notes) ?? byDefault }
+
+    /// Écrit le choix ; rien quand il égale le défaut (les notes restent propres).
+    static func notes(_ notes: String, on: Bool, byDefault: Bool = false) -> String {
+        var lines = notes.components(separatedBy: "\n").filter { !$0.contains("l'approche") || !NoteLines.isHidden($0) }
         while lines.last?.trimmingCharacters(in: .whitespaces).isEmpty == true { lines.removeLast() }
-        if on { lines.append(line) }
+        if on != byDefault { lines.append(on ? line : offLine) }
         return lines.joined(separator: "\n")
     }
 }

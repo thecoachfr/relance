@@ -4,7 +4,7 @@ import Foundation
 /// (📍 dans la section Lieu, 📅 dans la section Agenda) ou ne servent qu'au tri (📩). Elles restent dans
 /// Google Tasks : en modifiant le texte visible, on les garde telles quelles.
 nonisolated enum NoteLines {
-    static let hiddenPrefixes = ["📍", "📅 Dans l'agenda", "📩 Message partagé", "🔔 À l'approche", "👀 À voir", "📖 À lire", "🎧 À écouter", "🎬 À regarder", "🍽 À tester", "🛍 Magasin", "📷 Spot photo", "🗓", "🔄", "↪ Suivante créée"]
+    static let hiddenPrefixes = ["📍", "📅 Dans l'agenda", "📩 Message partagé", "🔔 À l'approche", "🔕 Pas à l'approche", "👀 À voir", "📖 À lire", "🎧 À écouter", "🎬 À regarder", "🍽 À tester", "🛍 Magasin", "📷 Spot photo", "🗓", "🔄", "↪ Suivante créée"]
 
     static func isHidden(_ line: String) -> Bool {
         let clean = line.replacingOccurrences(of: "\u{FE0F}", with: "").trimmingCharacters(in: .whitespaces)

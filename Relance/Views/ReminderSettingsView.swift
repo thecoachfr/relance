@@ -112,6 +112,23 @@ struct ReminderSettingsView: View {
                 Text("Pour les envies avec une période (expo, festival, film en salle). Sans période, aucune relance.")
             }
 
+            Section {
+                ForEach(ToSee.Kind.allCases.filter(\.isPlace)) { kind in
+                    Toggle(isOn: Binding(
+                        get: { settings.toSee.nearbyKinds.contains(kind.rawValue) },
+                        set: { on in
+                            settings.toSee.nearbyKinds.removeAll { $0 == kind.rawValue }
+                            if on { settings.toSee.nearbyKinds.append(kind.rawValue) }
+                        })) {
+                        Label(kind.title, systemImage: kind.symbol)
+                    }
+                }
+            } header: {
+                Text("À l'approche, par défaut")
+            } footer: {
+                Text("Pour ces envies avec un lieu, l'appareil qui relance te prévient en passant à moins de 200 m, sans rien activer. Chaque envie peut le couper dans sa section Lieu. Au-delà de 20 lieux, les plus proches de toi sont surveillés.")
+            }
+
             ForEach(EnvieSuggestions.kinds) { kind in
                 SuggestionSection(kind: kind, slot: Binding(
                     get: { settings.suggestions[kind]! }, set: { settings.suggestions[kind] = $0 }),
@@ -132,8 +149,11 @@ struct ReminderSettingsView: View {
         }
         .onChange(of: settings) {
             guard loaded else { return }
+            let nearbyChanged = store.scheduler.settings.toSee.nearbyKinds != settings.toSee.nearbyKinds
             store.scheduler.settings = settings
             Task { await store.reschedule() }
+            // Zones à l'approche (appareil qui relance) : recalculées avec les nouveaux types par défaut.
+            if nearbyChanged { store.onTasksChanged?() }
         }
     }
 }
