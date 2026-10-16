@@ -67,6 +67,7 @@ Champ `actions` de `TacheHA` v2 (voir l'index). Chaque action :
 | `ouvrir_lien` | appareil (au toucher) | `{lien}` | D1, 16/10 |
 | `sur_tv` | appareil (au toucher), script `script.aiguillage_sur_tv` | `{lien}` | D1, 16/10 |
 | `playlist_spotify` | `ha` (vigie), ajouté par la recette `spotify-playlist` | `{playlist: "a_ecouter", recette}` ; lien Spotify de l'envie | D2-D4, 16/10 (avant : `envie.playlist`, gardé pour les tâches déjà traitées) |
+| `rappel_maison` | `ha` (vigie), déclencheur `{quand: "presence"}` | aucun ; notification visible à l'arrivée au salon, une fois par jour | F2, 16/10 |
 | `preparer` | `routine`, recette `tva-micro` (inactive) | `{modele: "tva_micro", recette}` | D5, à faire |
 
 Recettes (`config:recettes`) : `{id, nom, active, si: {envie_type, hote, categorie, tag, mot}, alors: {type, executant, declencheur, params}}`.

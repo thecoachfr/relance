@@ -151,6 +151,12 @@ class RelanceVigie(Hass):
             self.run_in(lambda **_kw: self._load_known_keys(), 1)
             self.run_every(self.tmdb_pass, "now+90", 3600)
             self.run_every(self.spotify_pass, "now+120", 3600)
+        # Rappels « à la maison » (P9-F2) : présence approchée par la zone Hue MotionAware du salon.
+        self._presence = self.args.get("presence_entity")
+        if self._espace and self._presence:
+            self.listen_state(self.on_presence, self._presence, new="on", old="off")
+        # Essai : « aiguillage_test_maison » simule une arrivée au salon.
+        self.listen_event(lambda *_a, **_kw: self.on_presence(None, None, None, None), "aiguillage_test_maison")
         # Bouton « Lire sur la TV » (app TV ou iPhone) via script.aiguillage_spotify_sur_tv.
         self.listen_event(self.on_spotify_lire, "aiguillage_spotify_lire")
         self._refreshes = 0
@@ -385,6 +391,56 @@ class RelanceVigie(Hass):
             self.log(f"Actions : routine refusée ({response.status_code}) : {response.text[:200]}", level="WARNING")
             return False
         return True
+
+    # MARK: - Rappels « à la maison » (P9-F2)
+
+    def on_presence(self, entity, attribute, old, new, **kwargs):
+        """Quelqu'un arrive au salon (personne → quelqu'un) : notification visible pour chaque tâche qui porte
+        l'action « Me le rappeler à la maison », une fois par jour au plus."""
+        try:
+            records = self._service("donnees_apps", "lire", {"espace": self._espace}).get("enregistrements", [])
+        except Exception as error:  # noqa: BLE001
+            self.log(f"Maison : tâches illisibles : {error!r}", level="WARNING")
+            return
+        today = date.today()
+        maintenant = datetime.now(UTC).isoformat(timespec="seconds")
+        heure = datetime.now().strftime("%H:%M")
+        for record in records:
+            tache = record.get("valeur") or {}
+            if not self._is_task_key(record.get("cle", "")):
+                continue
+            dues = [a for a in tache.get("actions") or [] if aiguillage_actions.rappel_maison_du(a, tache, today)]
+            if not dues:
+                continue
+            envoyes = self.notify_all("🏠 " + (tache.get("titre") or "Tâche"), "Tu es à la maison : c'est le moment.")
+            for action in dues:
+                tache = aiguillage_actions.marquer_rappel(tache, action["id"], maintenant, heure)
+            try:
+                self._service("donnees_apps", "ecrire", {
+                    "espace": self._espace, "cle": record["cle"], "valeur": tache,
+                    "version_attendue": record["version"], "modifie_par": "vigie", "op_id": str(uuid.uuid4()),
+                })
+            except Exception as error:  # noqa: BLE001
+                self.log(f"Maison : « {tache.get('titre')} » non écrite : {error!r}", level="WARNING")
+            self.log(f"Maison : rappel de « {tache.get('titre')} » ({envoyes} iPhone)")
+
+    def notify_all(self, title, body):
+        """Notification visible sur les iPhone enregistrés (production : builds TestFlight). Renvoie le nombre
+        d'envois réussis. Les iPad et le Mac ne la reçoivent pas, pour ne pas sonner partout à la fois."""
+        with self._lock:
+            tokens = self._load_tokens()
+        cibles = {t: i for t, i in tokens.items()
+                  if i.get("environment") == "production" and str(i.get("device", "")).startswith("iPhone")}
+        self._count_push("rappel_maison", len(cibles))
+        ok = 0
+        with httpx.Client(http2=True, timeout=10) as client:
+            for token, info in cibles.items():
+                status, reason = self._send(client, token, info["environment"], alerte=(title, body))
+                if status == 200:
+                    ok += 1
+                else:
+                    self.log(f"APNs {status} {reason} pour {info.get('device', token[:8])}", level="WARNING")
+        return ok
 
     def _executer(self, action, tache, client):
         """(etat, resultat) ; (None, None) si l'exécution doit attendre."""
@@ -718,18 +774,21 @@ class RelanceVigie(Hass):
             detail = ", ".join(f"{cause} {n}" for cause, n in sorted(jour["salves"].items()))
             self.log(f"Pushs du {days[-1]} : {sum(jour['salves'].values())} salve(s) ({detail}), {jour['envois']} envoi(s)")
 
-    def _send(self, client, token, environment):
+    def _send(self, client, token, environment, alerte=None):
+        """Push silencieux (réveil pour synchroniser), ou notification visible si `alerte` = (titre, texte)."""
+        if alerte:
+            headers = {"apns-push-type": "alert", "apns-priority": "10"}
+            payload = {"aps": {"alert": {"title": alerte[0], "body": alerte[1]}, "sound": "default",
+                               "thread-id": "aiguillage-maison"}}
+        else:
+            # Un push silencieux doit être en priorité 5, sinon Apple le refuse.
+            headers = {"apns-push-type": "background", "apns-priority": "5"}
+            payload = {"aps": {"content-available": 1}}
         try:
             response = client.post(
                 f"{APNS_HOSTS[environment]}/3/device/{token}",
-                headers={
-                    "authorization": f"bearer {self._provider_token()}",
-                    "apns-topic": self._bundle_id,
-                    "apns-push-type": "background",
-                    # Un push silencieux doit être en priorité 5, sinon Apple le refuse.
-                    "apns-priority": "5",
-                },
-                json={"aps": {"content-available": 1}},
+                headers={"authorization": f"bearer {self._provider_token()}", "apns-topic": self._bundle_id, **headers},
+                json=payload,
             )
         except httpx.HTTPError as error:
             return 0, str(error)

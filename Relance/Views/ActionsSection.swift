@@ -16,7 +16,7 @@ struct ActionsSection: View {
         // Ancienne note de la vigie (D4, avant les recettes) : seulement si l'action n'existe pas.
         let playlist = actions.contains(where: { $0.type == "playlist_spotify" }) ? nil
             : PlaylistNote(item.envieRaw.flatMap { try? JSONDecoder().decode(TacheHA.Envie.self, from: Data($0.utf8)) })
-        if !actions.isEmpty || playlist != nil || lien != nil {
+        if !actions.isEmpty || playlist != nil || lien != nil || HAConfig.isActive {
             Section {
                 if let playlist {
                     LabeledContent {
@@ -31,8 +31,13 @@ struct ActionsSection: View {
                         .swipeActions { supprimer(action) }
                         .contextMenu { supprimer(action) }
                 }
-                if let lien {
-                    Menu {
+                Menu {
+                    if HAConfig.isActive, !actions.contains(where: { $0.type == TacheHA.Action.rappelMaison }) {
+                        Button("Me le rappeler à la maison", systemImage: "house") {
+                            store.addAction(.aLaMaison(), to: item)
+                        }
+                    }
+                    if let lien {
                         if !actions.contains(where: { $0.type == TacheHA.Action.ouvrirLien }) {
                             Button("Ouvrir le lien", systemImage: "link") {
                                 store.addAction(.surAppareil(TacheHA.Action.ouvrirLien, lien: lien), to: item)
@@ -43,14 +48,18 @@ struct ActionsSection: View {
                                 store.addAction(.surAppareil(TacheHA.Action.surTV, lien: lien), to: item)
                             }
                         }
-                    } label: {
-                        Label("Ajouter une action", systemImage: "plus.circle")
                     }
+                } label: {
+                    Label("Ajouter une action", systemImage: "plus.circle")
                 }
             } header: {
                 Text("Actions")
             } footer: {
-                if !actions.isEmpty { Text("Touche une action pour la lancer. Elles se synchronisent avec tes autres appareils.") }
+                if actions.contains(where: { $0.type == TacheHA.Action.rappelMaison }) {
+                    Text("Home Assistant te prévient quand il détecte quelqu'un au salon, une fois par jour, jusqu'à ce que la tâche soit faite.")
+                } else if !actions.isEmpty {
+                    Text("Touche une action pour la lancer. Elles se synchronisent avec tes autres appareils.")
+                }
             }
         }
     }

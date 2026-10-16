@@ -69,6 +69,20 @@ def test_routine():
     assert a.routine_en_retard(lance, datetime(2026, 10, 17, 9, 0, tzinfo=timezone.utc))
 
 
+def test_rappel_maison():
+    action = {"id": "m1", "type": "rappel_maison", "executant": "ha", "declencheur": {"quand": "presence"}, "etat": "a_faire"}
+    tache = {"titre": "Arroser les plantes", "actions": [action]}
+    assert a.rappel_maison_du(action, tache, TODAY)
+    # La passe des actions ne l'exécute pas (déclencheur « presence ») : seule l'arrivée à la maison le fait.
+    assert not a.due(action, tache, TODAY)
+    t = a.marquer_rappel(tache, "m1", "2026-10-16T19:10:00+00:00", "21:10")
+    rappel = t["actions"][0]
+    assert rappel["etat"] == "a_faire" and rappel["resultat"] == "Rappelé le 16/10 à 21:10"
+    assert not a.rappel_maison_du(rappel, t, TODAY)  # une fois par jour
+    assert a.rappel_maison_du(rappel, t, date(2026, 10, 17))
+    assert not a.rappel_maison_du(action, {**tache, "fait": True}, TODAY)
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_"):

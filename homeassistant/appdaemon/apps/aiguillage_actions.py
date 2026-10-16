@@ -130,6 +130,23 @@ def due(action, tache, today, executant="ha"):
     return False
 
 
+RAPPEL_MAISON = "rappel_maison"
+
+
+def rappel_maison_du(action, tache, today):
+    """« Me le rappeler à la maison » (P9-F2) : à faire, tâche pas faite, pas encore rappelé aujourd'hui.
+    L'action reste « a_faire » : elle rappelle à chaque retour (une fois par jour) jusqu'à ce que la tâche soit faite."""
+    if action.get("type") != RAPPEL_MAISON or action.get("etat") != "a_faire" or tache.get("fait"):
+        return False
+    return (action.get("maj") or "")[:10] != today.isoformat()
+
+
+def marquer_rappel(tache, action_id, maintenant, heure):
+    """La tâche avec le rappel noté (« Rappelé le JJ/MM à HH:MM »), l'action restant à faire."""
+    jour = maintenant[8:10] + "/" + maintenant[5:7]
+    return marquer(tache, action_id, "a_faire", f"Rappelé le {jour} à {heure}", maintenant)
+
+
 ROUTINE_DELAI_HEURES = 24
 
 

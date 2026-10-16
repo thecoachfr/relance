@@ -22,6 +22,12 @@
 - 4 zones au plus, 3 ampoules au moins par zone : toutes les pièces ne pourront pas être couvertes.
 - L'activation de la zone peut avoir lancé un comportement réglé dans l'app Hue (allumage au passage) : à vérifier dans l'app.
 
+## 3 bis. Fait (16/10/2026)
+
+- **Idée 1** : `binary_sensor.presence_salon` (helper Template, `delay_off` 10 min).
+- **Idée 2** : action `rappel_maison` (vigie, notification visible sur les iPhone, une fois par jour et par tâche).
+- Restent : idée 3 (Nest Hub selon la présence), idée 4 (Bermuda).
+
 ## 4. Ordre
 
 Le capteur de présence (idée 1) est une simple configuration HA, faisable à tout moment. Les idées 2 et 3 viennent après D3 (exécutant HA des actions). L'idée 4 attend l'installation des relais Bermuda.

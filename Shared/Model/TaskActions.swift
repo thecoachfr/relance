@@ -6,6 +6,12 @@ import Foundation
 nonisolated extension TacheHA.Action {
     static let ouvrirLien = "ouvrir_lien"
     static let surTV = "sur_tv"
+    static let rappelMaison = "rappel_maison"
+
+    /// « Me le rappeler à la maison » (P9-F2) : la vigie prévient quand quelqu'un arrive au salon, une fois par jour.
+    static func aLaMaison() -> Self {
+        Self(type: rappelMaison, executant: "ha", declencheur: .objet(["quand": .texte("presence")]))
+    }
 
     /// Nouvelle action sur l'appareil, au toucher, avec le lien en paramètre.
     static func surAppareil(_ type: String, lien: URL) -> Self {
@@ -16,6 +22,7 @@ nonisolated extension TacheHA.Action {
         switch type {
         case Self.ouvrirLien: "Ouvrir le lien"
         case Self.surTV: "Sur la TV"
+        case Self.rappelMaison: "Me le rappeler à la maison"
         case "playlist_spotify": "Ajouter à la playlist « À écouter »"
         case "preparer": "Préparer"
         default: type
@@ -26,6 +33,7 @@ nonisolated extension TacheHA.Action {
         switch type {
         case Self.ouvrirLien: "link"
         case Self.surTV: "tv"
+        case Self.rappelMaison: "house"
         case "playlist_spotify": "music.note.list"
         case "preparer": "doc.text.magnifyingglass"
         default: "bolt"
@@ -43,6 +51,10 @@ nonisolated extension TacheHA.Action {
     /// « Faite le 16/10 à 19:33 · Envoyé à la TV », « Échec · TV injoignable », « À faire ».
     var etatTexte: String {
         let quand = maj.flatMap { TacheHA.date($0) }.map { " le " + $0.formatted(.dateTime.day().month(.twoDigits).hour().minute()) } ?? ""
+        if type == Self.rappelMaison, etat == "a_faire" {
+            // Reste « à faire » : elle rappelle à chaque retour, une fois par jour, jusqu'à ce que la tâche soit faite.
+            return ["En rentrant à la maison", resultat].compactMap { $0 }.joined(separator: " · ")
+        }
         let base = switch etat {
         case "faite": "Faite" + quand
         case "echec": "Échec" + quand

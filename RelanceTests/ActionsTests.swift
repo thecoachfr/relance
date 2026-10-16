@@ -96,4 +96,14 @@ struct ActionsTests {
         #expect(tva["active"] == .booleen(true))
         #expect(tva["futur"] == .entier(1))
     }
+
+    /// « Me le rappeler à la maison » (P9-F2) : exécutée par la vigie, reste « à faire » et note le dernier rappel.
+    @Test func rappelMaison() {
+        var a = TacheHA.Action.aLaMaison()
+        #expect(a.type == "rappel_maison" && a.executant == "ha" && !a.auToucher)
+        #expect(a.declencheur == .objet(["quand": .texte("presence")]))
+        #expect(a.etatTexte == "En rentrant à la maison")
+        a.resultat = "Rappelé le 16/10 à 21:10"
+        #expect(a.etatTexte == "En rentrant à la maison · Rappelé le 16/10 à 21:10")
+    }
 }
