@@ -26,6 +26,7 @@ Puis : savoir **sur quelle plateforme** le titre est disponible en France, l'ouv
 - **Accepté quand** : chaque lien réel donne plateforme, identifiant et titre ; tests unitaires.
 
 ### B2 — Phrase seule
+*Fait le 16/10 : règle K de la routine (champ `envie` et plateforme), essai réel réussi (voir SUIVI).*
 - Paragraphe pour la routine de tri (étape K) : quand une envie « À regarder » nomme une plateforme (« sur Netflix », « sur Apple TV »), remplir `envie.plateforme` ; remettre le titre exact de l'œuvre dans le titre de la tâche (sans « sur Netflix ») avec la ligne `🎙 Dicté : …` comme aujourd'hui. Ne jamais inventer d'identifiant ni de lien. À appliquer à la routine après B1 en service (index, section 4).
 
 ### B3 — Disponibilité en France par TMDB (vigie AppDaemon)
