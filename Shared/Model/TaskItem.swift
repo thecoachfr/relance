@@ -30,6 +30,10 @@ final class TaskItem {
     var envieRaw: String?
     /// Actions reçues de Home Assistant (JSON de `[TacheHA.Action]`, P9-D1) ; `nil` = aucune.
     var actionsRaw: String?
+    /// Liste d'articles (JSON de `TacheHA.Liste`, P9-G) ; `nil` = pas de liste.
+    var listeRaw: String?
+    /// Dernière liste reçue de Home Assistant : l'ancêtre commun de la fusion article par article.
+    var listeBaseRaw: String?
     /// Champs de premier niveau inconnus de l'app (JSON), renvoyés tels quels à Home Assistant.
     var haExtrasRaw: String?
     /// Événement d'agenda créé depuis CET appareil (identifiant EventKit, propre à l'appareil).

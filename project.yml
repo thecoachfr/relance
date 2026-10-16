@@ -184,6 +184,7 @@ targets:
       - Shared/Model/NoteLines.swift
       - Shared/HA/HAConfig.swift
       - Shared/HA/TacheHA.swift
+      - Shared/HA/TacheHA+Liste.swift
       - Shared/HA/MemoHA.swift
     dependencies:
       - package: DonneesHA

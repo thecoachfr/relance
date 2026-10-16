@@ -89,6 +89,7 @@ Code fait et fusionné dans `main` (désactivé tant qu'on ne bascule pas dans l
 - **À essayer par Alexandre** : Nest Hub avec des tâches du jour, puis sans personne dans l'espace de vie depuis 10 min (photo) ; Spotify : un album et un épisode dans « À écouter », puis lecture ; A4 en se déplaçant ; notification et écran du résultat d'une action à la prochaine préparation.
 - **Réglage par Alexandre** : lissage de Bermuda (la pièce saute toutes les quelques secondes) ; activer la recette TVA avant le 10/11 (Réglages › Actions automatiques).
 - **Plan E** : relevé de Réglages › Batterie vers le 23/10, rapport E1, puis E2.
+- **Plan G, listes de courses** (`plans/P9-G-listes-courses.md`, déposé depuis le chat le 16/10 à 22 h) : G1 commencé (modèle et fusion, voir le plan).
 - **Améliorations au choix** : écriture dans le classeur de comptabilité après validation (« Appliquer ») ; alerte quand un titre quitte une plateforme abonnée ; Apple TV, Prime Video, France TV, Arte sur la TV ; éditeur de conditions des recettes ; retirer l'horaire du 17 de la routine actions ; essais P2 (reportés).
 - **Home Assistant** : NUC passé à 8 Go de RAM le 16/10 au soir (sauvegarde complète avant, redémarrage vérifié : vigie, capteurs, Nest Hub).
 

@@ -44,6 +44,7 @@ La règle actuelle de C2 (« la modification la plus récente gagne ») s'appliq
 ## 4. Lots
 
 ### G1 — Liste cochable
+*Commencé le 16/10 au soir : modèle `TacheHA.Liste` (`Shared/HA/TacheHA+Liste.swift`, champs inconnus gardés, ligne `🛒`), copie locale `TaskItem.listeRaw` et ancêtre commun `listeBaseRaw` (dernière liste reçue de HA), fusion à trois voies article par article (`Liste.fusion`), tests `ListeTests`. Reste : brancher la fusion au moment du conflit (le paquet `DonneesHA` règle les conflits par « dernier écrit gagne » sur l'enregistrement entier : il faut un point d'accroche, à faire dans `ha-donnees-apps` avec l'accord d'Alexandre), écran, compteur, tout coché → Fait, consigne de la routine.*
 - Fiche : cases à cocher, ajout d'un article d'une ligne (Retour = article suivant), réordonner en glissant, supprimer en balayant ; compteur « 3/12 » dans la liste des tâches et le widget.
 - Création : « Nouvelle liste » dans la saisie rapide ; une tâche existante peut recevoir une liste.
 - **Tout coché → Fait**, avec le « Annuler » habituel ; ajouter un article à une liste faite la rouvre ; décocher un article d'une liste faite la rouvre aussi.

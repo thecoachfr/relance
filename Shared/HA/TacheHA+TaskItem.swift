@@ -10,6 +10,8 @@ extension TacheHA {
         envie = item.envie()
         // La ligne 📍 recopie le lieu (lien Plans du point quand il n'a pas d'adresse).
         notes = lieu.map { TaskContact.notes(item.notes, setting: $0.contact) } ?? item.notes
+        liste = item.liste
+        notes = Liste.notes(notes, setting: liste)
         jour = Self.jour(item.dueDay)
         heure = item.dueDay == nil ? nil : Self.heure(item.dueMinutes)
         categorie = item.category
@@ -51,6 +53,8 @@ extension TacheHA {
         item.completedAt = fait ? (Self.date(faitLe) ?? item.completedAt ?? .now) : nil
         if let googleID { item.googleID = googleID }
         item.actions = actions
+        item.liste = liste
+        item.listeBaseRaw = item.listeRaw
         item.haExtrasRaw = autres.isEmpty ? nil : (try? JSONEncoder().encode(autres)).map { String(decoding: $0, as: UTF8.self) }
         item.isDirty = false
     }
@@ -133,6 +137,17 @@ extension TaskItem {
     var actions: [TacheHA.Action] {
         get { actionsRaw.flatMap { try? JSONDecoder().decode([TacheHA.Action].self, from: Data($0.utf8)) } ?? [] }
         set { actionsRaw = newValue.isEmpty ? nil : (try? JSONEncoder().encode(newValue)).map { String(decoding: $0, as: UTF8.self) } }
+    }
+
+    /// Liste d'articles (P9-G), rangée en JSON dans `listeRaw` ; `nil` sans liste.
+    var liste: TacheHA.Liste? {
+        get { listeRaw.flatMap { try? JSONDecoder().decode(TacheHA.Liste.self, from: Data($0.utf8)) } }
+        set { listeRaw = newValue.flatMap { try? JSONEncoder().encode($0) }.map { String(decoding: $0, as: UTF8.self) } }
+    }
+
+    /// Dernière liste reçue de HA (ancêtre commun de la fusion).
+    var listeBase: TacheHA.Liste? {
+        listeBaseRaw.flatMap { try? JSONDecoder().decode(TacheHA.Liste.self, from: Data($0.utf8)) }
     }
 
     /// L'envie à envoyer à HA : type et note des lignes (modifiables dans l'app), complétés par la dernière envie
