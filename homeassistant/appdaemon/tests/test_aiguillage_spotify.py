@@ -56,6 +56,23 @@ def test_doublons_et_lecture():
     assert s.appareil(reels, "sonos") is None
 
 
+def test_copie_playlist():
+    items = [
+        {"item": {"type": "track", "id": "A1", "uri": "spotify:track:A1", "name": "Spaceships",
+                  "artists": [{"name": "Robots in Lilac"}],
+                  "album": {"images": [{"url": "big", "width": 640}, {"url": "mid", "width": 300}, {"url": "small", "width": 64}]}}},
+        {"item": {"type": "episode", "id": "E1", "uri": "spotify:episode:E1", "name": "Épisode 3",
+                  "images": [{"url": "ep", "width": 600}], "show": {"name": "Un podcast"}}},
+        {"item": None},  # titre retiré du catalogue
+    ]
+    c = s.copie_playlist(items, "PL", "2026-10-16T18:00:00+00:00")
+    assert c["playlist"] == "PL" and len(c["titres"]) == 2
+    # Les plus récents (ajoutés en dernier) d'abord.
+    assert c["titres"][0] == {"lien": "https://open.spotify.com/episode/E1", "titre": "Épisode 3", "artistes": "Un podcast",
+                              "image": "ep", "type": "episode"}
+    assert c["titres"][1]["image"] == "mid" and c["titres"][1]["artistes"] == "Robots in Lilac"
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_"):

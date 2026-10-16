@@ -128,6 +128,35 @@ def appareil(devices, choix="tv"):
     return next((d for d in devices if voulu in (d.get("name") or "").lower().replace(" ", "")), None)
 
 
+CLE_PLAYLIST = "config:playlist_a_ecouter"
+MAX_TITRES = 100
+
+
+def piste(item):
+    """Élément de `/playlists/{id}/items` → {lien, titre, artistes, image, type} pour l'app TV (ou None)."""
+    e = item.get("item") or item.get("track") or {}
+    if not e.get("uri") or not e.get("id"):
+        return None
+    kind = e.get("type") or "track"
+    images = (e.get("album") or {}).get("images") or e.get("images") or (e.get("show") or {}).get("images") or []
+    artistes = ", ".join(a.get("name", "") for a in e.get("artists") or []) or (e.get("show") or {}).get("name", "")
+    return {
+        "lien": f"https://open.spotify.com/{kind}/{e['id']}",
+        "titre": e.get("name") or "",
+        "artistes": artistes,
+        # La plus petite image d'au moins 300 px (assez pour une carte TV), sinon la première.
+        "image": next((i["url"] for i in sorted(images, key=lambda i: i.get("width") or 0) if (i.get("width") or 0) >= 300),
+                      images[0]["url"] if images else None),
+        "type": kind,
+    }
+
+
+def copie_playlist(items, playlist_id, maj):
+    """Valeur de `config:playlist_a_ecouter` : la playlist telle que l'app TV l'affiche (les plus récents d'abord)."""
+    pistes = [p for p in (piste(i) for i in reversed(list(items))) if p]
+    return {"playlist": playlist_id, "maj": maj, "titres": pistes[:MAX_TITRES]}
+
+
 class Client:
     """Appels à l'API Web avec un jeton d'accès obtenu par le jeton de rafraîchissement."""
 
@@ -181,6 +210,9 @@ class Client:
             if element.get("uri"):
                 out.add(element["uri"])
         return out
+
+    def elements(self, playlist_id):
+        return list(self._pages(f"/playlists/{playlist_id}/items", {"additional_types": "track,episode"}))
 
     def uris(self, kind, ident):
         """Morceau ou épisode : lui-même ; album : ses titres (appels individuels, API de février 2026)."""

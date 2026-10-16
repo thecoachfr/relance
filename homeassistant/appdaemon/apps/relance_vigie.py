@@ -321,6 +321,28 @@ class RelanceVigie(Hass):
                 continue
             # Conflit : le prochain passage relit ; les titres déjà ajoutés ne le seront pas deux fois.
             self.log(f"Spotify : « {valeur.get('titre')} » → playlist, {summary} ({result.get('statut')})")
+        self._copier_playlist(client, records)
+
+    def _copier_playlist(self, client, records):
+        """Copie du contenu de « À écouter » dans `config:playlist_a_ecouter` pour l'app TV (qui n'a pas de jeton
+        Spotify). Écrite seulement si elle a changé (titres), pour ne pas réveiller les appareils pour rien."""
+        try:
+            pid = client.playlist()
+            copie = aiguillage_spotify.copie_playlist(client.elements(pid), pid, datetime.now(UTC).isoformat(timespec="seconds"))
+        except Exception as error:  # noqa: BLE001
+            self.log(f"Spotify : playlist illisible : {error!r}", level="WARNING")
+            return
+        actuel = next((r for r in records if r.get("cle") == aiguillage_spotify.CLE_PLAYLIST), None)
+        if actuel and (actuel.get("valeur") or {}).get("titres") == copie["titres"]:
+            return
+        try:
+            self._service("donnees_apps", "ecrire", {
+                "espace": self._espace, "cle": aiguillage_spotify.CLE_PLAYLIST, "valeur": copie,
+                "version_attendue": actuel["version"] if actuel else 0, "modifie_par": "vigie", "op_id": str(uuid.uuid4()),
+            })
+            self.log(f"Spotify : copie de la playlist pour la TV ({len(copie['titres'])} titre(s))")
+        except Exception as error:  # noqa: BLE001
+            self.log(f"Spotify : copie de la playlist non écrite : {error!r}", level="WARNING")
 
     def on_spotify_lire(self, event_name, data, **kwargs):
         """Lecture par Spotify Connect : `lien` Spotify (morceau, album, épisode, playlist) ou `a_ecouter` (toute la
