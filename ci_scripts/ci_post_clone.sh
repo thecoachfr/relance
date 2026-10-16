@@ -46,3 +46,6 @@ for plist in Relance/Resources/Info.plist RelanceMac/Info.plist RelanceShare/Inf
     fi
 done
 echo "Secrets écrits, build ${CI_BUILD_NUMBER}, commit ${commit:-inconnu}."
+
+# Numéro de build ↔ commit, gardé par la vigie : savoir quel build TestFlight contient quoi.
+sh ci_scripts/signaler_build.sh demarre

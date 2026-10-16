@@ -72,6 +72,9 @@ iPhone, iPad, montre (incluse dans l'app iPhone) et Mac se mettent à jour depui
 - `ci_scripts/ci_post_clone.sh` recrée `Secrets.xcconfig` (absent du dépôt public) et donne
   le numéro de build de Xcode Cloud à l'app et à toutes ses extensions, et le commit compilé (clé `AiguillageCommit`,
   affichée dans Réglages › À propos, sur le Mac et sur la montre).
+- `ci_scripts/signaler_build.sh` (appelé au début du build et par `ci_post_xcodebuild.sh` après chaque archive) signale
+  « build N = commit X, étape » au webhook de l'app (`action: build`) ; la vigie garde la correspondance dans
+  `relance_builds.json` (add-on AppDaemon), pour savoir quel build TestFlight contient quelle modification.
 - Variables du workflow (Xcode › Cloud › Workflow › Environnement), toutes **secrètes** :
   `GOOGLE_CLIENT_ID`, `RELANCE_WEBHOOK_URL` (URL complète, avec `https://`). Le schéma d'URL Google
   (`GOOGLE_REVERSED_CLIENT_ID`) est déduit de l'ID client par le script ; une variable de ce nom est ignorée.

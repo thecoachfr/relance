@@ -108,6 +108,8 @@ class RelanceVigie(Hass):
         self._tokens_path = Path(self.args.get("tokens_file", "/config/relance_tokens.json"))
         # Audit de batterie (P9-E) : pushs envoyés par jour et par cause.
         self._push_stats_path = Path(self.args.get("push_stats_file", "/config/relance_push_stats.json"))
+        # Builds Xcode Cloud signalés par ci_scripts/signaler_build.sh : numéro ↔ commit.
+        self._builds_path = Path(self.args.get("builds_file", "/config/relance_builds.json"))
         self._lock = threading.Lock()
         self._jwt = None
         self._jwt_issued_at = 0.0
@@ -359,6 +361,9 @@ class RelanceVigie(Hass):
         if data.get("action") == "triage":
             self.request_triage()
             return
+        if data.get("action") == "build":
+            self.record_build(data)
+            return
         token = str(data.get("token", "")).strip().lower()
         environment = data.get("environment", "production")
         if len(token) < 32 or not all(c in "0123456789abcdef" for c in token):
@@ -376,6 +381,26 @@ class RelanceVigie(Hass):
             }
             self._save_tokens(tokens)
         self.log(f"Appareil enregistré : {data.get('device', '?')} ({environment})")
+
+    def record_build(self, data):
+        """Build Xcode Cloud : `device` = numéro, `token` = commit, `environment` = étape. 60 builds gardés."""
+        build = str(data.get("device", "")).strip()
+        commit = str(data.get("token", "")).strip().lower()[:40]
+        etape = str(data.get("environment", "")).strip()[:20]
+        if not build.isdigit() or not all(c in "0123456789abcdef" for c in commit):
+            self.log(f"Build refusé : {build[:12]} {commit[:12]}", level="WARNING")
+            return
+        with self._lock:
+            try:
+                builds = json.loads(self._builds_path.read_text())
+            except (FileNotFoundError, json.JSONDecodeError):
+                builds = {}
+            entree = builds.setdefault(build, {"commit": commit[:7], "etapes": {}})
+            entree["etapes"][etape] = datetime.now().strftime("%Y-%m-%d %H:%M")
+            for old in sorted(builds, key=int)[:-60]:
+                builds.pop(old)
+            self._builds_path.write_text(json.dumps(builds, indent=2, sort_keys=True))
+        self.log(f"Build {build} (commit {commit[:7]}) : {etape}")
 
     def _load_tokens(self):
         try:
