@@ -1,32 +1,48 @@
 import Foundation
 
-/// Une envie, gardée sans échéance : une sortie « À voir » (expo, lieu, festival), ou quelque chose
-/// « À lire », « À écouter », « À regarder », éventuellement avec une période (« du 10/09/2026 au 31/01/2027 »).
-/// Deux lignes des notes, cachées du champ Notes : le type (« 👀 À voir », « 📖 À lire », « 🎧 À écouter »,
-/// « 🎬 À regarder ») et « 🗓 Du 10/09/2026 au 31/01/2027 » (ou « 🗓 Jusqu'au … », « 🗓 À partir du … »).
+/// Une envie, gardée sans échéance : une sortie « À voir » (expo, lieu, festival), un resto à tester, un magasin,
+/// un spot photo, ou quelque chose « À lire », « À écouter », « À regarder », éventuellement avec une période
+/// (« du 10/09/2026 au 31/01/2027 »). Deux lignes des notes, cachées du champ Notes : le type (« 👀 À voir »,
+/// « 🍽 À tester », « 🛍 Magasin », « 📷 Spot photo », « 📖 À lire », « 🎧 À écouter », « 🎬 À regarder »), suivi
+/// d'une note facultative (« 📷 Spot photo · au couchant »), et « 🗓 Du 10/09/2026 au 31/01/2027 »
+/// (ou « 🗓 Jusqu'au … », « 🗓 À partir du … »).
 /// Lignes lues aussi par la routine de tri et l'écran du Nest Hub : garder les marqueurs.
 nonisolated struct ToSee: Equatable, Sendable {
     enum Kind: String, CaseIterable, Identifiable, Sendable {
-        case outing, read, listen, watch
+        // Les envies qui se passent quelque part d'abord (carte), puis les autres.
+        case outing, restaurant, shop, photoSpot, read, listen, watch
 
         var id: Self { self }
 
         var marker: String {
             switch self {
             case .outing: "👀 À voir"
+            case .restaurant: "🍽 À tester"
+            case .shop: "🛍 Magasin"
+            case .photoSpot: "📷 Spot photo"
             case .read: "📖 À lire"
             case .listen: "🎧 À écouter"
             case .watch: "🎬 À regarder"
             }
         }
 
-        /// « À voir », « À lire »… (la ligne des notes sans l'emoji).
-        var title: String { String(marker.drop { $0 != " " }.dropFirst()) }
+        /// « À voir », « Restos à tester »… : titre d'un groupe, d'un choix de type.
+        var title: String {
+            switch self {
+            case .restaurant: "Restos à tester"
+            case .shop: "Magasins"
+            case .photoSpot: "Spots photo"
+            default: String(marker.drop { $0 != " " }.dropFirst())
+            }
+        }
 
         /// Libellé court du filtre.
         var shortTitle: String {
             switch self {
             case .outing: "Voir"
+            case .restaurant: "Restos"
+            case .shop: "Magasins"
+            case .photoSpot: "Spots"
             case .read: "Lire"
             case .listen: "Écouter"
             case .watch: "Regarder"
@@ -36,16 +52,24 @@ nonisolated struct ToSee: Equatable, Sendable {
         var symbol: String {
             switch self {
             case .outing: "ticket"
+            case .restaurant: "fork.knife"
+            case .shop: "bag"
+            case .photoSpot: "camera"
             case .read: "book"
             case .listen: "headphones"
             case .watch: "play.tv"
             }
         }
 
-        /// Le bouton « Fait » : « Vu », « Lu », « Écouté ».
+        /// Une envie qui a sa place sur la carte (avec un lieu).
+        var isPlace: Bool { [.outing, .restaurant, .shop, .photoSpot].contains(self) }
+
+        /// Le bouton « Fait » : « Vu », « Lu », « Écouté », « Testé », « Photographié ».
         var doneTitle: String {
             switch self {
-            case .outing, .watch: "Vu"
+            case .outing, .watch, .shop: "Vu"
+            case .restaurant: "Testé"
+            case .photoSpot: "Photographié"
             case .read: "Lu"
             case .listen: "Écouté"
             }
@@ -54,7 +78,9 @@ nonisolated struct ToSee: Equatable, Sendable {
         /// Titre de la section des envies faites.
         var doneSection: String {
             switch self {
-            case .outing, .watch: "Déjà vu"
+            case .outing, .watch, .shop: "Déjà vu"
+            case .restaurant: "Déjà testé"
+            case .photoSpot: "Déjà photographié"
             case .read: "Déjà lu"
             case .listen: "Déjà écouté"
             }
@@ -64,6 +90,9 @@ nonisolated struct ToSee: Equatable, Sendable {
         var example: String {
             switch self {
             case .outing: "Expo photo à la MEP"
+            case .restaurant: "Le petit italien de la rue de Lyon"
+            case .shop: "La boutique de papeterie du Marais"
+            case .photoSpot: "Le pont Marie au couchant"
             case .read: "L'Anomalie, Hervé Le Tellier"
             case .listen: "Le dernier album de Feist"
             case .watch: "Perfect Days, Wim Wenders"
@@ -80,15 +109,23 @@ nonisolated struct ToSee: Equatable, Sendable {
     /// Premier et dernier jour (début de journée), facultatifs.
     var start: Date?
     var end: Date?
+    /// Note courte sur la ligne du type (« au couchant, en automne » pour un spot photo).
+    var note: String?
 
-    init(_ kind: Kind = .outing, start: Date? = nil, end: Date? = nil) {
-        (self.kind, self.start, self.end) = (kind, start, end)
+    init(_ kind: Kind = .outing, start: Date? = nil, end: Date? = nil, note: String? = nil) {
+        (self.kind, self.start, self.end, self.note) = (kind, start, end, note)
     }
 
     init?(notes: String) {
         let lines = notes.components(separatedBy: "\n").map(Self.clean)
-        guard let kind = Kind.allCases.first(where: { k in lines.contains { $0.hasPrefix(k.marker) } }) else { return nil }
+        guard let (kind, line) = Kind.allCases.lazy.compactMap({ k in lines.first { $0.hasPrefix(k.marker) }.map { (k, $0) } }).first
+        else { return nil }
         self.kind = kind
+        let rest = line.dropFirst(kind.marker.count).trimmingCharacters(in: .whitespaces)
+        if rest.hasPrefix("·") {
+            let text = rest.dropFirst().trimmingCharacters(in: .whitespaces)
+            note = text.isEmpty ? nil : text
+        }
         guard let period = lines.first(where: { $0.hasPrefix(Self.periodMarker) }) else { return }
         let dates = Self.dates(in: period)
         if period.contains("Jusqu") {
@@ -104,7 +141,8 @@ nonisolated struct ToSee: Equatable, Sendable {
     /// « Dune à regarder », « à lire : L'Anomalie », « l'album de Feist, à écouter » : le type dit dans la phrase,
     /// au début ou à la fin, et la plage à retirer du titre.
     static func kind(in text: String) -> (range: Range<String.Index>, kind: Kind)? {
-        let verbs: [(String, Kind)] = [("lire", .read), ("[ée]couter", .listen), ("regarder", .watch), ("voir", .outing)]
+        let verbs: [(String, Kind)] = [("lire", .read), ("[ée]couter", .listen), ("regarder", .watch), ("voir", .outing),
+                                       ("tester", .restaurant)]
         for (verb, kind) in verbs {
             for pattern in [#"[\s,;:–-]*\b(?:à|a)\s+"# + verb + #"\s*[.!]?\s*$"#, #"^\s*(?:à|a)\s+"# + verb + #"\s*[:,–-]\s*"#] {
                 guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
@@ -127,7 +165,8 @@ nonisolated struct ToSee: Equatable, Sendable {
     // MARK: - Lignes des notes
 
     var lines: [String] {
-        var lines = [kind.marker]
+        let note = note?.replacingOccurrences(of: "\n", with: " ").trimmingCharacters(in: .whitespaces)
+        var lines = [kind.marker + (note.map { $0.isEmpty ? "" : " · " + $0 } ?? "")]
         switch (start, end) {
         case let (s?, e?): lines.append("\(Self.periodMarker) Du \(Self.format(s)) au \(Self.format(e))")
         case let (nil, e?): lines.append("\(Self.periodMarker) Jusqu'au \(Self.format(e))")

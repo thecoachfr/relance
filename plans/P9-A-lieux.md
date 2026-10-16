@@ -29,6 +29,7 @@ Et pouvoir les ajouter sans rien taper : depuis un **lien Plans ou Google Maps p
 - **Accepté quand** : une tâche avec `lieu` sans adresse s'affiche sur la carte (iPhone, iPad, Mac) ; une ancienne tâche avec seulement `📍` s'affiche comme avant ; la routine de tri, la vigie et la carte du Nest Hub voient toujours la ligne `📍` ; tests unitaires de lecture/écriture dans les deux sens.
 
 ### A2 — Trois nouveaux types d'envie
+*Fait le 16/10 (tests verts, vu dans le simulateur, Nest Hub à jour). La note du spot est sur la ligne du type (`📷 Spot photo · au couchant`) ; le champ `envie` de HA arrivera avec B1. Paragraphe de la routine prêt dans SUIVI, à appliquer une fois le build installé.*
 - `ToSee.Kind` : `resto`, `magasin`, `spotPhoto` avec marqueur, symbole SF, libellé du filtre, bouton « Fait » (`Testé`, `Vu`, `Photographié`) et section d'historique.
 - Carte : un filtre par type, couleurs distinctes, regroupement des points proches comme aujourd'hui.
 - Fiche d'un spot photo : champ `note` (lumière, saison).

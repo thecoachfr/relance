@@ -25,7 +25,8 @@ nonisolated struct EnvieSuggestions: Codable, Equatable, Sendable {
         watch = (try? c.decodeIfPresent(Slot.self, forKey: .watch)) ?? watch
     }
 
-    /// Les sorties (« À voir ») ont déjà leurs rappels de période : pas de suggestion.
+    /// Les sorties (« À voir ») ont déjà leurs rappels de période, les restos, magasins et spots photo
+    /// le rappel à l'approche : pas de suggestion.
     static let kinds: [ToSee.Kind] = [.read, .listen, .watch]
 
     subscript(kind: ToSee.Kind) -> Slot? {
@@ -34,7 +35,7 @@ nonisolated struct EnvieSuggestions: Codable, Equatable, Sendable {
             case .read: read
             case .listen: listen
             case .watch: watch
-            case .outing: nil
+            case .outing, .restaurant, .shop, .photoSpot: nil
             }
         }
         set {
@@ -43,7 +44,7 @@ nonisolated struct EnvieSuggestions: Codable, Equatable, Sendable {
             case .read: read = newValue
             case .listen: listen = newValue
             case .watch: watch = newValue
-            case .outing: break
+            case .outing, .restaurant, .shop, .photoSpot: break
             }
         }
     }
@@ -56,7 +57,7 @@ nonisolated struct EnvieSuggestions: Codable, Equatable, Sendable {
         case .read: "Un moment pour lire \(moment) ?"
         case .listen: "À écouter \(moment) ?"
         case .watch: "Envie de regarder ça \(moment) ?"
-        case .outing: "À voir ?"
+        case .outing, .restaurant, .shop, .photoSpot: "À voir ?"
         }
     }
 }

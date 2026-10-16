@@ -88,13 +88,24 @@ struct TaskRow: View {
         #endif
     }
 
+    /// Sans période : la note (spot photo), sinon le lieu s'il dit autre chose que le titre, sinon le site du
+    /// lien (vidéo, album), sinon le type.
+    static func envieCaption(_ item: TaskItem, _ toSee: ToSee) -> String {
+        if let note = toSee.note { return note }
+        if toSee.kind.isPlace, let place = TaskContact(notes: item.notes) {
+            let name = place.name.lowercased()
+            if !item.title.lowercased().contains(name) && !name.contains(item.title.lowercased()) { return place.name }
+            if let address = place.address { return address }
+            return toSee.kind.title
+        }
+        return ToSee.link(in: item.notes)?.host()?.replacingOccurrences(of: "www.", with: "") ?? toSee.kind.title
+    }
+
     @ViewBuilder private var statusLabel: some View {
         if let toSee = item.toSee, item.dueDay == nil {
             HStack(spacing: 5) {
                 Image(systemName: toSee.kind.symbol).imageScale(.small)
-                Text(toSee.start == nil && toSee.end == nil
-                     ? ToSee.link(in: item.notes)?.host()?.replacingOccurrences(of: "www.", with: "") ?? toSee.kind.title
-                     : toSee.text(now: now))
+                Text(toSee.start == nil && toSee.end == nil ? Self.envieCaption(item, toSee) : toSee.text(now: now))
             }
             .font(.subheadline)
             .foregroundStyle(toSee.isOver(now: now) ? Color.secondary : toSee.text(now: now).hasPrefix("Plus que") || toSee.text(now: now) == "Dernier jour" ? Color.orange : Color.secondary)

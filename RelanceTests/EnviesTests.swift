@@ -25,6 +25,24 @@ struct EnviesTests {
         #expect(ToSee.Kind.read.title == "À lire")
     }
 
+    /// Restos, magasins, spots photo (P9-A2) : marqueurs lus par la routine et le Nest Hub, note du spot.
+    @Test func placeKindsAndNote() {
+        #expect(ToSee(.restaurant).lines == ["🍽 À tester"])
+        #expect(ToSee(notes: "🛍\u{FE0F} Magasin")?.kind == .shop)
+        let spot = ToSee(.photoSpot, note: "au couchant, en automne")
+        let notes = ToSee.notes("📍 Pont Marie · https://maps.apple.com/?ll=48.8519,2.3572", setting: spot)
+        #expect(notes.hasSuffix("\n📷 Spot photo · au couchant, en automne"))
+        #expect(ToSee(notes: notes) == spot)
+        #expect(NoteLines.visible(notes).isEmpty)
+        // Note vide ou multiligne : pas de « · » seul, une seule ligne.
+        #expect(ToSee(.photoSpot, note: "").lines == ["📷 Spot photo"])
+        #expect(ToSee(.photoSpot, note: "brume\nmatin").lines == ["📷 Spot photo · brume matin"])
+        #expect(ToSee(notes: "📷 Spot photo ·  ")?.note == nil)
+        #expect(ToSee.Kind.allCases.filter(\.isPlace) == [.outing, .restaurant, .shop, .photoSpot])
+        #expect(ToSee.Kind.restaurant.doneTitle == "Testé" && ToSee.Kind.photoSpot.doneTitle == "Photographié")
+        #expect(ToSee.kind(in: "le resto italien de la rue de Lyon à tester")?.kind == .restaurant)
+    }
+
     @Test func kindInAPhrase() {
         let text = "Perfect Days à regarder"
         let found = ToSee.kind(in: text)

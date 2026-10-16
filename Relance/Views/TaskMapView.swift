@@ -2,8 +2,9 @@ import MapKit
 import SwiftData
 import SwiftUI
 
-/// Carte des tâches à faire qui ont un lieu (ligne 📍) : une épingle par tâche, couleur et symbole
-/// de sa catégorie, rouge si elle est urgente.
+/// Carte des tâches à faire qui ont un lieu (ligne 📍) : une épingle ronde par tâche, couleur et symbole
+/// de sa catégorie, rouge si elle est urgente ; une épingle carrée, couleur et symbole de son type, pour
+/// une envie (À voir, resto, magasin, spot photo). Filtre en pastilles quand il y a plusieurs sortes de lieux.
 struct TaskMapView: View {
     @Environment(TaskStore.self) private var store
     @Query(filter: #Predicate<TaskItem> { !$0.isCompleted && !$0.isTrashed })
@@ -19,10 +20,40 @@ struct TaskMapView: View {
     /// Tâches au même endroit : on les liste (aucun zoom ne les sépare).
     @State private var sameSpot: [UUID]?
     @State private var adding = false
+    /// Filtre : vide = tout, « taches » = les tâches qui ne sont pas des envies, sinon un type d'envie.
+    @AppStorage("mapFilter") private var filterRaw = ""
 
     private var locator: PlaceLocator { .shared }
 
-    private var placed: [(item: TaskItem, contact: TaskContact, coordinate: CLLocationCoordinate2D)] {
+    private static let tasksFilter = "taches"
+
+    /// Type d'envie montré sur la carte avec son épingle propre (`nil` = tâche ordinaire).
+    static func placeKind(_ item: TaskItem) -> ToSee.Kind? {
+        item.toSee.map(\.kind).flatMap { $0.isPlace ? $0 : nil }
+    }
+
+    /// Pastilles : Tout, Tâches, puis les types d'envie présents ; rien s'il n'y a qu'une sorte de lieu.
+    private var filterOptions: [FilterChips.Option] {
+        let kinds = Set(allPlaced.map { Self.placeKind($0.item) })
+        guard kinds.count > 1 else { return [] }
+        var options = [FilterChips.Option(id: "", title: "Tout", symbol: nil)]
+        if kinds.contains(nil) { options.append(.init(id: Self.tasksFilter, title: "Tâches", symbol: "checklist")) }
+        for kind in ToSee.Kind.allCases where kinds.contains(kind) {
+            options.append(.init(id: kind.rawValue, title: kind == .outing ? "À voir" : kind.shortTitle, symbol: kind.symbol))
+        }
+        return options
+    }
+
+    private var placed: [Entry] {
+        // Un filtre qui ne correspond plus à rien (dernier resto testé) ne doit pas vider la carte.
+        guard !filterRaw.isEmpty, filterOptions.contains(where: { $0.id == filterRaw }) else { return allPlaced }
+        return allPlaced.filter { entry in
+            let kind = Self.placeKind(entry.item)
+            return filterRaw == Self.tasksFilter ? kind == nil : kind?.rawValue == filterRaw
+        }
+    }
+
+    private var allPlaced: [Entry] {
         active.compactMap { item in
             guard let contact = TaskContact(notes: item.notes), let coordinate = locator.coordinate(for: item)
             else { return nil }
@@ -89,13 +120,14 @@ struct TaskMapView: View {
             ForEach(clusters(placed), id: \.first!.item.localID) { group in
                 let entry = group[0]
                 let category = TaskCategory(name: entry.item.category)
-                let color: Color = entry.item.priority == .urgent ? .red : category?.color ?? .gray
+                let kind = Self.placeKind(entry.item)
+                let color: Color = entry.item.priority == .urgent ? .red : kind?.mapColor ?? category?.color ?? .gray
                 if group.count == 1 {
                     // Épingle dessinée : titre, puis l'échéance en plus petit (un Marker n'a qu'un style de texte).
                     Annotation(entry.item.title, coordinate: entry.coordinate, anchor: .top) {
                         MapTaskPin(title: entry.item.title, caption: Self.caption(entry.item),
-                                   symbol: category?.symbol ?? "mappin", color: color,
-                                   selected: selection == entry.item.localID)
+                                   symbol: kind?.symbol ?? category?.symbol ?? "mappin", color: color,
+                                   isEnvie: kind != nil, selected: selection == entry.item.localID)
                             .onTapGesture { selection = entry.item.localID }
                     }
                     .annotationTitles(.hidden)
@@ -128,6 +160,17 @@ struct TaskMapView: View {
                 ContentUnavailableView("Aucune tâche avec un lieu", systemImage: "map",
                                        description: Text("Ajoute un lieu à une tâche (section Lieu du détail) pour la voir ici."))
                     .background(.regularMaterial)
+            }
+        }
+        .safeAreaInset(edge: .top) {
+            if !filterOptions.isEmpty {
+                FilterChips(selection: $filterRaw, options: filterOptions, overMap: true)
+                    .contentMargins(.horizontal, 16, for: .scrollContent)
+                    #if os(iOS)
+                    // Place laissée au « + » flottant.
+                    .padding(.trailing, 64)
+                    #endif
+                    .shadow(color: .black.opacity(0.12), radius: 3, y: 1)
             }
         }
         .safeAreaInset(edge: .bottom) {
@@ -181,22 +224,40 @@ struct TaskMapView: View {
     }
 }
 
-/// Rond coloré au symbole de la catégorie, titre en petit gras, échéance en plus petit dessous.
+/// Couleurs des envies sur la carte, distinctes de celles des catégories (bleu, brun, rose, orange,
+/// indigo, vert, violet) autant que possible ; la forme carrée et le symbole les distinguent aussi.
+extension ToSee.Kind {
+    var mapColor: Color {
+        switch self {
+        case .outing: .purple
+        case .restaurant: .orange
+        case .shop: .teal
+        case .photoSpot: .indigo
+        case .read, .listen, .watch: .gray
+        }
+    }
+}
+
+/// Rond coloré au symbole de la catégorie (carré arrondi pour une envie), titre en petit gras,
+/// échéance en plus petit dessous.
 private struct MapTaskPin: View {
     let title: String
     let caption: String?
     let symbol: String
     let color: Color
+    var isEnvie = false
     let selected: Bool
 
     var body: some View {
+        let size: CGFloat = selected ? 38 : 28
+        let shape = RoundedRectangle(cornerRadius: isEnvie ? size * 0.28 : size / 2, style: .continuous)
         VStack(spacing: 3) {
             Image(systemName: symbol)
                 .font(.system(size: selected ? 17 : 13, weight: .semibold))
                 .foregroundStyle(.white)
-                .frame(width: selected ? 38 : 28, height: selected ? 38 : 28)
-                .background(color, in: .circle)
-                .overlay(Circle().stroke(.white, lineWidth: 2))
+                .frame(width: size, height: size)
+                .background(color, in: shape)
+                .overlay(shape.stroke(.white, lineWidth: 2))
                 .shadow(radius: 2, y: 1)
             // Comme les noms de rues de Plans : un liseré autour des lettres plutôt qu'un fond.
             VStack(spacing: 0) {

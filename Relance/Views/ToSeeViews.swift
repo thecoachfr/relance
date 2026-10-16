@@ -36,10 +36,16 @@ struct ToSeeSection: View {
                 Label("Envie, sans échéance", systemImage: "bookmark")
             }
             if let toSee {
+                // Sept types : un menu plutôt qu'un sélecteur segmenté (illisible au-delà de cinq sur iPhone).
                 Picker("Type", selection: Binding(get: { toSee.kind }, set: { var t = toSee; t.kind = $0; set(t) })) {
-                    ForEach(ToSee.Kind.allCases) { Text($0.shortTitle).tag($0) }
+                    ForEach(ToSee.Kind.allCases) { Label($0.title, systemImage: $0.symbol).tag($0) }
                 }
-                .pickerStyle(.segmented)
+                .pickerStyle(.menu)
+                if toSee.kind == .photoSpot {
+                    TextField("Lumière, saison (au couchant, en automne…)", text: Binding(
+                        get: { toSee.note ?? "" },
+                        set: { var t = toSee; t.note = $0.isEmpty ? nil : $0; set(t) }))
+                }
                 dateRow("Début", date: toSee.start) { var t = toSee; t.start = $0; set(t) }
                 dateRow("Fin", date: toSee.end) { var t = toSee; t.end = $0; set(t) }
                 if let link = ToSee.link(in: notes) {
@@ -51,7 +57,9 @@ struct ToSeeSection: View {
             }
         } footer: {
             if let toSee {
-                if toSee.end == nil && toSee.start == nil {
+                if toSee.kind.isPlace && toSee.kind != .outing && TaskContact(notes: notes) == nil {
+                    Text("Ajoute le lieu (section Lieu) pour le retrouver sur la carte et être prévenu en passant à côté.")
+                } else if toSee.end == nil && toSee.start == nil {
                     Text(toSee.kind == .outing
                          ? "Gardée dans Envies, sans relance. Ajoute une période (expo, festival…) pour être prévenu au bon moment."
                          : "Gardée dans Envies › \(toSee.kind.title), sans relance. Une période (film en salle, replay) te préviendra avant la fin.")
@@ -59,7 +67,7 @@ struct ToSeeSection: View {
                     Text("Prévenu à l'ouverture, quelques semaines avant la fin et le dernier week-end (Réglages › Relances › Envies).")
                 }
             } else {
-                Text("Pour une sortie, un livre, un album, un film : gardé à part, sans relance chaque jour.")
+                Text("Pour une sortie, un resto, un magasin, un spot photo, un livre, un album, un film : gardé à part, sans relance chaque jour.")
             }
         }
     }
@@ -135,12 +143,10 @@ struct ToSeeListView: View {
         let done = filter.map { kind in completed.filter { $0.toSee?.kind == kind }.prefix(10) } ?? []
         List(selection: selection ?? .constant(nil)) {
             // En tête de liste (et pas dans une barre) : le grand titre reste visible et le filtre défile avec.
-            Picker("Type", selection: $filterRaw) {
-                Text("Tout").tag("")
-                ForEach(ToSee.Kind.allCases) { Text($0.shortTitle).tag($0.rawValue) }
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
+            // Pastilles qui défilent : sept types ne tiennent pas dans un sélecteur segmenté.
+            FilterChips(selection: $filterRaw,
+                        options: [FilterChips.Option(id: "", title: "Tout", symbol: nil)]
+                            + ToSee.Kind.allCases.map { FilterChips.Option(id: $0.rawValue, title: $0.shortTitle, symbol: $0.symbol) })
             .listRowBackground(Color.clear)
             .listRowInsets(EdgeInsets())
             .selectionDisabled()
@@ -219,7 +225,61 @@ struct ToSeeListView: View {
         case .watch?:
             ContentUnavailableView("Rien à regarder pour l'instant", systemImage: ToSee.Kind.watch.symbol,
                                    description: Text("Un film, une série, une vidéo : partage-la depuis YouTube ou une autre app."))
+        case .restaurant?:
+            ContentUnavailableView("Aucun resto à tester", systemImage: ToSee.Kind.restaurant.symbol,
+                                   description: Text("Un restaurant ou un bar repéré : touche +, puis ajoute son lieu."))
+        case .shop?:
+            ContentUnavailableView("Aucun magasin", systemImage: ToSee.Kind.shop.symbol,
+                                   description: Text("Une boutique où passer un jour : touche +, puis ajoute son lieu."))
+        case .photoSpot?:
+            ContentUnavailableView("Aucun spot photo", systemImage: ToSee.Kind.photoSpot.symbol,
+                                   description: Text("Un endroit où revenir photographier, avec la bonne lumière ou la bonne saison."))
         }
+    }
+}
+
+/// Filtre en pastilles qui défilent (comme les catégories de Plans) : pour plus de cinq choix.
+struct FilterChips: View {
+    struct Option: Identifiable {
+        let id: String
+        let title: String
+        let symbol: String?
+    }
+
+    @Binding var selection: String
+    let options: [Option]
+    /// Sur la carte : fond en matériau (lisible sur le plan) et rangée coupée à son cadre.
+    var overMap = false
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(options) { option in
+                    let selected = option.id == selection
+                    Button {
+                        withAnimation(.snappy) { selection = option.id }
+                    } label: {
+                        // Pas de `Label` : dans une liste, il réserve une colonne d'icône trop large.
+                        HStack(spacing: 5) {
+                            if let symbol = option.symbol { Image(systemName: symbol).imageScale(.small) }
+                            Text(option.title)
+                        }
+                        .font(.subheadline.weight(.medium))
+                        .padding(.horizontal, 12)
+                        .frame(minHeight: 34)
+                        .foregroundStyle(selected ? Color.white : Color.primary)
+                        .background(in: .capsule)
+                        .backgroundStyle(selected ? AnyShapeStyle(Color.accentColor)
+                                         : overMap ? AnyShapeStyle(.regularMaterial) : AnyShapeStyle(Color.secondary.opacity(0.14)))
+                        .contentShape(.capsule)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(selected ? .isSelected : [])
+                }
+            }
+            .padding(.vertical, 6)
+        }
+        .scrollClipDisabled(!overMap)
     }
 }
 
