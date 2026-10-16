@@ -20,7 +20,7 @@ Puis : savoir **sur quelle plateforme** le titre est disponible en France, l'ouv
 ## 3. Lots
 
 ### B1 — Plateforme et identifiant du titre depuis le lien
-*En cours (16/10) : champ `envie` en service ; Netflix, Canal+ (`mycan.al`) et Disney+ figés sur de vrais liens (voir SUIVI et `Shared/Share/SharedLink.swift`) ; restent Apple TV, Prime Video, France TV, Arte.*
+*En cours (16/10) : champ `envie` en service ; Netflix, Canal+ (`mycan.al`) et Disney+ figés sur de vrais liens (voir SUIVI et `Shared/Share/SharedLink.swift`) ; Apple TV, Prime Video, France TV et Arte reportés (moins courants).*
 - Remplir `envie.plateforme` (`netflix`, `apple_tv`, `disney`, `canal`, `prime`, `youtube`, `france_tv`, `arte`…), `envie.id_titre` et `envie.lien` à partir de l'adresse partagée (ex. le numéro après `netflix.com/title/`).
 - **Formats à figer sur de vrais liens** : Alexandre partage vers une note deux liens par plateforme (un film, une série), depuis l'app de la plateforme sur l'iPhone ; Claude Code en fait des cas de test. Ne pas supposer un format non vu.
 - **Accepté quand** : chaque lien réel donne plateforme, identifiant et titre ; tests unitaires.
