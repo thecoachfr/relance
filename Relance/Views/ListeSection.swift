@@ -60,32 +60,53 @@ struct ListeSection: View {
     }
 
     private func ligne(_ article: TacheHA.Liste.Article) -> some View {
-        Button {
+        ArticleRow(article: article) {
             terminee = store.toggleArticle(id: article.id, of: item)
-        } label: {
-            HStack(spacing: 12) {
-                Image(systemName: article.coche ? "checkmark.circle.fill" : "circle")
-                    .font(.title3)
-                    .foregroundStyle(article.coche ? Color.accentColor : Color.secondary)
-                Text(article.texte)
-                    .strikethrough(article.coche)
-                    .foregroundStyle(article.coche ? .secondary : .primary)
-                Spacer()
-                if let quantite = article.quantite {
-                    Text(quantite).foregroundStyle(.secondary)
-                }
-            }
-            .contentShape(.rect)
+        } onEdit: { saisie in
+            store.editArticle(id: article.id, saisie: saisie, of: item)
         }
-        .buttonStyle(.plain)
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(article.coche ? [.isButton, .isSelected] : .isButton)
-        .accessibilityHint(article.coche ? "Décoche l'article" : "Coche l'article")
     }
 
     private func ajouter() {
         store.addArticle(saisie, to: item)
         saisie = ""
         saisieActive = true
+    }
+}
+
+/// Une ligne de la liste, comme dans Rappels : le rond coche, le texte se modifie sur place (« 6 œufs » garde la
+/// quantité ; effacer le texte retire l'article).
+private struct ArticleRow: View {
+    let article: TacheHA.Liste.Article
+    var onToggle: () -> Void
+    var onEdit: (String) -> Void
+    @State private var texte = ""
+    @FocusState private var actif: Bool
+
+    private var saisie: String {
+        [article.quantite, article.texte].compactMap { $0 }.joined(separator: " ")
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Button(action: onToggle) {
+                Image(systemName: article.coche ? "checkmark.circle.fill" : "circle")
+                    .font(.title3)
+                    .foregroundStyle(article.coche ? Color.accentColor : Color.secondary)
+                    .frame(minWidth: 28, minHeight: 28)
+                    .contentShape(.rect)
+            }
+            .buttonStyle(.borderless)
+            .accessibilityLabel(article.coche ? "Décocher \(article.texte)" : "Cocher \(article.texte)")
+            TextField("Article", text: $texte)
+                .focused($actif)
+                .strikethrough(article.coche && !actif)
+                .foregroundStyle(article.coche && !actif ? .secondary : .primary)
+                .submitLabel(.done)
+                .onSubmit { onEdit(texte) }
+                .onChange(of: actif) { if !actif, texte != saisie { onEdit(texte) } }
+        }
+        .onAppear { texte = saisie }
+        .onChange(of: saisie) { if !actif { texte = saisie } }
     }
 }

@@ -38,6 +38,21 @@ extension TaskStore {
         return false
     }
 
+    /// Modifie le texte d'un article (« 6 œufs » → quantité 6) ; vide, l'article est retiré.
+    func editArticle(id: String, saisie: String, of item: TaskItem, now: Date = .now) {
+        guard var liste = item.liste, let i = liste.articles.firstIndex(where: { $0.id == id }) else { return }
+        guard let lu = Self.article(saisie) else {
+            liste.articles.remove(at: i)
+            setListe(liste, of: item)
+            return
+        }
+        guard lu.texte != liste.articles[i].texte || lu.quantite != liste.articles[i].quantite else { return }
+        liste.articles[i].texte = lu.texte
+        liste.articles[i].quantite = lu.quantite
+        liste.articles[i].maj = TacheHA.timestamp(now)
+        setListe(liste, of: item)
+    }
+
     func removeArticles(at offsets: IndexSet, of item: TaskItem) {
         guard var liste = item.liste else { return }
         liste.articles.remove(atOffsets: offsets)

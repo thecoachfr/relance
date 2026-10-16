@@ -165,5 +165,11 @@ struct ListeStoreTests {
         #expect(!item.isCompleted && item.liste?.articles.count == 3)
         store.removeArticles(at: [0], of: item)
         #expect(item.liste?.articles.map(\.texte) == ["lait", "Beurre"])
+        // Modifier sur place : la quantité suit la saisie ; vider retire l'article.
+        let lait = try #require(item.liste?.articles.first)
+        store.editArticle(id: lait.id, saisie: "3 lait entier", of: item)
+        #expect(item.liste?.articles.first?.texte == "lait entier" && item.liste?.articles.first?.quantite == "3")
+        store.editArticle(id: lait.id, saisie: "  ", of: item)
+        #expect(item.liste?.articles.map(\.texte) == ["Beurre"])
     }
 }
