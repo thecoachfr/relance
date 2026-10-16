@@ -69,7 +69,8 @@ Chaque push sur `main` compile l'app dans le cloud d'Apple et l'envoie sur TestF
 iPhone, iPad, montre (incluse dans l'app iPhone) et Mac se mettent à jour depuis l'app TestFlight.
 
 - `ci_scripts/ci_post_clone.sh` recrée `Secrets.xcconfig` (absent du dépôt public) et donne
-  le numéro de build de Xcode Cloud à l'app et à toutes ses extensions.
+  le numéro de build de Xcode Cloud à l'app et à toutes ses extensions, et le commit compilé (clé `AiguillageCommit`,
+  affichée dans Réglages › À propos, sur le Mac et sur la montre).
 - Variables du workflow (Xcode › Cloud › Workflow › Environnement), toutes **secrètes** :
   `GOOGLE_CLIENT_ID`, `RELANCE_WEBHOOK_URL` (URL complète, avec `https://`). Le schéma d'URL Google
   (`GOOGLE_REVERSED_CLIENT_ID`) est déduit de l'ID client par le script ; une variable de ce nom est ignorée.

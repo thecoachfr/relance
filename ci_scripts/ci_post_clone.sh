@@ -34,8 +34,15 @@ GOOGLE_REVERSED_CLIENT_ID = ${reversed_client_id}
 RELANCE_WEBHOOK_URL = https:/\$()/${webhook}
 XCCONFIG
 
+# Commit compilé, affiché avec la version (Réglages › À propos) : savoir si un build contient une modification.
+commit=$(printf '%s' "${CI_COMMIT:-$(git rev-parse HEAD 2>/dev/null || true)}" | cut -c1-7)
+
 for plist in Relance/Resources/Info.plist RelanceMac/Info.plist RelanceShare/Info.plist \
              RelanceWidgets/Info.plist RelanceWatch/Info.plist RelanceWatchWidgets/Info.plist; do
     /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${CI_BUILD_NUMBER}" "$plist"
+    if [ -n "$commit" ]; then
+        /usr/libexec/PlistBuddy -c "Delete :AiguillageCommit" "$plist" 2>/dev/null || true
+        /usr/libexec/PlistBuddy -c "Add :AiguillageCommit string ${commit}" "$plist"
+    fi
 done
-echo "Secrets écrits, build ${CI_BUILD_NUMBER}."
+echo "Secrets écrits, build ${CI_BUILD_NUMBER}, commit ${commit:-inconnu}."

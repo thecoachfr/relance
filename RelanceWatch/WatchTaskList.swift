@@ -27,7 +27,7 @@ struct WatchTaskList: View {
                             .listRowBackground(Color.clear)
                     }
                     if !store.tasks.isEmpty {
-                        Text("Version \(AppVersion.text)")
+                        Text("Version \(AppVersion.full)")
                             .font(.footnote).foregroundStyle(.tertiary)
                             .listRowBackground(Color.clear)
                     }
@@ -39,7 +39,7 @@ struct WatchTaskList: View {
                                                description: Text(store.google.isAvailable
                                                                  ? "Aucune tâche à faire."
                                                                  : "Ouvre Aiguillage sur l'iPhone une fois pour connecter la montre.")
-                                               + Text("\nVersion \(AppVersion.text)").foregroundStyle(.tertiary))
+                                               + Text("\nVersion \(AppVersion.full)").foregroundStyle(.tertiary))
                     }
                 }
             }

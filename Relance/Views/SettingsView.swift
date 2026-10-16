@@ -39,12 +39,15 @@ struct SettingsView: View {
                         }
                         .font(.footnote)
                     }
-                    LabeledContent("Version", value: AppVersion.text)
-                        .font(.footnote)
                 } header: {
                     Text("Journal de synchro")
                 } footer: {
                     Text("Si « Push de la vigie reçu » n'apparaît jamais, vérifie Réglages iOS → Général → Actualisation en arrière-plan → Aiguillage, et le mode Économie d'énergie.")
+                }
+                Section("À propos") {
+                    LabeledContent("Version", value: AppVersion.text)
+                    LabeledContent("Commit", value: AppVersion.commit)
+                        .textSelection(.enabled)
                 }
             }
             .navigationTitle("Réglages")
