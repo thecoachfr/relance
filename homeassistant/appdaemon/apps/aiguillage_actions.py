@@ -130,6 +130,30 @@ def due(action, tache, today, executant="ha"):
     return False
 
 
+ROUTINE_DELAI_HEURES = 24
+
+
+def routine_en_retard(action, maintenant_dt):
+    """Action confiée à la routine (`en_cours`) sans réponse depuis plus de 24 h."""
+    from datetime import datetime
+
+    if action.get("executant") != "routine" or action.get("etat") != "en_cours" or not action.get("maj"):
+        return False
+    try:
+        depuis = datetime.fromisoformat(action["maj"].replace("Z", "+00:00"))
+    except ValueError:
+        return True
+    return (maintenant_dt - depuis).total_seconds() > ROUTINE_DELAI_HEURES * 3600
+
+
+def texte_routine(cle, action, tache):
+    """Texte de lancement de la routine « Aiguillage · actions » : de quoi retrouver la tâche et l'action.
+    Données seulement (la consigne de la routine dit quoi en faire)."""
+    params = action.get("params") or {}
+    return (f"Action à préparer. Tâche : clé {cle} (« {tache.get('titre', '')} », échéance {tache.get('jour') or 'aucune'}). "
+            f"Action : id {action.get('id')}, type {action.get('type')}, modèle {params.get('modele', 'aucun')}.")
+
+
 def marquer(tache, action_id, etat, resultat, maintenant, envie=None):
     """La tâche avec l'état de l'action mis à jour (et `envie` remplacée si fournie)."""
     tache = dict(tache)

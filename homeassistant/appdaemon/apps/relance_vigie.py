@@ -308,6 +308,16 @@ class RelanceVigie(Hass):
             tache = aiguillage_actions.appliquer_recettes(avant, recettes, maintenant) or avant
             faites = []
             for action in list(tache.get("actions") or []):
+                # Préparations confiées à la routine Claude (D5) : lancée une fois, échec si pas de réponse en 24 h.
+                if aiguillage_actions.due(action, tache, today, executant="routine"):
+                    if self._lancer_routine_actions(record["cle"], action, tache):
+                        tache = aiguillage_actions.marquer(tache, action["id"], "en_cours", "Routine lancée", maintenant)
+                        faites.append(f"{action.get('type')} : routine lancée")
+                    continue
+                if aiguillage_actions.routine_en_retard(action, datetime.now(UTC)):
+                    tache = aiguillage_actions.marquer(tache, action["id"], "echec", "La routine n'a pas répondu en 24 h", maintenant)
+                    faites.append(f"{action.get('type')} : échec (routine muette)")
+                    continue
                 if not aiguillage_actions.due(action, tache, today):
                     continue
                 etat, resultat = self._executer(action, tache, client)
@@ -347,6 +357,34 @@ class RelanceVigie(Hass):
         except Exception as error:  # noqa: BLE001
             self.log(f"Actions : recettes non créées : {error!r}", level="WARNING")
         return aiguillage_actions.RECETTES_PAR_DEFAUT
+
+    def _lancer_routine_actions(self, cle, action, tache):
+        """Lance la routine « Aiguillage · actions » (créée depuis le chat Claude) pour une action `preparer`.
+        Sans identifiant (`actions_routine_id`) ou jeton (`/config/aiguillage_actions_token`) : rien, l'action attend."""
+        routine_id = self.args.get("actions_routine_id")
+        token_path = Path(self.args.get("actions_routine_token_file", "/config/aiguillage_actions_token"))
+        try:
+            token = token_path.read_text().strip() if routine_id else ""
+        except FileNotFoundError:
+            token = ""
+        if not token:
+            if not getattr(self, "_actions_routine_missing_logged", False):
+                self.log("Actions : routine « actions » non configurée (actions_routine_id, jeton), préparations en attente")
+                self._actions_routine_missing_logged = True
+            return False
+        try:
+            response = httpx.post(
+                ROUTINE_URL.format(routine_id),
+                headers={"Authorization": f"Bearer {token}", "anthropic-beta": "experimental-cc-routine-2026-04-01",
+                         "anthropic-version": "2023-06-01"},
+                json={"text": aiguillage_actions.texte_routine(cle, action, tache)}, timeout=20)
+        except httpx.HTTPError as error:
+            self.log(f"Actions : routine non lancée : {error}", level="WARNING")
+            return False
+        if response.status_code >= 300:
+            self.log(f"Actions : routine refusée ({response.status_code}) : {response.text[:200]}", level="WARNING")
+            return False
+        return True
 
     def _executer(self, action, tache, client):
         """(etat, resultat) ; (None, None) si l'exécution doit attendre."""

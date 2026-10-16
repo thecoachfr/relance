@@ -55,6 +55,20 @@ def test_due_et_marquer():
     assert t["actions"][0]["maj"] == NOW and tache["actions"][0]["etat"] == "a_faire"  # pas de modification en place
 
 
+def test_routine():
+    from datetime import datetime, timezone
+    action = {"id": "p1", "type": "preparer", "executant": "routine", "declencheur": {"quand": "avant_echeance", "jours": 5},
+              "params": {"modele": "tva_micro", "recette": "tva-micro"}, "etat": "a_faire"}
+    tache = {"titre": "Payer la TVA", "jour": "2026-10-21", "actions": [action]}
+    assert a.due(action, tache, TODAY, executant="routine") and not a.due(action, tache, TODAY)
+    texte = a.texte_routine("k-1", action, tache)
+    assert "clé k-1" in texte and "id p1" in texte and "modèle tva_micro" in texte and "2026-10-21" in texte
+    lance = {**action, "etat": "en_cours", "maj": "2026-10-16T08:00:00+00:00"}
+    assert not a.due(lance, tache, TODAY, executant="routine")  # pas relancée
+    assert not a.routine_en_retard(lance, datetime(2026, 10, 17, 7, 0, tzinfo=timezone.utc))
+    assert a.routine_en_retard(lance, datetime(2026, 10, 17, 9, 0, tzinfo=timezone.utc))
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_"):
