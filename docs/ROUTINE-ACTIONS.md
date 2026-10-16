@@ -5,6 +5,15 @@ TVA). La consigne réelle se crée **dans le chat Claude** (claude.ai), dans la 
 comptabilité a été étudiée : elle y ajoute l'emplacement de la feuille, les onglets, le régime et les cases. Elle
 n'est **pas** versionnée ici (identifiants de fichiers, données personnelles).
 
+## État (16/10/2026)
+
+La routine existe (`trig_01J1nRgBk4iBC3hBK4vZMLLV`, créée par l'API, Opus, sans horaire) avec le connecteur Home
+Assistant limité à `call_service`. Sa consigne réelle, en **lecture seule**, est gardée hors dépôt
+(`~/.config/aiguillage/routine-actions.md` sur le Mac). Restent, dans claude.ai : ajouter les connecteurs Gmail et
+Google Drive à la routine, générer son jeton d'API et le déposer dans `aiguillage_actions_token` (dossier
+d'AppDaemon). Les écritures dans le classeur (montants TTC) et le dépôt des pièces viendront ensuite, par la vigie,
+après validation d'Alexandre dans l'app.
+
 ## Mise en place (une fois)
 
 1. Dans claude.ai : créer une tâche planifiée (routine) **« Aiguillage · actions »**, sans horaire (lancée seulement
