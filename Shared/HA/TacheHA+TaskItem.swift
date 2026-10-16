@@ -50,18 +50,20 @@ nonisolated extension TacheHA.Lieu {
                   lien: contact.link?.absoluteString)
     }
 
-    /// La ligne 📍 correspondante ; sans adresse ni lien, un lien Plans vers le point.
+    /// La ligne 📍 correspondante ; sans lien, un lien Plans vers le point s'il est connu (même avec une
+    /// adresse : celle que donne Plans pour un point n'a pas toujours de code postal, et la ligne doit garder
+    /// le point, 16/10).
     var contact: TaskContact {
         var link = lien.flatMap(URL.init(string:))
-        if link == nil, adresse == nil, let lat, let lon {
+        if link == nil, let lat, let lon {
             link = TaskContact.mapsLink(name: nom, latitude: lat, longitude: lon)
         }
         return TaskContact(name: nom, address: adresse, phone: telephone, link: link)
     }
 
-    /// Même endroit : même adresse, ou même nom quand aucun des deux n'a d'adresse.
+    /// Même endroit : même nom, ou même adresse.
     func isSamePlace(as other: Self) -> Bool {
-        adresse == other.adresse && (adresse != nil || nom == other.nom)
+        nom == other.nom || (adresse != nil && adresse == other.adresse)
     }
 }
 
@@ -76,6 +78,8 @@ extension TaskItem {
         if let previous, previous.isSamePlace(as: lieu) {
             lieu.source = previous.source
             if lieu.lat == nil { (lieu.lat, lieu.lon) = (previous.lat, previous.lon) }
+            // La ligne ne dit pas toujours l'adresse (adresse seule, sans code postal) : on garde celle connue.
+            if lieu.adresse == nil, lieu.nom == previous.nom { lieu.adresse = previous.adresse }
         }
         if lieu.lat == nil, let address = lieu.adresse, let c = cache[address], c.count == 2 {
             (lieu.lat, lieu.lon) = (TaskContact.rounded(c[0]), TaskContact.rounded(c[1]))

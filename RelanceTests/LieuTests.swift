@@ -79,6 +79,23 @@ struct LieuTests {
         #expect(item.lieu() == nil && TacheHA(item).lieu == nil)
     }
 
+    /// Cas réel du 16/10 : coordonnées partagées, adresse de Plans sans code postal égale au nom. Le point
+    /// doit survivre à la réécriture (il était perdu, et avec lui le rappel à l'approche).
+    @Test func pointWithAddressWithoutPostcodeSurvives() throws {
+        let item = TaskItem(title: "")
+        try decode(#"""
+        {"titre":"Photographier au 5 Rue de Conflans","notes":"📩 Message partagé\n48.8215, 2.4123\n📷 Spot photo",
+         "lieu":{"nom":"5 Rue de Conflans, Charenton-le-Pont","adresse":"5 Rue de Conflans, Charenton-le-Pont","lat":48.8215,"lon":2.4123,"source":"gps"}}
+        """#).apply(to: item)
+        #expect(item.notes.contains("https://maps.apple.com/?ll=48.8215,2.4123"))
+        #expect(item.placeCoordinate?.latitude == 48.8215)
+        #expect(TaskContact(notes: item.notes)?.destination == "48.8215,2.4123")
+
+        let lieu = try #require(TacheHA(item).lieu)
+        #expect(lieu.lat == 48.8215 && lieu.lon == 2.4123 && lieu.source == "gps")
+        #expect(lieu.adresse == "5 Rue de Conflans, Charenton-le-Pont")
+    }
+
     /// Le lieu fait foi : une ligne 📍 différente dans les notes reçues est remplacée.
     @Test func fieldWinsOverLine() throws {
         let item = TaskItem(title: "")
