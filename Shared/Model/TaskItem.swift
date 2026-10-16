@@ -25,6 +25,9 @@ final class TaskItem {
     /// Dernier `lieu` reçu de Home Assistant (JSON de `TacheHA.Lieu`) : garde coordonnées et source,
     /// que la ligne 📍 des notes n'a pas toujours. `nil` en mode Google Tasks.
     var placeRaw: String?
+    /// Dernière `envie` reçue de Home Assistant (JSON de `TacheHA.Envie`) : plateforme, identifiant et champs
+    /// de la vigie (TMDB), que les lignes des notes n'ont pas. `nil` en mode Google Tasks.
+    var envieRaw: String?
     /// Événement d'agenda créé depuis CET appareil (identifiant EventKit, propre à l'appareil).
     var calendarEventID: String?
     var isCompleted: Bool

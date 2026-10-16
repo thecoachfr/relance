@@ -11,11 +11,65 @@ nonisolated enum SharedLink {
         ("qobuz.com", .listen),
         ("youtube.com", .watch), ("youtu.be", .watch), ("vimeo.com", .watch), ("dailymotion.com", .watch),
         ("netflix.com", .watch), ("primevideo.com", .watch), ("disneyplus.com", .watch), ("tv.apple.com", .watch),
-        ("canalplus.com", .watch), ("france.tv", .watch), ("arte.tv", .watch), ("max.com", .watch),
+        ("canalplus.com", .watch), ("mycan.al", .watch), ("france.tv", .watch), ("arte.tv", .watch), ("max.com", .watch),
         ("twitch.tv", .watch), ("imdb.com", .watch), ("allocine.fr", .watch), ("letterboxd.com", .watch),
         ("books.apple.com", .read), ("goodreads.com", .read), ("babelio.com", .read), ("medium.com", .read),
         ("substack.com", .read),
     ]
+
+    /// Plateforme d'après l'adresse (champ `envie.plateforme`, P9-B1). Seulement les hôtes connus ;
+    /// l'identifiant du titre attend de vrais liens partagés (formats à vérifier).
+    private static let platforms: [(String, String)] = [
+        ("music.youtube.com", "youtube_music"), ("music.apple.com", "apple_music"), ("podcasts.apple.com", "apple_podcasts"),
+        ("open.spotify.com", "spotify"), ("spotify.link", "spotify"), ("deezer.com", "deezer"), ("deezer.page.link", "deezer"),
+        ("youtube.com", "youtube"), ("youtu.be", "youtube"), ("netflix.com", "netflix"), ("primevideo.com", "prime"),
+        ("disneyplus.com", "disney"), ("tv.apple.com", "apple_tv"), ("canalplus.com", "canal"), ("mycan.al", "canal"),
+        ("france.tv", "france_tv"),
+        ("arte.tv", "arte"), ("max.com", "max"), ("twitch.tv", "twitch"), ("vimeo.com", "vimeo"),
+    ]
+
+    static func platform(for url: URL) -> String? {
+        guard let host = url.host()?.lowercased() else { return nil }
+        return platforms.first { host == $0.0 || host.hasSuffix("." + $0.0) }?.1
+    }
+
+    /// Nom affiché d'une plateforme.
+    static func platformName(_ platform: String) -> String {
+        ["netflix": "Netflix", "disney": "Disney+", "apple_tv": "Apple TV", "canal": "Canal+", "prime": "Prime Video",
+         "youtube": "YouTube", "france_tv": "france.tv", "arte": "Arte", "max": "Max", "spotify": "Spotify",
+         "deezer": "Deezer", "apple_music": "Apple Music", "youtube_music": "YouTube Music"][platform] ?? platform
+    }
+
+    /// Identifiant du titre dans le lien (champ `envie.id_titre`). Formats vus sur de vrais partages le 16/10 :
+    /// Netflix `netflix.com/fr/title/81674500?s=i&trkid=…` ; Canal+ `mycan.al/series/<titre>/h/40002718_50696`
+    /// (→ `canalplus.com/…` même chemin). Les autres plateformes attendent leurs liens réels.
+    static func titleID(for url: URL) -> String? {
+        let path = url.path()
+        switch platform(for: url) {
+        case "netflix": return path.firstMatch(of: /\/title\/(\d+)/).map { String($0.1) }
+        case "canal": return path.firstMatch(of: /\/h\/([0-9_]+)/).map { String($0.1) }
+        // Disney+ : `disneyplus.com/fr-FR/browse/entity-8744ec55-…?sharesource=iOS`.
+        case "disney": return path.firstMatch(of: /entity-([0-9a-fA-F-]{36})/).map { String($0.1).lowercased() }
+        default: return nil
+        }
+    }
+
+    /// Titre entre guillemets dans le texte partagé (Disney+ : « Je pense que tu aimeras « VisionQuest » sur
+    /// Disney+. »).
+    static func quotedTitle(in text: String) -> String? {
+        text.firstMatch(of: /«\s*([^»]{1,120}?)\s*»/).map { String($0.1) }
+    }
+
+    /// Titre lisible dans l'adresse quand la page ne le donne pas (Canal+ refuse les robots, 403) :
+    /// `…/series/monarch-legacy-of-monsters/h/…` → « Monarch legacy of monsters ».
+    static func titleInPath(of url: URL) -> String? {
+        guard platform(for: url) == "canal" else { return nil }
+        let parts = url.path().split(separator: "/").map(String.init)
+        guard let h = parts.firstIndex(of: "h"), h >= 1 else { return nil }
+        let slug = parts[h - 1].replacingOccurrences(of: "-", with: " ")
+        guard !slug.isEmpty, !["series", "films", "cinema"].contains(slug) else { return nil }
+        return slug.prefix(1).uppercased() + slug.dropFirst()
+    }
 
     /// Premier lien web du texte partagé.
     static func url(in text: String) -> URL? { ToSee.link(in: text) }
@@ -57,7 +111,8 @@ nonisolated enum SharedLink {
                   let range = Range(m.range(at: 1), in: html) else { continue }
             let title = cleaned(decoded(String(html[range])))
             // Page d'erreur ou nom du site seul : pas un titre (le lien Google Maps a donné le premier, le 16/10).
-            let generic = ["dynamic link not found", "google maps", "apple maps", "plans", "page not found", "404"]
+            let generic = ["dynamic link not found", "google maps", "apple maps", "plans", "page not found", "404",
+                           "netflix", "canal+", "mycanal", "disney+", "prime video", "apple tv"]
             if !title.isEmpty, !generic.contains(title.lowercased()) { return title }
         }
         return nil

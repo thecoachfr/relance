@@ -242,6 +242,7 @@
 		C642E4D5DAD4DB03124288CE /* TaskFields.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C219EEDD1BA5AF2BD37ABCA /* TaskFields.swift */; };
 		C6F18DD0DD71D893DB5B93A1 /* TaskPriority.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EE508F82F326D596EC1A031 /* TaskPriority.swift */; };
 		C79EB0F3703A561BF58D7F3E /* SharedLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761FC1F3864FB766BF0A6485 /* SharedLink.swift */; };
+		C84E6A3B183F5D5D3D39D043 /* EnvieFieldTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE8D7DCB6EBC8D7F85AE9B02 /* EnvieFieldTests.swift */; };
 		C858D4E004FC4E97118EAD02 /* MemoMerge.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8DEDB1DC8F3AC484AE105AB /* MemoMerge.swift */; };
 		CA24E32C49EBEBA142493072 /* MemoHA.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F9BBE7BB317EE70061CDB73 /* MemoHA.swift */; };
 		CAF23669994EDF45727FB2A7 /* TaskMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 428A54223E0ADAC3553B38D1 /* TaskMapView.swift */; };
@@ -510,6 +511,7 @@
 		D9027925BE8667BD979AF6ED /* SharedPlace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedPlace.swift; sourceTree = "<group>"; };
 		DA74C2AD3519045DE673C1B1 /* InboxView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InboxView.swift; sourceTree = "<group>"; };
 		DC32596A1285FC2A86206F55 /* RelanceShare.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = RelanceShare.entitlements; sourceTree = "<group>"; };
+		DE8D7DCB6EBC8D7F85AE9B02 /* EnvieFieldTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnvieFieldTests.swift; sourceTree = "<group>"; };
 		DF29C342D7BB3A0E61FDF60D /* MemoShareDraft.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoShareDraft.swift; sourceTree = "<group>"; };
 		E0C65CE1B1707634DEE54856 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		E3D7BA9AC7A9D6DB8068F7BB /* MemoContactsImport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoContactsImport.swift; sourceTree = "<group>"; };
@@ -604,6 +606,7 @@
 			isa = PBXGroup;
 			children = (
 				E4DC1239718727B09A71BA21 /* DueTextTests.swift */,
+				DE8D7DCB6EBC8D7F85AE9B02 /* EnvieFieldTests.swift */,
 				1C3F65EA3092E1881DEA6CE5 /* EnviesTests.swift */,
 				203193BF1B5EE7BBFCBA5F53 /* EnvieSuggestionTests.swift */,
 				8BB210515A561BDDE66887DD /* HASyncTests.swift */,
@@ -1357,6 +1360,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				E760D750ADA9349B536A92E7 /* DueTextTests.swift in Sources */,
+				C84E6A3B183F5D5D3D39D043 /* EnvieFieldTests.swift in Sources */,
 				1765A8B5866503765A68DFB8 /* EnvieSuggestionTests.swift in Sources */,
 				BB2D3E72F85A27A82A60C7B1 /* EnviesTests.swift in Sources */,
 				473D512C7BA222A224D6CE94 /* HASyncTests.swift in Sources */,

@@ -57,6 +57,7 @@ Les tâches sont dans l'espace `aiguillage` de `donnees_apps` (`Shared/HA/TacheH
 - `lieu.telephone` : ajouté en A1 (16/10), le téléphone de la ligne `📍`, pour ne pas le perdre quand le champ fait foi.
 - `lieu.source` : `plans`, `google`, `photo`, `gps`, `memo` (ajouté par la routine) ou `saisie`. `adresse` devient facultative : une photo ou un point GPS n'en a pas forcément.
 - `envie.type` : `voir`, `lire`, `ecouter`, `regarder` (existants) et `resto`, `magasin`, `spot_photo` (nouveaux, plan A). Champs `plateforme`, `id_titre`, `tmdb`, `dispo_fr`, `dispo_maj` : plan B.
+- `envie` (B1, 16/10) : l'app garde tels quels les champs qu'elle ne connaît pas (`tmdb`, `dispo_fr`, `dispo_maj`…), pour que la vigie puisse les écrire sans qu'une réécriture de l'app les efface.
 - `actions` : plan D (B ajoute seulement l'action `sur_tv` déclenchée au toucher).
 - **Compatibilité, obligatoire pendant la transition** : continuer d'écrire les lignes techniques des notes (`📍 …`, `👀 À voir`, `🎬 À regarder`… et les nouvelles `🍽 À tester`, `🛍 Magasin`, `📷 Spot photo`), car la vigie, la routine de tri, la carte du Nest Hub (`nest-hub-entree-card`) et le mode Google Tasks les lisent. Le champ structuré fait foi ; la ligne en est une copie. Lecture : si le champ manque, le déduire de la ligne (anciennes tâches), sans réécrire toutes les tâches d'un coup.
 - **Mode Google Tasks** (« Revenir à Google Tasks ») : les nouveaux champs n'y existent pas. Les fonctions P9 ne sont proposées qu'en mode HA ; en mode Google, seules les lignes des notes sont gardées.

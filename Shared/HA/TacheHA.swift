@@ -21,6 +21,57 @@ nonisolated struct TacheHA: Codable, Equatable, Sendable {
         var source: String?
     }
 
+    /// Envie (P9-A2, B1) : type, note, plateforme… Elle fait foi ; la ligne du type (`🎬 À regarder`…) en est la
+    /// copie. Les champs que l'app ne connaît pas (`tmdb`, `dispo_fr`, `dispo_maj`, écrits par la vigie en B3)
+    /// sont gardés tels quels.
+    struct Envie: Codable, Equatable, Sendable {
+        /// `voir`, `resto`, `magasin`, `spot_photo`, `lire`, `ecouter`, `regarder`.
+        var type: String
+        var note: String?
+        /// `netflix`, `apple_tv`, `disney`, `canal`, `prime`, `youtube`, `france_tv`, `arte`, `spotify`…
+        var plateforme: String?
+        var idTitre: String?
+        var lien: String?
+        /// Champs écrits par d'autres (vigie, routine), recopiés sans y toucher.
+        var autres: [String: JSONValeur] = [:]
+
+        init(type: String, note: String? = nil, plateforme: String? = nil, idTitre: String? = nil, lien: String? = nil) {
+            (self.type, self.note, self.plateforme, self.idTitre, self.lien) = (type, note, plateforme, idTitre, lien)
+        }
+
+        private struct Key: CodingKey {
+            var stringValue: String
+            var intValue: Int? { nil }
+            init(_ s: String) { stringValue = s }
+            init?(stringValue: String) { self.stringValue = stringValue }
+            init?(intValue: Int) { nil }
+        }
+
+        private static let known = ["type", "note", "plateforme", "id_titre", "lien"]
+
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: Key.self)
+            type = try c.decode(String.self, forKey: Key("type"))
+            note = try c.decodeIfPresent(String.self, forKey: Key("note"))
+            plateforme = try c.decodeIfPresent(String.self, forKey: Key("plateforme"))
+            idTitre = try c.decodeIfPresent(String.self, forKey: Key("id_titre"))
+            lien = try c.decodeIfPresent(String.self, forKey: Key("lien"))
+            for key in c.allKeys where !Self.known.contains(key.stringValue) {
+                autres[key.stringValue] = try c.decode(JSONValeur.self, forKey: key)
+            }
+        }
+
+        func encode(to encoder: Encoder) throws {
+            var c = encoder.container(keyedBy: Key.self)
+            try c.encode(type, forKey: Key("type"))
+            try c.encodeIfPresent(note, forKey: Key("note"))
+            try c.encodeIfPresent(plateforme, forKey: Key("plateforme"))
+            try c.encodeIfPresent(idTitre, forKey: Key("id_titre"))
+            try c.encodeIfPresent(lien, forKey: Key("lien"))
+            for (key, value) in autres where !Self.known.contains(key) { try c.encode(value, forKey: Key(key)) }
+        }
+    }
+
     /// Version du format : 2 dès qu'un champ P9 est présent.
     var v = 1
     var titre: String
@@ -41,9 +92,10 @@ nonisolated struct TacheHA: Codable, Equatable, Sendable {
     /// Identifiant Google Tasks d'origine (tâche migrée ou dictée à Google Home) : évite les doublons.
     var googleID: String?
     var lieu: Lieu?
+    var envie: Envie?
 
     enum CodingKeys: String, CodingKey {
-        case v, titre, notes, jour, heure, categorie, priorite, tags, relances, fait, lieu
+        case v, titre, notes, jour, heure, categorie, priorite, tags, relances, fait, lieu, envie
         case faitLe = "fait_le"
         case googleID = "google_id"
     }
@@ -68,12 +120,13 @@ nonisolated struct TacheHA: Codable, Equatable, Sendable {
         googleID = try c.decodeIfPresent(String.self, forKey: .googleID)
         // Un lieu mal formé (écrit à la main, autre version) ne doit pas rendre la tâche illisible.
         lieu = try? c.decodeIfPresent(Lieu.self, forKey: .lieu)
+        envie = try? c.decodeIfPresent(Envie.self, forKey: .envie)
     }
 
     /// Les champs absents ne sont pas écrits (JSON plus lisible pour la routine et la vigie).
     func encode(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(lieu == nil ? v : max(v, 2), forKey: .v)
+        try c.encode(lieu == nil && envie == nil ? v : max(v, 2), forKey: .v)
         try c.encode(titre, forKey: .titre)
         if !notes.isEmpty { try c.encode(notes, forKey: .notes) }
         try c.encodeIfPresent(jour, forKey: .jour)
@@ -86,6 +139,7 @@ nonisolated struct TacheHA: Codable, Equatable, Sendable {
         try c.encodeIfPresent(faitLe, forKey: .faitLe)
         try c.encodeIfPresent(googleID, forKey: .googleID)
         try c.encodeIfPresent(lieu, forKey: .lieu)
+        try c.encodeIfPresent(envie, forKey: .envie)
     }
 
     // MARK: - Conversions

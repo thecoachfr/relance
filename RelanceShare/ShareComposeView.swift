@@ -209,10 +209,19 @@ struct ShareComposeView: View {
         }
         kind = SharedLink.kind(for: url, linkOnly: linkOnly)
         if kind != nil { day = nil }
+        // Titre entre guillemets dans le message de l'app (Disney+) : plus sûr que la page.
+        if kind != nil, let quoted = SharedLink.quotedTitle(in: original), title == proposedTitle {
+            title = quoted
+            proposedTitle = quoted
+            return
+        }
         guard linkOnly else { return }
         fetchingTitle = true
         Task {
-            if let pageTitle = await SharedLink.title(of: url), title == proposedTitle {
+            let pageTitle = await SharedLink.title(of: url) ?? SharedLink.titleInPath(of: url)
+                // Page sans titre utile (Netflix) : la plateforme, à renommer.
+                ?? SharedLink.platform(for: url).map { "À regarder sur " + SharedLink.platformName($0) }
+            if let pageTitle, title == proposedTitle {
                 title = String(pageTitle.prefix(SharedMessage.maxTitleLength * 2))
                 proposedTitle = title
             }

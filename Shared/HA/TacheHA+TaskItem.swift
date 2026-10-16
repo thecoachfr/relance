@@ -6,6 +6,7 @@ extension TacheHA {
     init(_ item: TaskItem) {
         self.init(titre: item.title)
         lieu = item.lieu(cache: PlaceCoordinates.saved())
+        envie = item.envie()
         // La ligne 📍 recopie le lieu (lien Plans du point quand il n'a pas d'adresse).
         notes = lieu.map { TaskContact.notes(item.notes, setting: $0.contact) } ?? item.notes
         jour = Self.jour(item.dueDay)
@@ -29,6 +30,14 @@ extension TacheHA {
         // la ligne des notes reste la seule source.
         item.notes = lieu.map { TaskContact.notes(notes, setting: $0.contact) } ?? notes
         item.placeRaw = lieu.flatMap { try? JSONEncoder().encode($0) }.map { String(decoding: $0, as: UTF8.self) }
+        // L'envie fait foi aussi : sa ligne de type (avec la note) est réécrite d'après elle ; la période 🗓 reste.
+        if let envie, let kind = ToSee.Kind(haType: envie.type) {
+            var toSee = ToSee(notes: item.notes) ?? ToSee(kind)
+            toSee.kind = kind
+            toSee.note = envie.note
+            if ToSee(notes: item.notes) != toSee { item.notes = ToSee.notes(item.notes, setting: toSee) }
+        }
+        item.envieRaw = envie.flatMap { try? JSONEncoder().encode($0) }.map { String(decoding: $0, as: UTF8.self) }
         item.dueDay = day
         item.dueMinutes = minutes
         item.category = categorie
@@ -91,6 +100,49 @@ extension TaskItem {
     var placeCoordinate: (latitude: Double, longitude: Double)? {
         guard let lieu = lieu(), let lat = lieu.lat, let lon = lieu.lon else { return nil }
         return (lat, lon)
+    }
+}
+
+nonisolated extension ToSee.Kind {
+    /// Nom du type dans le champ `envie.type` de Home Assistant.
+    var haType: String {
+        switch self {
+        case .outing: "voir"
+        case .restaurant: "resto"
+        case .shop: "magasin"
+        case .photoSpot: "spot_photo"
+        case .read: "lire"
+        case .listen: "ecouter"
+        case .watch: "regarder"
+        }
+    }
+
+    init?(haType: String) {
+        guard let kind = Self.allCases.first(where: { $0.haType == haType }) else { return nil }
+        self = kind
+    }
+}
+
+extension TaskItem {
+    /// L'envie à envoyer à HA : type et note des lignes (modifiables dans l'app), complétés par la dernière envie
+    /// reçue de HA si le type n'a pas changé (plateforme, identifiant, champs de la vigie). Lien et plateforme
+    /// d'après le premier lien des notes pour une envie à regarder, écouter ou lire. `nil` sans envie.
+    func envie() -> TacheHA.Envie? {
+        guard let toSee = ToSee(notes: notes) else { return nil }
+        var envie = TacheHA.Envie(type: toSee.kind.haType, note: toSee.note)
+        if let previous = envieRaw.flatMap({ try? JSONDecoder().decode(TacheHA.Envie.self, from: Data($0.utf8)) }),
+           previous.type == envie.type {
+            (envie.plateforme, envie.idTitre, envie.lien, envie.autres)
+                = (previous.plateforme, previous.idTitre, previous.lien, previous.autres)
+        }
+        if envie.lien == nil, [.watch, .listen, .read].contains(toSee.kind), let url = ToSee.link(in: notes) {
+            envie.lien = url.absoluteString
+        }
+        if let url = envie.lien.flatMap(URL.init(string:)) {
+            if envie.plateforme == nil { envie.plateforme = SharedLink.platform(for: url) }
+            if envie.idTitre == nil { envie.idTitre = SharedLink.titleID(for: url) }
+        }
+        return envie
     }
 }
 
