@@ -1,3 +1,4 @@
+import CoreLocation
 import Foundation
 import Testing
 @testable import Relance
@@ -93,6 +94,17 @@ struct LieuTests {
 
         let broken = try decode(#"{"titre":"Pain","lieu":{"adresse":"sans nom"}}"#)
         #expect(broken.titre == "Pain" && broken.lieu == nil)
+    }
+
+    /// Point choisi sur la carte : nom, adresse approximative et lien du point ; l'itinéraire vise le point.
+    @Test func pointPickedOnTheMap() {
+        let point = CLLocationCoordinate2D(latitude: 48.8519, longitude: 2.3572)
+        let contact = PointPickerView.contact(name: " Pont Marie ", address: "Quai de Bourbon, 75004 Paris", at: point)
+        #expect(contact.name == "Pont Marie" && contact.address == "Quai de Bourbon, 75004 Paris")
+        #expect(contact.destination == "48.8519,2.3572")
+        let notes = TaskContact.notes("", setting: contact)
+        #expect(TaskContact(notes: notes) == contact)
+        #expect(PointPickerView.contact(name: "", address: nil, at: point).name == "Point sur la carte")
     }
 
     @Test func coordinatesInPlansLinks() {

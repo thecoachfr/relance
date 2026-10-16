@@ -107,8 +107,8 @@ nonisolated struct TaskContact: Equatable, Sendable {
         return c.url
     }
 
-    /// Où aller : l'adresse, sinon les coordonnées « lat,lon » (lieu sans adresse).
-    var destination: String? { address ?? coordinate.map { "\($0.latitude),\($0.longitude)" } }
+    /// Où aller : le point exact s'il est connu (lieu choisi sur la carte, photo, GPS), sinon l'adresse.
+    var destination: String? { coordinate.map { "\($0.latitude),\($0.longitude)" } ?? address }
 
     /// Itinéraire dans Plans (vers l'adresse, sinon vers le point).
     var mapsURL: URL? {
