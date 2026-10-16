@@ -37,4 +37,22 @@ enum PlaceCategory {
         return CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
             .distance(from: CLLocation(latitude: center.latitude, longitude: center.longitude)) < 300
     }
+
+    /// Nom et adresse d'un point (photo, coordonnées), proposés par Plans.
+    static func describe(latitude: Double, longitude: Double) async -> (name: String?, address: String?) {
+        let location = CLLocation(latitude: latitude, longitude: longitude)
+        if #available(iOS 26, *) {
+            guard let request = MKReverseGeocodingRequest(location: location),
+                  let item = try? await request.mapItems.first else { return (nil, nil) }
+            let address = (item.address?.shortAddress ?? item.address?.fullAddress)?
+                .replacingOccurrences(of: "\n", with: ", ")
+                .replacingOccurrences(of: #",\s*France$"#, with: "", options: .regularExpression)
+            return (item.name, address)
+        }
+        guard let placemark = try? await CLGeocoder().reverseGeocodeLocation(location).first else { return (nil, nil) }
+        let street = [placemark.subThoroughfare, placemark.thoroughfare].compactMap { $0 }.joined(separator: " ")
+        let city = [placemark.postalCode, placemark.locality].compactMap { $0 }.joined(separator: " ")
+        let address = [street, city].filter { !$0.isEmpty }.joined(separator: ", ")
+        return (placemark.areasOfInterest?.first ?? placemark.name, address.isEmpty ? nil : address)
+    }
 }

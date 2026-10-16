@@ -1,4 +1,5 @@
 import Contacts
+import ImageIO
 import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
@@ -10,7 +11,8 @@ final class ShareViewController: UIViewController {
         Task { @MainActor in
             let text = await Self.sharedText(from: extensionContext)
             let memo = await Self.memoDraft(from: extensionContext)
-            let host = UIHostingController(rootView: ShareRootView(original: text, memoDraft: memo) { [weak self] in
+            let photo = await Self.sharedPhoto(from: extensionContext)
+            let host = UIHostingController(rootView: ShareRootView(original: text, memoDraft: memo, photo: photo) { [weak self] in
                 self?.extensionContext?.completeRequest(returningItems: nil)
             } onCancel: { [weak self] in
                 self?.extensionContext?.cancelRequest(withError: CocoaError(.userCancelled))
@@ -39,6 +41,20 @@ final class ShareViewController: UIViewController {
         }
         return (texts.isEmpty ? urls : texts + urls.filter { url in !texts.contains { $0.contains(url) } })
             .joined(separator: "\n")
+    }
+
+    /// Photo partagée depuis Photos : position et date lues dans le fichier (rien n'est gardé de l'image).
+    private static func sharedPhoto(from context: NSExtensionContext?) async -> SharedPhoto? {
+        let providers = (context?.inputItems as? [NSExtensionItem] ?? []).flatMap { $0.attachments ?? [] }
+        guard let provider = providers.first(where: { $0.hasItemConformingToTypeIdentifier(UTType.image.identifier) }),
+              let item = try? await provider.loadItem(forTypeIdentifier: UTType.image.identifier) else { return nil }
+        let source: CGImageSource?
+        switch item {
+        case let url as URL: source = CGImageSourceCreateWithURL(url as CFURL, nil)
+        case let data as Data: source = CGImageSourceCreateWithData(data as CFData, nil)
+        default: source = nil  // Une image sans fichier (capture) n'a pas de métadonnées.
+        }
+        return source.flatMap(SharedPhoto.init(source:)) ?? SharedPhoto()
     }
 
     /// Contact d'abord (fiche la plus riche), sinon texte, liens et titre de la page.

@@ -1,4 +1,5 @@
 import Foundation
+import ImageIO
 import Testing
 @testable import Relance
 
@@ -74,5 +75,40 @@ struct SharedPlaceTests {
         #expect(plans.name == "Aromes" && plans.latitude != nil)
         let google = try #require(await SharedPlace.resolve(googleShort))
         #expect(google.name == "Express de Lyon")
+    }
+}
+
+/// Photo et coordonnées partagées (P9-A3, lots 3 et 4).
+struct SharedPhotoTests {
+    @Test func coordinatesInText() {
+        let decimal = SharedPlace.coordinates(inText: "Le spot : 48.8215, 2.4123")
+        #expect(decimal?.0 == 48.8215 && decimal?.1 == 2.4123)
+        #expect(SharedPlace.coordinates(inText: "48,8215 ; 2,4123")?.1 == 2.4123)
+        #expect(SharedPlace.coordinates(inText: "-33.8568 151.2153")?.0 == -33.8568)
+        let dms = SharedPlace.coordinates(inText: #"48°49'17.4"N 2°24'44.3"E"#)
+        #expect(abs((dms?.0 ?? 0) - 48.821500) < 0.000_01 && abs((dms?.1 ?? 0) - 2.412306) < 0.000_01)
+        #expect((SharedPlace.coordinates(inText: "33°51'24.5\"S 151°12'55.2\"E")?.0 ?? 0) < 0)
+        // Hors bornes, ou pas des coordonnées (un prix, une heure).
+        #expect(SharedPlace.coordinates(inText: "91.5, 2.3") == nil)
+        #expect(SharedPlace.coordinates(inText: "Rendez-vous à 14,30 le 12") == nil)
+        #expect(SharedPlace.coordinates(inText: "Prix : 12,50 €") == nil)
+    }
+
+    @Test func photoMetadata() {
+        let photo = SharedPhoto(properties: [
+            kCGImagePropertyGPSDictionary as String: [
+                kCGImagePropertyGPSLatitude as String: 48.8519, kCGImagePropertyGPSLatitudeRef as String: "N",
+                kCGImagePropertyGPSLongitude as String: 2.3572, kCGImagePropertyGPSLongitudeRef as String: "W",
+            ],
+            kCGImagePropertyExifDictionary as String: [kCGImagePropertyExifDateTimeOriginal as String: "2026:10:12 18:42:05"],
+        ])
+        #expect(photo.latitude == 48.8519 && photo.longitude == -2.3572 && photo.hasLocation)
+        #expect(photo.dateLine == "Photo du 12 octobre 2026")
+        // Sans GPS (option « Lieu » coupée) : pas de position, et on le dira.
+        let bare = SharedPhoto(properties: [:])
+        #expect(!bare.hasLocation && bare.dateLine == nil)
+        // Lieu d'une photo : point exact, source « photo », pas de lien.
+        let place = SharedPlace(name: "Pont Marie", latitude: 48.8519, longitude: 2.3572, source: "photo")
+        #expect(place.lieu(link: nil).lien == nil && place.contact(link: nil).coordinate?.latitude == 48.8519)
     }
 }

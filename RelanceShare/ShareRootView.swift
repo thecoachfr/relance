@@ -11,6 +11,8 @@ enum ShareMode: String, CaseIterable, Identifiable {
 struct ShareRootView: View {
     let original: String
     let memoDraft: (title: String, details: String)
+    /// Photo partagée (position, date), `nil` si on n'a pas partagé d'image.
+    var photo: SharedPhoto?
     let onDone: () -> Void
     let onCancel: () -> Void
 
@@ -18,7 +20,7 @@ struct ShareRootView: View {
 
     var body: some View {
         switch mode {
-        case .task: ShareComposeView(original: original, mode: $mode, onDone: onDone, onCancel: onCancel)
+        case .task: ShareComposeView(original: original, photo: photo, mode: $mode, onDone: onDone, onCancel: onCancel)
         case .memo: MemoShareView(draft: memoDraft, mode: $mode, onDone: onDone, onCancel: onCancel)
         }
     }

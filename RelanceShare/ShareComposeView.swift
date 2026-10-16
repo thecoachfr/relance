@@ -4,6 +4,7 @@ import SwiftUI
 /// Elle reste courte : le message complet part dans les notes, le tri range la catégorie.
 struct ShareComposeView: View {
     let original: String
+    var photo: SharedPhoto?
     @Binding var mode: ShareMode
     let onDone: () -> Void
     let onCancel: () -> Void
@@ -48,6 +49,13 @@ struct ShareComposeView: View {
                     }
                 }
 
+                if let photo, !photo.hasLocation {
+                    Section {
+                        Label("Cette photo n'a pas de position. Dans Photos, touche Options en haut de la feuille de partage et active « Lieu », ou ajoute le lieu ensuite dans la tâche.",
+                              systemImage: "location.slash")
+                            .font(.callout)
+                    }
+                }
                 if let place {
                     Section("Lieu") {
                         Label {
@@ -157,6 +165,18 @@ struct ShareComposeView: View {
             hasTime = true
             time = Calendar.current.date(bySettingHour: m / 60, minute: m % 60, second: 0, of: .now)!
         }
+        // Une photo : un spot photo, à l'endroit où elle a été prise.
+        if let photo {
+            kind = .photoSpot
+            day = nil
+            if let lat = photo.latitude, let lon = photo.longitude { locate(lat, lon, source: "photo") }
+            return
+        }
+        // Des coordonnées (« 48.8215, 2.4123 », « 48°49'17"N 2°24'44"E ») : un point.
+        if SharedLink.url(in: original) == nil, let (lat, lon) = SharedPlace.coordinates(inText: original) {
+            locate(lat, lon, source: "gps")
+            return
+        }
         // Un lien (vidéo, album, article) : une envie, avec le titre de la page si on n'a partagé que le lien.
         guard let url = SharedLink.url(in: original) else { return }
         let linkOnly = draft.body.trimmingCharacters(in: .whitespacesAndNewlines) == url.absoluteString
@@ -200,6 +220,22 @@ struct ShareComposeView: View {
         }
     }
 
+    /// Lieu d'un point (photo, coordonnées) : nom et adresse proposés par Plans, titre si on n'en a pas.
+    private func locate(_ latitude: Double, _ longitude: Double, source: String) {
+        place = SharedPlace(name: "Point sur la carte", latitude: latitude, longitude: longitude, source: source)
+        fetchingTitle = true
+        Task {
+            let found = await PlaceCategory.describe(latitude: latitude, longitude: longitude)
+            let name = found.name ?? found.address ?? "Point sur la carte"
+            place = SharedPlace(name: name, address: found.address, latitude: latitude, longitude: longitude, source: source)
+            if title == proposedTitle {
+                title = name
+                proposedTitle = title
+            }
+            fetchingTitle = false
+        }
+    }
+
     /// Dans Home Assistant si l'app y range ses tâches, sinon directement chez Google (la vigie réveille
     /// ensuite l'iPhone) ; sans réponse de Google, file d'attente pour l'app.
     private func add() async {
@@ -207,8 +243,13 @@ struct ShareComposeView: View {
         let c = Calendar.current.dateComponents([.hour, .minute], from: time)
         let minutes = day != nil && hasTime ? (c.hour ?? 0) * 60 + (c.minute ?? 0) : nil
         let cleanTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        var notes = SharedMessage.notes(original: original, titleEdited: cleanTitle != proposedTitle)
-        if let place, let placeLink {
+        // Une photo seule n'a pas de message : pas de ligne 📩 (la routine chercherait un titre dans le vide).
+        var notes = original.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? "" : SharedMessage.notes(original: original, titleEdited: cleanTitle != proposedTitle)
+        if let dateLine = photo?.dateLine {
+            notes = notes.isEmpty ? dateLine : notes + "\n" + dateLine
+        }
+        if let place {
             notes = TaskContact.notes(notes, setting: place.contact(link: placeLink))
         }
         if let kind {
@@ -247,7 +288,7 @@ struct ShareComposeView: View {
         tache.jour = TacheHA.jour(day)
         tache.heure = day == nil ? nil : TacheHA.heure(minutes)
         tache.priorite = priority == .normal ? nil : priority.rawValue
-        if let place, let placeLink { tache.lieu = place.lieu(link: placeLink) }
+        if let place { tache.lieu = place.lieu(link: placeLink) }
         guard let valeur = try? tache.valeur(),
               (try? synchro.ecrire(UUID().uuidString.lowercased(), valeur)) != nil else { return false }
         _ = await Self.within(seconds: 8) { @MainActor in

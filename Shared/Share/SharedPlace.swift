@@ -19,7 +19,7 @@ nonisolated struct SharedPlace: Equatable, Sendable {
         (self.name, self.address, self.latitude, self.longitude, self.source, self.category)
             = (name, address, latitude, longitude, source, category)
     }
-    /// `plans` ou `google` (champ `lieu.source`).
+    /// `plans`, `google`, `photo` ou `gps` (champ `lieu.source`).
     var source: String
     /// Catégorie de Plans (`MKPOICategoryNightlife`…), demandée à Plans au moment du partage.
     var category: String?
@@ -108,16 +108,16 @@ nonisolated struct SharedPlace: Equatable, Sendable {
     }
 
     /// La ligne 📍 : le point exact s'il est connu (lien Plans `ll=`), sinon le lien partagé.
-    func contact(link: URL) -> TaskContact {
+    func contact(link: URL?) -> TaskContact {
         let mapsLink = latitude.flatMap { lat in longitude.flatMap { TaskContact.mapsLink(name: name, latitude: lat, longitude: $0) } }
         return TaskContact(name: name, address: address, link: mapsLink ?? link)
     }
 
-    /// Le champ `lieu` (HA), avec le lien partagé tel quel.
-    func lieu(link: URL) -> TacheHA.Lieu {
+    /// Le champ `lieu` (HA), avec le lien partagé tel quel (aucun pour une photo ou des coordonnées).
+    func lieu(link: URL?) -> TacheHA.Lieu {
         TacheHA.Lieu(nom: name, adresse: address, telephone: nil,
                      lat: latitude.map(TaskContact.rounded), lon: longitude.map(TaskContact.rounded),
-                     lien: link.absoluteString, source: source)
+                     lien: link?.absoluteString, source: source)
     }
 
     // MARK: - Lecture
