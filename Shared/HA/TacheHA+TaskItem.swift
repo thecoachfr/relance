@@ -1,4 +1,5 @@
 import CryptoKit
+import DonneesHA
 import Foundation
 
 extension TacheHA {
@@ -143,6 +144,57 @@ extension TaskItem {
             if envie.idTitre == nil { envie.idTitre = SharedLink.titleID(for: url) }
         }
         return envie
+    }
+}
+
+/// Disponibilités en France écrites par la vigie dans `envie` (P9-B3, TMDB / JustWatch).
+nonisolated struct Availability: Equatable, Sendable {
+    struct Provider: Equatable, Sendable {
+        var name: String
+        var code: String?
+    }
+
+    var title: String?
+    var year: Int?
+    var poster: URL?
+    var subscription: [Provider] = []
+    var free: [Provider] = []
+    var rent: [Provider] = []
+    var buy: [Provider] = []
+    /// Jour de la vérification (AAAA-MM-JJ).
+    var checked: String?
+    /// `ambigu` ou `introuvable` quand TMDB n'a pas trouvé une seule œuvre.
+    var status: String?
+
+    init?(_ envie: TacheHA.Envie) {
+        func text(_ v: JSONValeur?) -> String? { if case .texte(let s)? = v { s } else { nil } }
+        func object(_ v: JSONValeur?) -> [String: JSONValeur]? { if case .objet(let o)? = v { o } else { nil } }
+        func providers(_ v: JSONValeur?) -> [Provider] {
+            guard case .liste(let list)? = v else { return [] }
+            return list.compactMap { item in
+                guard let o = object(item), let name = text(o["nom"]) else { return nil }
+                return Provider(name: name, code: text(o["code"]))
+            }
+        }
+        let tmdb = object(envie.autres["tmdb"])
+        let dispo = object(envie.autres["dispo_fr"])
+        status = text(envie.autres["tmdb_statut"])
+        guard tmdb != nil || status != nil else { return nil }
+        title = text(tmdb?["titre"])
+        if case .entier(let y)? = tmdb?["annee"] { year = y }
+        poster = text(tmdb?["affiche"]).flatMap(URL.init(string:))
+        subscription = providers(dispo?["abonnement"])
+        free = providers(dispo?["gratuit"])
+        rent = providers(dispo?["location"])
+        buy = providers(dispo?["achat"])
+        checked = text(envie.autres["dispo_maj"])
+    }
+}
+
+extension TaskItem {
+    /// Disponibilités connues (envie reçue de HA), `nil` tant que la vigie n'est pas passée.
+    var availability: Availability? {
+        envieRaw.flatMap { try? JSONDecoder().decode(TacheHA.Envie.self, from: Data($0.utf8)) }.flatMap(Availability.init)
     }
 }
 

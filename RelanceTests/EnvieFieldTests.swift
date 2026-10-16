@@ -118,3 +118,28 @@ struct TVLinkTests {
         #expect(TVRemote.link(for: spotify) == "https://open.spotify.com/track/6A5pZE8XuTjJbrpQ3mpeNc")
     }
 }
+
+/// Disponibilités écrites par la vigie (P9-B3), relues par l'app.
+struct AvailabilityTests {
+    @Test func readsWhatTheVigieWrites() throws {
+        let item = TaskItem(title: "")
+        try JSONDecoder().decode(TacheHA.self, from: Data(#"""
+        {"titre":"The Bear","notes":"🎬 À regarder","envie":{"type":"regarder","plateforme":"disney",
+         "tmdb":{"id":136315,"type":"tv","titre":"The Bear","annee":2022,"affiche":"https://image.tmdb.org/t/p/w342/a.jpg"},
+         "dispo_fr":{"abonnement":[{"id":337,"nom":"Disney Plus","code":"disney"}],"location":[{"id":2,"nom":"Apple TV","code":"apple_tv"}]},
+         "dispo_maj":"2026-10-16"}}
+        """#.utf8)).apply(to: item)
+        let a = try #require(item.availability)
+        #expect(a.title == "The Bear" && a.year == 2022 && a.poster?.lastPathComponent == "a.jpg")
+        #expect(a.subscription == [.init(name: "Disney Plus", code: "disney")] && a.rent.first?.code == "apple_tv")
+        #expect(a.buy.isEmpty && a.checked == "2026-10-16" && a.status == nil)
+    }
+
+    @Test func ambiguousAndAbsent() throws {
+        let item = TaskItem(title: "")
+        try JSONDecoder().decode(TacheHA.self, from: Data(#"{"titre":"Dune","envie":{"type":"regarder","tmdb_statut":"ambigu","tmdb_maj":"2026-10-16"}}"#.utf8))
+            .apply(to: item)
+        #expect(item.availability?.status == "ambigu")
+        #expect(TaskItem(title: "x").availability == nil)
+    }
+}

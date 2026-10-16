@@ -20,6 +20,8 @@ extension TaskStore {
 /// une période facultative (début, fin) et le lien à ouvrir s'il y en a un dans les notes.
 struct ToSeeSection: View {
     @Binding var notes: String
+    /// Disponibilités TMDB de l'envie (fiche d'une tâche existante), affichées pour « À regarder ».
+    var availability: Availability?
     /// Type proposé quand on active l'envie (celui du filtre d'où vient la saisie).
     var kind: ToSee.Kind = .outing
     /// Passer en envie retire l'échéance du formulaire.
@@ -56,6 +58,9 @@ struct ToSeeSection: View {
                     if HAConfig.isActive, [.watch, .listen].contains(toSee.kind) {
                         SendToTVButton(link: link)
                     }
+                }
+                if toSee.kind == .watch, let availability {
+                    AvailabilityView(availability: availability)
                 }
             }
         } footer: {
@@ -237,6 +242,55 @@ struct ToSeeListView: View {
         case .photoSpot?:
             ContentUnavailableView("Aucun spot photo", systemImage: ToSee.Kind.photoSpot.symbol,
                                    description: Text("Un endroit où revenir photographier, avec la bonne lumière ou la bonne saison."))
+        }
+    }
+}
+
+/// Où regarder en France (TMDB, données JustWatch) : l'œuvre trouvée, puis les plateformes par mode.
+struct AvailabilityView: View {
+    let availability: Availability
+
+    var body: some View {
+        if let status = availability.status {
+            Label(status == "ambigu" ? "Plusieurs œuvres de ce nom : précise l'année dans le titre (ex. « Dune (2021) »)."
+                  : "Introuvable sur TMDB.", systemImage: "questionmark.circle")
+                .font(.subheadline).foregroundStyle(.secondary)
+        } else {
+            HStack(alignment: .top, spacing: 12) {
+                if let poster = availability.poster {
+                    AsyncImage(url: poster) { image in
+                        image.resizable().aspectRatio(contentMode: .fill)
+                    } placeholder: {
+                        Color.secondary.opacity(0.15)
+                    }
+                    .frame(width: 48, height: 72)
+                    .clipShape(.rect(cornerRadius: 6))
+                    .accessibilityHidden(true)
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    if let title = availability.title {
+                        Text([title, availability.year.map(String.init)].compactMap { $0 }.joined(separator: " · "))
+                            .font(.subheadline.weight(.semibold))
+                    }
+                    line("En abonnement", availability.subscription)
+                    line("Gratuit", availability.free)
+                    line("En location", availability.rent)
+                    line("À l'achat", availability.buy)
+                    if availability.subscription.isEmpty && availability.free.isEmpty
+                        && availability.rent.isEmpty && availability.buy.isEmpty {
+                        Text("Disponible nulle part en France pour l'instant.").font(.subheadline).foregroundStyle(.secondary)
+                    }
+                    Text("Disponibilités : JustWatch, via TMDB").font(.caption2).foregroundStyle(.tertiary)
+                }
+            }
+            .accessibilityElement(children: .combine)
+        }
+    }
+
+    @ViewBuilder private func line(_ label: String, _ providers: [Availability.Provider]) -> some View {
+        if !providers.isEmpty {
+            Text("\(label) : " + providers.map(\.name).joined(separator: ", "))
+                .font(.subheadline)
         }
     }
 }

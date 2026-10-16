@@ -10,7 +10,7 @@
    Google devient une boîte d'entrée (dictées Google Home) vidée dans HA par `import_inbox`.
 """
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 import json
 import os
 import threading
@@ -21,6 +21,8 @@ import uuid
 import httpx
 import jwt
 from appdaemon.plugins.hass import Hass
+
+import aiguillage_tmdb
 
 APNS_HOSTS = {
     "sandbox": "https://api.sandbox.push.apple.com",
@@ -41,6 +43,9 @@ CORE_API = "http://supervisor/core/api"
 INBOX_NAMESPACE = uuid.UUID("6f1c2a3e-1d8b-4e5f-9a7c-2b4d6e8f0a1c")
 # Plusieurs événements d'affilée (lot de l'app) : un seul push.
 PUSH_DEBOUNCE = 3
+# Disponibilités TMDB (P9-B3) : passage peu après une modification, puis toutes les heures ; plafond par passage.
+TMDB_DEBOUNCE = 30
+TMDB_PER_PASS = 10
 
 
 def tache_depuis_google(item):
@@ -110,6 +115,10 @@ class RelanceVigie(Hass):
         self._push_stats_path = Path(self.args.get("push_stats_file", "/config/relance_push_stats.json"))
         # Builds Xcode Cloud signalés par ci_scripts/signaler_build.sh : numéro ↔ commit.
         self._builds_path = Path(self.args.get("builds_file", "/config/relance_builds.json"))
+        # Jeton TMDB (lecture seule), déposé à la main par Alexandre ; jamais dans le dépôt.
+        self._tmdb_token_path = Path(self.args.get("tmdb_token_file", "/config/tmdb_token"))
+        self._tmdb_handle = None
+        self._tmdb_missing_logged = False
         self._lock = threading.Lock()
         self._jwt = None
         self._jwt_issued_at = 0.0
@@ -131,6 +140,7 @@ class RelanceVigie(Hass):
         if self._espace:
             self.listen_event(self.on_data_changed, "donnees_apps_modifie", espace=self._espace)
             self.run_in(lambda **_kw: self._load_known_keys(), 1)
+            self.run_every(self.tmdb_pass, "now+90", 3600)
         self._refreshes = 0
         self._triage_handle = None
         self._triage_day = None
@@ -189,12 +199,64 @@ class RelanceVigie(Hass):
         if self._push_handle:
             self.cancel_timer(self._push_handle)
         self._push_handle = self.run_in(self._push_after_change, PUSH_DEBOUNCE)
+        # Une envie à regarder ajoutée ou modifiée : disponibilités TMDB peu après (une seule fois par rafale).
+        if self._tmdb_handle:
+            self.cancel_timer(self._tmdb_handle)
+        self._tmdb_handle = self.run_in(self.tmdb_pass, TMDB_DEBOUNCE)
 
     def _push_after_change(self, **kwargs):
         self._push_handle = None
         self.log(f"{self._espace} : {self._changes} modification(s) dans Home Assistant, réveil des appareils")
         self._changes = 0
         self.push_all("modification_ha")
+
+    # MARK: - Disponibilités TMDB (P9-B3)
+
+    def tmdb_pass(self, **kwargs):
+        """Envies à regarder pas encore vérifiées (ou vérifiées il y a plus de 7 jours) : œuvre et plateformes en
+        France d'après TMDB, écrites dans `envie`. Les tâches écrites ne demandent plus rien : pas de boucle."""
+        self._tmdb_handle = None
+        try:
+            token = self._tmdb_token_path.read_text().strip()
+        except FileNotFoundError:
+            token = ""
+        if not token:
+            if not self._tmdb_missing_logged:
+                self.log(f"TMDB : pas de jeton dans {self._tmdb_token_path}, disponibilités inactives")
+                self._tmdb_missing_logged = True
+            return
+        try:
+            records = self._service("donnees_apps", "lire", {"espace": self._espace}).get("enregistrements", [])
+        except Exception as error:  # noqa: BLE001
+            self.log(f"TMDB : tâches illisibles : {error!r}", level="WARNING")
+            return
+        today = date.today()
+        client = aiguillage_tmdb.Client(token)
+        due = [r for r in records if self._is_task_key(r.get("cle", "")) and r.get("valeur")
+               and aiguillage_tmdb.needs_lookup(r["valeur"], today)]
+        for record in due[:TMDB_PER_PASS]:
+            valeur = record["valeur"]
+            try:
+                info, dispo = client.lookup(valeur.get("titre", ""), today)
+            except Exception as error:  # noqa: BLE001
+                self.log(f"TMDB : « {valeur.get('titre')} » non vérifié : {error!r}", level="WARNING")
+                continue
+            if dispo is None:
+                updated = aiguillage_tmdb.with_status(valeur, info, today)
+                summary = info
+            else:
+                updated = aiguillage_tmdb.with_availability(valeur, info, dispo, today)
+                summary = ", ".join(p["nom"] for p in dispo.get("abonnement", [])) or "aucun abonnement"
+            try:
+                result = self._service("donnees_apps", "ecrire", {
+                    "espace": self._espace, "cle": record["cle"], "valeur": updated,
+                    "version_attendue": record["version"], "modifie_par": "vigie", "op_id": str(uuid.uuid4()),
+                })
+            except Exception as error:  # noqa: BLE001
+                self.log(f"TMDB : « {valeur.get('titre')} » non écrit : {error!r}", level="WARNING")
+                continue
+            # Conflit (modifiée entre-temps) : le prochain passage reprendra la nouvelle version.
+            self.log(f"TMDB : « {valeur.get('titre')} » → {summary} ({result.get('statut')})")
 
     def _load_known_keys(self):
         try:
