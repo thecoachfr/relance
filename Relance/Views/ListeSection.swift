@@ -14,6 +14,17 @@ struct ListeSection: View {
         if HAConfig.isActive {
             if let liste = item.liste {
                 Section {
+                    ForEach(liste.recettesAPreparer, id: \.self) { titre in
+                        Label {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(titre)
+                                Text("Claude prépare la liste des ingrédients…").font(.footnote).foregroundStyle(.secondary)
+                            }
+                        } icon: {
+                            ProgressView()
+                        }
+                        .accessibilityElement(children: .combine)
+                    }
                     ForEach(liste.articles) { article in
                         ligne(article)
                     }

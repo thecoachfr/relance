@@ -88,6 +88,15 @@ nonisolated extension TacheHA {
         }
 
         var cochés: Int { articles.filter(\.coche).count }
+        /// Recettes dont la routine de tri n'a pas encore tiré les ingrédients (P9-G3).
+        var recettesAPreparer: [String] {
+            guard case .liste(let recettes)? = autres["recettes"] else { return [] }
+            return recettes.compactMap {
+                guard case .objet(let r) = $0, r["a_preparer"] == .booleen(true) else { return nil }
+                if case .texte(let titre)? = r["titre"] { return titre }
+                return "Recette"
+            }
+        }
         /// Au moins un article, tous cochés : la tâche passe en « Fait ».
         var toutCoché: Bool { !articles.isEmpty && articles.allSatisfy(\.coche) }
 

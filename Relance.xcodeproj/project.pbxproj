@@ -15,6 +15,7 @@
 		04F1DE7BAA4BE9774C28DAA5 /* DemoData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59196264DF41F8F7B0C15A3A /* DemoData.swift */; };
 		05A02A506A9B049A2F603E36 /* Recettes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59E6DFE31CE62707FB0EB4F9 /* Recettes.swift */; };
 		0600C6B06CA479A6BE743098 /* ReminderOverride.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CF4B1AF23ADE07B4C45F7D2 /* ReminderOverride.swift */; };
+		068F783DA9C57E563BACCE02 /* SharedRecipe.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31F39EE343F9F1163673585 /* SharedRecipe.swift */; };
 		079384DFFE7FA5E5A7AAB104 /* MemoContactsImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3D7BA9AC7A9D6DB8068F7BB /* MemoContactsImport.swift */; };
 		07B29052A2CDDC105B8AF1F2 /* NotesTimeCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05822D2ACADE5BC42570E7F5 /* NotesTimeCodec.swift */; };
 		08144680257D4E310E60A176 /* SharedPlace.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9027925BE8667BD979AF6ED /* SharedPlace.swift */; };
@@ -37,6 +38,7 @@
 		149050EA2D5382406AC2FEAE /* TaskDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90710C68F0B11F5A74C59129 /* TaskDetailView.swift */; };
 		15329CD0971902FD75BAD125 /* MemoStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5397683CF5FD3589B36E1F13 /* MemoStore.swift */; };
 		15DB97C34C95B08222BA4C35 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 562B75805BA1C9F3215AF394 /* GoogleSignIn */; };
+		16C9047F27D17CB8F563FEB8 /* RecetteTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F89DCCE514D91C28F92BEC5 /* RecetteTests.swift */; };
 		1713F83E8A2B3EB986C0FC02 /* MemoHA.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F9BBE7BB317EE70061CDB73 /* MemoHA.swift */; };
 		1765A8B5866503765A68DFB8 /* EnvieSuggestionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 203193BF1B5EE7BBFCBA5F53 /* EnvieSuggestionTests.swift */; };
 		17A257C14E793776BEFA2E6B /* CategoryViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E8C4B98CC17E47DEB59005B /* CategoryViews.swift */; };
@@ -82,6 +84,7 @@
 		39CE665B4156CE3572A9A060 /* TaskActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4710CF61EBFBFD1A1472103A /* TaskActivityAttributes.swift */; };
 		39F505037B3E41C6D41BF52F /* SharedPhoto.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31B339A2445E0E4BF2299831 /* SharedPhoto.swift */; };
 		3BE40C9DBDE64A6F5F2546B3 /* TaskMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 428A54223E0ADAC3553B38D1 /* TaskMapView.swift */; };
+		3C5894C10DB3D57440186753 /* SharedRecipe.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31F39EE343F9F1163673585 /* SharedRecipe.swift */; };
 		3C7EB414FE5B94778AFA7C21 /* MemoMerge.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8DEDB1DC8F3AC484AE105AB /* MemoMerge.swift */; };
 		3D5E9A6C58E227587722DF17 /* CalendarLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41BF8369B5A6A593F0D8D600 /* CalendarLink.swift */; };
 		3D64BDAD7CC844B33E35716A /* EnvieSuggestions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EA131F7F608B2771AEC1E0B /* EnvieSuggestions.swift */; };
@@ -125,6 +128,7 @@
 		594F293387ACE61FCAE44667 /* NotesTimeCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05822D2ACADE5BC42570E7F5 /* NotesTimeCodec.swift */; };
 		596D3593EAE2393FB72C1014 /* RelanceMacApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1357E622C532038DFAE8D909 /* RelanceMacApp.swift */; };
 		59D184F4DD3047DCE4FBAF66 /* RelanceApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59F7A908CED23B538B56A391 /* RelanceApp.swift */; };
+		5A005023B4A1F2FC9D988FF2 /* SharedRecipe.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31F39EE343F9F1163673585 /* SharedRecipe.swift */; };
 		5AFC2FE6F6F4C53E1D72D6D9 /* ContactSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E7598AD45ABC35C0448C201 /* ContactSection.swift */; };
 		5AFCF7DFF64F6862DF44F094 /* WatchQuickAdd.swift in Sources */ = {isa = PBXBuildFile; fileRef = 967ED0E0B086490E32E03E0B /* WatchQuickAdd.swift */; };
 		5D30B5C9319AF1B5A5AD6305 /* ContactSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E7598AD45ABC35C0448C201 /* ContactSection.swift */; };
@@ -236,6 +240,7 @@
 		B124EB00A072E175CD261404 /* NotesTimeCodecTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77112E8A0B99D6D1C55C2D66 /* NotesTimeCodecTests.swift */; };
 		B1AC57AB8B6F4554CD35A8E2 /* ReminderProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8FDF7A0D1D79E016D9F07AA /* ReminderProfile.swift */; };
 		B1E59BEF8722E7FE18322099 /* TaskActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4710CF61EBFBFD1A1472103A /* TaskActivityAttributes.swift */; };
+		B1EF53ECF22468EB0B9C5516 /* SharedRecipe.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31F39EE343F9F1163673585 /* SharedRecipe.swift */; };
 		B1FF51214CA50C5C123E2C32 /* DiagnosticView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9966A98CACCCB07E311345FA /* DiagnosticView.swift */; };
 		B4F3FCB485FC24BA04D9D92D /* ReminderDeviceSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98189E62C7922E8F582E78C1 /* ReminderDeviceSection.swift */; };
 		B62C6C5D2C7AD96BC26CF840 /* AppGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A12D2947BB91F0172F0ED7C /* AppGroup.swift */; };
@@ -499,6 +504,7 @@
 		7AC4D232F9F0F91D89576CCA /* RecurrenceViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurrenceViews.swift; sourceTree = "<group>"; };
 		7E7598AD45ABC35C0448C201 /* ContactSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactSection.swift; sourceTree = "<group>"; };
 		7EA1042AC75E061B36BD80DB /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		7F89DCCE514D91C28F92BEC5 /* RecetteTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecetteTests.swift; sourceTree = "<group>"; };
 		7FF5E09A3FBE2EE46DFEB2E0 /* RelanceWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = RelanceWidgets.entitlements; sourceTree = "<group>"; };
 		856B480B3D562813D03F3EC2 /* TriageRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TriageRequest.swift; sourceTree = "<group>"; };
 		87AC073D86B6A0B75EDB8E72 /* EnergyMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnergyMetrics.swift; sourceTree = "<group>"; };
@@ -547,6 +553,7 @@
 		C7926432BD1ECAC69B112A06 /* PlatformCompat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlatformCompat.swift; sourceTree = "<group>"; };
 		CC6BAC9DF11A10BB3CFAC2F3 /* TaskLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskLiveActivity.swift; sourceTree = "<group>"; };
 		CFB0E54140635703273C5FC6 /* DateDetection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DateDetection.swift; sourceTree = "<group>"; };
+		D31F39EE343F9F1163673585 /* SharedRecipe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedRecipe.swift; sourceTree = "<group>"; };
 		D5115FA3B8E348E91F0DCFEF /* TVRemote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVRemote.swift; sourceTree = "<group>"; };
 		D537FFD88362EBC0053D6B55 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		D81626992F7BA464A164EEC6 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -661,6 +668,7 @@
 				1D5B40F509B64DF9DF0291C1 /* MemoMergeTests.swift */,
 				77112E8A0B99D6D1C55C2D66 /* NotesTimeCodecTests.swift */,
 				68136F1B49698436DD4A0A31 /* ProximityPlannerTests.swift */,
+				7F89DCCE514D91C28F92BEC5 /* RecetteTests.swift */,
 				3D82D35DFB589C1E996F8CBC /* ReminderPlannerTests.swift */,
 				4DCCE35813EA2892D8D3C8B7 /* SharedMessageTests.swift */,
 				61A994C34CC736F16CBEE82E /* SharedPlaceTests.swift */,
@@ -680,6 +688,7 @@
 				1AC3C376A9AF6A9087AF2A12 /* SharedMessage.swift */,
 				31B339A2445E0E4BF2299831 /* SharedPhoto.swift */,
 				D9027925BE8667BD979AF6ED /* SharedPlace.swift */,
+				D31F39EE343F9F1163673585 /* SharedRecipe.swift */,
 			);
 			path = Share;
 			sourceTree = "<group>";
@@ -1270,6 +1279,7 @@
 				30BD36CAB51B171449076E31 /* SharedMessage.swift in Sources */,
 				EFCEF257B39053D825B52153 /* SharedPhoto.swift in Sources */,
 				6275C8E11C33A233733DE6B7 /* SharedPlace.swift in Sources */,
+				068F783DA9C57E563BACCE02 /* SharedRecipe.swift in Sources */,
 				257B9AB2824CB698FD0CA93B /* SiriCapture.swift in Sources */,
 				93C7E60D472124C74A6B30B3 /* Subscriptions.swift in Sources */,
 				43C8AFEDD5A2B15E0EB802CC /* SyncLog.swift in Sources */,
@@ -1367,6 +1377,7 @@
 				DED92B856FA78FAE4B00D64F /* SharedMessage.swift in Sources */,
 				ECFC4DEA1A7252278DE7122A /* SharedPhoto.swift in Sources */,
 				8F2A44E8EC03E81EF967FA5A /* SharedPlace.swift in Sources */,
+				5A005023B4A1F2FC9D988FF2 /* SharedRecipe.swift in Sources */,
 				F2DDC97BAAFE99B2B5BEABB8 /* Subscriptions.swift in Sources */,
 				614FCED5DB203287B10A9376 /* SyncLog.swift in Sources */,
 				D51C6FDA1B60603EDDF4FF0E /* TVRemote.swift in Sources */,
@@ -1423,6 +1434,7 @@
 				D68D03B7649D68EDC025CDF1 /* SharedMessage.swift in Sources */,
 				39F505037B3E41C6D41BF52F /* SharedPhoto.swift in Sources */,
 				08144680257D4E310E60A176 /* SharedPlace.swift in Sources */,
+				B1EF53ECF22468EB0B9C5516 /* SharedRecipe.swift in Sources */,
 				B02BAEE050604EE6092D2779 /* TacheHA+Liste.swift in Sources */,
 				25C1676B0FC5CF26CD5223E9 /* TacheHA.swift in Sources */,
 				D1F27F2D01E56E2A8DD14586 /* TaskContact.swift in Sources */,
@@ -1449,6 +1461,7 @@
 				754F56298037383538A680A5 /* MemoMergeTests.swift in Sources */,
 				B124EB00A072E175CD261404 /* NotesTimeCodecTests.swift in Sources */,
 				518F4EBC19B67DA5B6BA9133 /* ProximityPlannerTests.swift in Sources */,
+				16C9047F27D17CB8F563FEB8 /* RecetteTests.swift in Sources */,
 				33B7402C2D9B8978CA0931CD /* ReminderPlannerTests.swift in Sources */,
 				F943FD7BDC4BD07D3207600E /* SharedMessageTests.swift in Sources */,
 				7133AAFEED4BE920E2634CED /* SharedPlaceTests.swift in Sources */,
@@ -1539,6 +1552,7 @@
 				A9D25158884B43503A37002A /* SharedMessage.swift in Sources */,
 				DAFE51031166321EF4C59D66 /* SharedPhoto.swift in Sources */,
 				4D27FF1457756319CE784215 /* SharedPlace.swift in Sources */,
+				3C5894C10DB3D57440186753 /* SharedRecipe.swift in Sources */,
 				9CA8D9FF92184B04154BC2B1 /* SiriCapture.swift in Sources */,
 				2E64B536067BD74047C00CD9 /* Subscriptions.swift in Sources */,
 				8D23FD08D27F1D9D42DCA1CA /* SyncLog.swift in Sources */,

@@ -26,6 +26,11 @@ struct ShareComposeView: View {
     @State private var placeLink: URL?
     /// Envie proposée d'après la catégorie de Plans, et la sorte de lieu (« bar ») notée sur sa ligne.
     @State private var suggestion: (kind: ToSee.Kind, label: String?)?
+    /// Recette (P9-G3) : lue dans la page (données schema.org), ou texte collé qui parle d'ingrédients.
+    @State private var recipe: SharedRecipe?
+    @State private var recipeText = false
+    /// En faire une liste de courses, préparée ensuite par la routine de tri.
+    @State private var asList = false
 
     var body: some View {
         NavigationStack {
@@ -69,6 +74,21 @@ struct ShareComposeView: View {
                             }
                         } icon: {
                             Image(systemName: "mappin.and.ellipse")
+                        }
+                    }
+                }
+
+                if HAConfig.isActive, recipe != nil || recipeText {
+                    Section {
+                        Toggle("Liste de courses", systemImage: "cart", isOn: $asList)
+                    } header: {
+                        Text("Recette")
+                    } footer: {
+                        if let recipe {
+                            Text("\(recipe.ingredients.count) ingrédients trouvés\(recipe.parts.map { " pour \($0) parts" } ?? "")."
+                                 + " Claude en fera une liste à cocher, quantités indicatives, dans la minute.")
+                        } else {
+                            Text("Claude lira les ingrédients du texte et en fera une liste à cocher, quantités indicatives.")
                         }
                     }
                 }
@@ -178,7 +198,26 @@ struct ShareComposeView: View {
             return
         }
         // Un lien (vidéo, album, article) : une envie, avec le titre de la page si on n'a partagé que le lien.
-        guard let url = SharedLink.url(in: original) else { return }
+        guard let url = SharedLink.url(in: original) else {
+            if SharedRecipe.looksLikeRecipe(original) {
+                recipeText = true
+                asList = true
+                day = nil
+            }
+            return
+        }
+        // Une page de recette : les ingrédients sont lus en parallèle du titre.
+        Task {
+            guard let found = await SharedRecipe.fetch(url) else { return }
+            recipe = found
+            asList = true
+            kind = nil
+            day = nil
+            if title == proposedTitle || title.isEmpty || fetchingTitle {
+                title = found.titre
+                proposedTitle = title
+            }
+        }
         let linkOnly = draft.body.trimmingCharacters(in: .whitespacesAndNewlines) == url.absoluteString
         // Un lieu (Plans, Google Maps) : nom et adresse lus dans le lien, jamais dans la page.
         if SharedPlace.isMapLink(url) {
@@ -221,7 +260,8 @@ struct ShareComposeView: View {
             let pageTitle = await SharedLink.title(of: url) ?? SharedLink.titleInPath(of: url)
                 // Page sans titre utile (Netflix) : la plateforme, à renommer.
                 ?? SharedLink.platform(for: url).map { "À regarder sur " + SharedLink.platformName($0) }
-            if let pageTitle, title == proposedTitle {
+            // Une recette a déjà donné son nom : il prime sur le titre de la page.
+            if let pageTitle, title == proposedTitle, recipe == nil {
                 title = String(pageTitle.prefix(SharedMessage.maxTitleLength * 2))
                 proposedTitle = title
             }
@@ -265,6 +305,9 @@ struct ShareComposeView: View {
             notes = ToSee.notes(notes, setting: ToSee(kind, note: suggestion?.kind == kind ? suggestion?.label : nil))
             day = nil
         }
+        if asList, kind == nil {
+            notes = notes.isEmpty ? "🍳 Recette : \(recipe?.titre ?? cleanTitle)" : notes + "\n🍳 Recette : \(recipe?.titre ?? cleanTitle)"
+        }
         if HAConfig.isActive, await addToHA(title: cleanTitle, notes: notes, minutes: minutes) {
             return onDone()
         }
@@ -298,6 +341,13 @@ struct ShareComposeView: View {
         tache.heure = day == nil ? nil : TacheHA.heure(minutes)
         tache.priorite = priority == .normal ? nil : priority.rawValue
         if let place { tache.lieu = place.lieu(link: placeLink) }
+        if asList, kind == nil {
+            var liste = TacheHA.Liste(parts: recipe?.parts)
+            let entree = recipe.map { $0.entree(lien: SharedLink.url(in: original)) }
+                ?? SharedRecipe.entree(texte: original, titre: title)
+            liste.autres["recettes"] = .liste([entree])
+            tache.liste = liste
+        }
         guard let valeur = try? tache.valeur(),
               (try? synchro.ecrire(UUID().uuidString.lowercased(), valeur)) != nil else { return false }
         _ = await Self.within(seconds: 8) { @MainActor in
