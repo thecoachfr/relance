@@ -92,6 +92,11 @@ struct TaskRow: View {
     /// lien (vidéo, album), sinon le type.
     static func envieCaption(_ item: TaskItem, _ toSee: ToSee) -> String {
         if let note = toSee.note { return note }
+        // À regarder : là où c'est inclus dans mes abonnements, sinon la première plateforme d'abonnement.
+        if toSee.kind == .watch, let availability = item.availability {
+            if let included = Subscriptions.included(in: availability).first { return "Inclus · " + included.name }
+            if let first = availability.subscription.first { return "Sur " + first.name }
+        }
         if toSee.kind.isPlace, let place = TaskContact(notes: item.notes) {
             let name = place.name.lowercased()
             if !item.title.lowercased().contains(name) && !name.contains(item.title.lowercased()) { return place.name }

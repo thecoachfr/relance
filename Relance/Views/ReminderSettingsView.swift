@@ -113,6 +113,22 @@ struct ReminderSettingsView: View {
             }
 
             Section {
+                ForEach(Subscriptions.choices, id: \.self) { code in
+                    Toggle(SharedLink.platformName(code), isOn: Binding(
+                        get: { store.subscriptions.contains(code) },
+                        set: { on in
+                            var codes = store.subscriptions.filter { $0 != code }
+                            if on { codes.append(code) }
+                            store.setSubscriptions(codes)
+                        }))
+                }
+            } header: {
+                Text("Mes abonnements")
+            } footer: {
+                Text("Une envie à regarder disponible sur l'un d'eux affiche « Inclus dans ton abonnement ». Partagé avec tes autres appareils par Home Assistant.")
+            }
+
+            Section {
                 ForEach(ToSee.Kind.allCases.filter(\.isPlace)) { kind in
                     Toggle(isOn: Binding(
                         get: { settings.toSee.nearbyKinds.contains(kind.rawValue) },

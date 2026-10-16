@@ -143,3 +143,19 @@ struct AvailabilityTests {
         #expect(TaskItem(title: "x").availability == nil)
     }
 }
+
+/// Badge « inclus dans ton abonnement » (P9-B3).
+struct SubscriptionsTests {
+    @Test func includedPlatforms() throws {
+        let envie = try JSONDecoder().decode(TacheHA.Envie.self, from: Data(#"""
+        {"type":"regarder","tmdb":{"id":1,"type":"tv","titre":"X"},
+         "dispo_fr":{"abonnement":[{"id":8,"nom":"Netflix","code":"netflix"},{"id":5,"nom":"Mubi"}],"location":[{"id":2,"nom":"Apple TV","code":"apple_tv"}]}}
+        """#.utf8))
+        let availability = try #require(Availability(envie))
+        #expect(Subscriptions.included(in: availability, mine: ["netflix", "disney"]).map(\.name) == ["Netflix"])
+        // Location ou achat : pas « inclus ».
+        #expect(Subscriptions.included(in: availability, mine: ["apple_tv"]).isEmpty)
+        #expect(Subscriptions.included(in: availability, mine: []).isEmpty)
+        #expect(Subscriptions.haKey.contains(":") && UUID(uuidString: Subscriptions.haKey) == nil)
+    }
+}

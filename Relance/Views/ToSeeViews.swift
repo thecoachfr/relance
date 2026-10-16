@@ -248,9 +248,17 @@ struct ToSeeListView: View {
 
 /// Où regarder en France (TMDB, données JustWatch) : l'œuvre trouvée, puis les plateformes par mode.
 struct AvailabilityView: View {
+    @Environment(TaskStore.self) private var store
     let availability: Availability
 
     var body: some View {
+        let included = Subscriptions.included(in: availability, mine: store.subscriptions)
+        if !included.isEmpty {
+            Label("Inclus dans ton abonnement · " + included.map(\.name).joined(separator: ", "),
+                  systemImage: "checkmark.seal.fill")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.green)
+        }
         if let status = availability.status {
             Label(status == "ambigu" ? "Plusieurs œuvres de ce nom : précise l'année dans le titre (ex. « Dune (2021) »)."
                   : "Introuvable sur TMDB.", systemImage: "questionmark.circle")

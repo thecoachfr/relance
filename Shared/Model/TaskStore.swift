@@ -27,6 +27,8 @@ final class TaskStore {
     var isDemo = false
     /// Synchroniseur Home Assistant (espace `aiguillage`), créé à la première synchro une fois HA activé.
     var synchro: Synchroniseur?
+    /// Mes abonnements (Réglages › Relances), lus et écrits dans HA (`Subscriptions.haKey`).
+    var subscriptions: [String] = Subscriptions.cached()
     /// Forcé par les tests, sans toucher au réglage partagé de l'appareil (que l'app hôte lit aussi).
     var haActiveOverride: Bool?
     /// Coupé par les tests de synchro : le centre de notifications du simulateur peut bloquer des dizaines de secondes.

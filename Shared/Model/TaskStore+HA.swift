@@ -69,6 +69,15 @@ extension TaskStore {
         try? context.save()
     }
 
+    /// Mes abonnements : sur l'appareil tout de suite, puis dans HA (partagés avec les autres appareils et la vigie).
+    func setSubscriptions(_ codes: [String]) {
+        subscriptions = codes
+        Subscriptions.cache(codes)
+        guard let synchro else { return }
+        try? synchro.ecrire(Subscriptions.haKey, .objet(["plateformes": .liste(codes.map { .texte($0) })]))
+        Task { await sync() }
+    }
+
     /// Les modifications locales passent dans la base `DonneesHA` (et son outbox).
     private func haPush(_ synchro: Synchroniseur) throws {
         insertPendingShares()
@@ -88,6 +97,14 @@ extension TaskStore {
     /// La base `DonneesHA` (à jour de HA après la synchro) recopiée dans SwiftData.
     private func haPull(_ synchro: Synchroniseur, firstSync: Bool) throws {
         let records = try synchro.base.tous(inclureSupprimes: true)
+        if let config = records.first(where: { $0.cle == Subscriptions.haKey && !$0.supprime }),
+           case .objet(let o) = config.valeur, case .liste(let list)? = o["plateformes"] {
+            let codes = list.compactMap { if case .texte(let s) = $0 { s } else { nil } }
+            if codes != subscriptions {
+                subscriptions = codes
+                Subscriptions.cache(codes)
+            }
+        }
         let all = try context.fetch(FetchDescriptor<TaskItem>())
         var byKey = Dictionary(all.map { (Self.haKey($0), $0) }, uniquingKeysWith: { first, _ in first })
         var seen = Set<String>()
