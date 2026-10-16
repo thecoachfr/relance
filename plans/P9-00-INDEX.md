@@ -1,8 +1,8 @@
 # P9 — Aiguillage : lieux, « À regarder », app Android TV, actions
 
-*Rédigé le 16/10/2026 dans le chat Claude, à partir de l'étude P9 du document « Idées à traiter — études et plans » et d'une lecture du code de `relance` le même jour. À donner à Claude Code avec le plan du chantier en cours. Ce fichier est commun aux quatre plans : il fixe l'ordre, le modèle de données partagé et les règles.*
+*Rédigé le 16/10/2026 dans le chat Claude, à partir de l'étude P9 du document « Idées à traiter — études et plans » et d'une lecture du code de `relance` le même jour. À donner à Claude Code avec le plan du chantier en cours. Ce fichier est commun aux cinq plans : il fixe l'ordre, le modèle de données partagé et les règles.*
 
-## 1. Les quatre plans
+## 1. Les cinq plans
 
 | Plan | Fichier | Dépôt | Temps estimé |
 |---|---|---|---|
