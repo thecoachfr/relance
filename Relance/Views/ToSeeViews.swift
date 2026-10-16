@@ -53,6 +53,9 @@ struct ToSeeSection: View {
                         Label("Ouvrir " + (link.host()?.replacingOccurrences(of: "www.", with: "") ?? "le lien"),
                               systemImage: "arrow.up.right.square")
                     }
+                    if HAConfig.isActive, [.watch, .listen].contains(toSee.kind) {
+                        SendToTVButton(link: link)
+                    }
                 }
             }
         } footer: {
@@ -234,6 +237,45 @@ struct ToSeeListView: View {
         case .photoSpot?:
             ContentUnavailableView("Aucun spot photo", systemImage: ToSee.Kind.photoSpot.symbol,
                                    description: Text("Un endroit où revenir photographier, avec la bonne lumière ou la bonne saison."))
+        }
+    }
+}
+
+/// « Sur la TV » : ouvre le lien sur le Freebox Player Pop par Home Assistant, avec un retour visible.
+struct SendToTVButton: View {
+    let link: URL
+    @State private var sending = false
+    @State private var outcome: TVRemote.Outcome?
+
+    var body: some View {
+        Button {
+            sending = true
+            outcome = nil
+            Task {
+                outcome = await TVRemote.send(link)
+                sending = false
+            }
+        } label: {
+            HStack {
+                Label("Sur la TV", systemImage: "tv")
+                Spacer()
+                if sending {
+                    ProgressView()
+                } else if let outcome {
+                    Text(Self.text(outcome))
+                        .font(.subheadline)
+                        .foregroundStyle(outcome == .sent ? Color.secondary : Color.red)
+                }
+            }
+        }
+        .disabled(sending)
+    }
+
+    static func text(_ outcome: TVRemote.Outcome) -> String {
+        switch outcome {
+        case .sent: "Envoyé à la TV"
+        case .unreachable: "TV injoignable"
+        case .failed(let message): message
         }
     }
 }

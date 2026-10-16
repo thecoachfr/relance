@@ -119,6 +119,10 @@ et à la demande de l'app (« Retrier avec Claude », champ `action: triage` du 
 Pour la mettre à jour : monter le partage `smb://homeassistant.local/addon_configs` dans le Finder et copier
 `relance_vigie.py` dans `a0d7b954_appdaemon/apps/` (AppDaemon la recharge seul).
 
+« Sur la TV » (plan P9-B4) : le bouton de la fiche d'une envie appelle le script HA `script.aiguillage_sur_tv`
+(champ `lien`), qui allume le Freebox Player Pop si besoin et ouvre le lien (`remote.turn_on`, `activity`). Formes de
+liens par plateforme : [docs/LIENS-TV.md](docs/LIENS-TV.md).
+
 Audit de batterie (plan P9-E) : la vigie compte les pushs envoyés par jour et par cause dans
 `/config/relance_push_stats.json` de l'add-on, et l'app iPhone et iPad garde les rapports MetricKit
 (Réglages › Diagnostic batterie). Voir [docs/BATTERIE.md](docs/BATTERIE.md).

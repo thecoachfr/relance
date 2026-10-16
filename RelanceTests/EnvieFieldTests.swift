@@ -100,3 +100,13 @@ struct RealWatchLinksTests {
         #expect(envie.plateforme == "canal" && envie.idTitre == "40002718_50696")
     }
 }
+
+/// « Sur la TV » (P9-B4) : forme du lien envoyé au Player.
+struct TVLinkTests {
+    @Test func netflixGetsSource30() {
+        let shared = URL(string: "https://www.netflix.com/fr/title/81674500?s=i&trkid=13747225&shareType=Title&vlang=fr")!
+        #expect(TVRemote.link(for: shared) == "https://www.netflix.com/title/81674500?source=30")
+        let youtube = URL(string: "https://youtube.com/watch?v=JPcVyq_BYjU")!
+        #expect(TVRemote.link(for: youtube) == youtube.absoluteString)
+    }
+}
