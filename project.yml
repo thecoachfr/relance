@@ -126,6 +126,7 @@ targets:
       - Relance/Views/TaskEditor.swift
       - Relance/Views/HASettingsSection.swift
       - Relance/Views/ActionsSection.swift
+      - Relance/Views/RecettesView.swift
     configFiles:
       Debug: Relance/Resources/Secrets.xcconfig
       Release: Relance/Resources/Secrets.xcconfig

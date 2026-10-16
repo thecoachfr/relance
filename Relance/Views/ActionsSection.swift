@@ -13,7 +13,9 @@ struct ActionsSection: View {
 
     var body: some View {
         let actions = item.actions
-        let playlist = PlaylistNote(item.envieRaw.flatMap { try? JSONDecoder().decode(TacheHA.Envie.self, from: Data($0.utf8)) })
+        // Ancienne note de la vigie (D4, avant les recettes) : seulement si l'action n'existe pas.
+        let playlist = actions.contains(where: { $0.type == "playlist_spotify" }) ? nil
+            : PlaylistNote(item.envieRaw.flatMap { try? JSONDecoder().decode(TacheHA.Envie.self, from: Data($0.utf8)) })
         if !actions.isEmpty || playlist != nil || lien != nil {
             Section {
                 if let playlist {

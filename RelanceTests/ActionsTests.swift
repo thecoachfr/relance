@@ -73,4 +73,27 @@ struct ActionsTests {
         #expect(note?.texte == "Ajoutée le 16/10 (1 titre)")
         #expect(PlaylistNote(TacheHA.Envie(type: "ecouter")) == nil)
     }
+
+    /// Recettes de `config:recettes` telles que la vigie les crée ; seul `active` change, le reste est gardé.
+    @Test func recettes() throws {
+        let json = """
+            {"recettes": [{"id": "spotify-playlist", "nom": "Envie À écouter avec un lien Spotify → playlist « À écouter »",
+              "active": true, "si": {"envie_type": "ecouter", "hote": "spotify.com"},
+              "alors": {"type": "playlist_spotify", "executant": "ha", "declencheur": {"quand": "creation"}}},
+             {"id": "tva-micro", "nom": "TVA", "active": false, "si": {"mot": "TVA", "tag": "Micro"},
+              "alors": {"type": "preparer", "executant": "routine"}, "futur": 1}]}
+            """
+        var liste = Recette.liste(try JSONDecoder().decode(JSONValeur.self, from: Data(json.utf8)))
+        #expect(liste.map(\.id) == ["spotify-playlist", "tva-micro"])
+        #expect(liste[0].active && !liste[1].active)
+        #expect(liste[0].conditions == "Envie À écouter · lien spotify.com")
+        #expect(liste[1].conditions == "tag Micro · « TVA » dans le titre")
+        #expect(liste[1].executant == "par une routine Claude")
+        liste[1].active = true
+        guard case .objet(let o) = Recette.config(liste), case .liste(let l)? = o["recettes"], case .objet(let tva) = l[1] else {
+            Issue.record("forme"); return
+        }
+        #expect(tva["active"] == .booleen(true))
+        #expect(tva["futur"] == .entier(1))
+    }
 }

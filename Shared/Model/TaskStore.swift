@@ -29,6 +29,8 @@ final class TaskStore {
     var synchro: Synchroniseur?
     /// Mes abonnements (Réglages › Relances), lus et écrits dans HA (`Subscriptions.haKey`).
     var subscriptions: [String] = Subscriptions.cached()
+    /// Recettes d'actions (Réglages › Actions automatiques), lues et écrites dans HA (`Recette.haKey`).
+    var recettes: [Recette] = []
     /// Forcé par les tests, sans toucher au réglage partagé de l'appareil (que l'app hôte lit aussi).
     var haActiveOverride: Bool?
     /// Coupé par les tests de synchro : le centre de notifications du simulateur peut bloquer des dizaines de secondes.

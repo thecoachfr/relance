@@ -26,6 +26,7 @@ struct SettingsView: View {
                 Section {
                     NavigationLink("Quand et comment relancer") { ReminderSettingsView() }
                     NavigationLink("Mémo pour le tri") { MemoListView() }
+                    NavigationLink("Actions automatiques") { RecettesView() }
                     NavigationLink("Diagnostic batterie") { DiagnosticView() }
                 }
                 Section {

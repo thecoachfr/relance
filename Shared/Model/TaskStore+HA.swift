@@ -78,6 +78,15 @@ extension TaskStore {
         Task { await sync() }
     }
 
+    /// Active ou coupe une recette (appliquée ensuite par la vigie) ; le reste de la recette est gardé tel quel.
+    func setRecette(_ id: String, active: Bool) {
+        guard let i = recettes.firstIndex(where: { $0.id == id }), recettes[i].active != active else { return }
+        recettes[i].active = active
+        guard let synchro else { return }
+        try? synchro.ecrire(Recette.haKey, Recette.config(recettes))
+        Task { await sync() }
+    }
+
     /// Les modifications locales passent dans la base `DonneesHA` (et son outbox).
     private func haPush(_ synchro: Synchroniseur) throws {
         insertPendingShares()
@@ -104,6 +113,10 @@ extension TaskStore {
                 subscriptions = codes
                 Subscriptions.cache(codes)
             }
+        }
+        if let config = records.first(where: { $0.cle == Recette.haKey && !$0.supprime }) {
+            let liste = Recette.liste(config.valeur)
+            if liste != recettes { recettes = liste }
         }
         let all = try context.fetch(FetchDescriptor<TaskItem>())
         var byKey = Dictionary(all.map { (Self.haKey($0), $0) }, uniquingKeysWith: { first, _ in first })

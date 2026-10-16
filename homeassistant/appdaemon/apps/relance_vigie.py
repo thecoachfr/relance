@@ -22,6 +22,7 @@ import httpx
 import jwt
 from appdaemon.plugins.hass import Hass
 
+import aiguillage_actions
 import aiguillage_spotify
 import aiguillage_tmdb
 
@@ -287,41 +288,81 @@ class RelanceVigie(Hass):
         return aiguillage_spotify.Client(ids)
 
     def spotify_pass(self, **kwargs):
-        """Envies à écouter avec un lien Spotify : ajout à la playlist « À écouter » (sans doublon), noté dans
-        `envie.playlist`. Une tâche notée ne demande plus rien (échec : retenté le lendemain) : pas de boucle."""
+        """Passage des actions (P9-D2, D3) : recettes appliquées aux tâches, puis actions de HA dues exécutées
+        (aujourd'hui `playlist_spotify`), puis copie de la playlist pour la TV. Une action faite ou en échec n'est
+        jamais relancée seule (`etat`) : pas de boucle sur les écritures de la vigie."""
         self._spotify_handle = None
-        client = self._spotify_client()
-        if client is None:
-            return
         try:
             records = self._service("donnees_apps", "lire", {"espace": self._espace}).get("enregistrements", [])
         except Exception as error:  # noqa: BLE001
-            self.log(f"Spotify : tâches illisibles : {error!r}", level="WARNING")
+            self.log(f"Actions : tâches illisibles : {error!r}", level="WARNING")
             return
+        recettes = self._recettes(records)
+        client = self._spotify_client()
         today = date.today()
-        due = [r for r in records if self._is_task_key(r.get("cle", "")) and r.get("valeur")
-               and aiguillage_spotify.needs_playlist(r["valeur"], today)]
-        for record in due[:SPOTIFY_PER_PASS]:
-            valeur = record["valeur"]
-            kind, ident = aiguillage_spotify.lien_de(valeur)
-            try:
-                playlist_id, ajoutes = client.ajouter(kind, ident)
-                updated = aiguillage_spotify.with_playlist(valeur, "ok", today, playlist_id, ajoutes)
-                summary = f"{ajoutes} titre(s) ajouté(s)"
-            except Exception as error:  # noqa: BLE001
-                updated = aiguillage_spotify.with_playlist(valeur, "echec", today, erreur=repr(error))
-                summary = f"échec : {error!r}"
+        maintenant = datetime.now(UTC).isoformat(timespec="seconds")
+        for record in records:
+            if not self._is_task_key(record.get("cle", "")) or not record.get("valeur"):
+                continue
+            avant = record["valeur"]
+            tache = aiguillage_actions.appliquer_recettes(avant, recettes, maintenant) or avant
+            faites = []
+            for action in list(tache.get("actions") or []):
+                if not aiguillage_actions.due(action, tache, today):
+                    continue
+                etat, resultat = self._executer(action, tache, client)
+                if etat is None:
+                    continue  # pas exécutable maintenant (Spotify sans identifiants) : on réessaiera
+                tache = aiguillage_actions.marquer(tache, action["id"], etat, resultat, maintenant)
+                faites.append(f"{action.get('type')} : {etat}")
+            if tache is avant:
+                continue
             try:
                 result = self._service("donnees_apps", "ecrire", {
-                    "espace": self._espace, "cle": record["cle"], "valeur": updated,
+                    "espace": self._espace, "cle": record["cle"], "valeur": tache,
                     "version_attendue": record["version"], "modifie_par": "vigie", "op_id": str(uuid.uuid4()),
                 })
             except Exception as error:  # noqa: BLE001
-                self.log(f"Spotify : « {valeur.get('titre')} » non écrit : {error!r}", level="WARNING")
+                self.log(f"Actions : « {avant.get('titre')} » non écrite : {error!r}", level="WARNING")
                 continue
-            # Conflit : le prochain passage relit ; les titres déjà ajoutés ne le seront pas deux fois.
-            self.log(f"Spotify : « {valeur.get('titre')} » → playlist, {summary} ({result.get('statut')})")
-        self._copier_playlist(client, records)
+            # Conflit : le prochain passage relit (une action déjà exécutée l'est sans effet : pas de doublon Spotify).
+            ajoutees = len(tache.get("actions") or []) - len(avant.get("actions") or [])
+            self.log(f"Actions : « {avant.get('titre')} » : {ajoutees} ajoutée(s){', ' if faites else ''}{', '.join(faites)} "
+                     f"({result.get('statut')})")
+        if client is not None:
+            self._copier_playlist(client, records)
+
+    def _recettes(self, records):
+        """Recettes de `config:recettes` ; créées avec les recettes par défaut si absentes."""
+        actuel = next((r for r in records if r.get("cle") == aiguillage_actions.CLE_RECETTES), None)
+        if actuel:
+            return (actuel.get("valeur") or {}).get("recettes") or []
+        try:
+            self._service("donnees_apps", "ecrire", {
+                "espace": self._espace, "cle": aiguillage_actions.CLE_RECETTES,
+                "valeur": {"recettes": aiguillage_actions.RECETTES_PAR_DEFAUT}, "version_attendue": 0,
+                "modifie_par": "vigie", "op_id": str(uuid.uuid4()),
+            })
+            self.log("Actions : recettes par défaut créées (config:recettes)")
+        except Exception as error:  # noqa: BLE001
+            self.log(f"Actions : recettes non créées : {error!r}", level="WARNING")
+        return aiguillage_actions.RECETTES_PAR_DEFAUT
+
+    def _executer(self, action, tache, client):
+        """(etat, resultat) ; (None, None) si l'exécution doit attendre."""
+        if action.get("type") == "playlist_spotify":
+            if client is None:
+                return None, None
+            ref = aiguillage_spotify.lien_de(tache)
+            if not ref or ref[0] not in ("track", "album", "episode"):
+                return "echec", "Pas de lien Spotify vers un morceau, un album ou un épisode"
+            try:
+                _, ajoutes = client.ajouter(*ref)
+            except Exception as error:  # noqa: BLE001
+                return "echec", f"Spotify : {error!r}"[:300]
+            return "faite", ("Déjà dans « À écouter »" if ajoutes == 0
+                             else f"{ajoutes} titre{'s' if ajoutes > 1 else ''} ajouté{'s' if ajoutes > 1 else ''} à « À écouter »")
+        return "echec", f"Type d'action inconnu de la vigie : {action.get('type')}"
 
     def _copier_playlist(self, client, records):
         """Copie du contenu de « À écouter » dans `config:playlist_a_ecouter` pour l'app TV (qui n'a pas de jeton

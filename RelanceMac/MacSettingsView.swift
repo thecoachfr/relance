@@ -18,6 +18,11 @@ struct MacSettingsView: View {
                     .formStyle(.grouped)
                     .frame(width: 520, height: 560)
             }
+            Tab("Actions", systemImage: "bolt") {
+                NavigationStack { RecettesView() }
+                    .formStyle(.grouped)
+                    .frame(width: 520, height: 420)
+            }
             Tab("Synchro", systemImage: "arrow.triangle.2.circlepath") {
                 SyncLogSettings()
             }
