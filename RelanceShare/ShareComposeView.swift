@@ -23,6 +23,8 @@ struct ShareComposeView: View {
     /// Lieu lu dans un lien Plans ou Google Maps, et ce lien.
     @State private var place: SharedPlace?
     @State private var placeLink: URL?
+    /// Envie proposée d'après la catégorie de Plans, et la sorte de lieu (« bar ») notée sur sa ligne.
+    @State private var suggestion: (kind: ToSee.Kind, label: String?)?
 
     var body: some View {
         NavigationStack {
@@ -51,8 +53,10 @@ struct ShareComposeView: View {
                         Label {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(place.name)
-                                if let address = place.address, address != place.name {
-                                    Text(address).font(.subheadline).foregroundStyle(.secondary)
+                                let details = [suggestion?.label?.capitalizedFirst, place.address == place.name ? nil : place.address]
+                                    .compactMap { $0 }.joined(separator: " · ")
+                                if !details.isEmpty {
+                                    Text(details).font(.subheadline).foregroundStyle(.secondary)
                                 }
                             }
                         } icon: {
@@ -167,6 +171,17 @@ struct ShareComposeView: View {
                         title = found.name
                         proposedTitle = title
                     }
+                    fetchingTitle = false
+                    // Puis la catégorie (bar, épicerie…) : le type est proposé tant qu'on ne l'a pas choisi.
+                    let completed = await PlaceCategory.complete(found)
+                    place = completed
+                    if let envie = SharedPlace.envie(forCategory: completed.category) {
+                        suggestion = envie
+                        if kind == nil {
+                            kind = envie.kind
+                            day = nil
+                        }
+                    }
                 }
                 fetchingTitle = false
             }
@@ -197,7 +212,7 @@ struct ShareComposeView: View {
             notes = TaskContact.notes(notes, setting: place.contact(link: placeLink))
         }
         if let kind {
-            notes = ToSee.notes(notes, setting: ToSee(kind))
+            notes = ToSee.notes(notes, setting: ToSee(kind, note: suggestion?.kind == kind ? suggestion?.label : nil))
             day = nil
         }
         if HAConfig.isActive, await addToHA(title: cleanTitle, notes: notes, minutes: minutes) {
@@ -252,4 +267,9 @@ struct ShareComposeView: View {
             return first
         }
     }
+}
+
+private extension String {
+    /// « bar » → « Bar ».
+    var capitalizedFirst: String { prefix(1).uppercased() + dropFirst() }
 }

@@ -269,6 +269,7 @@
 		E3FD3372EC844E9BAAB37EEB /* ReminderPlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E48E67DBEFD62C7E6118390 /* ReminderPlanner.swift */; };
 		E49EE1CC985FCC5FDCA27A09 /* TaskTag.swift in Sources */ = {isa = PBXBuildFile; fileRef = B863B8DA8A7D1FFAE24BE87C /* TaskTag.swift */; };
 		E760D750ADA9349B536A92E7 /* DueTextTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4DC1239718727B09A71BA21 /* DueTextTests.swift */; };
+		E8EC0CE2B79974BD2003D4FB /* PlaceCategory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A158CA0EBF4E13AC0646123 /* PlaceCategory.swift */; };
 		EA68B655AD96AC1346A4F39C /* ReminderPlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E48E67DBEFD62C7E6118390 /* ReminderPlanner.swift */; };
 		EACD7A26CDE728DACD37189D /* WatchAddView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF7D59A852003D569866B8C8 /* WatchAddView.swift */; };
 		EC26EB9632D040AFA3D8EB56 /* TaskContact.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB47AF80FF2840FC777CCEC2 /* TaskContact.swift */; };
@@ -435,6 +436,7 @@
 		61A994C34CC736F16CBEE82E /* SharedPlaceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedPlaceTests.swift; sourceTree = "<group>"; };
 		6203FE3484BB9AB47B0C2D83 /* NoteLines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteLines.swift; sourceTree = "<group>"; };
 		666C8CA69B643438FA2EC7C2 /* DueText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DueText.swift; sourceTree = "<group>"; };
+		6A158CA0EBF4E13AC0646123 /* PlaceCategory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceCategory.swift; sourceTree = "<group>"; };
 		7101AAD132DC47E2F1E92A49 /* RelanceWatch.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = RelanceWatch.entitlements; sourceTree = "<group>"; };
 		719434D8C63A56B7090C5E3F /* TacheHA.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TacheHA.swift; sourceTree = "<group>"; };
 		7330833E3C0E5C180D91AC6A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -576,6 +578,7 @@
 			children = (
 				4AF54CF05DEFFF16CB11D50D /* Info.plist */,
 				2F79F1BB3DA9597815EB03EE /* MemoShareView.swift */,
+				6A158CA0EBF4E13AC0646123 /* PlaceCategory.swift */,
 				DC32596A1285FC2A86206F55 /* RelanceShare.entitlements */,
 				1ACA9CCEB1971063F8141552 /* ShareComposeView.swift */,
 				B8DD169C267E52E75DD38AAD /* ShareRootView.swift */,
@@ -1310,6 +1313,7 @@
 				EDD93DB9E52E0D23FC770AA2 /* MemoShareView.swift in Sources */,
 				3E9FFFC514E3BD217B581094 /* NoteLines.swift in Sources */,
 				CBAFE55704F5C1DBAA548A8D /* NotesTimeCodec.swift in Sources */,
+				E8EC0CE2B79974BD2003D4FB /* PlaceCategory.swift in Sources */,
 				CEB0661B20E19E4D74AF8B84 /* ReminderOverride.swift in Sources */,
 				03042DD444E64B5E71EE600E /* ShareComposeView.swift in Sources */,
 				67B127B18E5CC48E3A37338B /* ShareRootView.swift in Sources */,

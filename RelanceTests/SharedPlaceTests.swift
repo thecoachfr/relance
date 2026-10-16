@@ -49,6 +49,19 @@ struct SharedPlaceTests {
         #expect(point.latitude == 48.8519 && point.name == "Point sur la carte")
     }
 
+    /// Catégories renvoyées par Plans pour les lieux partagés le 16/10.
+    @Test func envieFromPlansCategory() {
+        #expect(SharedPlace.envie(forCategory: "MKPOICategoryNightlife")! == (.restaurant, "bar"))
+        #expect(SharedPlace.envie(forCategory: "MKPOICategoryFoodMarket")! == (.shop, "épicerie"))
+        #expect(SharedPlace.envie(forCategory: "MKPOICategoryRestaurant")! == (.restaurant, "restaurant"))
+        #expect(SharedPlace.envie(forCategory: "MKPOICategoryStore")! == (.shop, nil))
+        #expect(SharedPlace.envie(forCategory: "MKPOICategoryMuseum")?.kind == .outing)
+        #expect(SharedPlace.envie(forCategory: "MKPOICategoryPharmacy") == nil)
+        #expect(SharedPlace.envie(forCategory: nil) == nil)
+        // La sorte de lieu va sur la ligne du type.
+        #expect(ToSee(.restaurant, note: "bar").lines == ["🍽 À tester · bar"])
+    }
+
     @Test func errorPagesAreNotTitles() {
         #expect(SharedLink.title(inHTML: "<title>Dynamic Link Not Found</title>") == nil)
         #expect(SharedLink.title(inHTML: "<title>Perfect Days - YouTube</title>") == "Perfect Days")

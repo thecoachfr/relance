@@ -13,8 +13,36 @@ nonisolated struct SharedPlace: Equatable, Sendable {
     var address: String?
     var latitude: Double?
     var longitude: Double?
+
+    init(name: String, address: String? = nil, latitude: Double? = nil, longitude: Double? = nil,
+         source: String, category: String? = nil) {
+        (self.name, self.address, self.latitude, self.longitude, self.source, self.category)
+            = (name, address, latitude, longitude, source, category)
+    }
     /// `plans` ou `google` (champ `lieu.source`).
     var source: String
+    /// Catégorie de Plans (`MKPOICategoryNightlife`…), demandée à Plans au moment du partage.
+    var category: String?
+
+    /// Envie proposée d'après la catégorie de Plans, et la sorte de lieu notée sur la ligne du type
+    /// (« 🍽 À tester · bar »). Catégories relevées le 16/10 : Aromes → épicerie, Express de Lyon → bar,
+    /// Le P'tit Zinc → restaurant.
+    static func envie(forCategory category: String?) -> (kind: ToSee.Kind, label: String?)? {
+        guard let category else { return nil }
+        let table: [String: (ToSee.Kind, String?)] = [
+            "Restaurant": (.restaurant, "restaurant"), "Cafe": (.restaurant, "café"), "Bakery": (.restaurant, "boulangerie"),
+            "Nightlife": (.restaurant, "bar"), "Brewery": (.restaurant, "brasserie"), "Winery": (.restaurant, "domaine viticole"),
+            "Distillery": (.restaurant, "distillerie"),
+            "Store": (.shop, nil), "FoodMarket": (.shop, "épicerie"),
+            "Museum": (.outing, "musée"), "Park": (.outing, "parc"), "NationalPark": (.outing, "parc naturel"),
+            "Theater": (.outing, "théâtre"), "MovieTheater": (.outing, "cinéma"), "MusicVenue": (.outing, "salle de concert"),
+            "Aquarium": (.outing, "aquarium"), "Zoo": (.outing, "zoo"), "AmusementPark": (.outing, "parc d'attractions"),
+            "Landmark": (.outing, "monument"), "NationalMonument": (.outing, "monument"), "Castle": (.outing, "château"),
+            "Fortress": (.outing, "fort"), "Planetarium": (.outing, "planétarium"), "Library": (.outing, "bibliothèque"),
+            "Beach": (.outing, "plage"), "Stadium": (.outing, "stade"),
+        ]
+        return table[category.replacingOccurrences(of: "MKPOICategory", with: "")].map { (kind: $0.0, label: $0.1) }
+    }
 
     /// Lien de carte, court ou long.
     static func isMapLink(_ url: URL) -> Bool {
