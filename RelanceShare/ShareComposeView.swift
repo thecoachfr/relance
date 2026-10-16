@@ -54,7 +54,7 @@ struct ShareComposeView: View {
                     }
                 }
 
-                if let photo, !photo.hasLocation {
+                if let photo, !photo.hasLocation, !recipeText {
                     Section {
                         Label("Cette photo n'a pas de position. Dans Photos, touche Options en haut de la feuille de partage et active « Lieu », ou ajoute le lieu ensuite dans la tâche.",
                               systemImage: "location.slash")
@@ -184,6 +184,17 @@ struct ShareComposeView: View {
         if let m = draft.minutes {
             hasTime = true
             time = Calendar.current.date(bySettingHour: m / 60, minute: m % 60, second: 0, of: .now)!
+        }
+        // Une photo de recette (texte lu sur l'image) : une liste de courses, pas un spot photo.
+        if let texte = photo?.texte, SharedRecipe.looksLikeRecipe(texte) {
+            recipeText = true
+            asList = true
+            day = nil
+            let premiere = texte.split(separator: "\n").map { $0.trimmingCharacters(in: .whitespaces) }
+                .first { $0.count >= 3 && !SharedRecipe.looksLikeRecipe($0) }
+            title = premiere.map { String($0.prefix(60)) } ?? "Recette"
+            proposedTitle = title
+            return
         }
         // Une photo : un spot photo, à l'endroit où elle a été prise.
         if let photo {
@@ -344,7 +355,7 @@ struct ShareComposeView: View {
         if asList, kind == nil {
             var liste = TacheHA.Liste(parts: recipe?.parts)
             let entree = recipe.map { $0.entree(lien: SharedLink.url(in: original)) }
-                ?? SharedRecipe.entree(texte: original, titre: title)
+                ?? SharedRecipe.entree(texte: photo?.texte ?? original, titre: title)
             liste.autres["recettes"] = .liste([entree])
             tache.liste = liste
         }

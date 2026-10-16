@@ -1,12 +1,16 @@
 import Foundation
 import ImageIO
 
+import Vision
+
 /// Photo partagée depuis Photos (plan P9-A3) : position et date de prise de vue lues dans ses métadonnées.
 /// Sans position (photo sans GPS, ou option « Lieu » coupée dans la feuille de partage), on le dit clairement.
 nonisolated struct SharedPhoto: Equatable, Sendable {
     var latitude: Double?
     var longitude: Double?
     var date: Date?
+    /// Texte lu dans l'image sur l'appareil (P9-G3 : page de livre de recettes) ; rien de l'image n'est gardé.
+    var texte: String?
 
     var hasLocation: Bool { latitude != nil && longitude != nil }
 
@@ -39,6 +43,21 @@ nonisolated struct SharedPhoto: Equatable, Sendable {
             formatter.dateFormat = "yyyy:MM:dd HH:mm:ss"
             date = formatter.date(from: text)
         }
+    }
+
+    /// Texte de l'image (reconnaissance de Vision, sur l'appareil), image réduite à 2 048 px pour la mémoire
+    /// de l'extension. `nil` si rien n'est lu.
+    static func text(in source: CGImageSource) -> String? {
+        let options = [kCGImageSourceCreateThumbnailFromImageAlways: true, kCGImageSourceThumbnailMaxPixelSize: 2048,
+                       kCGImageSourceCreateThumbnailWithTransform: true] as CFDictionary
+        guard let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options) else { return nil }
+        let request = VNRecognizeTextRequest()
+        request.recognitionLevel = .accurate
+        request.recognitionLanguages = ["fr-FR", "it-IT", "en-US"]
+        request.usesLanguageCorrection = true
+        try? VNImageRequestHandler(cgImage: image).perform([request])
+        let lines = (request.results ?? []).compactMap { $0.topCandidates(1).first?.string }
+        return lines.isEmpty ? nil : lines.joined(separator: "\n")
     }
 
     /// « Photo du 12 octobre 2026 », gardée dans les notes (pas de vignette : taille des enregistrements).

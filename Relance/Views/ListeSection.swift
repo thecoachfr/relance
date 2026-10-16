@@ -54,6 +54,8 @@ struct ListeSection: View {
                             }
                             .font(.footnote.bold())
                         }
+                    } else if liste.proposee {
+                        Text("Liste proposée par Claude d'après une recette classique, quantités indicatives : ajuste-la.")
                     } else if liste.articles.isEmpty {
                         Text("Quand tout est coché, la tâche passe en « Fait ».")
                     }

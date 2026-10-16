@@ -54,7 +54,10 @@ final class ShareViewController: UIViewController {
         case let data as Data: source = CGImageSourceCreateWithData(data as CFData, nil)
         default: source = nil  // Une image sans fichier (capture) n'a pas de métadonnées.
         }
-        return source.flatMap(SharedPhoto.init(source:)) ?? SharedPhoto()
+        var photo = source.flatMap(SharedPhoto.init(source:)) ?? SharedPhoto()
+        // Une page de livre de recettes : son texte (lu sur l'iPhone) peut devenir une liste de courses (P9-G3).
+        if let source { photo.texte = SharedPhoto.text(in: source) }
+        return photo
     }
 
     /// Contact d'abord (fiche la plus riche), sinon texte, liens et titre de la page.

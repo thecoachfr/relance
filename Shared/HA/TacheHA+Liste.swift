@@ -88,6 +88,12 @@ nonisolated extension TacheHA {
         }
 
         var cochés: Int { articles.filter(\.coche).count }
+        /// Liste proposée par la routine d'après le nom d'un plat (« courses pour un risotto », P9-G3).
+        var proposee: Bool {
+            guard case .liste(let recettes)? = autres["recettes"] else { return false }
+            return recettes.contains { if case .objet(let r) = $0 { r["proposee"] == .booleen(true) } else { false } }
+        }
+
         /// Recettes dont la routine de tri n'a pas encore tiré les ingrédients (P9-G3).
         var recettesAPreparer: [String] {
             guard case .liste(let recettes)? = autres["recettes"] else { return [] }
