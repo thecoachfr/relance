@@ -278,7 +278,7 @@ struct AvailabilityView: View {
                     line("À l'achat", availability.buy)
                     if availability.subscription.isEmpty && availability.free.isEmpty
                         && availability.rent.isEmpty && availability.buy.isEmpty {
-                        Text("Disponible nulle part en France pour l'instant.").font(.subheadline).foregroundStyle(.secondary)
+                        Text("Aucune plateforme connue en France pour l'instant.").font(.subheadline).foregroundStyle(.secondary)
                     }
                     Text("Disponibilités : JustWatch, via TMDB").font(.caption2).foregroundStyle(.tertiary)
                 }

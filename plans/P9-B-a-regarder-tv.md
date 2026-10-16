@@ -30,6 +30,7 @@ Puis : savoir **sur quelle plateforme** le titre est disponible en France, l'ouv
 - Paragraphe pour la routine de tri (étape K) : quand une envie « À regarder » nomme une plateforme (« sur Netflix », « sur Apple TV »), remplir `envie.plateforme` ; remettre le titre exact de l'œuvre dans le titre de la tâche (sans « sur Netflix ») avec la ligne `🎙 Dicté : …` comme aujourd'hui. Ne jamais inventer d'identifiant ni de lien. À appliquer à la routine après B1 en service (index, section 4).
 
 ### B3 — Disponibilité en France par TMDB (vigie AppDaemon)
+*En service le 16/10 (essai réel : Haunted Hotel → Netflix ; VisionQuest trouvée, sans plateforme connue). Restent les abonnements (badge, alerte).*
 - Pourquoi la vigie : elle tourne dans HA, a accès à Internet et réagit déjà à `donnees_apps_modifie` ; la routine n'a que l'outil Home Assistant.
 - Quand une tâche a `envie.type = regarder` sans `tmdb` (ou `dispo_maj` de plus de 7 jours) : chercher le titre dans TMDB (`/search/multi`, `language=fr-FR`, année si connue), garder `tmdb = {id, type: movie|tv, titre, annee, affiche}` ; puis `/{movie|tv}/{id}/watch/providers` → `dispo_fr` = fournisseurs pour la France, par mode (abonnement, location, achat), et `dispo_maj`.
 - TMDB fournit ces disponibilités grâce à JustWatch et **impose de citer JustWatch** : afficher « Disponibilités : JustWatch » dans la fiche. TMDB **ne donne pas de lien direct** vers l'app (documentation : « This is not going to return full deep links ») : le lien reste celui partagé, ou à défaut la plateforme seule.

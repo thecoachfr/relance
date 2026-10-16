@@ -126,7 +126,7 @@ struct AvailabilityTests {
         try JSONDecoder().decode(TacheHA.self, from: Data(#"""
         {"titre":"The Bear","notes":"🎬 À regarder","envie":{"type":"regarder","plateforme":"disney",
          "tmdb":{"id":136315,"type":"tv","titre":"The Bear","annee":2022,"affiche":"https://image.tmdb.org/t/p/w342/a.jpg"},
-         "dispo_fr":{"abonnement":[{"id":337,"nom":"Disney Plus","code":"disney"}],"location":[{"id":2,"nom":"Apple TV","code":"apple_tv"}]},
+         "dispo_fr":{"abonnement":[{"id":337,"nom":"Disney Plus","code":"disney"},{"id":9,"nom":"Disney Plus Basic","code":"disney"}],"location":[{"id":2,"nom":"Apple TV","code":"apple_tv"}]},
          "dispo_maj":"2026-10-16"}}
         """#.utf8)).apply(to: item)
         let a = try #require(item.availability)

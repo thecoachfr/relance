@@ -171,9 +171,13 @@ nonisolated struct Availability: Equatable, Sendable {
         func object(_ v: JSONValeur?) -> [String: JSONValeur]? { if case .objet(let o)? = v { o } else { nil } }
         func providers(_ v: JSONValeur?) -> [Provider] {
             guard case .liste(let list)? = v else { return [] }
+            // Une plateforme par code (« Netflix » et « Netflix Standard with Ads »).
+            var codes = Set<String>()
             return list.compactMap { item in
                 guard let o = object(item), let name = text(o["nom"]) else { return nil }
-                return Provider(name: name, code: text(o["code"]))
+                let code = text(o["code"])
+                if let code, !codes.insert(code).inserted { return nil }
+                return Provider(name: name, code: code)
             }
         }
         let tmdb = object(envie.autres["tmdb"])

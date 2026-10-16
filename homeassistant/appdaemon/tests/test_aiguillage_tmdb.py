@@ -13,7 +13,12 @@ TODAY = date(2026, 10, 16)
 def test_search_query():
     assert t.search_query("Dune (2021)") == ("Dune", 2021)
     assert t.search_query("The Bear (essai B2)") == ("The Bear", None)
-    assert t.search_query("À regarder sur Netflix") == ("À regarder sur Netflix", None)
+    # Titres réels du 16/10 (proposés par la routine pour des messages partagés).
+    assert t.search_query("Regarder Haunted Hotel sur Netflix") == ("Haunted Hotel", None)
+    assert t.search_query("Regarder VisionQuest sur Disney+") == ("VisionQuest", None)
+    assert t.search_query("Voir la série The Bear sur Disney Plus") == ("The Bear", None)
+    assert t.search_query("À regarder sur Netflix") == ("", None)
+    assert t.search_query("Monarch legacy of monsters") == ("Monarch legacy of monsters", None)
 
 
 def test_needs_lookup():
@@ -25,7 +30,20 @@ def test_needs_lookup():
     assert not t.needs_lookup(fresh, TODAY)
     old = {**regarder, "envie": {"type": "regarder", "dispo_maj": "2026-10-01"}}
     assert t.needs_lookup(old, TODAY)
-    ambigu = {**regarder, "envie": {"type": "regarder", "tmdb_statut": "ambigu", "tmdb_maj": "2026-10-15"}}
+    # Tâche plus ancienne que le champ `envie` : la ligne suffit, et le champ est créé.
+    ancienne = {"titre": "Regarder la vidéo", "fait": False, "notes": "📩 Message partagé\nhttps://www.netflix.com/title/1\n🎬 À regarder"}
+    assert t.needs_lookup(ancienne, TODAY)
+    assert t.with_status(ancienne, "introuvable", TODAY)["envie"]["type"] == "regarder"
+    assert not t.needs_lookup({"titre": "x", "notes": "📖 À lire"}, TODAY)
+    # Vidéo YouTube : jamais cherchée.
+    assert not t.needs_lookup({"titre": "Regarder la vidéo YouTube", "notes": "https://youtube.com/watch?v=x\n🎬 À regarder"}, TODAY)
+    # Introuvable hier sous un autre texte : recherchée de nouveau tout de suite.
+    vu = {"titre": "Regarder Haunted Hotel sur Netflix", "notes": "🎬 À regarder",
+          "envie": {"type": "regarder", "tmdb_statut": "introuvable", "tmdb_maj": "2026-10-16"}}
+    assert not t.needs_lookup(t.with_status(vu, "introuvable", TODAY), TODAY)
+    assert t.needs_lookup({**vu, "envie": {**vu["envie"], "tmdb_requete": "Regarder Haunted Hotel sur Netflix"}}, TODAY)
+    assert t.needs_lookup(vu, TODAY)  # recherche d'avant la mémorisation du texte
+    ambigu = {**regarder, "envie": {"type": "regarder", "tmdb_statut": "ambigu", "tmdb_maj": "2026-10-15", "tmdb_requete": "Dune"}}
     assert not t.needs_lookup(ambigu, TODAY)
 
 
@@ -68,6 +86,10 @@ def test_providers_and_availability():
     kept = t.with_availability({**tache, "envie": {"type": "regarder", "plateforme": "netflix"}}, info, dispo, TODAY)
     assert kept["envie"]["plateforme"] == "netflix"
     assert t.providers_fr({"results": {}}) == {}
+    # Réponse réelle du 16/10 pour Haunted Hotel : deux offres Netflix, une seule plateforme.
+    netflix = t.providers_fr({"results": {"FR": {"flatrate": [{"provider_id": 8, "provider_name": "Netflix"},
+                                                            {"provider_id": 1796, "provider_name": "Netflix Standard with Ads"}]}}})
+    assert netflix == {"abonnement": [{"id": 8, "nom": "Netflix", "code": "netflix"}]}
 
 
 def test_status():

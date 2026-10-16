@@ -42,23 +42,53 @@ def code_for(provider_name):
     return next((code for key, code in PROVIDER_CODES if key in name), None)
 
 
+PLATFORM_WORDS = r"(netflix|disney\+?|disney plus|apple tv\+?|canal\+?|mycanal|prime video|amazon( prime)?( video)?|youtube|france\.?tv|france tv|arte|max|ocs|paramount\+?)"
+
+
 def search_query(title):
     """Titre de la tâche → (requête, année). « Dune (2021) » → (« Dune », 2021) ; les autres parenthèses
-    (« (saison 2) », « (essai) ») sont retirées."""
+    (« (saison 2) », « (essai) ») sont retirées, comme le verbe proposé par la routine pour un message partagé
+    (« Regarder Haunted Hotel sur Netflix » → « Haunted Hotel », 16/10)."""
     year = None
     m = re.search(r"\((19|20)\d{2}\)", title or "")
     if m:
         year = int(m.group(0)[1:-1])
     query = re.sub(r"\([^)]*\)", " ", title or "")
+    query = re.sub(r"^\s*(re)?(regarder|voir|mater)\s+((le|la|les)\s+(film|série|serie|documentaire|saison)s?\s+)?",
+                   "", query, flags=re.IGNORECASE)
+    query = re.sub(r"\s+sur\s+" + PLATFORM_WORDS + r"\s*$", "", query, flags=re.IGNORECASE)
+    query = re.sub(r"^\s*à regarder\s*$", "", query, flags=re.IGNORECASE)
     return re.sub(r"\s+", " ", query).strip(" -–:"), year
+
+
+def is_video(valeur):
+    """Une vidéo YouTube ou Twitch n'est pas sur TMDB : on ne la cherche pas."""
+    envie = valeur.get("envie") or {}
+    if envie.get("plateforme") in ("youtube", "twitch", "vimeo"):
+        return True
+    return re.search(r"(youtube\.com|youtu\.be|twitch\.tv|vimeo\.com)/", valeur.get("notes") or "") is not None
+
+
+def is_to_watch(valeur):
+    """Envie « À regarder » : champ `envie.type`, ou à défaut la ligne `🎬 À regarder` des notes (tâches
+    écrites avant le champ `envie`, que l'app n'a pas encore réécrites)."""
+    envie = valeur.get("envie")
+    if envie:
+        return envie.get("type") == "regarder"
+    return any(line.replace("\ufe0f", "").strip().startswith("🎬 À regarder")
+               for line in (valeur.get("notes") or "").split("\n"))
 
 
 def needs_lookup(valeur, today):
     """Envie à regarder, à faire, jamais vérifiée (ni marquée ambiguë ou introuvable depuis moins de 7 jours),
     ou dont les disponibilités ont plus de 7 jours."""
     envie = valeur.get("envie") or {}
-    if valeur.get("fait") or envie.get("type") != "regarder":
+    if valeur.get("fait") or not is_to_watch(valeur) or is_video(valeur):
         return False
+    # Titre changé depuis la dernière recherche (année ajoutée, faute corrigée) : on recherche tout de suite.
+    # (Aussi pour une recherche faite avant que le texte cherché soit mémorisé.)
+    if ("tmdb" in envie or "tmdb_statut" in envie) and envie.get("tmdb_requete") != search_query(valeur.get("titre", ""))[0]:
+        return True
     checked = envie.get("dispo_maj") or envie.get("tmdb_maj")
     if not checked:
         return True
@@ -103,15 +133,17 @@ def providers_fr(payload):
     fr = (payload.get("results") or {}).get("FR") or {}
 
     def entries(*keys):
+        # Une plateforme par code : « Netflix » et « Netflix Standard with Ads » ne font qu'une (16/10).
         seen, out = set(), []
         for key in keys:
             for p in fr.get(key) or []:
-                if p.get("provider_id") in seen:
+                code = code_for(p.get("provider_name"))
+                if p.get("provider_id") in seen or (code and code in seen):
                     continue
                 seen.add(p.get("provider_id"))
                 entry = {"id": p.get("provider_id"), "nom": p.get("provider_name", "")}
-                code = code_for(p.get("provider_name"))
                 if code:
+                    seen.add(code)
                     entry["code"] = code
                 out.append(entry)
         return out
@@ -124,8 +156,9 @@ def providers_fr(payload):
 def with_availability(valeur, info, dispo, today):
     """La tâche avec `tmdb`, `dispo_fr`, `dispo_maj` ; plateforme déduite de l'abonnement si elle manque."""
     valeur = dict(valeur)
-    envie = dict(valeur.get("envie") or {})
+    envie = dict(valeur.get("envie") or {"type": "regarder"})
     envie["tmdb"] = info
+    envie["tmdb_requete"] = search_query(valeur.get("titre", ""))[0]
     envie["dispo_fr"] = dispo
     envie["dispo_maj"] = today.isoformat()
     envie.pop("tmdb_maj", None)
@@ -146,9 +179,10 @@ def with_status(valeur, statut, today):
     """Aucune œuvre (`introuvable`) ou plusieurs (`ambigu`, avec une suggestion une seule fois) : noté pour ne pas
     redemander avant 7 jours."""
     valeur = dict(valeur)
-    envie = dict(valeur.get("envie") or {})
+    envie = dict(valeur.get("envie") or {"type": "regarder"})
     envie["tmdb_statut"] = statut
     envie["tmdb_maj"] = today.isoformat()
+    envie["tmdb_requete"] = search_query(valeur.get("titre", ""))[0]
     valeur["envie"] = envie
     valeur["v"] = max(valeur.get("v", 1), 2)
     notes = valeur.get("notes") or ""

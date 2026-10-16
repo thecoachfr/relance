@@ -234,6 +234,8 @@ class RelanceVigie(Hass):
         client = aiguillage_tmdb.Client(token)
         due = [r for r in records if self._is_task_key(r.get("cle", "")) and r.get("valeur")
                and aiguillage_tmdb.needs_lookup(r["valeur"], today)]
+        if due:
+            self.log(f"TMDB : {len(due)} envie(s) à regarder à vérifier ({min(len(due), TMDB_PER_PASS)} ce passage)")
         for record in due[:TMDB_PER_PASS]:
             valeur = record["valeur"]
             try:
