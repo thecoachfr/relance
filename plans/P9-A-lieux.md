@@ -22,6 +22,7 @@ Et pouvoir les ajouter sans rien taper : depuis un **lien Plans ou Google Maps p
 ## 3. Lots
 
 ### A1 — Champ `lieu` et coordonnées stockées
+*Fait le 16/10 (tests verts, épingle vérifiée dans le simulateur ; paragraphe pour la routine proposé dans SUIVI, à appliquer). Le lieu porte aussi `telephone` (repris de la ligne 📍).*
 - Ajouter `lieu` à `TacheHA` (`v: 2`, voir l'index) et au modèle de l'app ; `TaskContact` se lit depuis `lieu` s'il existe, sinon depuis la ligne `📍`.
 - À l'écriture : `lieu` + la ligne `📍` (compatibilité). Si `lieu` a des coordonnées mais pas d'adresse, la ligne `📍` porte le nom et le lien Plans.
 - Les coordonnées connues par `PlaceLocator` (cache par adresse) remplissent `lat`/`lon` quand la tâche est réécrite pour une autre raison : pas de migration massive.

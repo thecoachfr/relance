@@ -6,8 +6,22 @@ import Foundation
 /// Contrairement à Google Tasks, chaque information a son champ : plus de lignes `⏰`, `🏷`, `🔖`, `❗`, `🔁`
 /// en tête des notes. Les autres lignes techniques (`📍`, `🔄`, `👀`, `🗓`, `📅`, `💡`, `🎙`…) restent dans
 /// `notes`, comme avant. Lu aussi par la vigie, la routine de tri et l'écran du Nest Hub : garder les noms.
+/// Version 2 (plans P9, `plans/P9-00-INDEX.md`) : champ `lieu`, dont la ligne `📍` des notes reste une copie.
 nonisolated struct TacheHA: Codable, Equatable, Sendable {
-    /// Version du format.
+    /// Lieu de la tâche (P9-A). Il fait foi ; la ligne `📍` des notes en est la copie lue par la vigie,
+    /// la routine de tri, l'écran du Nest Hub et le mode Google Tasks.
+    struct Lieu: Codable, Equatable, Sendable {
+        var nom: String
+        var adresse: String?
+        var telephone: String?
+        var lat: Double?
+        var lon: Double?
+        var lien: String?
+        /// `plans`, `google`, `photo`, `gps`, `memo` ou `saisie` ; absent si inconnu.
+        var source: String?
+    }
+
+    /// Version du format : 2 dès qu'un champ P9 est présent.
     var v = 1
     var titre: String
     var notes: String = ""
@@ -26,9 +40,10 @@ nonisolated struct TacheHA: Codable, Equatable, Sendable {
     var faitLe: String?
     /// Identifiant Google Tasks d'origine (tâche migrée ou dictée à Google Home) : évite les doublons.
     var googleID: String?
+    var lieu: Lieu?
 
     enum CodingKeys: String, CodingKey {
-        case v, titre, notes, jour, heure, categorie, priorite, tags, relances, fait
+        case v, titre, notes, jour, heure, categorie, priorite, tags, relances, fait, lieu
         case faitLe = "fait_le"
         case googleID = "google_id"
     }
@@ -51,12 +66,14 @@ nonisolated struct TacheHA: Codable, Equatable, Sendable {
         fait = try c.decodeIfPresent(Bool.self, forKey: .fait) ?? false
         faitLe = try c.decodeIfPresent(String.self, forKey: .faitLe)
         googleID = try c.decodeIfPresent(String.self, forKey: .googleID)
+        // Un lieu mal formé (écrit à la main, autre version) ne doit pas rendre la tâche illisible.
+        lieu = try? c.decodeIfPresent(Lieu.self, forKey: .lieu)
     }
 
     /// Les champs absents ne sont pas écrits (JSON plus lisible pour la routine et la vigie).
     func encode(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(v, forKey: .v)
+        try c.encode(lieu == nil ? v : max(v, 2), forKey: .v)
         try c.encode(titre, forKey: .titre)
         if !notes.isEmpty { try c.encode(notes, forKey: .notes) }
         try c.encodeIfPresent(jour, forKey: .jour)
@@ -68,6 +85,7 @@ nonisolated struct TacheHA: Codable, Equatable, Sendable {
         try c.encode(fait, forKey: .fait)
         try c.encodeIfPresent(faitLe, forKey: .faitLe)
         try c.encodeIfPresent(googleID, forKey: .googleID)
+        try c.encodeIfPresent(lieu, forKey: .lieu)
     }
 
     // MARK: - Conversions

@@ -6,7 +6,7 @@ import MapKit
 @MainActor @Observable
 final class PlaceLocator {
     static let shared = PlaceLocator()
-    private static let key = "placeCoordinates"
+    private static let key = PlaceCoordinates.key
 
     private(set) var coordinates: [String: CLLocationCoordinate2D]
     /// Adresses introuvables pendant cette session : on ne redemande pas à chaque affichage.
@@ -15,6 +15,17 @@ final class PlaceLocator {
     private init() {
         let saved = AppGroup.defaults.dictionary(forKey: Self.key) as? [String: [Double]] ?? [:]
         coordinates = saved.compactMapValues { $0.count == 2 ? CLLocationCoordinate2D(latitude: $0[0], longitude: $0[1]) : nil }
+    }
+
+    /// Position d'une tâche : coordonnées de son lieu (photo, GPS, lien), sinon celles de son adresse.
+    func coordinate(for item: TaskItem) -> CLLocationCoordinate2D? {
+        if let c = item.placeCoordinate { return CLLocationCoordinate2D(latitude: c.latitude, longitude: c.longitude) }
+        return TaskContact(notes: item.notes)?.address.flatMap { coordinates[$0] }
+    }
+
+    /// Adresses à chercher : celles des tâches dont le lieu n'a pas déjà ses coordonnées.
+    static func addresses(of items: [TaskItem]) -> [String] {
+        items.compactMap { $0.placeCoordinate == nil ? TaskContact(notes: $0.notes)?.address : nil }
     }
 
     /// Cherche les adresses encore inconnues (Plans limite le nombre de recherches : une à la fois).

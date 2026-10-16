@@ -20,6 +20,9 @@ enum DemoData {
         let books = store.add(title: "Rendre les livres à la médiathèque", day: day(3), minutes: nil, category: "Perso")
         books.notes = "📍 Bibliothèque de l'Hôtel de Ville · 5 rue de Lobau, 75004 Paris"
         store.add(title: "Trier les papiers de la banque", day: nil, minutes: nil)
+        // Lieu sans adresse (photo, point GPS) : seulement un lien Plans vers le point.
+        let spot = store.add(title: "Photographier le pont Marie au couchant", day: day(4), minutes: nil, category: "Perso")
+        spot.notes = "📍 Pont Marie · https://maps.apple.com/?ll=48.8519,2.3572&q=Pont%20Marie"
         let expo = store.add(title: "Voir l'expo photo de la MEP", day: nil, minutes: nil, category: "Perso")
         expo.notes = "📍 Maison européenne de la photographie · 5 rue de Fourcy, 75004 Paris\n"
             + ToSee(start: day(-30), end: day(19)).lines.joined(separator: "\n")

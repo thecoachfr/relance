@@ -33,8 +33,8 @@ final class ProximityReminders: NSObject, CLLocationManagerDelegate {
     /// Zones à surveiller : tâches à faire marquées, urgentes puis les plus proches de l'échéance.
     func update(tasks: [TaskItem]) async {
         guard CLLocationManager.isMonitoringAvailable(for: CLCircularRegion.self) else { return }
-        let marked = tasks.filter { NearbyReminder.isOn($0.notes) && TaskContact(notes: $0.notes)?.address != nil }
-        await PlaceLocator.shared.locate(marked.compactMap { TaskContact(notes: $0.notes)?.address })
+        let marked = tasks.filter { NearbyReminder.isOn($0.notes) && TaskContact(notes: $0.notes) != nil }
+        await PlaceLocator.shared.locate(PlaceLocator.addresses(of: marked))
         let allowed = authorization == .authorizedAlways || authorization == .authorizedWhenInUse
         let wanted: [CLCircularRegion] = (ReminderScheduler.isEnabledOnThisDevice && allowed) ? marked
             .sorted { a, b in
@@ -42,8 +42,7 @@ final class ProximityReminders: NSObject, CLLocationManagerDelegate {
                 return (a.dueInstant() ?? .distantFuture) < (b.dueInstant() ?? .distantFuture)
             }
             .compactMap { item -> CLCircularRegion? in
-                guard let address = TaskContact(notes: item.notes)?.address,
-                      let center = PlaceLocator.shared.coordinates[address] else { return nil }
+                guard let center = PlaceLocator.shared.coordinate(for: item) else { return nil }
                 let region = CLCircularRegion(center: center, radius: Self.radius,
                                               identifier: Self.prefix + item.localID.uuidString)
                 region.notifyOnEntry = true

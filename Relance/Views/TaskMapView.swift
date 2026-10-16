@@ -24,15 +24,16 @@ struct TaskMapView: View {
 
     private var placed: [(item: TaskItem, contact: TaskContact, coordinate: CLLocationCoordinate2D)] {
         active.compactMap { item in
-            guard let contact = TaskContact(notes: item.notes), let address = contact.address,
-                  let coordinate = locator.coordinates[address] else { return nil }
+            guard let contact = TaskContact(notes: item.notes), let coordinate = locator.coordinate(for: item)
+            else { return nil }
             return (item, contact, coordinate)
         }
     }
 
-    private var addresses: [String] {
-        active.compactMap { TaskContact(notes: $0.notes)?.address }
-    }
+    /// Adresses à faire chercher par Plans (les lieux qui ont déjà leurs coordonnées n'en ont pas besoin).
+    private var addresses: [String] { PlaceLocator.addresses(of: active) }
+
+    private var hasPlaces: Bool { active.contains { TaskContact(notes: $0.notes) != nil } }
 
     /// Le lieu commun quand toutes les tâches du groupe sont au même endroit (à 30 m près).
     static func samePlace(_ group: [Entry]) -> TaskContact? {
@@ -123,7 +124,7 @@ struct TaskMapView: View {
             MapScaleView()
         }
         .overlay {
-            if addresses.isEmpty {
+            if !hasPlaces {
                 ContentUnavailableView("Aucune tâche avec un lieu", systemImage: "map",
                                        description: Text("Ajoute un lieu à une tâche (section Lieu du détail) pour la voir ici."))
                     .background(.regularMaterial)
@@ -284,7 +285,7 @@ private struct MapTaskCard: View {
                     onDone()
                 }
                 .tint(.green)
-                if let url = contact.address.flatMap({ TravelTimes.mapsURL(to: $0, settings: store.scheduler.settings.departure) }) {
+                if let url = contact.destination.flatMap({ TravelTimes.mapsURL(to: $0, settings: store.scheduler.settings.departure) }) {
                     Button("Itinéraire", systemImage: "map") { openURL(url) }
                 }
                 Button("Détails", systemImage: "info.circle", action: onOpen)

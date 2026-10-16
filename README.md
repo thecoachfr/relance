@@ -52,6 +52,11 @@ Sur chaque appareil (iPhone, iPad, Mac) : **Réglages › Home Assistant** :
    puis toutes les tâches de l'appareil partent dans Home Assistant (avec leur identifiant Google).
 3. « Revenir à Google Tasks » renvoie les tâches de l'appareil dans Google en cas de souci.
 
+Format des tâches (`Shared/HA/TacheHA.swift`) : version 2 dès qu'une tâche a un **lieu** (plans P9, `plans/`) :
+`lieu = {nom, adresse, telephone, lat, lon, lien, source}`, tous facultatifs sauf `nom`. Le champ fait foi ; la ligne `📍`
+des notes en est une copie, toujours écrite, pour la vigie, la routine de tri, l'écran du Nest Hub et le mode Google.
+Un lieu sans adresse (photo, point GPS) a pour ligne `📍 Nom · https://maps.apple.com/?ll=lat,lon&q=Nom`.
+
 Google Tasks n'est plus que la **boîte d'entrée** des dictées Google Home (la vigie les reprend dans Home Assistant, puis
 les retire de Google). Le **mémo** de la routine de tri est dans Home Assistant depuis le 15/10 : liste Local To-do
 « Aiguillage · mémo » (`todo.aiguillage_memo`), qu'on modifie aussi dans Home Assistant (panneau **Listes de tâches**, titre

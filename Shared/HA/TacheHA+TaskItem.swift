@@ -5,7 +5,9 @@ extension TacheHA {
     /// La tâche locale, telle qu'envoyée à HA.
     init(_ item: TaskItem) {
         self.init(titre: item.title)
-        notes = item.notes
+        lieu = item.lieu(cache: PlaceCoordinates.saved())
+        // La ligne 📍 recopie le lieu (lien Plans du point quand il n'a pas d'adresse).
+        notes = lieu.map { TaskContact.notes(item.notes, setting: $0.contact) } ?? item.notes
         jour = Self.jour(item.dueDay)
         heure = item.dueDay == nil ? nil : Self.heure(item.dueMinutes)
         categorie = item.category
@@ -23,7 +25,10 @@ extension TacheHA {
         let minutes = day == nil ? nil : minutes
         if day != item.dueDay || minutes != item.dueMinutes { item.snoozedUntil = nil }
         item.title = titre
-        item.notes = notes
+        // Le lieu fait foi : la ligne 📍 est réécrite d'après lui. Sans lieu (ancienne tâche, mode Google),
+        // la ligne des notes reste la seule source.
+        item.notes = lieu.map { TaskContact.notes(notes, setting: $0.contact) } ?? notes
+        item.placeRaw = lieu.flatMap { try? JSONEncoder().encode($0) }.map { String(decoding: $0, as: UTF8.self) }
         item.dueDay = day
         item.dueMinutes = minutes
         item.category = categorie
@@ -34,6 +39,54 @@ extension TacheHA {
         item.completedAt = fait ? (Self.date(faitLe) ?? item.completedAt ?? .now) : nil
         if let googleID { item.googleID = googleID }
         item.isDirty = false
+    }
+}
+
+nonisolated extension TacheHA.Lieu {
+    /// Lieu tiré de la ligne 📍 (coordonnées comprises si son lien Plans en porte).
+    init(_ contact: TaskContact) {
+        self.init(nom: contact.name, adresse: contact.address, telephone: contact.phone,
+                  lat: contact.coordinate?.latitude, lon: contact.coordinate?.longitude,
+                  lien: contact.link?.absoluteString)
+    }
+
+    /// La ligne 📍 correspondante ; sans adresse ni lien, un lien Plans vers le point.
+    var contact: TaskContact {
+        var link = lien.flatMap(URL.init(string:))
+        if link == nil, adresse == nil, let lat, let lon {
+            link = TaskContact.mapsLink(name: nom, latitude: lat, longitude: lon)
+        }
+        return TaskContact(name: nom, address: adresse, phone: telephone, link: link)
+    }
+
+    /// Même endroit : même adresse, ou même nom quand aucun des deux n'a d'adresse.
+    func isSamePlace(as other: Self) -> Bool {
+        adresse == other.adresse && (adresse != nil || nom == other.nom)
+    }
+}
+
+extension TaskItem {
+    /// Le lieu à envoyer à HA : la ligne 📍 actuelle (modifiable dans l'app), complétée par le dernier lieu
+    /// reçu de HA s'il s'agit du même endroit (coordonnées, source), sinon par `cache` (adresses déjà
+    /// trouvées par Plans). `nil` sans ligne 📍.
+    func lieu(cache: [String: [Double]] = [:]) -> TacheHA.Lieu? {
+        guard let contact = TaskContact(notes: notes) else { return nil }
+        var lieu = TacheHA.Lieu(contact)
+        let previous = placeRaw.flatMap { try? JSONDecoder().decode(TacheHA.Lieu.self, from: Data($0.utf8)) }
+        if let previous, previous.isSamePlace(as: lieu) {
+            lieu.source = previous.source
+            if lieu.lat == nil { (lieu.lat, lieu.lon) = (previous.lat, previous.lon) }
+        }
+        if lieu.lat == nil, let address = lieu.adresse, let c = cache[address], c.count == 2 {
+            (lieu.lat, lieu.lon) = (TaskContact.rounded(c[0]), TaskContact.rounded(c[1]))
+        }
+        return lieu
+    }
+
+    /// Coordonnées connues du lieu sans rien demander à Plans (lieu reçu de HA, lien Plans de la ligne 📍).
+    var placeCoordinate: (latitude: Double, longitude: Double)? {
+        guard let lieu = lieu(), let lat = lieu.lat, let lon = lieu.lon else { return nil }
+        return (lat, lon)
     }
 }
 

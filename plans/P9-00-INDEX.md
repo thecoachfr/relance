@@ -34,6 +34,7 @@ Les tâches sont dans l'espace `aiguillage` de `donnees_apps` (`Shared/HA/TacheH
   "lieu": {
     "nom": "Pont de Charenton",
     "adresse": "Quai…, 94220 Charenton-le-Pont",
+    "telephone": null,
     "lat": 48.8215, "lon": 2.4123,
     "lien": "https://maps.apple.com/?ll=48.8215,2.4123&q=…",
     "source": "photo"
@@ -52,6 +53,7 @@ Les tâches sont dans l'espace `aiguillage` de `donnees_apps` (`Shared/HA/TacheH
 }
 ```
 
+- `lieu.telephone` : ajouté en A1 (16/10), le téléphone de la ligne `📍`, pour ne pas le perdre quand le champ fait foi.
 - `lieu.source` : `plans`, `google`, `photo`, `gps`, `memo` (ajouté par la routine) ou `saisie`. `adresse` devient facultative : une photo ou un point GPS n'en a pas forcément.
 - `envie.type` : `voir`, `lire`, `ecouter`, `regarder` (existants) et `resto`, `magasin`, `spot_photo` (nouveaux, plan A). Champs `plateforme`, `id_titre`, `tmdb`, `dispo_fr`, `dispo_maj` : plan B.
 - `actions` : plan D (B ajoute seulement l'action `sur_tv` déclenchée au toucher).

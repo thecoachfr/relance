@@ -176,6 +176,7 @@
 		98A2CDF1A6E8F5FD9A8E2153 /* WatchTaskList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 412F18AC79776A3000826C83 /* WatchTaskList.swift */; };
 		9BF4AC3B0A036B34D882952A /* ReminderDevice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41948BB9E52BE960048216FD /* ReminderDevice.swift */; };
 		9CA8D9FF92184B04154BC2B1 /* SiriCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87BBA1DB8D8D2DF9BA98DDCF /* SiriCapture.swift */; };
+		9D2DE725C74A796128FFBC6A /* LieuTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2DCB896CD10FB50A9BDD8FB /* LieuTests.swift */; };
 		9EF4DE2A2BECC496038B054E /* AppGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A12D2947BB91F0172F0ED7C /* AppGroup.swift */; };
 		9F2FD77B335B89B63523B34C /* AppVersion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F3DFFD161CF172B8EA484A9 /* AppVersion.swift */; };
 		A0E972DF6F678949E9C82BA9 /* ReminderPlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E48E67DBEFD62C7E6118390 /* ReminderPlanner.swift */; };
@@ -474,6 +475,7 @@
 		B94FACB36938B4FB532C381F /* TriageViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TriageViews.swift; sourceTree = "<group>"; };
 		BE4BC2D4DF42F4878D28C1E9 /* TaskStoreSyncTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskStoreSyncTests.swift; sourceTree = "<group>"; };
 		C2C09E5A407A0A9AE6C08821 /* RelanceWatchWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = RelanceWatchWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		C2DCB896CD10FB50A9BDD8FB /* LieuTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LieuTests.swift; sourceTree = "<group>"; };
 		C632C02A89E59605DA39439E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		C668853F8DA6D5749B17B534 /* PriorityViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PriorityViews.swift; sourceTree = "<group>"; };
 		C6D55227EE524598DDCB33C5 /* RelanceComplication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelanceComplication.swift; sourceTree = "<group>"; };
@@ -580,6 +582,7 @@
 				1C3F65EA3092E1881DEA6CE5 /* EnviesTests.swift */,
 				203193BF1B5EE7BBFCBA5F53 /* EnvieSuggestionTests.swift */,
 				8BB210515A561BDDE66887DD /* HASyncTests.swift */,
+				C2DCB896CD10FB50A9BDD8FB /* LieuTests.swift */,
 				1D5B40F509B64DF9DF0291C1 /* MemoMergeTests.swift */,
 				77112E8A0B99D6D1C55C2D66 /* NotesTimeCodecTests.swift */,
 				3D82D35DFB589C1E996F8CBC /* ReminderPlannerTests.swift */,
@@ -1315,6 +1318,7 @@
 				1765A8B5866503765A68DFB8 /* EnvieSuggestionTests.swift in Sources */,
 				BB2D3E72F85A27A82A60C7B1 /* EnviesTests.swift in Sources */,
 				473D512C7BA222A224D6CE94 /* HASyncTests.swift in Sources */,
+				9D2DE725C74A796128FFBC6A /* LieuTests.swift in Sources */,
 				754F56298037383538A680A5 /* MemoMergeTests.swift in Sources */,
 				B124EB00A072E175CD261404 /* NotesTimeCodecTests.swift in Sources */,
 				33B7402C2D9B8978CA0931CD /* ReminderPlannerTests.swift in Sources */,

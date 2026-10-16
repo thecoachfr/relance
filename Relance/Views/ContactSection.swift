@@ -35,7 +35,8 @@ struct ContactSection: View {
                 if let url = contact.googleMapsURL {
                     Button { openURL(url) } label: { Label("Ouvrir dans Google Maps", systemImage: "mappin.circle") }
                 }
-                if let url = contact.link {
+                // Le lien Plans d'un lieu sans adresse sert déjà à « Itinéraire ».
+                if let url = contact.link, contact.coordinate == nil {
                     if contact.isBookingLink {
                         Button { openURL(url) } label: { Label("Prendre rendez-vous", systemImage: "calendar.badge.plus") }
                     } else {
@@ -47,7 +48,7 @@ struct ContactSection: View {
                 }
                 // Deux lignes visibles plutôt qu'un menu : retirer un lieu doit se trouver sans chercher.
                 #if os(iOS)
-                if contact.address != nil {
+                if contact.destination != nil {
                     Toggle(isOn: Binding(
                         get: { NearbyReminder.isOn(notes) },
                         set: { on in

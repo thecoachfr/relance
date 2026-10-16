@@ -114,7 +114,7 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationC
                 store.setTime(item, minutes: minutes)
             }
         case ReminderScheduler.Action.route:
-            if let address = TaskContact(notes: item.notes)?.address,
+            if let address = TaskContact(notes: item.notes)?.destination,
                let url = TravelTimes.mapsURL(to: address, settings: store.scheduler.settings.departure) {
                 NSWorkspace.shared.open(url)
             }

@@ -66,6 +66,28 @@ nonisolated struct TaskContact: Equatable, Sendable {
         }
     }
 
+    /// Coordonnées lues dans un lien Plans `https://maps.apple.com/?ll=48.82,2.41…` (lieu sans adresse :
+    /// photo, point GPS).
+    var coordinate: (latitude: Double, longitude: Double)? {
+        guard let link, link.host()?.lowercased() == "maps.apple.com",
+              let ll = URLComponents(url: link, resolvingAgainstBaseURL: false)?
+                .queryItems?.first(where: { $0.name == "ll" })?.value else { return nil }
+        let parts = ll.split(separator: ",").compactMap { Double($0.trimmingCharacters(in: .whitespaces)) }
+        guard parts.count == 2, (-90...90).contains(parts[0]), (-180...180).contains(parts[1]) else { return nil }
+        return (parts[0], parts[1])
+    }
+
+    /// Lien Plans vers un point : « https://maps.apple.com/?ll=48.8215,2.4123&q=Nom ».
+    static func mapsLink(name: String, latitude: Double, longitude: Double) -> URL? {
+        var c = URLComponents(string: "https://maps.apple.com/")!
+        c.queryItems = [URLQueryItem(name: "ll", value: "\(Self.rounded(latitude)),\(Self.rounded(longitude))"),
+                        URLQueryItem(name: "q", value: name)]
+        return c.url
+    }
+
+    /// Six décimales : environ 10 cm, largement assez.
+    static func rounded(_ value: Double) -> Double { (value * 1_000_000).rounded() / 1_000_000 }
+
     /// Lien de prise de rendez-vous (Doctolib…) plutôt que simple site web.
     var isBookingLink: Bool {
         guard let host = link?.host()?.lowercased() else { return false }
@@ -80,17 +102,29 @@ nonisolated struct TaskContact: Equatable, Sendable {
     /// Google ne permet pas d'ajouter un lieu à une liste depuis une autre app : il reste un toucher.
     var googleMapsURL: URL? {
         var c = URLComponents(string: "https://www.google.com/maps/search/")!
-        let query = [name, address].compactMap { $0 }.reduce(into: [String]()) { if !$0.contains($1) { $0.append($1) } }
+        let query = [name, destination].compactMap { $0 }.reduce(into: [String]()) { if !$0.contains($1) { $0.append($1) } }
         c.queryItems = [URLQueryItem(name: "api", value: "1"), URLQueryItem(name: "query", value: query.joined(separator: ", "))]
         return c.url
     }
 
-    /// Itinéraire dans Plans.
+    /// Où aller : l'adresse, sinon les coordonnées « lat,lon » (lieu sans adresse).
+    var destination: String? { address ?? coordinate.map { "\($0.latitude),\($0.longitude)" } }
+
+    /// Itinéraire dans Plans (vers l'adresse, sinon vers le point).
     var mapsURL: URL? {
-        guard let address else { return nil }
+        guard let destination else { return nil }
         var c = URLComponents(string: "https://maps.apple.com/")!
-        c.queryItems = [URLQueryItem(name: "daddr", value: address)]
+        c.queryItems = [URLQueryItem(name: "daddr", value: destination)]
         return c.url
+    }
+}
+
+/// Coordonnées des adresses déjà trouvées par Plans (`PlaceLocator`), gardées dans l'App Group.
+nonisolated enum PlaceCoordinates {
+    static let key = "placeCoordinates"
+
+    static func saved() -> [String: [Double]] {
+        AppGroup.defaults.dictionary(forKey: key) as? [String: [Double]] ?? [:]
     }
 }
 

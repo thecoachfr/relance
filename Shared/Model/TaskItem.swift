@@ -22,6 +22,9 @@ final class TaskItem {
     var tagsRaw: String?
     /// Ligne « 🔁 … » des notes : relances propres à la tâche ; `nil` = selon la priorité.
     var remindersRaw: String?
+    /// Dernier `lieu` reçu de Home Assistant (JSON de `TacheHA.Lieu`) : garde coordonnées et source,
+    /// que la ligne 📍 des notes n'a pas toujours. `nil` en mode Google Tasks.
+    var placeRaw: String?
     /// Événement d'agenda créé depuis CET appareil (identifiant EventKit, propre à l'appareil).
     var calendarEventID: String?
     var isCompleted: Bool
@@ -100,7 +103,7 @@ final class TaskItem {
             snoozedUntil: snoozedUntil,
             priority: priority,
             reminders: reminderOverride,
-            hasPlace: TaskContact(notes: notes)?.address != nil,
+            hasPlace: TaskContact(notes: notes)?.destination != nil,
             toSee: toSee,
             linkHost: toSee == nil ? nil : ToSee.link(in: notes)?.host()?.replacingOccurrences(of: "www.", with: ""))
     }
