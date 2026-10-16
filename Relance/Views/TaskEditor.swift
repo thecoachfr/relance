@@ -43,6 +43,7 @@ struct TaskEditor: View {
                         }
                     }
                 }
+                ListeSection(item: item)
                 ToSeeSection(notes: $notes, availability: item.availability) { hasDay = false }
                 if ToSee(notes: notes) == nil { CalendarSection(item: item) }
                 Section {

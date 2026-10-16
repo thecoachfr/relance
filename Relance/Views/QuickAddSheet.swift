@@ -31,6 +31,9 @@ struct QuickAddSheet: View {
     @State private var pickOther = false
     @State private var category: String?
     @State private var priority = TaskPriority.normal
+    /// Nouvelle liste (P9-G1) : articles saisis un par ligne.
+    @State private var avecListe = false
+    @State private var articles = ""
 
     init(context: QuickAddContext = .today, category: String? = nil) {
         self.context = context
@@ -113,6 +116,19 @@ struct QuickAddSheet: View {
                         RecurrenceRow(notes: $notes, day: day ?? .now)
                     }
                 }
+                }
+                if HAConfig.isActive, !isToSee {
+                    Section {
+                        Toggle("Liste d'articles", systemImage: "checklist", isOn: $avecListe.animation())
+                        if avecListe {
+                            TextField("Articles", text: $articles, prompt: Text("Un article par ligne (« 6 œufs »)"),
+                                      axis: .vertical)
+                                .formFieldWithoutLabel()
+                                .lineLimit(3...)
+                        }
+                    } footer: {
+                        if avecListe { Text("Quand tout est coché, la tâche passe en « Fait ».") }
+                    }
                 }
                 if context != .map { ContactSection(notes: $notes, searching: $searchingPlace) }
                 Section {
@@ -224,9 +240,18 @@ struct QuickAddSheet: View {
         let c = Calendar.current.dateComponents([.hour, .minute], from: time)
         // Sans date, une répétition n'a pas de point de départ : on la retire.
         let kept = day == nil ? Recurrence.notes(notes, setting: nil) : notes
-        _ = store.add(title: cleanTitle, day: isToSee ? nil : day,
-                      minutes: hasTime && !isToSee ? (c.hour! * 60 + c.minute!) : nil,
-                      category: category, priority: priority, notes: kept)
+        let item = store.add(title: cleanTitle, day: isToSee ? nil : day,
+                             minutes: hasTime && !isToSee ? (c.hour! * 60 + c.minute!) : nil,
+                             category: category, priority: priority, notes: kept)
+        if avecListe, !isToSee {
+            let maintenant = TacheHA.timestamp(.now)
+            let liste = articles.components(separatedBy: .newlines).compactMap(TaskStore.article).map {
+                var article = $0
+                article.maj = maintenant
+                return article
+            }
+            store.setListe(TacheHA.Liste(articles: liste), of: item)
+        }
         dismiss()
     }
 }

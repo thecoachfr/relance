@@ -47,6 +47,7 @@ struct TaskRow: View {
                     .foregroundStyle(item.priority == .low ? .secondary : .primary)
                 // Étiquette sous le statut, comme les tags dans Rappels : rien n'est jamais coupé.
                 statusLabel
+                listeLabel
                 if item.category != nil || !item.tags.isEmpty {
                     HStack(spacing: 8) {
                         if let category = item.category { CategoryChip(name: category, onSelection: isSelected) }
@@ -126,6 +127,20 @@ struct TaskRow: View {
             }
             .font(.subheadline)
             .foregroundStyle(isSelected || prominence == .increased ? .secondary : status.color)
+        }
+    }
+
+    /// Liste d'articles (P9-G1) : « 3/12 », comme une sous-tâche de Rappels.
+    @ViewBuilder private var listeLabel: some View {
+        if let liste = item.liste, !liste.articles.isEmpty {
+            HStack(spacing: 5) {
+                Image(systemName: "checklist").imageScale(.small)
+                Text("\(liste.cochés)/\(liste.articles.count)").monospacedDigit()
+            }
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Liste : \(liste.cochés) cochés sur \(liste.articles.count)")
         }
     }
 

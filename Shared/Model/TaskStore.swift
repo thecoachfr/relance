@@ -247,7 +247,7 @@ final class TaskStore {
         commit()
     }
 
-    private func commit() {
+    func commit() {
         try? context.save()
         Task {
             await reschedule()

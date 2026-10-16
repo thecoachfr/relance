@@ -133,3 +133,37 @@ struct ListeTests {
         #expect(Liste.fusion(locale: TacheHA(titre: "a"), serveur: TacheHA(titre: "b"), base: nil) == nil)
     }
 }
+
+/// Cocher, ajouter, tout coché → Fait (P9-G1).
+@MainActor
+struct ListeStoreTests {
+    @Test func saisieDUnArticle() {
+        #expect(TaskStore.article("6 œufs")?.quantite == "6")
+        #expect(TaskStore.article("6 œufs")?.texte == "œufs")
+        #expect(TaskStore.article("Lait demi-écrémé")?.quantite == nil)
+        #expect(TaskStore.article("   ") == nil)
+    }
+
+    @Test func toutCocheFaitPuisRouvre() throws {
+        let store = TaskStore(auth: SlowAccount(), inMemory: true)
+        let item = store.add(title: "Courses", day: nil, minutes: nil)
+        store.addArticle("Pain", to: item)
+        store.addArticle("2 lait", to: item)
+        let liste = try #require(item.liste)
+        #expect(liste.articles.map(\.texte) == ["Pain", "lait"] && liste.articles.allSatisfy { $0.maj != nil })
+        #expect(store.toggleArticle(id: liste.articles[0].id, of: item) == false)
+        #expect(!item.isCompleted)
+        #expect(store.toggleArticle(id: liste.articles[1].id, of: item) == true)
+        #expect(item.isCompleted)
+        #expect(TacheHA(item).notes.hasSuffix("🛒 Liste : 2/2 cochés"))
+        // Décocher rouvre ; ajouter à une liste faite la rouvre aussi.
+        store.toggleArticle(id: liste.articles[1].id, of: item)
+        #expect(!item.isCompleted)
+        store.toggleArticle(id: liste.articles[1].id, of: item)
+        #expect(item.isCompleted)
+        store.addArticle("Beurre", to: item)
+        #expect(!item.isCompleted && item.liste?.articles.count == 3)
+        store.removeArticles(at: [0], of: item)
+        #expect(item.liste?.articles.map(\.texte) == ["lait", "Beurre"])
+    }
+}
