@@ -48,6 +48,19 @@ nonisolated enum SharedLink {
         switch platform(for: url) {
         case "netflix": return path.firstMatch(of: /\/title\/(\d+)/).map { String($0.1) }
         case "canal": return path.firstMatch(of: /\/h\/([0-9_]+)/).map { String($0.1) }
+        // YouTube : `youtube.com/watch?v=<id>&is=…`, `youtu.be/<id>`, `youtube.com/shorts/<id>`.
+        case "youtube":
+            if let v = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first(where: { $0.name == "v" })?.value {
+                return v
+            }
+            let parts = path.split(separator: "/").map(String.init)
+            if url.host()?.lowercased() == "youtu.be" { return parts.first }
+            return parts.count == 2 && ["shorts", "live", "embed"].contains(parts[0]) ? parts[1] : nil
+        // Spotify : `open.spotify.com/track/<id>?si=…` (aussi album, playlist, episode).
+        case "spotify":
+            let parts = path.split(separator: "/").map(String.init).filter { !$0.hasPrefix("intl-") }
+            return parts.count >= 2 && ["track", "album", "playlist", "episode", "show", "artist"].contains(parts[0])
+                ? parts[0] + ":" + parts[1] : nil
         // Disney+ : `disneyplus.com/fr-FR/browse/entity-8744ec55-…?sharesource=iOS`.
         case "disney": return path.firstMatch(of: /entity-([0-9a-fA-F-]{36})/).map { String($0.1).lowercased() }
         default: return nil

@@ -44,7 +44,7 @@ Puis : savoir **sur quelle plateforme** le titre est disponible en France, l'ouv
 - Les liens envoyés sont ceux validés en B5 (transformation par plateforme, ex. Netflix : ajouter `?source=30`).
 
 ### B5 — Essais des liens sur le Player (avec Alexandre devant la TV)
-*16/10 : Netflix, Canal+ et Disney+ ouvrent le titre (formes dans `docs/LIENS-TV.md`) ; YouTube et Spotify à essayer.*
+*16/10 : Netflix, Canal+, Disney+ et YouTube ouvrent le titre ; Spotify l'affiche sans le lire (formes dans `docs/LIENS-TV.md`). Reste la lecture Spotify par Spotify Connect.*
 - Documentation de HA (intégration Android TV Remote, lue le 16/10) : `remote.turn_on` + `activity` accepte un identifiant d'app, une URL ou un schéma ; YouTube (`https://www.youtube.com`), Netflix (un titre précis seulement si le lien finit par `?source=30`), Prime Video, Disney+ (ouverture de l'app). Apple TV, myCANAL et Spotify n'y figurent pas ; le guide communautaire des liens profonds non plus pour ces plateformes. L'app Apple TV est disponible sur le Player Pop depuis mars 2022 (Univers Freebox).
 - Tableau à remplir dans `docs/LIENS-TV.md` (fichier du dépôt, sans donnée personnelle) : plateforme × forme du lien (lien web du titre, schéma d'app, identifiant de paquet) × résultat (ouvre l'app / ouvre le titre / rien). Plateformes : Netflix, Apple TV, Disney+, myCANAL, Prime Video, YouTube, Spotify, France TV, Arte.
 - **Spotify (demande d'Alexandre du 16/10 : lire les morceaux sur la TV, l'app Spotify existe sur Android TV)** :

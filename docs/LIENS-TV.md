@@ -16,9 +16,11 @@ Résultat : **titre** (la page du titre s'ouvre), **app** (l'app s'ouvre, sans l
 | Disney+ | lien partagé `https://disneyplus.com/fr-FR/browse/entity-<uuid>?sharesource=iOS` | **rien** : « Aucune application ne peut effectuer cette action » | 16/10 |
 | Disney+ | `https://www.disneyplus.com/fr-fr/browse/entity-<uuid>` | **titre** (2e envoi, Player déjà allumé ; au 1er il sortait de veille, résultat non relevé) | 16/10 |
 | Canal+ | lien partagé `https://mycan.al/series/<titre>/h/<id>` | **titre** | 16/10 |
-| YouTube | `https://www.youtube.com/watch?v=<id>` | à essayer (documenté par HA) | |
-| Spotify | `https://open.spotify.com/track/<id>` | à essayer | |
-| Spotify | `spotify:track:<id>` | à essayer | |
+| YouTube | `https://www.youtube.com/watch?v=<id>` | **titre** (la vidéo s'ouvre) | 16/10 |
+| Spotify | `https://open.spotify.com/track/<id>` | **titre affiché, pas lu** (comme l'annonce la documentation Android de Spotify) | 16/10 |
+
+Spotify : pour **lire** sur la TV, il faudra passer par Spotify Connect (API Web, compte Premium, droit
+`user-modify-playback-state`), comme le prévoit le plan B5 ; à faire avec le jeton de l'app Spotify de D4.
 
 Ce que fait le script : Player injoignable → arrêt « TV injoignable » ; éteint → allumage, attente (15 s au plus) puis
 2 s ; ensuite `remote.turn_on` avec `activity: <lien>`. L'app transforme le lien selon ce tableau (`TVRemote.link`).

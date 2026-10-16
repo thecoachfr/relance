@@ -110,7 +110,11 @@ struct TVLinkTests {
         #expect(TVRemote.link(for: disney) == "https://www.disneyplus.com/fr-fr/browse/entity-8744ec55-8d14-4631-99b4-c889a2d6013f")
         let canal = URL(string: "https://mycan.al/series/monarch-legacy-of-monsters/h/40002718_50696")!
         #expect(TVRemote.link(for: canal) == canal.absoluteString)
-        let youtube = URL(string: "https://youtube.com/watch?v=JPcVyq_BYjU")!
-        #expect(TVRemote.link(for: youtube) == youtube.absoluteString)
+        let youtube = URL(string: "https://youtube.com/watch?v=JPcVyq_BYjU&is=ZlKEp7FwF3XJ2x_c")!
+        #expect(TVRemote.link(for: youtube) == "https://www.youtube.com/watch?v=JPcVyq_BYjU")
+        #expect(TVRemote.link(for: URL(string: "https://youtu.be/JPcVyq_BYjU?si=x")!) == "https://www.youtube.com/watch?v=JPcVyq_BYjU")
+        let spotify = URL(string: "https://open.spotify.com/track/6A5pZE8XuTjJbrpQ3mpeNc?si=hYKMyWtiSFqxBQUkAGemSg&utm_source=native-share-menu")!
+        #expect(SharedLink.titleID(for: spotify) == "track:6A5pZE8XuTjJbrpQ3mpeNc")
+        #expect(TVRemote.link(for: spotify) == "https://open.spotify.com/track/6A5pZE8XuTjJbrpQ3mpeNc")
     }
 }
