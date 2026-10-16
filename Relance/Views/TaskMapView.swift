@@ -17,6 +17,8 @@ struct TaskMapView: View {
     @State private var editing: TaskItem?
     /// Zone affichée : sert à regrouper les épingles trop proches à cette échelle.
     @State private var region: MKCoordinateRegion?
+    /// Taille de la carte en points : les groupes se calculent en points réels (iPhone, iPad, Mac).
+    @State private var mapSize = CGSize(width: 400, height: 800)
     /// Tâches au même endroit : on les liste (aucun zoom ne les sépare).
     @State private var sameSpot: [UUID]?
     @State private var adding = false
@@ -74,14 +76,33 @@ struct TaskMapView: View {
         return close ? group[0].contact : nil
     }
 
-    private func zoom(on group: [Entry]) {
+    /// Toucher un groupe : zoomer juste assez pour séparer ses épingles ; si aucun zoom raisonnable ne les
+    /// sépare (même immeuble), la liste de ses tâches.
+    private func open(_ group: [Entry]) {
+        guard Self.samePlace(group) == nil, let region,
+              let span = Self.separatingSpan(group.map(\.coordinate), current: region.span, size: mapSize) else {
+            sameSpot = group.map(\.item.localID)
+            return
+        }
         let lats = group.map(\.coordinate.latitude), lons = group.map(\.coordinate.longitude)
         let center = CLLocationCoordinate2D(latitude: (lats.min()! + lats.max()!) / 2, longitude: (lons.min()! + lons.max()!) / 2)
-        // Assez près pour que les étiquettes ne se chevauchent plus (un seul toucher).
-        // Échelle à laquelle l'écart dépasse la taille d'une étiquette sur l'un des deux axes, avec de la marge.
-        let side = max((lats.max()! - lats.min()!) / Self.labelHeight, (lons.max()! - lons.min()!) / Self.labelWidth) / 1.5
-        let span = MKCoordinateSpan(latitudeDelta: max(side, 0.0015), longitudeDelta: max(side, 0.0015))
         withAnimation { position = .region(MKCoordinateRegion(center: center, span: span)) }
+    }
+
+    /// Échelle où les épingles du groupe ne se chevauchent plus, en points réels de la carte (l'iPad est plus
+    /// large que l'iPhone : en proportion de l'écran, des lieux à 80 m restaient groupés, 16/10). `nil` si
+    /// elle passe sous `minSpan` (environ 60 m de haut) : mieux vaut alors la liste.
+    static func separatingSpan(_ points: [CLLocationCoordinate2D], current: MKCoordinateSpan, size: CGSize,
+                               minSpan: Double = 0.0006) -> MKCoordinateSpan? {
+        let lats = points.map(\.latitude), lons = points.map(\.longitude)
+        let dLat = lats.max()! - lats.min()!, dLon = lons.max()! - lons.min()!
+        // Écart actuel en points ; on réduit l'échelle pour qu'il dépasse une étiquette et demie sur l'axe
+        // le plus favorable (le moins de zoom possible).
+        let sepX = dLon / current.longitudeDelta * size.width, sepY = dLat / current.latitudeDelta * size.height
+        let factor = max(sepX / (labelSize.width * 1.5), sepY / (labelSize.height * 1.5))
+        guard factor > 0 else { return nil }
+        let span = MKCoordinateSpan(latitudeDelta: current.latitudeDelta * factor, longitudeDelta: current.longitudeDelta * factor)
+        return span.latitudeDelta < minSpan ? nil : span
     }
 
     /// « Demain à 9 h 30 », « En retard · depuis 2 j », « Jusqu'au 31 janv. » ; rien sans échéance.
@@ -94,13 +115,14 @@ struct TaskMapView: View {
 
     typealias Entry = (item: TaskItem, contact: TaskContact, coordinate: CLLocationCoordinate2D)
 
-    /// Part de l'écran occupée par une épingle et son étiquette (environ 120 × 60 pt sur 400 × 800).
-    private static let labelWidth = 0.3, labelHeight = 0.08
+    /// Place d'une épingle et de son étiquette, en points.
+    static let labelSize = CGSize(width: 120, height: 64)
 
     /// Épingles dont les étiquettes se chevaucheraient à l'échelle affichée, regroupées en une seule.
     private func clusters(_ entries: [Entry]) -> [[Entry]] {
-        guard let region else { return entries.map { [$0] } }
-        let dLon = region.span.longitudeDelta * Self.labelWidth, dLat = region.span.latitudeDelta * Self.labelHeight
+        guard let region, mapSize.width > 0, mapSize.height > 0 else { return entries.map { [$0] } }
+        let dLon = region.span.longitudeDelta * Self.labelSize.width / mapSize.width
+        let dLat = region.span.latitudeDelta * Self.labelSize.height / mapSize.height
         var groups: [[Entry]] = []
         for entry in entries.sorted(by: { $0.item.priority.rank < $1.item.priority.rank }) {
             if let i = groups.firstIndex(where: { group in
@@ -137,13 +159,14 @@ struct TaskMapView: View {
                     Annotation("\(group.count) tâches", coordinate: entry.coordinate, anchor: .top) {
                         MapClusterPin(count: group.count, color: color, place: Self.samePlace(group)?.name)
                             .onTapGesture {
-                                if Self.samePlace(group) != nil { sameSpot = group.map(\.item.localID) } else { zoom(on: group) }
+                                open(group)
                             }
                     }
                     .annotationTitles(.hidden)
                 }
             }
         }
+        .onGeometryChange(for: CGSize.self, of: \.size) { mapSize = $0 }
         .onMapCameraChange(frequency: .onEnd) { context in
             region = context.region
             // Cadrage automatique une seule fois : sinon il se refait à chaque regroupement, qui change
@@ -193,7 +216,7 @@ struct TaskMapView: View {
                     }
                     .buttonStyle(.plain)
                 }
-                .navigationTitle(items.first?.contact.name ?? "Au même endroit")
+                .navigationTitle(Self.samePlace(items)?.name ?? "\(items.count) tâches proches")
                 .inlineNavigationTitle()
             }
             .presentationDetents([.medium, .large])
