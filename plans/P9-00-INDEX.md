@@ -10,14 +10,16 @@
 | B — Envies « À regarder » (plateforme, identifiant, TMDB) et « Sur la TV » par Home Assistant | `P9-B-a-regarder-tv.md` | relance + HA | 2–3 soirées |
 | C — App Android TV pour le Freebox Player Pop | `P9-C-app-android-tv.md` | nouveau dépôt privé `aiguillage-tv` | 3–5 soirées |
 | D — Actions par tâche (socle, playlist Spotify, préparation de la TVA par une routine) | `P9-D-actions.md` | relance + HA + routine | 4–6 soirées |
+| E — Audit de la consommation de batterie (mesure de référence, puis après P9) | `P9-E-audit-batterie.md` | relance + HA | 1–2 soirées, plus deux semaines de mesure |
 
-**Ordre** : lot 0 ci-dessous, puis A, B, C, D. C dépend de B (liens testés sur le Player, champs `envie`). D réutilise « Sur la TV » (B) comme une action.
+**Ordre** : lot 0 ci-dessous (avec E1, la mesure de référence), puis A, B, C, D, et E2 après A4 et D3. C dépend de B (liens testés sur le Player, champs `envie`). D réutilise « Sur la TV » (B) comme une action.
 
 ## 2. Lot 0 — préalables (avant A)
 
 1. **Finir P2** : les deux essais restants de la migration vers HA, notés dans SUIVI : écriture hors ligne (repli iCloud réellement déclenché sur un appareil, puis retour de HA sans doublon) et vrai conflit entre deux appareils (la modification la plus récente gagne, conflit journalisé). P9 ajoute des champs aux tâches : il faut une synchro éprouvée avant.
 2. **Rendre le Freebox Player Pop joignable dans HA** : `remote.freebox_player_pop` et `media_player.freebox_player_pop_2` (intégration Android TV Remote) étaient `unavailable` le 16/10 au matin. Vérifier si le Player est en veille profonde (réglage de veille du Player) ou si l'intégration doit être réappairée. Nécessaire pour B et pour installer l'app C.
-3. Noter l'état dans SUIVI.
+3. **Mesure de référence de la batterie** (plan E, lot E1) : à lancer avant A pour une semaine d'usage normal.
+4. Noter l'état dans SUIVI.
 
 ## 3. Modèle de données commun (TacheHA, `v: 2`)
 
