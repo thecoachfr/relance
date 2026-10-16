@@ -22,6 +22,7 @@ import httpx
 import jwt
 from appdaemon.plugins.hass import Hass
 
+import aiguillage_spotify
 import aiguillage_tmdb
 
 APNS_HOSTS = {
@@ -46,6 +47,9 @@ PUSH_DEBOUNCE = 3
 # Disponibilités TMDB (P9-B3) : passage peu après une modification, puis toutes les heures ; plafond par passage.
 TMDB_DEBOUNCE = 30
 TMDB_PER_PASS = 10
+# Playlist Spotify « À écouter » (P9-D4) : même rythme que TMDB.
+SPOTIFY_DEBOUNCE = 30
+SPOTIFY_PER_PASS = 10
 
 
 def tache_depuis_google(item):
@@ -119,6 +123,10 @@ class RelanceVigie(Hass):
         self._tmdb_token_path = Path(self.args.get("tmdb_token_file", "/config/tmdb_token"))
         self._tmdb_handle = None
         self._tmdb_missing_logged = False
+        # Spotify (P9-D4) : identifiants et jeton de rafraîchissement, écrits par homeassistant/scripts/spotify_jeton.py.
+        self._spotify_path = Path(self.args.get("spotify_file", "/config/spotify_aiguillage.json"))
+        self._spotify_handle = None
+        self._spotify_missing_logged = False
         self._lock = threading.Lock()
         self._jwt = None
         self._jwt_issued_at = 0.0
@@ -141,6 +149,9 @@ class RelanceVigie(Hass):
             self.listen_event(self.on_data_changed, "donnees_apps_modifie", espace=self._espace)
             self.run_in(lambda **_kw: self._load_known_keys(), 1)
             self.run_every(self.tmdb_pass, "now+90", 3600)
+            self.run_every(self.spotify_pass, "now+120", 3600)
+        # Bouton « Lire sur la TV » (app TV ou iPhone) via script.aiguillage_spotify_sur_tv.
+        self.listen_event(self.on_spotify_lire, "aiguillage_spotify_lire")
         self._refreshes = 0
         self._triage_handle = None
         self._triage_day = None
@@ -203,6 +214,9 @@ class RelanceVigie(Hass):
         if self._tmdb_handle:
             self.cancel_timer(self._tmdb_handle)
         self._tmdb_handle = self.run_in(self.tmdb_pass, TMDB_DEBOUNCE)
+        if self._spotify_handle:
+            self.cancel_timer(self._spotify_handle)
+        self._spotify_handle = self.run_in(self.spotify_pass, SPOTIFY_DEBOUNCE)
 
     def _push_after_change(self, **kwargs):
         self._push_handle = None
@@ -259,6 +273,71 @@ class RelanceVigie(Hass):
                 continue
             # Conflit (modifiée entre-temps) : le prochain passage reprendra la nouvelle version.
             self.log(f"TMDB : « {valeur.get('titre')} » → {summary} ({result.get('statut')})")
+
+    # MARK: - Spotify (P9-D4)
+
+    def _spotify_client(self):
+        try:
+            ids = json.loads(self._spotify_path.read_text())
+        except (FileNotFoundError, ValueError):
+            if not self._spotify_missing_logged:
+                self.log(f"Spotify : pas d'identifiants dans {self._spotify_path}, playlist et lecture inactives")
+                self._spotify_missing_logged = True
+            return None
+        return aiguillage_spotify.Client(ids)
+
+    def spotify_pass(self, **kwargs):
+        """Envies à écouter avec un lien Spotify : ajout à la playlist « À écouter » (sans doublon), noté dans
+        `envie.playlist`. Une tâche notée ne demande plus rien (échec : retenté le lendemain) : pas de boucle."""
+        self._spotify_handle = None
+        client = self._spotify_client()
+        if client is None:
+            return
+        try:
+            records = self._service("donnees_apps", "lire", {"espace": self._espace}).get("enregistrements", [])
+        except Exception as error:  # noqa: BLE001
+            self.log(f"Spotify : tâches illisibles : {error!r}", level="WARNING")
+            return
+        today = date.today()
+        due = [r for r in records if self._is_task_key(r.get("cle", "")) and r.get("valeur")
+               and aiguillage_spotify.needs_playlist(r["valeur"], today)]
+        for record in due[:SPOTIFY_PER_PASS]:
+            valeur = record["valeur"]
+            kind, ident = aiguillage_spotify.lien_de(valeur)
+            try:
+                playlist_id, ajoutes = client.ajouter(kind, ident)
+                updated = aiguillage_spotify.with_playlist(valeur, "ok", today, playlist_id, ajoutes)
+                summary = f"{ajoutes} titre(s) ajouté(s)"
+            except Exception as error:  # noqa: BLE001
+                updated = aiguillage_spotify.with_playlist(valeur, "echec", today, erreur=repr(error))
+                summary = f"échec : {error!r}"
+            try:
+                result = self._service("donnees_apps", "ecrire", {
+                    "espace": self._espace, "cle": record["cle"], "valeur": updated,
+                    "version_attendue": record["version"], "modifie_par": "vigie", "op_id": str(uuid.uuid4()),
+                })
+            except Exception as error:  # noqa: BLE001
+                self.log(f"Spotify : « {valeur.get('titre')} » non écrit : {error!r}", level="WARNING")
+                continue
+            # Conflit : le prochain passage relit ; les titres déjà ajoutés ne le seront pas deux fois.
+            self.log(f"Spotify : « {valeur.get('titre')} » → playlist, {summary} ({result.get('statut')})")
+
+    def on_spotify_lire(self, event_name, data, **kwargs):
+        """Lecture sur le Freebox Player par Spotify Connect : `lien` Spotify (morceau, album, épisode, playlist)."""
+        ref = aiguillage_spotify.spotify_ref(data.get("lien", ""))
+        client = self._spotify_client()
+        if not ref or client is None:
+            self.log(f"Spotify : lecture impossible ({'lien non Spotify' if not ref else 'pas d’identifiants'})", level="WARNING")
+            return
+        try:
+            appareil = aiguillage_spotify.appareil_tv(client.appareils())
+            if appareil is None:
+                self.log("Spotify : Freebox Player absent de Spotify Connect (app Spotify fermée ?)", level="WARNING")
+                return
+            client.lire(*ref, appareil["id"])
+            self.log(f"Spotify : lecture de {ref[0]} {ref[1][:8]}… sur « {appareil.get('name')} »")
+        except Exception as error:  # noqa: BLE001
+            self.log(f"Spotify : lecture en échec : {error!r}", level="WARNING")
 
     def _load_known_keys(self):
         try:
