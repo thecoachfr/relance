@@ -124,7 +124,7 @@ final class TaskStore {
               !item.notes.contains(Recurrence.spawnedMarker) else { return nil }
         // Sans l'agenda (événement propre à la tâche faite) ni la suggestion du tri.
         let notes = item.notes.components(separatedBy: "\n").filter {
-            !$0.hasPrefix("📅 Dans l'agenda") && !$0.hasPrefix("💡") && $0 != Recurrence.spawnedMarker
+            !$0.hasPrefix("📅 Dans l'agenda") && !$0.hasPrefix("💡") && !$0.hasPrefix("➕") && $0 != Recurrence.spawnedMarker
         }.joined(separator: "\n")
         let next = TaskItem(title: item.title, notes: notes,
                             dueDay: rule.nextDay(after: due, done: item.completedAt ?? .now), dueMinutes: item.dueMinutes)
@@ -170,6 +170,19 @@ final class TaskStore {
         item.snoozedUntil = nil
         item.markChanged()
         commit()
+    }
+
+    /// Crée la tâche proposée par le tri (ligne « ➕ ») avec la catégorie de la tâche d'origine, puis retire la
+    /// ligne. `create` faux : la proposition est seulement retirée (« Ignorer »).
+    @discardableResult
+    func resolveProposal(of item: TaskItem, create: Bool) -> TaskItem? {
+        guard let proposal = TaskProposal(notes: item.notes) else { return nil }
+        let created = create ? add(title: proposal.title, day: proposal.startDay(), minutes: proposal.minutes,
+                                   category: item.category, notes: proposal.notes) : nil
+        item.notes = TaskProposal.removing(from: item.notes)
+        item.markChanged()
+        commit()
+        return created
     }
 
     /// Avant un retri par la routine : sans catégorie ni tags, elle traite la tâche comme neuve.

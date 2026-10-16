@@ -33,6 +33,41 @@ struct RetriageSection: View {
     }
 }
 
+/// Tâche annoncée par le message partagé et proposée par la routine de tri (ligne « ➕ ») : créée d'un toucher.
+struct ProposalSection: View {
+    @Environment(TaskStore.self) private var store
+    let item: TaskItem
+    @Binding var notes: String
+
+    var body: some View {
+        if let proposal = TaskProposal(notes: notes) {
+            Section {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(proposal.title)
+                    let summary = proposal.summary()
+                    if !summary.isEmpty {
+                        Text(summary).font(.subheadline).foregroundStyle(.secondary)
+                    }
+                }
+                .accessibilityElement(children: .combine)
+                Button("Créer cette tâche", systemImage: "plus.circle") { resolve(create: true) }
+                Button("Ignorer", systemImage: "xmark.circle") { resolve(create: false) }
+            } header: {
+                Text("Tâche proposée")
+            } footer: {
+                Text("Repérée par le tri dans le message. Elle est créée dans la même catégorie.")
+            }
+        }
+    }
+
+    private func resolve(create: Bool) {
+        withAnimation {
+            store.resolveProposal(of: item, create: create)
+            notes = TaskProposal.removing(from: notes)
+        }
+    }
+}
+
 enum TriageState: Equatable {
     case idle, sending, sent, failed
 

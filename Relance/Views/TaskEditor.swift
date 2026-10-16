@@ -27,6 +27,7 @@ struct TaskEditor: View {
                     TextField("Notes", text: visibleNotes, axis: .vertical)
                         .lineLimit(3...)
                 }
+                ProposalSection(item: item, notes: $notes)
                 ContactSection(notes: $notes, searching: $searchingPlace, memoSource: (category, tags), title: title)
                 // Un « À voir » n'a pas d'échéance : ni date, ni agenda.
                 if ToSee(notes: notes) == nil {
