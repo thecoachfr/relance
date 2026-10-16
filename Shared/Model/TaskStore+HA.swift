@@ -33,7 +33,18 @@ extension TaskStore {
     func haSynchroniser() async -> Synchroniseur? {
         if let synchro { return synchro }
         synchro = await makeSynchroniser()
+        // Listes d'articles (P9-G) : un conflit se fusionne article par article au lieu de perdre une coche.
+        synchro?.fusion = { [weak self] cle, locale, serveur in self?.fusionner(cle, locale, serveur) }
         return synchro
+    }
+
+    /// Fusion d'un conflit sur une tâche (voir `TacheHA.Liste.fusion`) ; l'ancêtre commun est la dernière liste
+    /// reçue de HA par cet appareil.
+    func fusionner(_ cle: String, _ locale: JSONValeur, _ serveur: JSONValeur) -> JSONValeur? {
+        guard let id = UUID(uuidString: cle), let l = try? TacheHA(valeur: locale), let s = try? TacheHA(valeur: serveur)
+        else { return nil }
+        let item = try? context.fetch(FetchDescriptor<TaskItem>(predicate: #Predicate { $0.localID == id })).first
+        return TacheHA.Liste.fusion(locale: l, serveur: s, base: item?.listeBase).flatMap { try? $0.valeur() }
     }
 
     /// À appeler quand l'URL ou le jeton change.

@@ -13,7 +13,7 @@ packages:
   # Stockage des tâches dans Home Assistant avec fallback iCloud (dépôt privé : Xcode Cloud doit y avoir accès).
   DonneesHA:
     url: https://github.com/thecoachfr/ha-donnees-apps
-    from: 0.1.0
+    from: 0.2.0
 settings:
   base:
     DEVELOPMENT_TEAM: GD6W292ZXP

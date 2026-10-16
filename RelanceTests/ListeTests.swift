@@ -114,4 +114,22 @@ struct ListeTests {
         tache.apply(to: autre)
         #expect(autre.liste == tache.liste && autre.listeBase == tache.liste)
     }
+
+    /// Conflit sur la tâche entière (`Synchroniseur.fusion`) : liste fusionnée, ligne 🛒 et « Fait » recalculés.
+    @Test func fusionDeTache() throws {
+        let base = Liste(articles: [Self.article("o", "Œufs"), Self.article("p", "Pain")])
+        var locale = TacheHA(titre: "Courses")
+        locale.liste = base
+        locale.liste?.articles[1].coche = true
+        locale.liste?.articles[1].maj = "2026-10-16T20:01:00Z"
+        var serveur = TacheHA(titre: "Courses")
+        serveur.liste = base
+        serveur.liste?.articles[0].coche = true
+        serveur.liste?.articles[0].maj = "2026-10-16T20:02:00Z"
+        let f = try #require(Liste.fusion(locale: locale, serveur: serveur, base: base))
+        #expect(f.liste?.toutCoché == true && f.fait && f.faitLe != nil)
+        #expect(f.notes.hasSuffix("🛒 Liste : 2/2 cochés"))
+        // Sans liste d'aucun côté : la règle « dernier écrit gagne » du paquet.
+        #expect(Liste.fusion(locale: TacheHA(titre: "a"), serveur: TacheHA(titre: "b"), base: nil) == nil)
+    }
 }

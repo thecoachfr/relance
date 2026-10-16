@@ -40,7 +40,7 @@ Puis ouvrir `Relance.xcodeproj`, choisir ton iPhone et lancer (⌘R). Schéma `R
 ### 3. Tâches dans Home Assistant (en essai, désactivé par défaut)
 
 Les tâches peuvent quitter Google Tasks pour l'intégration `donnees_apps` de Home Assistant (espace `aiguillage`),
-par le paquet Swift `DonneesHA` (dépôt privé `thecoachfr/ha-donnees-apps`, étiquette `0.1.0`). Hors connexion,
+par le paquet Swift `DonneesHA` (dépôt privé `thecoachfr/ha-donnees-apps`, étiquette `0.2.0`, avec la fusion des conflits pour les listes d'articles). Hors connexion,
 les écritures restent sur l'appareil et une copie part dans iCloud (conteneur `iCloud.fr.alexandrefau.relance`) ;
 tout repart vers Home Assistant dès qu'il répond, la modification la plus récente gagnant en cas de conflit.
 

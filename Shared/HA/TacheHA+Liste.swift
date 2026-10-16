@@ -110,6 +110,22 @@ nonisolated extension TacheHA {
 
         // MARK: - Fusion (deux appareils qui cochent en même temps)
 
+        /// Conflit sur une tâche avec liste (`Synchroniseur.fusion`) : la tâche locale, liste fusionnée article par
+        /// article ; « Fait » si tout est coché ou si les deux côtés le disaient. `nil` sans liste d'aucun côté :
+        /// la règle « dernier écrit gagne » s'applique.
+        static func fusion(locale: TacheHA, serveur: TacheHA, base: Liste?) -> TacheHA? {
+            guard locale.liste != nil || serveur.liste != nil else { return nil }
+            var tache = locale
+            tache.liste = fusion(locale: locale.liste, serveur: serveur.liste, base: base)
+            tache.notes = notes(tache.notes, setting: tache.liste)
+            let fait = (tache.liste?.toutCoché ?? false) || (locale.fait && serveur.fait)
+            if fait != tache.fait {
+                tache.fait = fait
+                tache.faitLe = fait ? (serveur.faitLe ?? locale.faitLe ?? TacheHA.timestamp(.now)) : nil
+            }
+            return tache
+        }
+
         /// Fusion article par article de deux versions d'une même liste, d'après `base` (la dernière reçue de HA par
         /// cet appareil, ancêtre commun) :
         /// - présent des deux côtés : la modification la plus récente (`maj`) gagne ;
