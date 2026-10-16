@@ -37,7 +37,7 @@ Et pouvoir les ajouter sans rien taper : depuis un **lien Plans ou Google Maps p
 - **Accepté quand** : création manuelle des trois types depuis l'app, filtres de la carte, tests des marqueurs et du format des notes.
 
 ### A3 — Entrées par la feuille de partage
-*Avancé le 16/10 : « Ma position » et « Choisir sur la carte » dans la recherche de lieu (point exact dans le lien Plans `ll=`) ; liens Plans et Google Maps (1 et 2) lus par l'extension de partage, formats réels dans `Shared/Share/SharedPlace.swift` et SUIVI ; catégorie demandée à Plans (type d'envie proposé) ; photo (3) et coordonnées en texte (4) faits le même jour. A3 terminé, reste l'essai d'une vraie photo sur l'iPhone. Photos inclut la position par défaut (« Location Included », Options › Lieu pour la retirer).*
+*Avancé le 16/10 : « Ma position » et « Choisir sur la carte » dans la recherche de lieu (point exact dans le lien Plans `ll=`) ; liens Plans et Google Maps (1 et 2) lus par l'extension de partage, formats réels dans `Shared/Share/SharedPlace.swift` et SUIVI ; catégorie demandée à Plans (type d'envie proposé) ; photo (3) et coordonnées en texte (4) faits le même jour. A3 terminé et validé sur l'iPhone (build 29). Photos inclut la position par défaut (« Location Included », Options › Lieu pour la retirer).*
 Toutes passent par `RelanceShare`, qui propose ensuite le type (resto, magasin, spot photo, à voir, tâche) avant d'enregistrer.
 
 1. **Lien Apple Plans** : lire coordonnées et nom dans l'adresse (`ll=`, `q=`, `address=`). Les liens courts de Plans sont à suivre jusqu'à l'adresse longue. Formats exacts **à vérifier sur de vrais liens** partagés depuis Plans sous iOS 26 (Alexandre en fournit quelques-uns), puis figés dans les tests.
