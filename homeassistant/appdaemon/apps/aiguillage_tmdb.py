@@ -56,6 +56,7 @@ def search_query(title):
     query = re.sub(r"\([^)]*\)", " ", title or "")
     query = re.sub(r"^\s*(re)?(regarder|voir|mater)\s+((le|la|les)\s+(film|série|serie|documentaire|saison)s?\s+)?",
                    "", query, flags=re.IGNORECASE)
+    query = re.sub(r"\s+en\s+(ligne|streaming)\s*$", "", query, flags=re.IGNORECASE)
     query = re.sub(r"\s+sur\s+" + PLATFORM_WORDS + r"\s*$", "", query, flags=re.IGNORECASE)
     query = re.sub(r"^\s*à regarder\s*$", "", query, flags=re.IGNORECASE)
     return re.sub(r"\s+", " ", query).strip(" -–:"), year

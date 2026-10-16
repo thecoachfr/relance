@@ -19,6 +19,9 @@ def test_search_query():
     assert t.search_query("Voir la série The Bear sur Disney Plus") == ("The Bear", None)
     assert t.search_query("À regarder sur Netflix") == ("", None)
     assert t.search_query("Monarch legacy of monsters") == ("Monarch legacy of monsters", None)
+    # « En ligne », sans plateforme (demande d'Alexandre du 16/10).
+    assert t.search_query("Regarder Six Feet Under en ligne") == ("Six Feet Under", None)
+    assert t.search_query("voir la série The Bear en streaming") == ("The Bear", None)
 
 
 def test_needs_lookup():
