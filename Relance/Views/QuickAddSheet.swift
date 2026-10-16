@@ -31,9 +31,11 @@ struct QuickAddSheet: View {
     @State private var pickOther = false
     @State private var category: String?
     @State private var priority = TaskPriority.normal
-    /// Nouvelle liste (P9-G1) : articles saisis un par ligne.
+    /// Nouvelle liste (P9-G1) : articles ajoutés un à un (Retour = article suivant, comme dans la fiche).
     @State private var avecListe = false
-    @State private var articles = ""
+    @State private var articles: [String] = []
+    @State private var article = ""
+    @FocusState private var articleActif: Bool
 
     init(context: QuickAddContext = .today, category: String? = nil) {
         self.context = context
@@ -120,11 +122,22 @@ struct QuickAddSheet: View {
                 if HAConfig.isActive, !isToSee {
                     Section {
                         Toggle("Liste d'articles", systemImage: "checklist", isOn: $avecListe.animation())
+                            .onChange(of: avecListe) { if avecListe { articleActif = true } }
                         if avecListe {
-                            TextField("Articles", text: $articles, prompt: Text("Un article par ligne (« 6 œufs »)"),
-                                      axis: .vertical)
+                            ForEach(articles.indices, id: \.self) { i in
+                                Label(articles[i], systemImage: "circle")
+                            }
+                            .onDelete { articles.remove(atOffsets: $0) }
+                            TextField("Article", text: $article, prompt: Text("Ajouter un article (« 6 œufs »)"))
                                 .formFieldWithoutLabel()
-                                .lineLimit(3...)
+                                .focused($articleActif)
+                                .submitLabel(.next)
+                                .onSubmit {
+                                    let texte = article.trimmingCharacters(in: .whitespaces)
+                                    if !texte.isEmpty { articles.append(texte) }
+                                    article = ""
+                                    articleActif = true
+                                }
                         }
                     } footer: {
                         if avecListe { Text("Quand tout est coché, la tâche passe en « Fait ».") }
@@ -245,7 +258,7 @@ struct QuickAddSheet: View {
                              category: category, priority: priority, notes: kept)
         if avecListe, !isToSee {
             let maintenant = TacheHA.timestamp(.now)
-            let liste = articles.components(separatedBy: .newlines).compactMap(TaskStore.article).map {
+            let liste = (articles + [article]).compactMap(TaskStore.article).map {
                 var article = $0
                 article.maj = maintenant
                 return article
