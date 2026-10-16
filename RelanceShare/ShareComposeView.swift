@@ -20,6 +20,9 @@ struct ShareComposeView: View {
     @State private var kind: ToSee.Kind?
     /// Titre lu sur la page pendant que la fiche s'affiche.
     @State private var fetchingTitle = false
+    /// Lieu lu dans un lien Plans ou Google Maps, et ce lien.
+    @State private var place: SharedPlace?
+    @State private var placeLink: URL?
 
     var body: some View {
         NavigationStack {
@@ -40,6 +43,21 @@ struct ShareComposeView: View {
                 } footer: {
                     if !body_.isEmpty {
                         Text(body_).lineLimit(4)
+                    }
+                }
+
+                if let place {
+                    Section("Lieu") {
+                        Label {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(place.name)
+                                if let address = place.address, address != place.name {
+                                    Text(address).font(.subheadline).foregroundStyle(.secondary)
+                                }
+                            }
+                        } icon: {
+                            Image(systemName: "mappin.and.ellipse")
+                        }
                     }
                 }
 
@@ -138,6 +156,22 @@ struct ShareComposeView: View {
         // Un lien (vidéo, album, article) : une envie, avec le titre de la page si on n'a partagé que le lien.
         guard let url = SharedLink.url(in: original) else { return }
         let linkOnly = draft.body.trimmingCharacters(in: .whitespacesAndNewlines) == url.absoluteString
+        // Un lieu (Plans, Google Maps) : nom et adresse lus dans le lien, jamais dans la page.
+        if SharedPlace.isMapLink(url) {
+            fetchingTitle = true
+            Task {
+                if let found = await SharedPlace.resolve(url) {
+                    place = found
+                    placeLink = url
+                    if title == proposedTitle || linkOnly {
+                        title = found.name
+                        proposedTitle = title
+                    }
+                }
+                fetchingTitle = false
+            }
+            return
+        }
         kind = SharedLink.kind(for: url, linkOnly: linkOnly)
         if kind != nil { day = nil }
         guard linkOnly else { return }
@@ -159,6 +193,9 @@ struct ShareComposeView: View {
         let minutes = day != nil && hasTime ? (c.hour ?? 0) * 60 + (c.minute ?? 0) : nil
         let cleanTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         var notes = SharedMessage.notes(original: original, titleEdited: cleanTitle != proposedTitle)
+        if let place, let placeLink {
+            notes = TaskContact.notes(notes, setting: place.contact(link: placeLink))
+        }
         if let kind {
             notes = ToSee.notes(notes, setting: ToSee(kind))
             day = nil
@@ -195,6 +232,7 @@ struct ShareComposeView: View {
         tache.jour = TacheHA.jour(day)
         tache.heure = day == nil ? nil : TacheHA.heure(minutes)
         tache.priorite = priority == .normal ? nil : priority.rawValue
+        if let place, let placeLink { tache.lieu = place.lieu(link: placeLink) }
         guard let valeur = try? tache.valeur(),
               (try? synchro.ecrire(UUID().uuidString.lowercased(), valeur)) != nil else { return false }
         _ = await Self.within(seconds: 8) { @MainActor in

@@ -56,7 +56,9 @@ nonisolated enum SharedLink {
                   let m = regex.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)),
                   let range = Range(m.range(at: 1), in: html) else { continue }
             let title = cleaned(decoded(String(html[range])))
-            if !title.isEmpty { return title }
+            // Page d'erreur ou nom du site seul : pas un titre (le lien Google Maps a donné le premier, le 16/10).
+            let generic = ["dynamic link not found", "google maps", "apple maps", "plans", "page not found", "404"]
+            if !title.isEmpty, !generic.contains(title.lowercased()) { return title }
         }
         return nil
     }

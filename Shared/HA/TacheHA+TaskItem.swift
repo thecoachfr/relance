@@ -106,3 +106,12 @@ extension TacheHA {
                            b[8], b[9], b[10], b[11], b[12], b[13], b[14], b[15]))
     }
 }
+
+/// Coordonnées des adresses déjà trouvées par Plans (`PlaceLocator`), gardées dans l'App Group.
+nonisolated enum PlaceCoordinates {
+    static let key = "placeCoordinates"
+
+    static func saved() -> [String: [Double]] {
+        AppGroup.defaults.dictionary(forKey: key) as? [String: [Double]] ?? [:]
+    }
+}

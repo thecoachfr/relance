@@ -119,14 +119,6 @@ nonisolated struct TaskContact: Equatable, Sendable {
     }
 }
 
-/// Coordonnées des adresses déjà trouvées par Plans (`PlaceLocator`), gardées dans l'App Group.
-nonisolated enum PlaceCoordinates {
-    static let key = "placeCoordinates"
-
-    static func saved() -> [String: [Double]] {
-        AppGroup.defaults.dictionary(forKey: key) as? [String: [Double]] ?? [:]
-    }
-}
 
 /// « Me le rappeler en passant à côté » : ligne « 🔔 À l'approche » dans les notes, pour que le choix suive
 /// la tâche sur tous les appareils (seul l'appareil qui relance surveille le lieu).

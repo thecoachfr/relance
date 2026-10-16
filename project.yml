@@ -178,6 +178,8 @@ targets:
       - Shared/Reminders/ReminderOverride.swift
       - Shared/Model/TaskTag.swift
       - Shared/Model/ToSee.swift
+      - Shared/Model/TaskContact.swift
+      - Shared/Model/NoteLines.swift
       - Shared/HA/HAConfig.swift
       - Shared/HA/TacheHA.swift
       - Shared/HA/MemoHA.swift
