@@ -155,6 +155,16 @@ class RelanceVigie(Hass):
         self._presence = self.args.get("presence_entity")
         if self._espace and self._presence:
             self.listen_state(self.on_presence, self._presence, new="on", old="off")
+        # Retour d'Alexandre (P9-F4) : son iPhone revient à portée des relais Bermuda.
+        self._domicile = self.args.get("domicile_entity")
+        if self._espace and self._domicile:
+            self.listen_state(self.on_presence, self._domicile, new="home", old="not_home")
+        # Pièce d'Alexandre (P9-F4, Bermuda) : rappels « dans une pièce », après 30 s dans la même pièce.
+        self._piece = self.args.get("piece_entity")
+        self._piece_handle = None
+        if self._espace and self._piece:
+            self.listen_state(self.on_piece, self._piece)
+            self.run_in(lambda **_kw: self._publier_pieces(), 15)
         # Essai : « aiguillage_test_maison » simule une arrivée au salon.
         self.listen_event(lambda *_a, **_kw: self.on_presence(None, None, None, None), "aiguillage_test_maison")
         # Bouton « Lire sur la TV » (app TV ou iPhone) via script.aiguillage_spotify_sur_tv.
@@ -423,6 +433,70 @@ class RelanceVigie(Hass):
             except Exception as error:  # noqa: BLE001
                 self.log(f"Maison : « {tache.get('titre')} » non écrite : {error!r}", level="WARNING")
             self.log(f"Maison : rappel de « {tache.get('titre')} » ({envoyes} iPhone)")
+
+    def on_piece(self, entity, attribute, old, new, **kwargs):
+        if self._piece_handle:
+            self.cancel_timer(self._piece_handle)
+            self._piece_handle = None
+        if new and new not in ("Absent", "unknown", "unavailable") and new != old:
+            self._piece_handle = self.run_in(self._piece_stable, 30, piece=new)
+
+    def _piece_stable(self, **kwargs):
+        """Toujours dans la même pièce 30 s après y être entré : rappels de cette pièce (une fois par jour)."""
+        self._piece_handle = None
+        piece = kwargs.get("piece")
+        if self.get_state(self._piece) != piece:
+            return
+        try:
+            records = self._service("donnees_apps", "lire", {"espace": self._espace}).get("enregistrements", [])
+        except Exception as error:  # noqa: BLE001
+            self.log(f"Pièce : tâches illisibles : {error!r}", level="WARNING")
+            return
+        today = date.today()
+        maintenant = datetime.now(UTC).isoformat(timespec="seconds")
+        heure = datetime.now().strftime("%H:%M")
+        for record in records:
+            tache = record.get("valeur") or {}
+            if not self._is_task_key(record.get("cle", "")):
+                continue
+            dues = [a for a in tache.get("actions") or [] if aiguillage_actions.rappel_piece_du(a, tache, piece, today)]
+            if not dues:
+                continue
+            envoyes = self.notify_all(f"📍 {tache.get('titre') or 'Tâche'}", f"Tu es dans : {piece}.")
+            for action in dues:
+                tache = aiguillage_actions.marquer_rappel(tache, action["id"], maintenant, heure)
+            try:
+                self._service("donnees_apps", "ecrire", {
+                    "espace": self._espace, "cle": record["cle"], "valeur": tache,
+                    "version_attendue": record["version"], "modifie_par": "vigie", "op_id": str(uuid.uuid4()),
+                })
+            except Exception as error:  # noqa: BLE001
+                self.log(f"Pièce : « {tache.get('titre')} » non écrite : {error!r}", level="WARNING")
+            self.log(f"Pièce : rappel de « {tache.get('titre')} » en {piece} ({envoyes} iPhone)")
+
+    def _publier_pieces(self):
+        """Pièces de la maison (zones de HA) dans `config:pieces`, pour le menu « Me le rappeler dans… » de l'app."""
+        try:
+            texte = self.render_template("{{ areas() | map('area_name') | list | tojson }}")
+            pieces = json.loads(texte) if isinstance(texte, str) else list(texte)
+        except Exception as error:  # noqa: BLE001
+            self.log(f"Pièce : liste des pièces illisible : {error!r}", level="WARNING")
+            return
+        try:
+            actuel = self._service("donnees_apps", "lire", {"espace": self._espace, "cle": aiguillage_actions.CLE_PIECES})
+            enregistrement = actuel.get("enregistrement") or {}
+        except Exception:  # noqa: BLE001
+            enregistrement = {}
+        if (enregistrement.get("valeur") or {}).get("pieces") == pieces:
+            return
+        try:
+            self._service("donnees_apps", "ecrire", {
+                "espace": self._espace, "cle": aiguillage_actions.CLE_PIECES, "valeur": {"pieces": pieces},
+                "version_attendue": enregistrement.get("version", 0), "modifie_par": "vigie", "op_id": str(uuid.uuid4()),
+            })
+            self.log(f"Pièce : {len(pieces)} pièce(s) publiées pour l'app")
+        except Exception as error:  # noqa: BLE001
+            self.log(f"Pièce : pièces non publiées : {error!r}", level="WARNING")
 
     def notify_all(self, title, body):
         """Notification visible sur les iPhone enregistrés (production : builds TestFlight). Renvoie le nombre

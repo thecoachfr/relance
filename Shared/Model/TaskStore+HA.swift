@@ -114,6 +114,11 @@ extension TaskStore {
                 Subscriptions.cache(codes)
             }
         }
+        if let config = records.first(where: { $0.cle == TacheHA.Action.piecesKey && !$0.supprime }),
+           case .objet(let o) = config.valeur, case .liste(let l)? = o["pieces"] {
+            let liste = l.compactMap { if case .texte(let s) = $0 { s } else { nil } }
+            if liste != pieces { pieces = liste }
+        }
         if let config = records.first(where: { $0.cle == Recette.haKey && !$0.supprime }) {
             let liste = Recette.liste(config.valeur)
             if liste != recettes { recettes = liste }

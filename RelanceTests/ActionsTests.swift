@@ -106,4 +106,11 @@ struct ActionsTests {
         a.resultat = "Rappelé le 16/10 à 21:10"
         #expect(a.etatTexte == "En rentrant à la maison · Rappelé le 16/10 à 21:10")
     }
+
+    @Test func rappelPiece() {
+        let a = TacheHA.Action.dans("Chambre")
+        #expect(a.type == "rappel_piece" && a.piece == "Chambre" && !a.auToucher)
+        #expect(a.titre == "Me le rappeler dans : Chambre")
+        #expect(a.etatTexte == "En entrant dans : Chambre")
+    }
 }

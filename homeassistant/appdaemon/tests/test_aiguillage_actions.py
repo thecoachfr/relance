@@ -83,6 +83,18 @@ def test_rappel_maison():
     assert not a.rappel_maison_du(action, {**tache, "fait": True}, TODAY)
 
 
+def test_rappel_piece():
+    action = {"id": "p1", "type": "rappel_piece", "executant": "ha", "declencheur": {"quand": "piece"},
+              "params": {"piece": "Chambre"}, "etat": "a_faire"}
+    tache = {"titre": "Changer l'ampoule", "actions": [action]}
+    assert a.rappel_piece_du(action, tache, "chambre", TODAY)
+    assert not a.rappel_piece_du(action, tache, "Salon", TODAY)
+    assert not a.due(action, tache, TODAY)  # pas exécutée par la passe des actions
+    t = a.marquer_rappel(tache, "p1", "2026-10-16T19:30:00+00:00", "21:30")
+    assert not a.rappel_piece_du(t["actions"][0], t, "Chambre", TODAY)
+    assert a.rappel_piece_du(t["actions"][0], t, "Chambre", date(2026, 10, 17))
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_"):

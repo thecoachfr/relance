@@ -26,7 +26,16 @@
 
 - **Idée 1** : `binary_sensor.presence_salon` (helper Template, `delay_off` 10 min).
 - **Idée 2** : action `rappel_maison` (vigie, notification visible sur les iPhone, une fois par jour et par tâche).
-- Restent : idée 3 (Nest Hub selon la présence), idée 4 (Bermuda).
+- **Idée 4 (Bermuda, relais installés par Alexandre)** : `sensor.piece_d_alexandre` (helper Template : pièce de la
+  montre, sinon de l'iPhone, sinon « Absent », d'après `sensor.private_ble_watch_area` et `sensor.private_ble_iphone_area`).
+  Action « Me le rappeler dans… » (`rappel_piece`, `params.piece`) : la vigie notifie quand Alexandre reste 30 s dans
+  la pièce (`piece_entity` dans `apps.yaml`), une fois par jour et par tâche. Pièces proposées par l'app : liste des
+  zones HA publiée par la vigie sous la clé non-UUID `config:pieces`. `domicile_entity` : retour à la maison d'après
+  `device_tracker.private_ble_iphone`.
+- **Idée 3 (Nest Hub)** : `binary_sensor.quelqu_un_dans_l_espace_de_vie` (présence salon, ou Alexandre dans l'entrée,
+  la cuisine ou le salon). Option `presence_entity` des cartes `nest-hub-entree-card` et `nest-hub-leger-card` : le bloc
+  Aiguillage est masqué quand personne n'est là. Les deux cartes sont des fichiers `/local/nest-hub/` (la légère
+  n'est plus une ressource inline).
 
 ## 4. Ordre
 

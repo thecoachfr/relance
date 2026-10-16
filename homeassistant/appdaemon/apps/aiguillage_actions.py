@@ -141,6 +141,21 @@ def rappel_maison_du(action, tache, today):
     return (action.get("maj") or "")[:10] != today.isoformat()
 
 
+RAPPEL_PIECE = "rappel_piece"
+CLE_PIECES = "config:pieces"
+
+
+def rappel_piece_du(action, tache, piece, today):
+    """« Me le rappeler dans <pièce> » (P9-F4) : même pièce (sans tenir compte de la casse), à faire, tâche pas
+    faite, pas encore rappelé aujourd'hui."""
+    if action.get("type") != RAPPEL_PIECE or action.get("etat") != "a_faire" or tache.get("fait"):
+        return False
+    voulue = ((action.get("params") or {}).get("piece") or "").casefold()
+    if not voulue or voulue != (piece or "").casefold():
+        return False
+    return (action.get("maj") or "")[:10] != today.isoformat()
+
+
 def marquer_rappel(tache, action_id, maintenant, heure):
     """La tâche avec le rappel noté (« Rappelé le JJ/MM à HH:MM »), l'action restant à faire."""
     jour = maintenant[8:10] + "/" + maintenant[5:7]

@@ -37,6 +37,14 @@ struct ActionsSection: View {
                             store.addAction(.aLaMaison(), to: item)
                         }
                     }
+                    if HAConfig.isActive, !store.pieces.isEmpty {
+                        // Bermuda sait dans quelle pièce est Alexandre : rappel en y entrant.
+                        Menu("Me le rappeler dans…", systemImage: "figure.walk.arrival") {
+                            ForEach(store.pieces, id: \.self) { piece in
+                                Button(piece) { store.addAction(.dans(piece), to: item) }
+                            }
+                        }
+                    }
                     if let lien {
                         if !actions.contains(where: { $0.type == TacheHA.Action.ouvrirLien }) {
                             Button("Ouvrir le lien", systemImage: "link") {
@@ -55,8 +63,8 @@ struct ActionsSection: View {
             } header: {
                 Text("Actions")
             } footer: {
-                if actions.contains(where: { $0.type == TacheHA.Action.rappelMaison }) {
-                    Text("Home Assistant te prévient quand il détecte quelqu'un au salon, une fois par jour, jusqu'à ce que la tâche soit faite.")
+                if actions.contains(where: { $0.type == TacheHA.Action.rappelMaison || $0.type == TacheHA.Action.rappelPiece }) {
+                    Text("Home Assistant te prévient quand tu rentres ou entres dans la pièce, une fois par jour, jusqu'à ce que la tâche soit faite.")
                 } else if !actions.isEmpty {
                     Text("Touche une action pour la lancer. Elles se synchronisent avec tes autres appareils.")
                 }
