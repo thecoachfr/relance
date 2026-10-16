@@ -43,7 +43,7 @@ Champ `actions` de `TacheHA` v2 (voir l'index). Chaque action :
 
 ### D3 — Exécutant HA (vigie)
 - Sur `donnees_apps_modifie` et toutes les heures (déclencheurs `avant_echeance`) : exécuter les actions `executant: "ha"` dues, écrire `etat`, `resultat`, `maj`.
-- Notification push (APNs, déjà en place) quand une action échoue ou qu'une préparation est prête.
+- Notification push (APNs, déjà en place) quand une action échoue ou qu'une préparation est prête. *Fait le 16/10 : `a_notifier` / `noter_notifie` (`aiguillage_actions.py`), écran `ResultatActionView` dans l'app.*
 - **Accepté quand** : test de bout en bout sur une tâche d'essai ; aucune exécution en double après un redémarrage d'AppDaemon.
 
 ### D4 — Playlist Spotify

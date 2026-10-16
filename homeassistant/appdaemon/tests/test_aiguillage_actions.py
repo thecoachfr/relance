@@ -100,3 +100,23 @@ if __name__ == "__main__":
         if name.startswith("test_"):
             fn()
             print("ok", name)
+
+
+def test_a_notifier():
+    tache = {"titre": "TVA", "actions": [
+        {"id": "r", "executant": "routine", "etat": "faite"},
+        {"id": "h", "executant": "ha", "etat": "echec", "resultat": "Spotify : 401"},
+        {"id": "t", "executant": "appareil", "etat": "echec"},
+        {"id": "s", "executant": "ha", "etat": "faite"},
+    ]}
+    actions = {x["id"]: x for x in tache["actions"]}
+    assert a.a_notifier(actions["r"], tache)[0] == "📝 TVA"
+    assert a.a_notifier(actions["h"], tache) == ("⚠️ TVA", "Action en échec : Spotify : 401")
+    assert a.a_notifier(actions["t"], tache) is None
+    assert a.a_notifier(actions["s"], tache) is None
+    notee = a.noter_notifie(tache, "r")
+    assert a.a_notifier(notee["actions"][0], notee) is None
+    assert notee["actions"][1] == tache["actions"][1]
+    # Nouvel échec après une réussite notifiée : notifié à nouveau.
+    assert a.a_notifier({**notee["actions"][0], "etat": "echec"}, notee) is not None
+    assert a.a_notifier(actions["h"], {**tache, "fait": True}) is None

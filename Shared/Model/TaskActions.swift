@@ -78,7 +78,14 @@ nonisolated extension TacheHA.Action {
         case "en_cours": "En cours"
         default: "À faire"
         }
-        return [base, resultat].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · ")
+        // Résultat long (préparation de la routine) : lu dans son propre écran, pas sous le titre.
+        return [base, resultatLong ? nil : resultat].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · ")
+    }
+
+    /// Résultat trop long pour la ligne de la fiche (plusieurs lignes ou plus de 120 caractères).
+    var resultatLong: Bool {
+        guard let resultat else { return false }
+        return resultat.count > 120 || resultat.contains("\n")
     }
 }
 

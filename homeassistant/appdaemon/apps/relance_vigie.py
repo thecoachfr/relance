@@ -341,6 +341,13 @@ class RelanceVigie(Hass):
                     continue  # pas exécutable maintenant (Spotify sans identifiants) : on réessaiera
                 tache = aiguillage_actions.marquer(tache, action["id"], etat, resultat, maintenant)
                 faites.append(f"{action.get('type')} : {etat}")
+            # Échecs et préparations prêtes (routine comprise) : notification visible, une fois par état.
+            for action in list(tache.get("actions") or []):
+                message = aiguillage_actions.a_notifier(action, tache)
+                if message:
+                    envoyes = self.notify_all(*message, cause="action")
+                    tache = aiguillage_actions.noter_notifie(tache, action["id"])
+                    faites.append(f"{action.get('type')} : {action.get('etat')} notifié ({envoyes} iPhone)")
             if tache is avant:
                 continue
             try:
@@ -498,14 +505,14 @@ class RelanceVigie(Hass):
         except Exception as error:  # noqa: BLE001
             self.log(f"Pièce : pièces non publiées : {error!r}", level="WARNING")
 
-    def notify_all(self, title, body):
+    def notify_all(self, title, body, cause="rappel_maison"):
         """Notification visible sur les iPhone enregistrés (production : builds TestFlight). Renvoie le nombre
         d'envois réussis. Les iPad et le Mac ne la reçoivent pas, pour ne pas sonner partout à la fois."""
         with self._lock:
             tokens = self._load_tokens()
         cibles = {t: i for t, i in tokens.items()
                   if i.get("environment") == "production" and str(i.get("device", "")).startswith("iPhone")}
-        self._count_push("rappel_maison", len(cibles))
+        self._count_push(cause, len(cibles))
         ok = 0
         with httpx.Client(http2=True, timeout=10) as client:
             for token, info in cibles.items():

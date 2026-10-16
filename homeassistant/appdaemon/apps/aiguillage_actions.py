@@ -162,6 +162,29 @@ def marquer_rappel(tache, action_id, maintenant, heure):
     return marquer(tache, action_id, "a_faire", f"Rappelé le {jour} à {heure}", maintenant)
 
 
+def a_notifier(action, tache):
+    """(titre, texte) de la notification visible à envoyer pour cette action, ou None. Échec d'une action de HA ou
+    de la routine, et préparation de la routine prête ; une seule fois par état (`notifie`). Les actions de
+    l'appareil (ouvrir le lien, sur la TV) ne sont jamais notifiées : Alexandre a vu le résultat à l'écran."""
+    etat = action.get("etat")
+    if action.get("executant") not in ("ha", "routine") or action.get("notifie") == etat or tache.get("fait"):
+        return None
+    titre = tache.get("titre") or "Tâche"
+    if etat == "echec":
+        return f"⚠️ {titre}", f"Action en échec : {action.get('resultat') or action.get('type')}"[:200]
+    if etat == "faite" and action.get("executant") == "routine":
+        return f"📝 {titre}", "Préparation prête : ouvre la tâche pour la lire."
+    return None
+
+
+def noter_notifie(tache, action_id):
+    """La tâche avec l'état actuel de l'action noté comme notifié (`notifie`)."""
+    tache = dict(tache)
+    tache["actions"] = [{**a, "notifie": a.get("etat")} if a.get("id") == action_id else a
+                        for a in tache.get("actions") or []]
+    return tache
+
+
 ROUTINE_DELAI_HEURES = 24
 
 

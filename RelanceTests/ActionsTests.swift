@@ -107,6 +107,16 @@ struct ActionsTests {
         #expect(a.etatTexte == "En rentrant à la maison · Rappelé le 16/10 à 21:10")
     }
 
+    /// Résultat long (préparation de la routine) : pas sous le titre, dans son écran.
+    @Test func resultatLong() {
+        var a = TacheHA.Action(type: "preparer", executant: "routine")
+        a.etat = "faite"
+        a.resultat = "Court"
+        #expect(!a.resultatLong && a.etatTexte.hasSuffix("· Court"))
+        a.resultat = "CA3 octobre\nLignes à saisir"
+        #expect(a.resultatLong && !a.etatTexte.contains("CA3"))
+    }
+
     @Test func rappelPiece() {
         let a = TacheHA.Action.dans("Chambre")
         #expect(a.type == "rappel_piece" && a.piece == "Chambre" && !a.auToucher)

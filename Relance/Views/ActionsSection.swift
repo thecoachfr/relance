@@ -10,6 +10,8 @@ struct ActionsSection: View {
     /// Lien de la tâche (envie, sinon premier lien des notes) : paramètre des nouvelles actions.
     let lien: URL?
     @State private var enCours: String?
+    /// Action dont le résultat complet est affiché (préparation de la routine, par exemple).
+    @State private var resultat: TacheHA.Action?
 
     var body: some View {
         let actions = item.actions
@@ -69,6 +71,7 @@ struct ActionsSection: View {
                     Text("Touche une action pour la lancer. Elles se synchronisent avec tes autres appareils.")
                 }
             }
+            .sheet(item: $resultat) { ResultatActionView(action: $0, tache: item.title) }
         }
     }
 
@@ -86,7 +89,15 @@ struct ActionsSection: View {
             Spacer()
             if enCours == action.id { ProgressView() }
         }
-        if action.auToucher, action.lien != nil {
+        if action.resultatLong {
+            Button { resultat = action } label: {
+                HStack {
+                    contenu
+                    Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+                }
+            }
+            .accessibilityHint("Affiche le résultat complet")
+        } else if action.auToucher, action.lien != nil {
             Button { executer(action) } label: { contenu }
                 .disabled(enCours != nil)
                 .accessibilityHint("Lance l'action")
@@ -118,5 +129,44 @@ struct ActionsSection: View {
         default:
             break
         }
+    }
+}
+
+/// Résultat complet d'une action (par exemple la proposition préparée par la routine), sélectionnable et partageable.
+struct ResultatActionView: View {
+    @Environment(\.dismiss) private var dismiss
+    let action: TacheHA.Action
+    let tache: String
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    Label(action.etatTexte, systemImage: action.symbole)
+                        .font(.subheadline)
+                        .foregroundStyle(action.etat == "echec" ? Color.red : Color.secondary)
+                    Text(action.resultat ?? "")
+                        .font(.body)
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .padding()
+            }
+            .navigationTitle(action.titre)
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("OK") { dismiss() }
+                }
+                ToolbarItem(placement: .primaryAction) {
+                    ShareLink(item: "\(tache)\n\n\(action.resultat ?? "")")
+                }
+            }
+        }
+        #if os(macOS)
+        .frame(minWidth: 480, minHeight: 420)
+        #endif
     }
 }
