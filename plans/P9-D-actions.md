@@ -47,7 +47,7 @@ Champ `actions` de `TacheHA` v2 (voir l'index). Chaque action :
 - **Accepté quand** : test de bout en bout sur une tâche d'essai ; aucune exécution en double après un redémarrage d'AppDaemon.
 
 ### D4 — Playlist Spotify
-- Réutiliser l'app Spotify de `spotify-library-tool` (qui a accès à l'API Web, confirmé par Alexandre) : identifiant et secret client, plus un jeton de rafraîchissement obtenu une fois sur le Mac avec les droits `playlist-modify-private` et `playlist-modify-public`. Le tout dans `/config/spotify_aiguillage.json` sur HA, jamais dans un dépôt.
+- Réutiliser l'app Spotify de `spotify-library-tool` (qui a accès à l'API Web, confirmé par Alexandre) : identifiant et secret client, plus un jeton de rafraîchissement obtenu une fois sur le Mac avec les droits `playlist-modify-private` et `playlist-modify-public`, plus `user-read-playback-state` et `user-modify-playback-state` pour la lecture sur la TV (plan B). Le tout dans `/config/spotify_aiguillage.json` sur HA, jamais dans un dépôt.
 - API de février 2026 : ajout par `POST /playlists/{id}/items` ; les requêtes groupées `GET /tracks`, `/albums`… ont disparu (appels individuels) ; le contenu d'une playlist n'est lisible que si on en est propriétaire ou collaborateur (c'est le cas de « À écouter »). L'app Spotify en mode développement exige un compte Premium chez son propriétaire.
 - Lien `open.spotify.com/track|album|episode/…` → URI ; un album ajoute ses titres (`GET /albums/{id}/tracks`). Vérifier d'abord que les titres ne sont pas déjà dans la playlist.
 - Playlist cible : réglage (identifiant) dans `config:recettes` ou un réglage de l'app ; la créer si absente (`POST /me/playlists`, privée).

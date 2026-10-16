@@ -53,7 +53,7 @@ Puis : savoir **sur quelle plateforme** le titre est disponible en France, l'ouv
 
 ## 4. Hors périmètre
 
-Lecture automatique (la TV ouvre la page du titre ; Alexandre lance la lecture), suivi des épisodes vus, The Frame (Samsung, Tizen : pas d'Android TV).
+Lecture automatique des films et séries (la TV ouvre la page du titre ; Alexandre lance la lecture ; seule la musique Spotify est lancée à distance), suivi des épisodes vus, The Frame (Samsung, Tizen : pas d'Android TV).
 
 ## 5. Documentation à tenir
 

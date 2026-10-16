@@ -40,6 +40,7 @@ Parcourir depuis le canapé, à la télécommande, les envies **« À regarder �
 
 ### C3 — Ouvrir et cocher
 - « Ouvrir » lance le titre dans l'app de la plateforme (formes de liens de LIENS-TV.md) ; « Vu » écrit dans HA et la tâche passe en historique sur l'iPhone.
+- **« À écouter » : lire sur la TV** (demande d'Alexandre du 16/10). « Ouvrir » passe le lien Spotify à l'app Spotify du Player (`Intent.ACTION_VIEW`, paquet `com.spotify.music`, qui affiche le contenu sans forcément le lire) ; « Lire » demande à HA de lancer la lecture par Spotify Connect (script `script.aiguillage_spotify_sur_tv` du plan B). L'app TV ne garde **aucun** jeton Spotify : tout passe par HA.
 - **Accepté quand** : pour chaque plateforme du tableau B5, l'ouverture donne le même résultat que le script HA ; « Vu » rejoué sans doublon après une coupure de HA.
 
 ### C4 — Mises à jour
