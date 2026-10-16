@@ -22,6 +22,8 @@
 3. **Mesure de référence de la batterie** (plan E, lot E1) : à lancer avant A pour une semaine d'usage normal.
 4. Noter l'état dans SUIVI.
 
+*État au 16/10 : (1) reporté par Alexandre ; (2) fait, le Player est joignable le jour et éteint la nuit (normal) ; (3) outils en place, semaine de mesure en cours ; (4) fait.*
+
 ## 3. Modèle de données commun (TacheHA, `v: 2`)
 
 Les tâches sont dans l'espace `aiguillage` de `donnees_apps` (`Shared/HA/TacheHA.swift`). P9 ajoute **trois champs facultatifs**. Les plans A, B, C et D les utilisent tous : ne pas en créer d'autres sans mettre ce fichier à jour.
@@ -33,6 +35,7 @@ Les tâches sont dans l'espace `aiguillage` de `donnees_apps` (`Shared/HA/TacheH
   "lieu": {
     "nom": "Pont de Charenton",
     "adresse": "Quai…, 94220 Charenton-le-Pont",
+    "telephone": null,
     "lat": 48.8215, "lon": 2.4123,
     "lien": "https://maps.apple.com/?ll=48.8215,2.4123&q=…",
     "source": "photo"
@@ -51,6 +54,7 @@ Les tâches sont dans l'espace `aiguillage` de `donnees_apps` (`Shared/HA/TacheH
 }
 ```
 
+- `lieu.telephone` : ajouté en A1 (16/10), le téléphone de la ligne `📍`, pour ne pas le perdre quand le champ fait foi.
 - `lieu.source` : `plans`, `google`, `photo`, `gps`, `memo` (ajouté par la routine) ou `saisie`. `adresse` devient facultative : une photo ou un point GPS n'en a pas forcément.
 - `envie.type` : `voir`, `lire`, `ecouter`, `regarder` (existants) et `resto`, `magasin`, `spot_photo` (nouveaux, plan A). Champs `plateforme`, `id_titre`, `tmdb`, `dispo_fr`, `dispo_maj` : plan B.
 - `actions` : plan D (B ajoute seulement l'action `sur_tv` déclenchée au toucher).
