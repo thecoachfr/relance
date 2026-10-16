@@ -57,6 +57,7 @@ struct TaskEditor: View {
                     CategoryPicker(category: $category)
                     TagsRow(tags: $tags)
                 }
+                ActionsSection(item: item, lien: item.envie()?.lien.flatMap(URL.init(string:)) ?? ToSee.link(in: NoteLines.visible(notes)))
                 RetriageSection(item: item)
                 Section {
                     Button(item.isCompleted ? "Marquer à faire" : "Marquer fait") {

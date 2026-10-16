@@ -72,6 +72,74 @@ nonisolated struct TacheHA: Codable, Equatable, Sendable {
         }
     }
 
+    /// Action d'une tâche (P9-D1) : ce qu'elle déclenche (ouvrir un lien, envoyer à la TV, ajouter à une playlist,
+    /// préparer un document…), qui l'exécute et où elle en est. Les champs inconnus sont gardés tels quels.
+    struct Action: Codable, Equatable, Sendable, Identifiable {
+        /// UUID stable, identifiant d'idempotence pour les exécutants.
+        var id: String
+        /// `ouvrir_lien`, `sur_tv`, `playlist_spotify`, `preparer`…
+        var type: String
+        /// `appareil`, `ha` (vigie) ou `routine`.
+        var executant: String
+        /// `{quand: "toucher"}`, `{quand: "creation"}`, `{quand: "avant_echeance", jours: 5}`…
+        var declencheur: JSONValeur?
+        /// Propres au type (ex. `{lien: "https://…"}`, `{playlist: "a_ecouter"}`).
+        var params: JSONValeur?
+        /// `a_faire`, `en_cours`, `faite`, `echec`.
+        var etat: String
+        /// Ce qui a été fait, ou l'erreur (court).
+        var resultat: String?
+        /// Horodatage ISO 8601 du dernier changement d'état.
+        var maj: String?
+        var autres: [String: JSONValeur] = [:]
+
+        init(id: String = UUID().uuidString.lowercased(), type: String, executant: String = "appareil",
+             declencheur: JSONValeur? = .objet(["quand": .texte("toucher")]), params: JSONValeur? = nil,
+             etat: String = "a_faire", resultat: String? = nil, maj: String? = nil) {
+            (self.id, self.type, self.executant, self.declencheur, self.params) = (id, type, executant, declencheur, params)
+            (self.etat, self.resultat, self.maj) = (etat, resultat, maj)
+        }
+
+        private static let known = ["id", "type", "executant", "declencheur", "params", "etat", "resultat", "maj"]
+
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: AnyKey.self)
+            id = try c.decode(String.self, forKey: AnyKey("id"))
+            type = try c.decode(String.self, forKey: AnyKey("type"))
+            executant = try c.decodeIfPresent(String.self, forKey: AnyKey("executant")) ?? "appareil"
+            declencheur = try c.decodeIfPresent(JSONValeur.self, forKey: AnyKey("declencheur"))
+            params = try c.decodeIfPresent(JSONValeur.self, forKey: AnyKey("params"))
+            etat = try c.decodeIfPresent(String.self, forKey: AnyKey("etat")) ?? "a_faire"
+            resultat = try c.decodeIfPresent(String.self, forKey: AnyKey("resultat"))
+            maj = try c.decodeIfPresent(String.self, forKey: AnyKey("maj"))
+            for key in c.allKeys where !Self.known.contains(key.stringValue) {
+                autres[key.stringValue] = try c.decode(JSONValeur.self, forKey: key)
+            }
+        }
+
+        func encode(to encoder: Encoder) throws {
+            var c = encoder.container(keyedBy: AnyKey.self)
+            try c.encode(id, forKey: AnyKey("id"))
+            try c.encode(type, forKey: AnyKey("type"))
+            try c.encode(executant, forKey: AnyKey("executant"))
+            try c.encodeIfPresent(declencheur, forKey: AnyKey("declencheur"))
+            try c.encodeIfPresent(params, forKey: AnyKey("params"))
+            try c.encode(etat, forKey: AnyKey("etat"))
+            try c.encodeIfPresent(resultat, forKey: AnyKey("resultat"))
+            try c.encodeIfPresent(maj, forKey: AnyKey("maj"))
+            for (key, value) in autres where !Self.known.contains(key) { try c.encode(value, forKey: AnyKey(key)) }
+        }
+    }
+
+    /// Clé libre, pour garder les champs inconnus.
+    struct AnyKey: CodingKey {
+        var stringValue: String
+        var intValue: Int? { nil }
+        init(_ s: String) { stringValue = s }
+        init?(stringValue: String) { self.stringValue = stringValue }
+        init?(intValue: Int) { nil }
+    }
+
     /// Version du format : 2 dès qu'un champ P9 est présent.
     var v = 1
     var titre: String
@@ -93,9 +161,14 @@ nonisolated struct TacheHA: Codable, Equatable, Sendable {
     var googleID: String?
     var lieu: Lieu?
     var envie: Envie?
+    /// Actions de la tâche (P9-D1).
+    var actions: [Action] = []
+    /// Champs de premier niveau que l'app ne connaît pas (ajoutés par la vigie, la routine ou une version plus
+    /// récente) : recopiés tels quels, pour qu'une modification sur l'iPhone ne les efface pas.
+    var autres: [String: JSONValeur] = [:]
 
-    enum CodingKeys: String, CodingKey {
-        case v, titre, notes, jour, heure, categorie, priorite, tags, relances, fait, lieu, envie
+    enum CodingKeys: String, CodingKey, CaseIterable {
+        case v, titre, notes, jour, heure, categorie, priorite, tags, relances, fait, lieu, envie, actions
         case faitLe = "fait_le"
         case googleID = "google_id"
     }
@@ -121,12 +194,21 @@ nonisolated struct TacheHA: Codable, Equatable, Sendable {
         // Un lieu mal formé (écrit à la main, autre version) ne doit pas rendre la tâche illisible.
         lieu = try? c.decodeIfPresent(Lieu.self, forKey: .lieu)
         envie = try? c.decodeIfPresent(Envie.self, forKey: .envie)
+        // Une action mal formée est ignorée sans perdre les autres.
+        actions = ((try? c.decodeIfPresent([JSONValeur].self, forKey: .actions)) ?? []).compactMap { valeur in
+            (try? JSONEncoder().encode(valeur)).flatMap { try? JSONDecoder().decode(Action.self, from: $0) }
+        }
+        let connus = Set(CodingKeys.allCases.map(\.rawValue))
+        let tout = try decoder.container(keyedBy: AnyKey.self)
+        for key in tout.allKeys where !connus.contains(key.stringValue) {
+            autres[key.stringValue] = try tout.decode(JSONValeur.self, forKey: key)
+        }
     }
 
     /// Les champs absents ne sont pas écrits (JSON plus lisible pour la routine et la vigie).
     func encode(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(lieu == nil && envie == nil ? v : max(v, 2), forKey: .v)
+        try c.encode(lieu == nil && envie == nil && actions.isEmpty ? v : max(v, 2), forKey: .v)
         try c.encode(titre, forKey: .titre)
         if !notes.isEmpty { try c.encode(notes, forKey: .notes) }
         try c.encodeIfPresent(jour, forKey: .jour)
@@ -140,6 +222,10 @@ nonisolated struct TacheHA: Codable, Equatable, Sendable {
         try c.encodeIfPresent(googleID, forKey: .googleID)
         try c.encodeIfPresent(lieu, forKey: .lieu)
         try c.encodeIfPresent(envie, forKey: .envie)
+        if !actions.isEmpty { try c.encode(actions, forKey: .actions) }
+        let connus = Set(CodingKeys.allCases.map(\.rawValue))
+        var tout = encoder.container(keyedBy: AnyKey.self)
+        for (key, value) in autres where !connus.contains(key) { try tout.encode(value, forKey: AnyKey(key)) }
     }
 
     // MARK: - Conversions

@@ -38,6 +38,7 @@
 		1713F83E8A2B3EB986C0FC02 /* MemoHA.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F9BBE7BB317EE70061CDB73 /* MemoHA.swift */; };
 		1765A8B5866503765A68DFB8 /* EnvieSuggestionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 203193BF1B5EE7BBFCBA5F53 /* EnvieSuggestionTests.swift */; };
 		17A257C14E793776BEFA2E6B /* CategoryViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E8C4B98CC17E47DEB59005B /* CategoryViews.swift */; };
+		1DA6F94EA96F552A12FC16B0 /* ActionsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C400C99C88D8FAF16375386 /* ActionsTests.swift */; };
 		1F7BE65A34F657867F64CA1D /* NoteLines.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6203FE3484BB9AB47B0C2D83 /* NoteLines.swift */; };
 		1FAC5E07C8AD2139C13A773A /* CalendarSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 595289CE4264CBC8CBE2415D /* CalendarSection.swift */; };
 		20E71BBEC18BFE03A2F6FF78 /* MemoRemote.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04E780457F28B702C2D670A0 /* MemoRemote.swift */; };
@@ -74,6 +75,7 @@
 		34E81DC10AA654646A7BB1FB /* TaskContact.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB47AF80FF2840FC777CCEC2 /* TaskContact.swift */; };
 		35CCA00BCE1D5AC227F6E6C6 /* TaskContact.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB47AF80FF2840FC777CCEC2 /* TaskContact.swift */; };
 		376B7919ADD2A02145627FD6 /* DonneesHA in Frameworks */ = {isa = PBXBuildFile; productRef = 25C0008109AA6C62C171A4E9 /* DonneesHA */; };
+		3960553E64701F2B73DB89D8 /* TaskActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7D24B2FA7C99714EB6FC0BD /* TaskActions.swift */; };
 		39CE665B4156CE3572A9A060 /* TaskActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4710CF61EBFBFD1A1472103A /* TaskActivityAttributes.swift */; };
 		39F505037B3E41C6D41BF52F /* SharedPhoto.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31B339A2445E0E4BF2299831 /* SharedPhoto.swift */; };
 		3BE40C9DBDE64A6F5F2546B3 /* TaskMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 428A54223E0ADAC3553B38D1 /* TaskMapView.swift */; };
@@ -97,6 +99,7 @@
 		473D512C7BA222A224D6CE94 /* HASyncTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BB210515A561BDDE66887DD /* HASyncTests.swift */; };
 		477300362673693C83EF14FE /* DueText.swift in Sources */ = {isa = PBXBuildFile; fileRef = 666C8CA69B643438FA2EC7C2 /* DueText.swift */; };
 		49371094B35A54ABB18B1134 /* TriageRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 856B480B3D562813D03F3EC2 /* TriageRequest.swift */; };
+		49A4C207454C37D9F756CAA5 /* TaskActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7D24B2FA7C99714EB6FC0BD /* TaskActions.swift */; };
 		4B9576648ACF89C848961140 /* AppGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A12D2947BB91F0172F0ED7C /* AppGroup.swift */; };
 		4D27FF1457756319CE784215 /* SharedPlace.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9027925BE8667BD979AF6ED /* SharedPlace.swift */; };
 		4E9091608C543191CA1D7B55 /* WatchIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = F221CBA28304261FF1D09E34 /* WatchIntents.swift */; };
@@ -139,6 +142,7 @@
 		6F427AFAE378B76CFA22DF05 /* GoogleRefreshSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D9F2F47AFB8AE35410E0899 /* GoogleRefreshSession.swift */; };
 		6FA4BFC948DDB87891AA78EA /* TaskStoreSyncTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE4BC2D4DF42F4878D28C1E9 /* TaskStoreSyncTests.swift */; };
 		6FD8EAC6F14FB052B287EFDE /* MemoStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5397683CF5FD3589B36E1F13 /* MemoStore.swift */; };
+		7017AB893472EE48C6DD4F57 /* ActionsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7DBE3DA8E8AC20FAB30C99D /* ActionsSection.swift */; };
 		7133AAFEED4BE920E2634CED /* SharedPlaceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61A994C34CC736F16CBEE82E /* SharedPlaceTests.swift */; };
 		7279A70EC91C14590F6E4DE9 /* MemoHA.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F9BBE7BB317EE70061CDB73 /* MemoHA.swift */; };
 		72B3AB693C6106E42B8D7808 /* TaskTag.swift in Sources */ = {isa = PBXBuildFile; fileRef = B863B8DA8A7D1FFAE24BE87C /* TaskTag.swift */; };
@@ -179,6 +183,7 @@
 		8F2F0A6D92079980C1F53D2B /* PriorityViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = C668853F8DA6D5749B17B534 /* PriorityViews.swift */; };
 		9032B55802F93C7ADD108C2E /* ToSee.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A3B053B5BF69150A21C6DA2 /* ToSee.swift */; };
 		90B6EB84EDA315A6F9C5E46E /* AppVersion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F3DFFD161CF172B8EA484A9 /* AppVersion.swift */; };
+		91CBB0BBABF2BF3EEFA9D8C8 /* TaskActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7D24B2FA7C99714EB6FC0BD /* TaskActions.swift */; };
 		92BEB50FEBAF86DA3ACEBCF1 /* TriageViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = B94FACB36938B4FB532C381F /* TriageViews.swift */; };
 		92D5E44DE928EBC19ED6E5D4 /* SharedLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761FC1F3864FB766BF0A6485 /* SharedLink.swift */; };
 		93C7E60D472124C74A6B30B3 /* Subscriptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E45A6B56620542EFF60636B /* Subscriptions.swift */; };
@@ -193,6 +198,7 @@
 		9D2DE725C74A796128FFBC6A /* LieuTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2DCB896CD10FB50A9BDD8FB /* LieuTests.swift */; };
 		9EF4DE2A2BECC496038B054E /* AppGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A12D2947BB91F0172F0ED7C /* AppGroup.swift */; };
 		9F2FD77B335B89B63523B34C /* AppVersion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F3DFFD161CF172B8EA484A9 /* AppVersion.swift */; };
+		9F57C32AEB673C86586CD243 /* ActionsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7DBE3DA8E8AC20FAB30C99D /* ActionsSection.swift */; };
 		A0E972DF6F678949E9C82BA9 /* ReminderPlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E48E67DBEFD62C7E6118390 /* ReminderPlanner.swift */; };
 		A14F0BEEB8890100A0B81D5E /* TacheHA.swift in Sources */ = {isa = PBXBuildFile; fileRef = 719434D8C63A56B7090C5E3F /* TacheHA.swift */; };
 		A280EB58AAF7D3D1FD9CC2ED /* TaskTag.swift in Sources */ = {isa = PBXBuildFile; fileRef = B863B8DA8A7D1FFAE24BE87C /* TaskTag.swift */; };
@@ -453,6 +459,7 @@
 		59F7A908CED23B538B56A391 /* RelanceApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelanceApp.swift; sourceTree = "<group>"; };
 		5A3B053B5BF69150A21C6DA2 /* ToSee.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToSee.swift; sourceTree = "<group>"; };
 		5C0DA8FD3D838562DDAE1750 /* TaskStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskStore.swift; sourceTree = "<group>"; };
+		5C400C99C88D8FAF16375386 /* ActionsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionsTests.swift; sourceTree = "<group>"; };
 		5CD9D6E8A5C0731F41756F44 /* SiriCaptureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SiriCaptureTests.swift; sourceTree = "<group>"; };
 		5FFB746BA5E4C74B3B145047 /* TodoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoView.swift; sourceTree = "<group>"; };
 		61A994C34CC736F16CBEE82E /* SharedPlaceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedPlaceTests.swift; sourceTree = "<group>"; };
@@ -501,6 +508,7 @@
 		A3BA2CD7259FBD2501089EDD /* MemoViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoViews.swift; sourceTree = "<group>"; };
 		A52A26E7A17146871684BD99 /* MacSignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacSignInView.swift; sourceTree = "<group>"; };
 		A6A4EF6EA4834A24EB534187 /* TaskItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskItem.swift; sourceTree = "<group>"; };
+		A7D24B2FA7C99714EB6FC0BD /* TaskActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskActions.swift; sourceTree = "<group>"; };
 		AD9D4E32E198251993005BCC /* QuickAddSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickAddSheet.swift; sourceTree = "<group>"; };
 		AEAE6516E008CA0F6431F7FC /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 		B30F392FC92433C39C1922E7 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -537,6 +545,7 @@
 		ECE60A54F2DC6987A632676A /* WatchTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchTask.swift; sourceTree = "<group>"; };
 		F151EFA42F032B5D0E235C59 /* ProximityReminders.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProximityReminders.swift; sourceTree = "<group>"; };
 		F221CBA28304261FF1D09E34 /* WatchIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchIntents.swift; sourceTree = "<group>"; };
+		F7DBE3DA8E8AC20FAB30C99D /* ActionsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionsSection.swift; sourceTree = "<group>"; };
 		F8DEDB1DC8F3AC484AE105AB /* MemoMerge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoMerge.swift; sourceTree = "<group>"; };
 		F8FDF7A0D1D79E016D9F07AA /* ReminderProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderProfile.swift; sourceTree = "<group>"; };
 		FAC867B66467D5B63EC30FDD /* TaskStore+HA.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TaskStore+HA.swift"; sourceTree = "<group>"; };
@@ -619,6 +628,7 @@
 		103CB1AB909D91F6CC84DEE1 /* RelanceTests */ = {
 			isa = PBXGroup;
 			children = (
+				5C400C99C88D8FAF16375386 /* ActionsTests.swift */,
 				E4DC1239718727B09A71BA21 /* DueTextTests.swift */,
 				DE8D7DCB6EBC8D7F85AE9B02 /* EnvieFieldTests.swift */,
 				1C3F65EA3092E1881DEA6CE5 /* EnviesTests.swift */,
@@ -697,6 +707,7 @@
 				57E018902DF086E23048C8AE /* Recurrence.swift */,
 				0E45A6B56620542EFF60636B /* Subscriptions.swift */,
 				110B163FAF813ACD416300F7 /* SyncLog.swift */,
+				A7D24B2FA7C99714EB6FC0BD /* TaskActions.swift */,
 				58450EAF33557E45B79243CC /* TaskCategory.swift */,
 				EB47AF80FF2840FC777CCEC2 /* TaskContact.swift */,
 				A6A4EF6EA4834A24EB534187 /* TaskItem.swift */,
@@ -744,6 +755,7 @@
 		5EEFE8FECD21EF7D4D739B46 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				F7DBE3DA8E8AC20FAB30C99D /* ActionsSection.swift */,
 				595289CE4264CBC8CBE2415D /* CalendarSection.swift */,
 				9E8C4B98CC17E47DEB59005B /* CategoryViews.swift */,
 				7E7598AD45ABC35C0448C201 /* ContactSection.swift */,
@@ -1172,6 +1184,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9F57C32AEB673C86586CD243 /* ActionsSection.swift in Sources */,
 				4FF5B1E0BB1083E64764515D /* AppDelegate.swift in Sources */,
 				B62C6C5D2C7AD96BC26CF840 /* AppGroup.swift in Sources */,
 				9F2FD77B335B89B63523B34C /* AppVersion.swift in Sources */,
@@ -1234,6 +1247,7 @@
 				AE595E878BC032D23FDCCD8D /* TacheHA+TaskItem.swift in Sources */,
 				A14F0BEEB8890100A0B81D5E /* TacheHA.swift in Sources */,
 				1080DA40882E6426D8D43BA3 /* TagViews.swift in Sources */,
+				91CBB0BBABF2BF3EEFA9D8C8 /* TaskActions.swift in Sources */,
 				39CE665B4156CE3572A9A060 /* TaskActivityAttributes.swift in Sources */,
 				FEDB1B7F0E352ABFB6BC0E53 /* TaskCategory.swift in Sources */,
 				35CCA00BCE1D5AC227F6E6C6 /* TaskContact.swift in Sources */,
@@ -1268,6 +1282,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7017AB893472EE48C6DD4F57 /* ActionsSection.swift in Sources */,
 				4B9576648ACF89C848961140 /* AppGroup.swift in Sources */,
 				0EEAC2D3D1162A9B1937FEC9 /* AppVersion.swift in Sources */,
 				3D5E9A6C58E227587722DF17 /* CalendarLink.swift in Sources */,
@@ -1323,6 +1338,7 @@
 				AA5DF43C8963DCD3BDDCD321 /* TacheHA+TaskItem.swift in Sources */,
 				A560C844A41122935E32661E /* TacheHA.swift in Sources */,
 				3FFA6E47ADFC793D3579268E /* TagViews.swift in Sources */,
+				49A4C207454C37D9F756CAA5 /* TaskActions.swift in Sources */,
 				A6DA19E0C01EE0DD0E87A9F8 /* TaskCategory.swift in Sources */,
 				BEB90A705229D5FD55190B2A /* TaskCommands.swift in Sources */,
 				34E81DC10AA654646A7BB1FB /* TaskContact.swift in Sources */,
@@ -1383,6 +1399,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1DA6F94EA96F552A12FC16B0 /* ActionsTests.swift in Sources */,
 				E760D750ADA9349B536A92E7 /* DueTextTests.swift in Sources */,
 				C84E6A3B183F5D5D3D39D043 /* EnvieFieldTests.swift in Sources */,
 				1765A8B5866503765A68DFB8 /* EnvieSuggestionTests.swift in Sources */,
@@ -1488,6 +1505,7 @@
 				5E5E3776B7E9803FCAE9C080 /* TVRemote.swift in Sources */,
 				27E2C8A5D99176B5FFFBAC02 /* TacheHA+TaskItem.swift in Sources */,
 				C4DADCA5789A103FC6CE009E /* TacheHA.swift in Sources */,
+				3960553E64701F2B73DB89D8 /* TaskActions.swift in Sources */,
 				B1E59BEF8722E7FE18322099 /* TaskActivityAttributes.swift in Sources */,
 				7EB6A855E45551CD7E85FB81 /* TaskCategory.swift in Sources */,
 				EC26EB9632D040AFA3D8EB56 /* TaskContact.swift in Sources */,

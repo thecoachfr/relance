@@ -323,19 +323,27 @@ class RelanceVigie(Hass):
             self.log(f"Spotify : « {valeur.get('titre')} » → playlist, {summary} ({result.get('statut')})")
 
     def on_spotify_lire(self, event_name, data, **kwargs):
-        """Lecture sur le Freebox Player par Spotify Connect : `lien` Spotify (morceau, album, épisode, playlist)."""
-        ref = aiguillage_spotify.spotify_ref(data.get("lien", ""))
+        """Lecture par Spotify Connect : `lien` Spotify (morceau, album, épisode, playlist) ou `a_ecouter` (toute la
+        playlist « À écouter »), sur `appareil` : « tv » (le Freebox Player, par défaut) ou un nom (« ls50 »)."""
+        lien = data.get("lien", "")
+        choix = (data.get("appareil") or "tv").strip().lower()
         client = self._spotify_client()
-        if not ref or client is None:
-            self.log(f"Spotify : lecture impossible ({'lien non Spotify' if not ref else 'pas d’identifiants'})", level="WARNING")
+        if client is None:
             return
         try:
-            appareil = aiguillage_spotify.appareil_tv(client.appareils())
-            if appareil is None:
-                self.log("Spotify : Freebox Player absent de Spotify Connect (app Spotify fermée ?)", level="WARNING")
+            if lien == aiguillage_spotify.PLAYLIST_A_ECOUTER:
+                ref = ("playlist", client.playlist())
+            else:
+                ref = aiguillage_spotify.spotify_ref(lien)
+            if not ref:
+                self.log("Spotify : lecture impossible (lien non Spotify)", level="WARNING")
                 return
-            client.lire(*ref, appareil["id"])
-            self.log(f"Spotify : lecture de {ref[0]} {ref[1][:8]}… sur « {appareil.get('name')} »")
+            cible = aiguillage_spotify.appareil(client.appareils(), choix)
+            if cible is None:
+                self.log(f"Spotify : appareil « {choix} » absent de Spotify Connect (éteint ou app fermée ?)", level="WARNING")
+                return
+            client.lire(*ref, cible["id"])
+            self.log(f"Spotify : lecture de {ref[0]} {ref[1][:8]}… sur « {cible.get('name')} »")
         except Exception as error:  # noqa: BLE001
             self.log(f"Spotify : lecture en échec : {error!r}", level="WARNING")
 

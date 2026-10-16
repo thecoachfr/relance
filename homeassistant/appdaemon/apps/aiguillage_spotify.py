@@ -116,6 +116,18 @@ def appareil_tv(devices):
     return tv[0] if len(tv) == 1 else None
 
 
+# Appareils Spotify Connect choisis depuis l'app TV : « tv » (le Player) ou un morceau de nom (« ls50 »).
+PLAYLIST_A_ECOUTER = "a_ecouter"
+
+
+def appareil(devices, choix="tv"):
+    """L'appareil voulu : « tv » → le Freebox Player ; sinon le premier dont le nom contient `choix`."""
+    if not choix or choix == "tv":
+        return appareil_tv(devices)
+    voulu = choix.lower()
+    return next((d for d in devices if voulu in (d.get("name") or "").lower().replace(" ", "")), None)
+
+
 class Client:
     """Appels à l'API Web avec un jeton d'accès obtenu par le jeton de rafraîchissement."""
 

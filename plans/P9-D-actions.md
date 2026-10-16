@@ -60,6 +60,14 @@ Champ `actions` de `TacheHA` v2 (voir l'index). Chaque action :
 - Côté Claude Code : seulement l'exécutant (déclenchement par la vigie, écriture du résultat, affichage dans la fiche, notification) et un modèle de consigne générique sans donnée personnelle.
 - **Accepté quand** : sur une tâche d'essai « Payer TVA » datée à J+5, la routine se lance, écrit un résultat lisible dans la fiche, et rien d'autre n'est modifié.
 
+## 3 bis. Types d'actions en service
+
+| Type | Exécutant | Paramètres | Depuis |
+|---|---|---|---|
+| `ouvrir_lien` | appareil (au toucher) | `{lien}` | D1, 16/10 |
+| `sur_tv` | appareil (au toucher), script `script.aiguillage_sur_tv` | `{lien}` | D1, 16/10 |
+| playlist Spotify « À écouter » | vigie, sans action explicite pour l'instant : noté dans `envie.playlist` {statut, ajoute_le, playlist, ajoutes} | lien Spotify de l'envie | D4, 16/10 |
+
 ## 4. Hors périmètre
 
 Actions qui envoient un message, paient ou déclarent ; actions sur la montre ; éditeur de recettes avancé (conditions combinées, OU logique).

@@ -90,6 +90,7 @@ struct TaskDetailView: View {
                 CategoryPicker(category: $category)
                 TagsRow(tags: $tags)
             }
+            ActionsSection(item: item, lien: item.envie()?.lien.flatMap(URL.init(string:)) ?? ToSee.link(in: NoteLines.visible(notes)))
             RetriageSection(item: item)
             // Sur Mac, ces actions sont dans la barre d'outils et le menu Tâche.
             #if os(iOS)

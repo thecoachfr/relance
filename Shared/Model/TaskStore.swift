@@ -185,6 +185,34 @@ final class TaskStore {
         return created
     }
 
+    // MARK: - Actions (P9-D1)
+
+    /// Ajoute, remplace (même `id`) ou retire des actions ; synchronisé comme le reste de la tâche.
+    func setActions(_ actions: [TacheHA.Action], of item: TaskItem) {
+        guard actions != item.actions else { return }
+        item.actions = actions
+        item.markChanged()
+        commit()
+    }
+
+    func addAction(_ action: TacheHA.Action, to item: TaskItem) {
+        setActions(item.actions.filter { $0.id != action.id } + [action], of: item)
+    }
+
+    func removeAction(id: String, from item: TaskItem) {
+        setActions(item.actions.filter { $0.id != id }, of: item)
+    }
+
+    /// Note l'état d'une action (et son résultat), horodaté.
+    func markAction(id: String, of item: TaskItem, etat: String, resultat: String?, now: Date = .now) {
+        var actions = item.actions
+        guard let i = actions.firstIndex(where: { $0.id == id }) else { return }
+        actions[i].etat = etat
+        actions[i].resultat = resultat
+        actions[i].maj = TacheHA.timestamp(now)
+        setActions(actions, of: item)
+    }
+
     /// Avant un retri par la routine : sans catégorie ni tags, elle traite la tâche comme neuve.
     func clearTriage(_ items: [TaskItem]) {
         for item in items where item.category != nil || !item.tags.isEmpty {

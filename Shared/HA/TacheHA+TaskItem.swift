@@ -19,6 +19,8 @@ extension TacheHA {
         fait = item.isCompleted
         faitLe = item.isCompleted ? Self.timestamp(item.completedAt ?? .now) : nil
         googleID = item.googleID
+        actions = item.actions
+        autres = item.haExtrasRaw.flatMap { try? JSONDecoder().decode([String: JSONValeur].self, from: Data($0.utf8)) } ?? [:]
     }
 
     /// Recopie dans la tâche locale ; une échéance déplacée efface le report en cours.
@@ -48,6 +50,8 @@ extension TacheHA {
         item.isCompleted = fait
         item.completedAt = fait ? (Self.date(faitLe) ?? item.completedAt ?? .now) : nil
         if let googleID { item.googleID = googleID }
+        item.actions = actions
+        item.haExtrasRaw = autres.isEmpty ? nil : (try? JSONEncoder().encode(autres)).map { String(decoding: $0, as: UTF8.self) }
         item.isDirty = false
     }
 }
@@ -125,6 +129,12 @@ nonisolated extension ToSee.Kind {
 }
 
 extension TaskItem {
+    /// Actions de la tâche (P9-D1), rangées en JSON dans `actionsRaw`.
+    var actions: [TacheHA.Action] {
+        get { actionsRaw.flatMap { try? JSONDecoder().decode([TacheHA.Action].self, from: Data($0.utf8)) } ?? [] }
+        set { actionsRaw = newValue.isEmpty ? nil : (try? JSONEncoder().encode(newValue)).map { String(decoding: $0, as: UTF8.self) } }
+    }
+
     /// L'envie à envoyer à HA : type et note des lignes (modifiables dans l'app), complétés par la dernière envie
     /// reçue de HA si le type n'a pas changé (plateforme, identifiant, champs de la vigie). Lien et plateforme
     /// d'après le premier lien des notes pour une envie à regarder, écouter ou lire. `nil` sans envie.

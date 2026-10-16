@@ -28,6 +28,10 @@ final class TaskItem {
     /// Dernière `envie` reçue de Home Assistant (JSON de `TacheHA.Envie`) : plateforme, identifiant et champs
     /// de la vigie (TMDB), que les lignes des notes n'ont pas. `nil` en mode Google Tasks.
     var envieRaw: String?
+    /// Actions reçues de Home Assistant (JSON de `[TacheHA.Action]`, P9-D1) ; `nil` = aucune.
+    var actionsRaw: String?
+    /// Champs de premier niveau inconnus de l'app (JSON), renvoyés tels quels à Home Assistant.
+    var haExtrasRaw: String?
     /// Événement d'agenda créé depuis CET appareil (identifiant EventKit, propre à l'appareil).
     var calendarEventID: String?
     var isCompleted: Bool

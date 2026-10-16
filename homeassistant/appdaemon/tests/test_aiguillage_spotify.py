@@ -48,6 +48,12 @@ def test_doublons_et_lecture():
     assert s.appareil_tv(devices)["id"] == "2"
     assert s.appareil_tv([{"id": "3", "name": "Salon", "type": "TV"}])["id"] == "3"
     assert s.appareil_tv([{"id": "1", "name": "MacBook", "type": "Computer"}]) is None
+    # Appareils réels du 16/10 : la TV, les enceintes du salon.
+    reels = [{"id": "t", "name": "tv salon", "type": "TV"}, {"id": "l", "name": "Salon LS50", "type": "Speaker"},
+             {"id": "f", "name": "Freebox Player POP", "type": "TV"}]
+    assert s.appareil(reels)["id"] == "f"
+    assert s.appareil(reels, "ls50")["id"] == "l"
+    assert s.appareil(reels, "sonos") is None
 
 
 if __name__ == "__main__":
