@@ -59,3 +59,40 @@ struct SettingsView: View {
         }
     }
 }
+
+/// Bouton Réglages (roue dentée) en haut à gauche de chaque onglet : avant le 16/10, il n'était que sur « À faire »
+/// et on ne le trouvait pas ailleurs (retour d'Alexandre).
+struct SettingsToolbarButton: ViewModifier {
+    @State private var showSettings = false
+
+    func body(content: Content) -> some View {
+        content
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Réglages", systemImage: "gearshape") { showSettings = true }
+                }
+            }
+            .sheet(isPresented: $showSettings) { SettingsView() }
+    }
+}
+
+extension View {
+    func settingsButton() -> some View { modifier(SettingsToolbarButton()) }
+}
+
+/// Même bouton, flottant, pour les écrans sans barre de navigation (la carte).
+struct FloatingSettingsButton: View {
+    @State private var showSettings = false
+
+    var body: some View {
+        Button("Réglages", systemImage: "gearshape") { showSettings = true }
+            .labelStyle(.iconOnly)
+            .font(.title3.weight(.semibold))
+            // Comme la roue dentée des barres de navigation : noire (ou blanche en sombre), pas orange.
+            .foregroundStyle(.primary)
+            .frame(width: 48, height: 48)
+            .background(.regularMaterial, in: .circle)
+            .shadow(radius: 3, y: 1)
+            .sheet(isPresented: $showSettings) { SettingsView() }
+    }
+}

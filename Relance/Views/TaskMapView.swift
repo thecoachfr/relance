@@ -190,7 +190,8 @@ struct TaskMapView: View {
                 FilterChips(selection: $filterRaw, options: filterOptions, overMap: true)
                     .contentMargins(.horizontal, 16, for: .scrollContent)
                     #if os(iOS)
-                    // Place laissée au « + » flottant.
+                    // Place laissée aux boutons flottants (Réglages à gauche, « + » à droite).
+                    .padding(.leading, 64)
                     .padding(.trailing, 64)
                     #endif
                     .shadow(color: .black.opacity(0.12), radius: 3, y: 1)
@@ -235,6 +236,11 @@ struct TaskMapView: View {
                 .background(Color.accentColor, in: .circle)
                 .shadow(radius: 3, y: 1)
                 .padding(.trailing, 16)
+                .padding(.top, 8)
+        }
+        .overlay(alignment: .topLeading) {
+            FloatingSettingsButton()
+                .padding(.leading, 16)
                 .padding(.top, 8)
         }
         .sheet(isPresented: $adding) { QuickAddSheet(context: .map) }

@@ -39,6 +39,7 @@ struct InboxView: View {
                 }
             }
             .navigationTitle("À trier")
+            .settingsButton()
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) { CategoryFilterMenu(filter: $categoryFilter) }
                 AddTaskToolbarButton(context: .inbox, isPresented: $adding)

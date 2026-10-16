@@ -10,7 +10,6 @@ struct TodoView: View {
     private var completed: [TaskItem]
 
     @State private var showAdd = false
-    @State private var showSettings = false
     @State private var showDone = false
     @State private var editing: TaskItem?
     @State private var justDone: TaskItem?
@@ -73,11 +72,9 @@ struct TodoView: View {
             }
         }
         .navigationTitle("À faire")
+        .settingsButton()
         .refreshable { await store.sync() }
         .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button("Réglages", systemImage: "gearshape") { showSettings = true }
-            }
             ToolbarItem(placement: .topBarTrailing) {
                 CategoryFilterMenu(filter: $categoryFilter)
             }
@@ -94,7 +91,6 @@ struct TodoView: View {
         }
         .safeAreaInset(edge: .bottom) { undoBanner }
         .sheet(isPresented: $showAdd) { QuickAddSheet() }
-        .sheet(isPresented: $showSettings) { SettingsView() }
         .sheet(isPresented: $showDone) { DoneView() }
         .sheet(item: $editing) { TaskEditor(item: $0) }
         .sensoryFeedback(.success, trigger: justDone)

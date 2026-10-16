@@ -190,6 +190,9 @@ struct ToSeeListView: View {
             if groups.isEmpty && done.isEmpty { empty }
         }
         .navigationTitle("Envies")
+        #if os(iOS)
+        .settingsButton()
+        #endif
         .sheet(item: $editing) { TaskEditor(item: $0) }
         #if os(iOS)
         // Sur Mac, le « + » de la colonne suit déjà la section.
