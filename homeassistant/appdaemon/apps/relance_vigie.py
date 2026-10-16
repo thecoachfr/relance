@@ -106,6 +106,8 @@ class RelanceVigie(Hass):
         self._memo = self.args.get("memo_entity", "todo.relance_memo")
         self._bundle_id = self.args["bundle_id"]
         self._tokens_path = Path(self.args.get("tokens_file", "/config/relance_tokens.json"))
+        # Audit de batterie (P9-E) : pushs envoyés par jour et par cause.
+        self._push_stats_path = Path(self.args.get("push_stats_file", "/config/relance_push_stats.json"))
         self._lock = threading.Lock()
         self._jwt = None
         self._jwt_issued_at = 0.0
@@ -114,7 +116,7 @@ class RelanceVigie(Hass):
         # Bouton « Retrier » de l'app (même webhook, action « triage ») ou événement direct.
         self.listen_event(lambda *_a, **_kw: self.request_triage(), "relance_triage")
         # Diagnostic : « relance_test_push » envoie un push tout de suite à chaque appareil.
-        self.listen_event(lambda *_args, **_kw: self.push_all(), "relance_test_push")
+        self.listen_event(lambda *_args, **_kw: self.push_all("test"), "relance_test_push")
         self.listen_state(self.on_tasks_changed, self._todo)
         # Tâches rangées dans Home Assistant (intégration donnees_apps).
         self._espace = self.args.get("ha_espace")
@@ -132,6 +134,7 @@ class RelanceVigie(Hass):
         self._triage_day = None
         self._triage_count = 0
         self.run_every(self.refresh, "now+5", int(self.args.get("refresh_seconds", 60)))
+        self.run_daily(self._log_push_stats, "00:00:30")
         mode = f", tâches dans HA ({self._espace}{', boîte d’entrée Google' if self._inbox else ''})" if self._espace else ""
         self.log(f"Vigie active sur {self._todo}{mode}, {len(self._load_tokens())} appareil(s) enregistré(s)")
 
@@ -159,7 +162,7 @@ class RelanceVigie(Hass):
             self.log(f"{entity} : {old} → {new} dans la boîte d'entrée Google")
             return
         self.log(f"{entity} : {old} → {new} tâches à faire, réveil des appareils")
-        self.push_all()
+        self.push_all("liste_google")
         if self._as_int(new) > self._as_int(old):
             self.schedule_triage()
 
@@ -189,7 +192,7 @@ class RelanceVigie(Hass):
         self._push_handle = None
         self.log(f"{self._espace} : {self._changes} modification(s) dans Home Assistant, réveil des appareils")
         self._changes = 0
-        self.push_all()
+        self.push_all("modification_ha")
 
     def _load_known_keys(self):
         try:
@@ -348,7 +351,7 @@ class RelanceVigie(Hass):
             self.log(f"Tri refusé ({response.status_code}) : {response.text[:200]}", level="WARNING")
             return
         self.log(f"Tri lancé ({self._triage_count}/{MAX_TRIAGES_PER_DAY} aujourd'hui)")
-        self.run_in(lambda **_kw: self.push_all(), PUSH_AFTER_TRIAGE)
+        self.run_in(lambda **_kw: self.push_all("apres_tri"), PUSH_AFTER_TRIAGE)
 
     # MARK: - Appareils
 
@@ -385,12 +388,13 @@ class RelanceVigie(Hass):
 
     # MARK: - APNs
 
-    def push_all(self):
+    def push_all(self, cause="autre"):
         with self._lock:
             tokens = self._load_tokens()
         if not tokens:
             self.log("Aucun appareil enregistré", level="WARNING")
             return
+        self._count_push(cause, len(tokens))
 
         stale = []
         with httpx.Client(http2=True, timeout=10) as client:
@@ -410,6 +414,32 @@ class RelanceVigie(Hass):
                     tokens.pop(token, None)
                 self._save_tokens(tokens)
             self.log(f"{len(stale)} appareil(s) retiré(s) (jeton périmé)")
+
+    def _count_push(self, cause, devices):
+        """Une salve (un push à chaque appareil) de plus pour aujourd'hui ; 31 jours gardés."""
+        day = datetime.now().strftime("%Y-%m-%d")
+        with self._lock:
+            try:
+                stats = json.loads(self._push_stats_path.read_text())
+            except (FileNotFoundError, json.JSONDecodeError):
+                stats = {}
+            jour = stats.setdefault(day, {"salves": {}, "envois": 0})
+            jour["salves"][cause] = jour["salves"].get(cause, 0) + 1
+            jour["envois"] += devices
+            for old in sorted(stats)[:-31]:
+                stats.pop(old)
+            self._push_stats_path.write_text(json.dumps(stats, indent=2, sort_keys=True))
+
+    def _log_push_stats(self, **kwargs):
+        try:
+            stats = json.loads(self._push_stats_path.read_text())
+        except (FileNotFoundError, json.JSONDecodeError):
+            return
+        days = sorted(d for d in stats if d < datetime.now().strftime("%Y-%m-%d"))
+        if days:
+            jour = stats[days[-1]]
+            detail = ", ".join(f"{cause} {n}" for cause, n in sorted(jour["salves"].items()))
+            self.log(f"Pushs du {days[-1]} : {sum(jour['salves'].values())} salve(s) ({detail}), {jour['envois']} envoi(s)")
 
     def _send(self, client, token, environment):
         try:

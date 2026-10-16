@@ -21,6 +21,8 @@
 3. **Mesure de référence de la batterie** (plan E, lot E1) : à lancer avant A pour une semaine d'usage normal.
 4. Noter l'état dans SUIVI.
 
+*État au 16/10 : (1) reporté par Alexandre ; (2) fait, le Player est joignable le jour et éteint la nuit (normal) ; (3) outils en place, semaine de mesure en cours ; (4) fait.*
+
 ## 3. Modèle de données commun (TacheHA, `v: 2`)
 
 Les tâches sont dans l'espace `aiguillage` de `donnees_apps` (`Shared/HA/TacheHA.swift`). P9 ajoute **trois champs facultatifs**. Les plans A, B, C et D les utilisent tous : ne pas en créer d'autres sans mettre ce fichier à jour.

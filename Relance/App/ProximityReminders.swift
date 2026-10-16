@@ -62,6 +62,7 @@ final class ProximityReminders: NSObject, CLLocationManagerDelegate {
     nonisolated func locationManager(_ manager: CLLocationManager, didEnterRegion region: CLRegion) {
         let id = region.identifier
         guard id.hasPrefix(Self.prefix) else { return }
+        EnergyMetrics.count(.zone)
         Task { @MainActor in await notify(taskID: String(id.dropFirst(Self.prefix.count))) }
     }
 

@@ -109,6 +109,10 @@ et à la demande de l'app (« Retrier avec Claude », champ `action: triage` du 
 Pour la mettre à jour : monter le partage `smb://homeassistant.local/addon_configs` dans le Finder et copier
 `relance_vigie.py` dans `a0d7b954_appdaemon/apps/` (AppDaemon la recharge seul).
 
+Audit de batterie (plan P9-E) : la vigie compte les pushs envoyés par jour et par cause dans
+`/config/relance_push_stats.json` de l'add-on, et l'app iPhone et iPad garde les rapports MetricKit
+(Réglages › Diagnostic batterie). Voir [docs/BATTERIE.md](docs/BATTERIE.md).
+
 Avec les tâches dans Home Assistant (`ha_espace: aiguillage` et `inbox: true` dans `apps.yaml`, à activer **après** la
 migration de l'app) : push à chaque événement `donnees_apps_modifie` de l'espace, liste Google vidée dans Home
 Assistant à chaque rafraîchissement (état dans `/config/relance_inbox.json`), et routine de tri lancée dès qu'une

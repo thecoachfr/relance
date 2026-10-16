@@ -1,6 +1,6 @@
 # Aiguillage (ex-Relance) — suivi du projet
 
-*Mis à jour le 15 octobre 2026. Point de départ pour reprendre le projet dans une nouvelle conversation.*
+*Mis à jour le 16 octobre 2026. Point de départ pour reprendre le projet dans une nouvelle conversation.*
 *Besoin et choix de départ : [CADRAGE.md](CADRAGE.md). Installation : [README.md](README.md).*
 
 ## 1. Où on en est
@@ -82,6 +82,11 @@ Code fait et fusionné dans `main` (désactivé tant qu'on ne bascule pas dans l
 - **Routine de tri passée sur HA le 15/10 vers 16 h** (accord d'Alexandre) : elle lit `donnees_apps.lire` et écrit `donnees_apps.ecrire` (espace `aiguillage`, `version_attendue`, `modifie_par: routine-tri`, une relance si conflit), mêmes règles A à M, champs JSON au lieu des lignes `⏰ 🏷 🔖 ❗`. Consigne hors dépôt (elle contient la copie du mémo). Vigie déployée en même temps : dictées Google reprises tout de suite, tri lancé à chaque nouvelle clé de l'espace. **Essai de bout en bout réussi** : tâche « [test] rappeler le dentiste demain à 10 h » créée dans HA → vigie « nouvelle tâche, tri demandé » → tri 90 s plus tard → jour du lendemain, 10:00, Santé, contact du dentiste, titre nettoyé avec la ligne 🎙 (tâche d'essai supprimée ensuite) ; le même passage a trié les deux tâches créées sur l'iPad (Administratif, Micro). **Première vraie dictée Google Home (15/10, 16 h 08)** : « Aller faire les courses » reprise dans HA 5 s après son arrivée dans Google, retirée de Google, triée 2 min plus tard (Achats, jour du jour, suggestion 18:00). Constat : la routine n'a pas d'horloge et datait ses écritures au jugé (16 h 15 au lieu de 16 h 10), ce qui lui aurait fait gagner un conflit contre une modification d'Alexandre ; consigne corrigée : `modifie_le` = celui de la tâche lue + 1 s (une modification faite après sa lecture l'emporte toujours). « Retrier avec Claude » ne réveille plus la routine si la tâche n'est pas encore arrivée dans HA.
 
 ## 2. Reste à faire / à vérifier
+
+0. **P9, lot 0** (16/10, plans dans [plans/](plans/P9-00-INDEX.md)) :
+   - (1) les essais restants de P2 (écriture hors ligne, conflit entre deux appareils) sont **reportés** à plus tard, à la demande d'Alexandre ;
+   - (2) **Freebox Player Pop** joignable dans HA (`remote.freebox_player_pop` et `media_player.freebox_player_pop_2` à `on` le 16/10 à 7 h). La nuit, quand Alexandre dort, il est éteint : `off` ou `unavailable` (le 15/10, `unavailable` de 23 h 10 à 6 h 58). Normal, pas de réappairage. B4 et C devront dire clairement « TV injoignable » ;
+   - (3) **E1, mesure de référence de la batterie** : diagnostic MetricKit dans l'app (Réglages › Diagnostic batterie) et comptage des pushs par la vigie (déployé le 16/10 à 7 h 33, salve de test vérifiée). La semaine de mesure commence à l'installation du build qui contient le diagnostic ; relevés à J+7 selon [docs/BATTERIE.md](docs/BATTERIE.md). 9 appareils sont enregistrés auprès de la vigie : à vérifier.
 
 0. **Migration Home Assistant** : (a) ~~accès de Xcode Cloud au dépôt privé `ha-donnees-apps`~~ fait le 15/10 (premier build en échec, « Grant Access », Rebuild : réussi) ; (b) ~~installer le build TestFlight~~ fait le 15/10 ; régler Home Assistant sur l'iPhone et basculer ; (c) critère : écrire une tâche en mode Avion → instantané visible dans iCloud Drive (Fichiers) ; retour en ligne → tâche dans HA ; même tâche modifiée sur deux appareils → la plus récente gagne ; (d) déployer la vigie avec `ha_espace` et `inbox` ; (e) ~~adapter la routine de tri et l'écran Nest Hub~~ fait le 15/10. Reste : essai hors ligne (instantané iCloud), cocher une tâche depuis le Nest Hub, première vraie dictée Google Home de bout en bout.
 

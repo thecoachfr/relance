@@ -20,6 +20,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         }
         #endif
         UNUserNotificationCenter.current().delegate = self
+        // Audit de batterie (P9-E) : rapports MetricKit gardés sur l'appareil.
+        EnergyMetrics.shared.start()
         store.scheduler.registerCategories()
         // Appareil qui relance changé ailleurs : on pose ou on retire les relances de celui-ci.
         ReminderDevice.observe { [store] in Task { await store.reschedule() } }
@@ -62,6 +64,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     func application(_ application: UIApplication,
                      didReceiveRemoteNotification userInfo: [AnyHashable: Any]) async -> UIBackgroundFetchResult {
         SyncLog.add("Push de la vigie reçu")
+        EnergyMetrics.count(.push)
         if auth.isRestoring { await auth.restore() }
         await store.sync()
         SyncLog.add(store.lastError.map { "Synchro après push : échec (\($0))" } ?? "Synchro après push : OK")

@@ -200,10 +200,12 @@
 		AE595E878BC032D23FDCCD8D /* TacheHA+TaskItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51E76C6EB4ADDD641DA38896 /* TacheHA+TaskItem.swift */; };
 		AE79BC95B7E650B9496AA144 /* PlaceLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4803928305D83EDF5F053D3B /* PlaceLocator.swift */; };
 		B0490222571119DD7A357A77 /* ToSeeViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F4B84D2A2A0978C04722990 /* ToSeeViews.swift */; };
+		B04F3548AE5D3BCBFD303E59 /* EnergyMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87AC073D86B6A0B75EDB8E72 /* EnergyMetrics.swift */; };
 		B0A7D888D880397CA1F4976B /* DueText.swift in Sources */ = {isa = PBXBuildFile; fileRef = 666C8CA69B643438FA2EC7C2 /* DueText.swift */; };
 		B124EB00A072E175CD261404 /* NotesTimeCodecTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77112E8A0B99D6D1C55C2D66 /* NotesTimeCodecTests.swift */; };
 		B1AC57AB8B6F4554CD35A8E2 /* ReminderProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8FDF7A0D1D79E016D9F07AA /* ReminderProfile.swift */; };
 		B1E59BEF8722E7FE18322099 /* TaskActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4710CF61EBFBFD1A1472103A /* TaskActivityAttributes.swift */; };
+		B1FF51214CA50C5C123E2C32 /* DiagnosticView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9966A98CACCCB07E311345FA /* DiagnosticView.swift */; };
 		B4F3FCB485FC24BA04D9D92D /* ReminderDeviceSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98189E62C7922E8F582E78C1 /* ReminderDeviceSection.swift */; };
 		B62C6C5D2C7AD96BC26CF840 /* AppGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A12D2947BB91F0172F0ED7C /* AppGroup.swift */; };
 		B7190007DF592BE54D7C7FC7 /* SharedLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761FC1F3864FB766BF0A6485 /* SharedLink.swift */; };
@@ -436,6 +438,7 @@
 		7EA1042AC75E061B36BD80DB /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		7FF5E09A3FBE2EE46DFEB2E0 /* RelanceWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = RelanceWidgets.entitlements; sourceTree = "<group>"; };
 		856B480B3D562813D03F3EC2 /* TriageRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TriageRequest.swift; sourceTree = "<group>"; };
+		87AC073D86B6A0B75EDB8E72 /* EnergyMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnergyMetrics.swift; sourceTree = "<group>"; };
 		87BBA1DB8D8D2DF9BA98DDCF /* SiriCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SiriCapture.swift; sourceTree = "<group>"; };
 		886B747EA2AD882590B8C0FE /* RelanceShare.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = RelanceShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		8BB210515A561BDDE66887DD /* HASyncTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HASyncTests.swift; sourceTree = "<group>"; };
@@ -448,6 +451,7 @@
 		967ED0E0B086490E32E03E0B /* WatchQuickAdd.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchQuickAdd.swift; sourceTree = "<group>"; };
 		97FADF69313D958AAEDF4ED3 /* HAConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HAConfig.swift; sourceTree = "<group>"; };
 		98189E62C7922E8F582E78C1 /* ReminderDeviceSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderDeviceSection.swift; sourceTree = "<group>"; };
+		9966A98CACCCB07E311345FA /* DiagnosticView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticView.swift; sourceTree = "<group>"; };
 		99A3E8623A59510F508D7421 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		9AF3B2A793608CF0B2A9F70C /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		9BC7FD887AB3B53D2F6D6148 /* GoogleAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleAuth.swift; sourceTree = "<group>"; };
@@ -690,6 +694,7 @@
 				595289CE4264CBC8CBE2415D /* CalendarSection.swift */,
 				9E8C4B98CC17E47DEB59005B /* CategoryViews.swift */,
 				7E7598AD45ABC35C0448C201 /* ContactSection.swift */,
+				9966A98CACCCB07E311345FA /* DiagnosticView.swift */,
 				2085B3617089E328A5BF3F30 /* DoneView.swift */,
 				4544084AD09A0D9E5EC2923F /* HASettingsSection.swift */,
 				DA74C2AD3519045DE673C1B1 /* InboxView.swift */,
@@ -838,6 +843,7 @@
 				B30F392FC92433C39C1922E7 /* AppDelegate.swift */,
 				41BF8369B5A6A593F0D8D600 /* CalendarLink.swift */,
 				59196264DF41F8F7B0C15A3A /* DemoData.swift */,
+				87AC073D86B6A0B75EDB8E72 /* EnergyMetrics.swift */,
 				E5C54AAEC34A872D13A632F8 /* LiveActivityManager.swift */,
 				4803928305D83EDF5F053D3B /* PlaceLocator.swift */,
 				F151EFA42F032B5D0E235C59 /* ProximityReminders.swift */,
@@ -1120,8 +1126,10 @@
 				5D30B5C9319AF1B5A5AD6305 /* ContactSection.swift in Sources */,
 				0BA6085EA060067592580BB7 /* DateDetection.swift in Sources */,
 				134CDA592AB93A092C18F96B /* DemoData.swift in Sources */,
+				B1FF51214CA50C5C123E2C32 /* DiagnosticView.swift in Sources */,
 				DC1B15409C41F6A7EB9FFA5C /* DoneView.swift in Sources */,
 				FA2B6044BDAC65C92DEC372D /* DueText.swift in Sources */,
+				B04F3548AE5D3BCBFD303E59 /* EnergyMetrics.swift in Sources */,
 				129BBE1FBC165864FBA0C6CE /* EnvieSuggestions.swift in Sources */,
 				28789DBD3D4F6CA8FB3B49EE /* GoogleAuth.swift in Sources */,
 				67A4FDCDD524644D106A829B /* GoogleRefreshSession.swift in Sources */,
