@@ -2,6 +2,8 @@
 
 *Plan du 16/10/2026. Lire d'abord `P9-00-INDEX.md` (modèle de données, compatibilité, règles). Dépôt : `relance`.*
 
+**État au 16/10 au soir** : A1 à A5 faits. Reste l'essai réel de A4 (proximité par distance, plus de 20 lieux, en se déplaçant).
+
 ## 1. But
 
 Aujourd'hui la carte (`Relance/Views/TaskMapView.swift`, Mac : `MacRootView`) montre les tâches qui ont une ligne `📍` et les sorties « À voir ». On veut aussi :

@@ -2,6 +2,8 @@
 
 *Plan du 16/10/2026. Lire d'abord `P9-00-INDEX.md`. Dépôts : `relance` (app, vigie AppDaemon) ; une nouvelle tâche planifiée claude.ai pour les actions « préparer ». Prérequis : A et B en service.*
 
+**État au 16/10 au soir** : D1 à D5 faits. D5 en lecture seule, essai réel réussi (préparation écrite par la routine en 4 min 30). Ajouts : notification visible quand une action de la vigie ou de la routine échoue ou qu'une préparation est prête, écran du résultat complet (build 46). Restent : activer la recette TVA (Alexandre), essai Spotify d'un album et d'un épisode, écriture dans le classeur après validation (« Appliquer »), éditeur de conditions des recettes, retirer l'horaire du 17 de la routine.
+
 ## 1. But
 
 Chaque tâche porte une ou plusieurs **actions** personnalisables. Aujourd'hui il en existe deux, codées en dur : le **rappel** (échéance et relances) et l'**alerte de proximité**. La catégorisation par la routine est déjà une sorte d'action. On veut des actions qui **font** quelque chose :
@@ -68,7 +70,8 @@ Champ `actions` de `TacheHA` v2 (voir l'index). Chaque action :
 | `sur_tv` | appareil (au toucher), script `script.aiguillage_sur_tv` | `{lien}` | D1, 16/10 |
 | `playlist_spotify` | `ha` (vigie), ajouté par la recette `spotify-playlist` | `{playlist: "a_ecouter", recette}` ; lien Spotify de l'envie | D2-D4, 16/10 (avant : `envie.playlist`, gardé pour les tâches déjà traitées) |
 | `rappel_maison` | `ha` (vigie), déclencheur `{quand: "presence"}` | aucun ; notification visible à l'arrivée au salon, une fois par jour | F2, 16/10 |
-| `preparer` | `routine`, recette `tva-micro` (inactive) | `{modele: "tva_micro", recette}` | D5, à faire |
+| `rappel_piece` | `ha` (vigie), déclencheur `{quand: "piece"}` | `{piece}` ; notification quand la pièce domine les 2 dernières minutes, une fois par jour | F4, 16/10 |
+| `preparer` | `routine`, recette `tva-micro` (inactive) | `{modele: "tva_micro", recette}` | D5, 16/10 (lecture seule) |
 
 Recettes (`config:recettes`) : `{id, nom, active, si: {envie_type, hote, categorie, tag, mot}, alors: {type, executant, declencheur, params}}`.
 

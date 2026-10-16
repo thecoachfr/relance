@@ -13,6 +13,14 @@ relance_vigie:
   # Routine Claude « Relance · tri » lancée à chaque nouvelle tâche. Le jeton (déclencheur API de la routine,
   # créé sur claude.ai) se met dans /config/relance_routine_token, jamais dans ce fichier.
   routine_id: trig_01GFD6vBExCUvTYDbx9KePm7
+  # Routine « Aiguillage · actions » (P9-D5) pour les actions « preparer » ; jeton dans
+  # /config/aiguillage_actions_token, jamais dans ce fichier.
+  actions_routine_id: trig_01J1nRgBk4iBC3hBK4vZMLLV
+  # Rappels « à la maison » (P9-F2) : présence au salon (Hue MotionAware, helper Template).
+  presence_entity: binary_sensor.presence_salon
+  # Bermuda (P9-F4) : retour à la maison (iPhone) et pièce d'Alexandre (montre, sinon iPhone).
+  domicile_entity: device_tracker.private_ble_iphone
+  piece_entity: sensor.piece_d_alexandre
   # Tâches dans Home Assistant (intégration donnees_apps, voir le dépôt ha-donnees-apps) :
   # push à chaque modification de l'espace. N'activer qu'une fois l'app passée sur Home Assistant.
   # ha_espace: aiguillage

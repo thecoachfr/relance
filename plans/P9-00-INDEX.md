@@ -11,9 +11,11 @@
 | C — App Android TV pour le Freebox Player Pop | `P9-C-app-android-tv.md` | nouveau dépôt privé `aiguillage-tv` | 3–5 soirées |
 | D — Actions par tâche (socle, playlist Spotify, préparation de la TVA par une routine) | `P9-D-actions.md` | relance + HA + routine | 4–6 soirées |
 | E — Audit de la consommation de batterie (mesure de référence, puis après P9) | `P9-E-audit-batterie.md` | relance + HA | 1–2 soirées, plus deux semaines de mesure |
-| F — *Piste* : présence à la maison (Hue MotionAware, puis Bermuda) | `P9-F-presence-maison.md` | HA + relance | à chiffrer après D |
+| F — Présence à la maison (Hue MotionAware, puis Bermuda) | `P9-F-presence-maison.md` | HA + relance | 1 soirée (16/10) |
 
-**Ordre** : lot 0 ci-dessous (avec E1, la mesure de référence), puis A, B, C, D, et E2 après A4 et D3. C dépend de B (liens testés sur le Player, champs `envie`). D réutilise « Sur la TV » (B) comme une action. F reste une piste, à préciser après D.
+**Ordre** : lot 0 ci-dessous (avec E1, la mesure de référence), puis A, B, C, D, et E2 après A4 et D3. C dépend de B (liens testés sur le Player, champs `envie`). D réutilise « Sur la TV » (B) comme une action. F, d'abord une piste, a été fait après D.
+
+**État au 16/10 au soir** : lot 0 fait sauf P2 (reporté) ; A, B, C, D et F faits, avec des essais réels restants ; E1 en mesure (relevé vers le 23/10), E2 à suivre. Détail de ce qui reste : SUIVI.md, section 2, « P9 : ce qui reste ».
 
 ## 2. Lot 0 — préalables (avant A)
 

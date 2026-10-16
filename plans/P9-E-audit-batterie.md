@@ -27,7 +27,7 @@ D'après le code lu le 16/10 :
 ## 4. Lots
 
 ### E1 — Mesure de référence (lot 0, avant A)
-*En cours (16/10) : collecte, écran de diagnostic et comptage des pushs faits ; semaine de mesure à partir de l'installation du build.*
+*En cours (16/10) : collecte, écran de diagnostic et comptage des pushs faits ; semaine de mesure à partir de l'installation du build. Relevé de Réglages › Batterie par Alexandre vers le 23/10, puis rapport dans `docs/BATTERIE.md`.*
 - Ajouter la collecte MetricKit et l'écran de diagnostic (sans réseau supplémentaire).
 - Compter dans la vigie les pushs envoyés par jour et par cause.
 - Une semaine d'usage normal ; relevé de Réglages › Batterie à J+7.

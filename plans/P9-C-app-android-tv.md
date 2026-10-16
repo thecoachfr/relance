@@ -1,6 +1,8 @@
 # P9-C — App Android TV « Aiguillage TV » pour le Freebox Player Pop
 
-*Plan du 16/10/2026. Lire d'abord `P9-00-INDEX.md`. Nouveau dépôt **privé** `thecoachfr/aiguillage-tv`, à créer par Alexandre (la création de dépôt échoue depuis les outils de Claude). Au premier commit, copier ce plan dans `docs/SPEC.md` du nouveau dépôt et créer `docs/STATUT.md`. Prérequis : lot 0 et plan B (champs `envie`, liens validés dans `relance/docs/LIENS-TV.md`).*
+*Plan du 16/10/2026. Lire d'abord `P9-00-INDEX.md`. Nouveau dépôt **privé** `thecoachfr/aiguillage-tv`, créé par Alexandre le 16/10 (la création de dépôt échoue depuis les outils de Claude). Au premier commit, copier ce plan dans `docs/SPEC.md` du nouveau dépôt et créer `docs/STATUT.md`. Prérequis : lot 0 et plan B (champs `envie`, liens validés dans `relance/docs/LIENS-TV.md`).*
+
+**État au 16/10 au soir** : C0 à C4 faits et essayés par Alexandre, plus l'onglet Audio (lecture sur la TV ou les LS50, contenu de la playlist « À écouter »). Suivi détaillé : `aiguillage-tv/docs/STATUT.md`. Reste : ouvrir Apple TV, Prime Video, France TV et Arte.
 
 ## 1. But
 

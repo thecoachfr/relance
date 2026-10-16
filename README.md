@@ -117,7 +117,15 @@ Relance ──(jeton push)──► webhook HA ──► événement relance_reg
 Sans tâches dans HA, elle rafraîchit aussi la liste Google du mémo (`todo.relance_memo`) ; elle lance la routine après chaque nouvelle tâche
 et à la demande de l'app (« Retrier avec Claude », champ `action: triage` du webhook).
 Pour la mettre à jour : monter le partage `smb://homeassistant.local/addon_configs` dans le Finder et copier
-`relance_vigie.py` dans `a0d7b954_appdaemon/apps/` (AppDaemon la recharge seul).
+`relance_vigie.py` et les modules `aiguillage_*.py` dans `a0d7b954_appdaemon/apps/` (AppDaemon la recharge seul).
+Tests des modules : `python3 -m pytest homeassistant/appdaemon/tests`.
+
+Actions des tâches (plan P9-D) : la vigie applique les recettes (`config:recettes`), exécute les actions
+`executant: ha` (playlist Spotify « À écouter »), lance la routine « Aiguillage · actions » pour les actions
+`preparer` ([docs/ROUTINE-ACTIONS.md](docs/ROUTINE-ACTIONS.md)) et envoie une notification visible aux iPhone quand
+une action échoue ou qu'une préparation est prête. Présence (plan P9-F) : rappels « à la maison »
+(`presence_entity`, `domicile_entity`) et « dans une pièce » (`piece_entity`, pièce dominante sur 2 minutes,
+liste des pièces publiée dans `config:pieces`). Clés d'exemple : `homeassistant/appdaemon/apps/apps.yaml`.
 
 « Sur la TV » (plan P9-B4) : le bouton de la fiche d'une envie appelle le script HA `script.aiguillage_sur_tv`
 (champ `lien`), qui allume le Freebox Player Pop si besoin et ouvre le lien (`remote.turn_on`, `activity`). Formes de
@@ -144,7 +152,7 @@ Reste à faire :
    URI de redirection `https://my.home-assistant.io/redirect/oauth`.
 3. **Intégration Google Tasks** dans HA (Paramètres → Appareils et services → Ajouter → Google Tasks),
    avec l'ID et le secret de l'étape 2. Noter l'entité créée pour « Mes tâches ».
-4. **AppDaemon** : copier `homeassistant/appdaemon/apps/relance_vigie.py` et le contenu de `apps.yaml`
+4. **AppDaemon** : copier `homeassistant/appdaemon/apps/relance_vigie.py`, les modules `aiguillage_*.py` et le contenu de `apps.yaml`
    dans `/addon_configs/a0d7b954_appdaemon/apps/`, y déposer le `.p8` sous le nom `AuthKey_relance.p8`,
    puis renseigner `key_id` et `todo_entity`.
 5. **URL du webhook** : ouvrir l'automatisation « Relance : enregistrer un appareil », copier l'URL
