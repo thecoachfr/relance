@@ -73,7 +73,13 @@ struct WatchTaskList: View {
         if !tasks.isEmpty {
             Section(title) {
                 ForEach(tasks) { task in
-                    WatchTaskRow(task: task, now: now)
+                    Group {
+                        if task.articles?.isEmpty == false {
+                            NavigationLink { WatchListeView(taskID: task.id) } label: { WatchTaskRow(task: task, now: now) }
+                        } else {
+                            WatchTaskRow(task: task, now: now)
+                        }
+                    }
                         .swipeActions(edge: .leading) {
                             Button("Fait", systemImage: "checkmark") { store.complete(task) }.tint(.green)
                         }
@@ -113,6 +119,11 @@ struct WatchTaskRow: View {
                 if let status = status(late: late) {
                     Text(status).font(.footnote).foregroundStyle(late ? .red : .secondary)
                 }
+                if let articles = task.articles, !articles.isEmpty {
+                    Label("\(articles.filter(\.coche).count)/\(articles.count)", systemImage: "checklist")
+                        .font(.footnote).foregroundStyle(.secondary)
+                        .accessibilityLabel("Liste : \(articles.filter(\.coche).count) cochés sur \(articles.count)")
+                }
                 if let name = task.category {
                     let category = TaskCategory(name: name)
                     HStack(spacing: 3) {
@@ -138,5 +149,39 @@ struct WatchTaskRow: View {
         if let snoozed = task.snoozedUntil, snoozed > now { return "Relance à " + DueText.clock(snoozed) }
         guard let due = task.due else { return nil }
         return DueText.long(due: due, hasTime: task.hasTime, now: now)
+    }
+}
+
+/// Liste d'articles d'une tâche (P9-G2) : toucher coche ou décoche. Tout coché : la tâche passe en « Fait ».
+struct WatchListeView: View {
+    @Environment(WatchStore.self) private var store
+    let taskID: String
+
+    var body: some View {
+        if let task = store.tasks.first(where: { $0.id == taskID }), let articles = task.articles {
+            List {
+                // Ce qui reste à prendre d'abord, ce qui est déjà dans le panier ensuite.
+                ForEach(articles.filter { !$0.coche } + articles.filter(\.coche)) { article in
+                    Button { store.setArticle(article, coche: !article.coche, of: task) } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: article.coche ? "checkmark.circle.fill" : "circle")
+                                .foregroundStyle(article.coche ? Color.accentColor : Color.secondary)
+                            Text(article.texte)
+                                .strikethrough(article.coche)
+                                .foregroundStyle(article.coche ? .secondary : .primary)
+                            Spacer(minLength: 0)
+                            if let quantite = article.quantite {
+                                Text(quantite).foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                    .accessibilityAddTraits(article.coche ? .isSelected : [])
+                }
+            }
+            .navigationTitle(task.title)
+        } else {
+            ContentUnavailableView("Liste terminée", systemImage: "checkmark.circle",
+                                   description: Text("Tout est coché : la tâche est faite."))
+        }
     }
 }

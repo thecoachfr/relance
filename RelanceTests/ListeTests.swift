@@ -172,4 +172,23 @@ struct ListeStoreTests {
         store.editArticle(id: lait.id, saisie: "  ", of: item)
         #expect(item.liste?.articles.map(\.texte) == ["Beurre"])
     }
+
+    /// Coche venue de la montre (P9-G2) : datée de son geste, ignorée si l'article a changé depuis.
+    @Test func cocheDeLaMontre() throws {
+        let store = TaskStore(auth: SlowAccount(), inMemory: true)
+        let item = store.add(title: "Courses", day: nil, minutes: nil)
+        store.addArticle("Pain", to: item, now: Date(timeIntervalSince1970: 100))
+        store.addArticle("Lait", to: item, now: Date(timeIntervalSince1970: 100))
+        let ids = try #require(item.liste?.articles.map(\.id))
+        store.setArticle(id: ids[0], coche: true, of: item, at: Date(timeIntervalSince1970: 200))
+        #expect(item.liste?.articles[0].coche == true && !item.isCompleted)
+        // Message en retard, plus ancien que la dernière modification : ignoré.
+        store.setArticle(id: ids[0], coche: false, of: item, at: Date(timeIntervalSince1970: 150))
+        #expect(item.liste?.articles[0].coche == true)
+        store.setArticle(id: ids[1], coche: true, of: item, at: Date(timeIntervalSince1970: 300))
+        #expect(item.isCompleted)
+        let envoye = WatchTask(id: "x", title: "Courses", due: nil, hasTime: false,
+                               articles: [WatchArticle(id: "a", texte: "Pain", quantite: "2", coche: false)])
+        #expect(WatchLink.decode(WatchLink.encode([envoye])) == [envoye])
+    }
 }

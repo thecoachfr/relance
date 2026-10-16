@@ -121,6 +121,10 @@ struct TasksWidgetView: View {
 
                         Text(task.title).font(.subheadline).lineLimit(1)
                         Spacer(minLength: 4)
+                        if let liste = task.liste {
+                            Text(liste).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                                .accessibilityLabel("Liste \(liste)")
+                        }
                         CategoryMark(name: task.category)
                         Text(DueText.short(due: task.due, hasTime: task.hasTime, now: entry.date))
                             .font(.caption.monospacedDigit())

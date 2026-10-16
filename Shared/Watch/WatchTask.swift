@@ -13,10 +13,20 @@ nonisolated struct WatchTask: Codable, Hashable, Identifiable, Sendable {
     var priority: TaskPriority?
     var category: String?
     var tags: [String]?
+    /// Liste d'articles (P9-G2) ; `nil` sans liste (et listes envoyées par une ancienne version de l'iPhone).
+    var articles: [WatchArticle]?
 
     var isUrgent: Bool { priority == .urgent }
 
     func isLate(at now: Date) -> Bool { due.map { $0 < now } ?? false }
+}
+
+/// Article d'une liste, tel que la montre l'affiche et le coche.
+nonisolated struct WatchArticle: Codable, Hashable, Identifiable, Sendable {
+    var id: String
+    var texte: String
+    var quantite: String?
+    var coche: Bool
 }
 
 /// Messages échangés entre l'iPhone et la montre (WatchConnectivity).
@@ -41,10 +51,14 @@ nonisolated enum WatchLink {
 
     enum Action: String {
         case complete, snooze, add
+        /// Article coché ou décoché (`idKey` = tâche, `articleKey`, `cocheKey`, `dueKey` = instant de la coche).
+        case article
         /// Fiche du mémo de tri (tâches dans Home Assistant) : l'iPhone l'enregistre et répond `outcomeKey`.
         case memo
     }
     static let detailsKey = "details"
+    static let articleKey = "article"
+    static let cocheKey = "coche"
     /// Réponse de l'iPhone à une fiche du mémo : `added`, `completed`, `unchanged` ou `failed`.
     static let outcomeKey = "outcome"
 

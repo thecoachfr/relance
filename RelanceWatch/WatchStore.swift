@@ -75,6 +75,18 @@ final class WatchStore: NSObject, WCSessionDelegate {
         }
     }
 
+    /// Coche un article d'une liste (P9-G2) : tout de suite à l'écran, puis par l'iPhone vers Home Assistant (file
+    /// d'attente s'il n'est pas joignable). Tout coché : la tâche quitte la liste, comme « Fait ».
+    func setArticle(_ article: WatchArticle, coche: Bool, of task: WatchTask) {
+        guard let i = tasks.firstIndex(where: { $0.id == task.id }),
+              let j = tasks[i].articles?.firstIndex(where: { $0.id == article.id }) else { return }
+        tasks[i].articles?[j].coche = coche
+        if let articles = tasks[i].articles, articles.allSatisfy(\.coche) { tasks.remove(at: i) }
+        save()
+        send([WatchLink.actionKey: WatchLink.Action.article.rawValue, WatchLink.idKey: task.id,
+              WatchLink.articleKey: article.id, WatchLink.cocheKey: coche, WatchLink.dueKey: Date.now])
+    }
+
     /// Le report n'existe que dans les notifications de l'iPhone : il passe toujours par lui.
     func snooze(_ task: WatchTask) {
         if let i = tasks.firstIndex(where: { $0.id == task.id }) {

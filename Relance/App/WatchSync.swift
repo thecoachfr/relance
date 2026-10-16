@@ -24,7 +24,9 @@ final class WatchSync: NSObject, WCSessionDelegate {
             .filter { !$0.isCompleted && !$0.isTrashed }
             .map { WatchTask(id: store.isHAActive ? $0.localID.uuidString : ($0.googleID ?? $0.localID.uuidString), title: $0.title, due: $0.dueInstant(),
                              hasTime: $0.dueMinutes != nil, snoozedUntil: $0.snoozedUntil, priority: $0.priority,
-                             category: $0.category, tags: $0.tags.isEmpty ? nil : $0.tags) }
+                             category: $0.category, tags: $0.tags.isEmpty ? nil : $0.tags,
+                             articles: $0.liste.map { $0.articles.map {
+                                 WatchArticle(id: $0.id, texte: $0.texte, quantite: $0.quantite, coche: $0.coche) } }) }
         var context: [String: Any] = [WatchLink.tasksKey: WatchLink.encode(payload),
                                       WatchLink.tasksInHAKey: store.isHAActive]
         // Passe par le lien chiffré iPhone ↔ montre ; une chaîne vide dit à la montre d'oublier la connexion.
@@ -92,6 +94,11 @@ final class WatchSync: NSObject, WCSessionDelegate {
             } else {
                 store.snooze(item, until: .now.addingTimeInterval(3600))
             }
+        case .article:
+            guard let id = message[WatchLink.idKey] as? String, let item = UUID(uuidString: id).flatMap(store.task),
+                  let article = message[WatchLink.articleKey] as? String,
+                  let coche = message[WatchLink.cocheKey] as? Bool else { return }
+            store.setArticle(id: article, coche: coche, of: item, at: message[WatchLink.dueKey] as? Date ?? .now)
         case .add:
             guard let title = message[WatchLink.titleKey] as? String, !title.isEmpty else { return }
             let due = message[WatchLink.dueKey] as? Date
