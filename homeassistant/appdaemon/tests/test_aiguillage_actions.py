@@ -120,3 +120,21 @@ def test_a_notifier():
     # Nouvel échec après une réussite notifiée : notifié à nouveau.
     assert a.a_notifier({**notee["actions"][0], "etat": "echec"}, notee) is not None
     assert a.a_notifier(actions["h"], {**tache, "fait": True}) is None
+
+
+def test_piece_dominante():
+    # Assis au salon avec des sauts de quelques secondes (relevé du 16/10) : le salon est retenu.
+    hist = [(0, "Salon"), (30, "Salle de bain"), (40, "Salon"), (70, "Entrée"), (75, "Salon"), (110, "Bureau"), (115, "Salon")]
+    assert a.piece_dominante(hist, 120) == "Salon"
+    # Rien de majoritaire : aucune pièce.
+    hist = [(0, "Salon"), (40, "Entrée"), (80, "Cuisine")]
+    assert a.piece_dominante(hist, 120) is None
+    # Entré dans la cuisine il y a 30 s seulement : toujours le salon.
+    hist = [(0, "Salon"), (90, "Cuisine")]
+    assert a.piece_dominante(hist, 120) == "Salon"
+    # … puis au bout de 90 s de plus.
+    assert a.piece_dominante(hist, 210) == "Cuisine"
+    # Pièce d'avant la fenêtre et stable : retenue ; absent : jamais.
+    assert a.piece_dominante([(0, "Chambre")], 1000) == "Chambre"
+    assert a.piece_dominante([(0, "Absent")], 1000) is None
+    assert a.piece_dominante([], 1000) is None

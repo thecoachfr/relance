@@ -442,18 +442,24 @@ class RelanceVigie(Hass):
             self.log(f"Maison : rappel de « {tache.get('titre')} » ({envoyes} iPhone)")
 
     def on_piece(self, entity, attribute, old, new, **kwargs):
-        if self._piece_handle:
-            self.cancel_timer(self._piece_handle)
-            self._piece_handle = None
-        if new and new not in ("Absent", "unknown", "unavailable") and new != old:
-            self._piece_handle = self.run_in(self._piece_stable, 30, piece=new)
+        """Changement de pièce (Bermuda) : noté ; la pièce n'est retenue que si elle domine les 2 dernières minutes."""
+        maintenant = time.time()
+        self._piece_hist = [(t, p) for t, p in getattr(self, "_piece_hist", [])
+                            if t >= maintenant - 2 * aiguillage_actions.PIECE_FENETRE] + [(maintenant, new)]
+        if not self._piece_handle:
+            self._piece_handle = self.run_every(self._piece_verifier, "now+15", 15)
+
+    def _piece_verifier(self, **kwargs):
+        """Toutes les 15 s : pièce dominante (70 % des 2 dernières minutes). Nouvelle pièce → ses rappels."""
+        piece = aiguillage_actions.piece_dominante(getattr(self, "_piece_hist", []), time.time())
+        if piece is None or piece == getattr(self, "_piece_retenue", None):
+            return
+        self._piece_retenue = piece
+        self._piece_stable(piece=piece)
 
     def _piece_stable(self, **kwargs):
-        """Toujours dans la même pièce 30 s après y être entré : rappels de cette pièce (une fois par jour)."""
-        self._piece_handle = None
+        """Pièce retenue (dominante sur 2 min) : rappels de cette pièce (une fois par jour et par tâche)."""
         piece = kwargs.get("piece")
-        if self.get_state(self._piece) != piece:
-            return
         try:
             records = self._service("donnees_apps", "lire", {"espace": self._espace}).get("enregistrements", [])
         except Exception as error:  # noqa: BLE001

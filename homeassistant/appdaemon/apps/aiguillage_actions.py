@@ -156,6 +156,30 @@ def rappel_piece_du(action, tache, piece, today):
     return (action.get("maj") or "")[:10] != today.isoformat()
 
 
+PIECE_FENETRE = 120
+PIECE_PART = 0.7
+
+
+def piece_dominante(historique, maintenant, fenetre=PIECE_FENETRE, part=PIECE_PART):
+    """Pièce occupée au moins `part` du temps des `fenetre` dernières secondes, ou None. `historique` : liste
+    chronologique de (instant en secondes, pièce) ; chaque pièce vaut jusqu'au changement suivant. Les relais
+    Bermuda font sauter la pièce d'une seconde à l'autre (16/10 : 73 changements en 18 min, assis au salon) :
+    on retient la pièce majoritaire plutôt que la dernière. « Absent » et les états inconnus ne comptent jamais."""
+    debut = maintenant - fenetre
+    durees = {}
+    for i, (instant, piece) in enumerate(historique):
+        fin = historique[i + 1][0] if i + 1 < len(historique) else maintenant
+        d = min(fin, maintenant) - max(instant, debut)
+        if d > 0:
+            durees[piece] = durees.get(piece, 0) + d
+    if not durees:
+        return None
+    piece, duree = max(durees.items(), key=lambda x: x[1])
+    if piece in (None, "", "Absent", "unknown", "unavailable") or duree < part * fenetre:
+        return None
+    return piece
+
+
 def marquer_rappel(tache, action_id, maintenant, heure):
     """La tâche avec le rappel noté (« Rappelé le JJ/MM à HH:MM »), l'action restant à faire."""
     jour = maintenant[8:10] + "/" + maintenant[5:7]

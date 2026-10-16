@@ -28,8 +28,9 @@
 - **Idée 2** : action `rappel_maison` (vigie, notification visible sur les iPhone, une fois par jour et par tâche).
 - **Idée 4 (Bermuda, relais installés par Alexandre)** : `sensor.piece_d_alexandre` (helper Template : pièce de la
   montre, sinon de l'iPhone, sinon « Absent », d'après `sensor.private_ble_watch_area` et `sensor.private_ble_iphone_area`).
-  Action « Me le rappeler dans… » (`rappel_piece`, `params.piece`) : la vigie notifie quand Alexandre reste 30 s dans
-  la pièce (`piece_entity` dans `apps.yaml`), une fois par jour et par tâche. Pièces proposées par l'app : liste des
+  Action « Me le rappeler dans… » (`rappel_piece`, `params.piece`) : la vigie notifie quand la pièce domine les
+  2 dernières minutes (70 % du temps ; la pièce brute de Bermuda saute toutes les quelques secondes), une fois par
+  jour et par tâche (`piece_entity` dans `apps.yaml`). Pièces proposées par l'app : liste des
   zones HA publiée par la vigie sous la clé non-UUID `config:pieces`. `domicile_entity` : retour à la maison d'après
   `device_tracker.private_ble_iphone`.
 - **Idée 3 (Nest Hub)** : `binary_sensor.quelqu_un_dans_l_espace_de_vie` (présence salon, ou Alexandre dans l'entrée,
