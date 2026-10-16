@@ -12,11 +12,11 @@ Résultat : **titre** (la page du titre s'ouvre), **app** (l'app s'ouvre, sans l
 
 | Plateforme | Forme du lien | Résultat | Date |
 |---|---|---|---|
-| Netflix | `https://www.netflix.com/title/<id>?source=30` | à essayer | |
-| Netflix | lien partagé tel quel | à essayer | |
-| Disney+ | lien partagé (`disneyplus.com/fr-FR/browse/entity-<uuid>`) | à essayer | |
-| Canal+ | lien partagé (`canalplus.com/series/<titre>/h/<id>`) | à essayer | |
-| YouTube | `https://www.youtube.com/watch?v=<id>` | à essayer | |
+| Netflix | `https://www.netflix.com/title/<id>?source=30` | **titre**, après l'écran de choix du profil (imposé par Netflix) | 16/10 |
+| Disney+ | lien partagé `https://disneyplus.com/fr-FR/browse/entity-<uuid>?sharesource=iOS` | **rien** : « Aucune application ne peut effectuer cette action » | 16/10 |
+| Disney+ | `https://www.disneyplus.com/fr-fr/browse/entity-<uuid>` | **titre** (2e envoi, Player déjà allumé ; au 1er il sortait de veille, résultat non relevé) | 16/10 |
+| Canal+ | lien partagé `https://mycan.al/series/<titre>/h/<id>` | **titre** | 16/10 |
+| YouTube | `https://www.youtube.com/watch?v=<id>` | à essayer (documenté par HA) | |
 | Spotify | `https://open.spotify.com/track/<id>` | à essayer | |
 | Spotify | `spotify:track:<id>` | à essayer | |
 

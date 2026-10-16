@@ -10,14 +10,16 @@ nonisolated enum TVRemote {
         case failed(String)
     }
 
-    /// La forme du lien que le Player sait ouvrir, selon la plateforme (`docs/LIENS-TV.md`, essais B5).
-    /// Netflix : un titre précis seulement avec `?source=30` (documentation de l'intégration Android TV
-    /// Remote de Home Assistant) ; les autres plateformes tel quel en attendant les essais.
+    /// La forme du lien que le Player sait ouvrir, selon la plateforme (`docs/LIENS-TV.md`, essais B5 du 16/10) :
+    /// Netflix `…/title/<id>?source=30` (titre, après le choix du profil) ; Disney+ seulement avec `www.` et la
+    /// langue en minuscules (le lien partagé `disneyplus.com/fr-FR/…` donne « Aucune application ne peut
+    /// effectuer cette action ») ; Canal+ tel quel ; les autres tel quel.
     static func link(for url: URL) -> String {
-        if SharedLink.platform(for: url) == "netflix", let id = SharedLink.titleID(for: url) {
-            return "https://www.netflix.com/title/\(id)?source=30"
+        switch (SharedLink.platform(for: url), SharedLink.titleID(for: url)) {
+        case ("netflix", let id?): "https://www.netflix.com/title/\(id)?source=30"
+        case ("disney", let id?): "https://www.disneyplus.com/fr-fr/browse/entity-\(id)"
+        default: url.absoluteString
         }
-        return url.absoluteString
     }
 
     static func send(_ url: URL) async -> Outcome {

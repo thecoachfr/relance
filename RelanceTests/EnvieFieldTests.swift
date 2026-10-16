@@ -106,6 +106,10 @@ struct TVLinkTests {
     @Test func netflixGetsSource30() {
         let shared = URL(string: "https://www.netflix.com/fr/title/81674500?s=i&trkid=13747225&shareType=Title&vlang=fr")!
         #expect(TVRemote.link(for: shared) == "https://www.netflix.com/title/81674500?source=30")
+        let disney = URL(string: "https://disneyplus.com/fr-FR/browse/entity-8744ec55-8d14-4631-99b4-c889a2d6013f?sharesource=iOS")!
+        #expect(TVRemote.link(for: disney) == "https://www.disneyplus.com/fr-fr/browse/entity-8744ec55-8d14-4631-99b4-c889a2d6013f")
+        let canal = URL(string: "https://mycan.al/series/monarch-legacy-of-monsters/h/40002718_50696")!
+        #expect(TVRemote.link(for: canal) == canal.absoluteString)
         let youtube = URL(string: "https://youtube.com/watch?v=JPcVyq_BYjU")!
         #expect(TVRemote.link(for: youtube) == youtube.absoluteString)
     }
