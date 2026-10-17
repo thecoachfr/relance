@@ -33,3 +33,11 @@ relance_vigie:
   # La liste Google devient la boîte d'entrée des dictées Google Home, vidée dans HA (état dans
   # /config/relance_inbox.json). Ne démarre qu'après la migration de l'app.
   # inbox: true
+
+# Signal → envies (17/10) et mémoire des échanges (P9-J, docs/MEMOIRE-SIGNAL.md). Numéros dans
+# /config/aiguillage_signal.json, jamais dans ce fichier ; résumés la nuit par l'API (même clé que le tri).
+aiguillage_signal:
+  module: aiguillage_signal
+  class: AiguillageSignal
+  # workspace_id: wrkspc_…
+  memoire_budget_mensuel: 5

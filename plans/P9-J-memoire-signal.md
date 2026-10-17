@@ -1,8 +1,16 @@
 # P9-J — Mémoire des échanges Signal avec Yoann (recherche, résumés)
 
-*Rédigé le 17/10/2026 dans Claude Code, à la demande d'Alexandre, après « Signal → envies ». Rien n'est codé. Les
+*Rédigé le 17/10/2026 dans Claude Code, à la demande d'Alexandre, après « Signal → envies ». Les
 règles communes sont dans `P9-00-INDEX.md` (section 5). Le dépôt est public : aucun message, aucun numéro et aucun
 extrait réel ne va dans le dépôt, les tests ou SUIVI.*
+
+
+**État (17/10 au soir)** : J1, J2 et J3 faits et en service (mode d'emploi : `docs/MEMOIRE-SIGNAL.md`). Choix
+d'Alexandre le 17/10 : Yoann est d'accord ; texte brut gardé **un an**, puis résumés seuls ; pièces jointes
+**purgées après 30 jours** ; historique (J5) **plus tard**. Écarts avec le plan : la recherche dans le texte passe par
+l'événement `aiguillage_memoire_chercher` et la clé `recherche` de l'espace `memoire` (pas de service HA) ; les résumés
+de la semaine et du mois se font à partir des résumés du jour ; la purge des pièces jointes passe par l'API de
+l'add-on Signal (`DELETE /v1/attachments/<id>`). Reste : premier résumé de nuit réel (18/10 à 3 h), J4, J5.
 
 ## 1. Le besoin
 

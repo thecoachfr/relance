@@ -136,6 +136,10 @@ ne sert plus qu'en secours (erreur, refus, budget `tri_budget_mensuel` atteint).
 `/config/anthropic_api_key`, consigne dans `/config/aiguillage_tri_consigne.md` (hors dépôt, modèle dans
 [docs/TRI-CONSIGNE.md](docs/TRI-CONSIGNE.md)), état et coût du mois dans `/config/aiguillage_tri_etat.json`.
 
+Mémoire des échanges Signal (plan P9-J) : `aiguillage_memoire.py`, branché dans l'app `aiguillage_signal` (capture,
+résumés la nuit, purges, recherche par l'événement `aiguillage_memoire_chercher`). Mode d'emploi :
+[docs/MEMOIRE-SIGNAL.md](docs/MEMOIRE-SIGNAL.md).
+
 « Sur la TV » (plan P9-B4) : le bouton de la fiche d'une envie appelle le script HA `script.aiguillage_sur_tv`
 (champ `lien`), qui allume le Freebox Player Pop si besoin et ouvre le lien (`remote.turn_on`, `activity`). Formes de
 liens par plateforme : [docs/LIENS-TV.md](docs/LIENS-TV.md).

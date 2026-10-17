@@ -161,12 +161,13 @@ if hass is not None:
     import asyncio
     import json
     import os
-    from datetime import UTC, datetime
+    from datetime import UTC, datetime, timedelta
     from pathlib import Path
 
     import aiohttp
     import httpx
 
+    import aiguillage_memoire as memoire
     import aiguillage_spotify
 
     CORE_API = "http://supervisor/core/api"
@@ -182,6 +183,13 @@ if hass is not None:
             self._etat = {"connexion": "démarrage", "dernier_message": None, "derniere_erreur": None}
             self._derniere = "aucune"
             self._arret = False
+            # Mémoire des échanges (P9-J) : `memoire: {"actif": true}` dans aiguillage_signal.json (conversations :
+            # `memoire.conversations`, sinon les `sources`). Résumés la nuit, recherche par l'événement
+            # « aiguillage_memoire_chercher » (résultat dans donnees_apps, espace « memoire », clé « recherche »).
+            self._db_path = self.args.get("memoire_file", "/config/aiguillage_memoire.sqlite")
+            self._memoire_etat_path = Path(self.args.get("memoire_etat_file", "/config/aiguillage_memoire_etat.json"))
+            self.run_daily(self._nuit, self.args.get("memoire_heure", "03:00:00"))
+            self.listen_event(self._chercher, "aiguillage_memoire_chercher")
             self._tache = asyncio.ensure_future(self._boucle())
 
         async def terminate(self):
@@ -227,6 +235,10 @@ if hass is not None:
                 donnees = json.loads(brut)
             except json.JSONDecodeError:
                 return
+            try:
+                await self._memoriser(donnees, conf)
+            except Exception as exc:  # noqa: BLE001 - la mémoire ne doit jamais bloquer les envies
+                self.log(f"Signal : mémoire, ERREUR {exc!r}", level="WARNING")
             retenu = message_retenu(donnees, conf["compte"], conf.get("sources") or {}, conf.get("note_a_soi", True))
             if not retenu:
                 return
@@ -271,6 +283,149 @@ if hass is not None:
             except Exception as exc:  # noqa: BLE001 - titre par défaut, l'envie est créée quand même
                 self.log(f"Signal : titre introuvable pour {ref['lien']} ({exc!r})", level="WARNING")
                 return None
+
+        # MARK: - Mémoire (P9-J)
+
+        @staticmethod
+        def _conversations(conf):
+            mem = conf.get("memoire") or {}
+            return (mem.get("conversations") or conf.get("sources") or {}) if mem.get("actif") else {}
+
+        async def _memoriser(self, donnees, conf):
+            conversations = self._conversations(conf)
+            if not conversations:
+                return
+            op = memoire.lire_notification(donnees, conf["compte"], conversations)
+            if op:
+                total = await self.run_in_executor(self._memo_appliquer, op)
+                self._etat["memoire"] = f"{total} message(s)"
+
+        def _memo_appliquer(self, op):
+            db = memoire.ouvrir(self._db_path)
+            try:
+                memoire.appliquer(db, op)
+                return memoire.compter(db)
+            finally:
+                db.close()
+
+        async def _chercher(self, event_name, data, **kwargs):
+            await self.run_in_executor(self._chercher_sync, str((data or {}).get("requete") or ""))
+
+        def _chercher_sync(self, requete):
+            db = memoire.ouvrir(self._db_path)
+            try:
+                trouve = memoire.chercher(db, requete)
+            finally:
+                db.close()
+            valeur = {"requete": requete, "moment": datetime.now(UTC).isoformat(), **trouve}
+            while len(json.dumps(valeur, ensure_ascii=False).encode()) > 60_000 and valeur["messages"]:
+                valeur["messages"].pop()  # limite de 64 Ko par enregistrement
+            self._service("donnees_apps", "ecrire", {
+                "espace": "memoire", "cle": "recherche", "valeur": valeur,
+                "modifie_par": "memoire", "op_id": str(uuid.uuid4())})
+            self.log(f"Signal : mémoire, recherche ({len(valeur['messages'])} message(s), "
+                     f"{len(valeur['resumes'])} résumé(s))")
+
+        async def _nuit(self, **kwargs):
+            try:
+                await self.run_in_executor(self._nuit_sync)
+            except Exception as exc:  # noqa: BLE001
+                self.log(f"Signal : mémoire, ERREUR la nuit {exc!r}", level="WARNING")
+
+        def _nuit_sync(self):
+            """Résumés des jours sans résumé (7 derniers jours), de la semaine le lundi, du mois le 1er ; purges."""
+            conf = json.loads(self._conf_path.read_text())
+            conversations = self._conversations(conf)
+            if not conversations:
+                return
+            aujourdhui = datetime.now(memoire.PARIS).date()
+            db = memoire.ouvrir(self._db_path)
+            try:
+                client = self._client_api()
+                if client is not None:
+                    self._resumer_tout(db, client, conversations, aujourdhui)
+                retires = memoire.purger_textes(db, aujourdhui)
+                purgees = self._purger_pieces(db)
+            finally:
+                db.close()
+            self.log(f"Signal : mémoire, nuit faite ({retires} ancien(s) message(s) retiré(s), "
+                     f"{purgees} pièce(s) jointe(s) purgée(s))")
+
+        def _client_api(self):
+            try:
+                import anthropic
+                cle = Path(self.args.get("api_key_file", "/config/anthropic_api_key")).read_text().strip()
+            except (ImportError, FileNotFoundError) as exc:
+                self.log(f"Signal : mémoire, résumés impossibles ({exc!r})", level="WARNING")
+                return None
+            espace = self.args.get("workspace_id")
+            return anthropic.Anthropic(api_key=cle, timeout=180.0, max_retries=2,
+                                       default_headers={"anthropic-workspace-id": espace} if espace else None)
+
+        def _resumer_tout(self, db, client, conversations, aujourdhui):
+            etat = self._memoire_etat()
+            mois = f"{aujourdhui:%Y-%m}"
+            if etat.get("mois") != mois:
+                etat = {"mois": mois, "cout_mois": 0.0}
+            budget = float(self.args.get("memoire_budget_mensuel", 5))
+            modele = self.args.get("memoire_modele", "claude-sonnet-5-5")
+            effort = self.args.get("memoire_effort", "medium")
+
+            def faire(niveau, nom, periode, texte):
+                if etat["cout_mois"] >= budget:
+                    self.log(f"Signal : mémoire, budget du mois atteint ({etat['cout_mois']:.2f} $)", level="WARNING")
+                    return
+                resultat, usage = memoire.resumer(client, texte, modele, effort)
+                prix = {"claude-sonnet-5-5": (2.0, 10.0), "claude-haiku-5-5": (0.10, 0.50)}.get(modele, (4.0, 20.0))
+                etat["cout_mois"] = round(etat["cout_mois"] + (usage.input_tokens * prix[0]
+                                                               + usage.output_tokens * prix[1]) / 1e6, 4)
+                self._memoire_etat(etat)
+                if resultat is None:
+                    self.log(f"Signal : mémoire, résumé {niveau} {periode} impossible", level="WARNING")
+                    return
+                maintenant = datetime.now(UTC).isoformat()
+                memoire.enregistrer_resume(db, niveau, nom, periode, resultat, maintenant)
+                self._service("donnees_apps", "ecrire", {
+                    "espace": "memoire", "cle": memoire.cle_donnees(nom, niveau, periode),
+                    "valeur": {"conversation": nom, "niveau": niveau, "periode": periode, **resultat},
+                    "modifie_par": "memoire", "op_id": str(uuid.uuid4())})
+                self.log(f"Signal : mémoire, résumé {niveau} {periode} ({len(resultat['faits'])} fait(s)) ; "
+                         f"mois : {etat['cout_mois']:.2f} $")
+
+            for nom in sorted(set(conversations.values())):
+                for recul in range(7, 0, -1):
+                    jour = (aujourdhui - timedelta(days=recul)).isoformat()
+                    messages = memoire.messages_du_jour(db, nom, jour)
+                    if messages and not memoire.resumes(db, "jour", nom, jour, jour):
+                        faire("jour", nom, jour, memoire.texte_jour(nom, jour, messages))
+                for niveau, (debut, fin, periode) in (("semaine", memoire.semaine_precedente(aujourdhui)),
+                                                      ("mois", memoire.mois_precedent(aujourdhui))):
+                    jours = memoire.resumes(db, "jour", nom, debut.isoformat(), fin.isoformat())
+                    if jours and not memoire.resumes(db, niveau, nom, periode, periode):
+                        faire(niveau, nom, periode, memoire.texte_resumes(nom, niveau, periode, jours))
+
+        def _purger_pieces(self, db):
+            base = self._hote.replace("ws://", "http://").replace("wss://", "https://")
+            n = 0
+            for ident in memoire.pieces_a_purger(db, int(datetime.now(UTC).timestamp() * 1000)):
+                try:
+                    r = httpx.delete(f"{base}/v1/attachments/{ident}", timeout=10)
+                except httpx.HTTPError as exc:
+                    self.log(f"Signal : mémoire, purge de {ident} impossible ({exc!r})", level="WARNING")
+                    continue
+                if r.status_code < 300 or r.status_code == 404:
+                    memoire.piece_purgee(db, ident)
+                    n += 1
+            return n
+
+        def _memoire_etat(self, etat=None):
+            if etat is not None:
+                self._memoire_etat_path.write_text(json.dumps(etat, indent=2))
+                return etat
+            try:
+                return json.loads(self._memoire_etat_path.read_text())
+            except (FileNotFoundError, json.JSONDecodeError):
+                return {}
 
         def _service(self, domain, service, data):
             """Action HA par l'API REST (`return_response`, exigé par `donnees_apps`, que `call_service` ne passe pas)."""
