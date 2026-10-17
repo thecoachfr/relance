@@ -1,6 +1,14 @@
 # P9-I — Le tri par l'API Messages (au lieu de la routine « Relance · tri »)
 
-*Rédigé le 17/10/2026 dans Claude Code, après une étude de coût. Rien n'est codé. Les règles communes sont dans `P9-00-INDEX.md` (section 5).*
+*Rédigé le 17/10/2026 dans Claude Code, après une étude de coût. Les règles communes sont dans `P9-00-INDEX.md` (section 5).*
+
+**État (17/10 au soir)** : I2 et I3 faits et déployés. `aiguillage_tri.py` (18 tests), vigie en `tri_mode: ombre`,
+paquet `anthropic` (1.15.0) ajouté à l'add-on, consigne adaptée déposée dans `/config/aiguillage_tri_consigne.md`
+(modèle : `docs/TRI-CONSIGNE.md`). **Il manque la clé API** (`/config/anthropic_api_key`) : tant qu'elle n'est pas là,
+la vigie note « Tri par l'API inactif : fichier absent » une fois et la routine trie seule, comme avant. Ensuite :
+une semaine d'ombre, puis I4. Choix faits au codage : pas de `fallbacks` côté serveur (un refus fait déjà passer la
+main à la routine), effort `high` au départ (`tri_effort`), passage du matin à 6 h 45 par la vigie en modes `ombre`
+et `api` (en `ombre`, la routine garde aussi son cron), reprise après conflit par un appel sur la seule tâche.
 
 ## 1. Pourquoi
 

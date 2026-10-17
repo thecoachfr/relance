@@ -16,6 +16,10 @@ relance_vigie:
   # Routine « Aiguillage · actions » (P9-D5) pour les actions « preparer » ; jeton dans
   # /config/aiguillage_actions_token, jamais dans ce fichier.
   actions_routine_id: trig_01J1nRgBk4iBC3hBK4vZMLLV
+  # Tri par l'API Messages (P9-I) : routine (défaut) | ombre | api. Clé API Console dans /config/anthropic_api_key,
+  # consigne dans /config/aiguillage_tri_consigne.md (hors dépôt, modèle dans docs/TRI-CONSIGNE.md).
+  tri_mode: ombre
+  tri_budget_mensuel: 30
   # Rappels « à la maison » (P9-F2) : présence au salon (Hue MotionAware, helper Template).
   presence_entity: binary_sensor.presence_salon
   # Bermuda (P9-F4) : retour à la maison (iPhone) et pièce d'Alexandre (montre, sinon iPhone).

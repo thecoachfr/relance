@@ -17,6 +17,7 @@ import threading
 import time
 from pathlib import Path
 import uuid
+from zoneinfo import ZoneInfo
 
 import httpx
 import jwt
@@ -25,6 +26,7 @@ from appdaemon.plugins.hass import Hass
 import aiguillage_actions
 import aiguillage_spotify
 import aiguillage_tmdb
+import aiguillage_tri
 
 APNS_HOSTS = {
     "sandbox": "https://api.sandbox.push.apple.com",
@@ -39,6 +41,8 @@ TRIAGE_DELAY = 90
 # Le tri prend en général moins d'une minute ; on réveille ensuite les appareils pour qu'ils voient le résultat.
 PUSH_AFTER_TRIAGE = 180
 MAX_TRIAGES_PER_DAY = 20
+PARIS = ZoneInfo("Europe/Paris")
+JOURS = ("lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche")
 # API de Home Assistant vue depuis une app (add-on) avec `homeassistant_api: true`.
 CORE_API = "http://supervisor/core/api"
 # Clés et op_id dérivés de l'identifiant Google : une reprise après une coupure ne crée pas de doublon.
@@ -173,6 +177,16 @@ class RelanceVigie(Hass):
         self._triage_handle = None
         self._triage_day = None
         self._triage_count = 0
+        # Tri par l'API Messages (P9-I) : `routine` (la routine claude.ai, comme avant), `ombre` (la routine trie,
+        # l'API propose sans écrire, journal dans aiguillage_tri_ombre.jsonl) ou `api` (la vigie trie, la routine en secours).
+        self._tri_mode = self.args.get("tri_mode", "routine")
+        self._tri_lock = threading.Lock()
+        self._tri_etat_path = Path(self.args.get("tri_etat_file", "/config/aiguillage_tri_etat.json"))
+        self._tri_manque_logged = False
+        if self._espace and self._tri_mode in ("ombre", "api"):
+            # Passage du matin sur toutes les tâches ouvertes (le cron de la routine en mode `routine` et `ombre`).
+            self.run_daily(lambda **_kw: self.fire_triage(complet=True), self.args.get("tri_matin", "06:45:00"))
+            self.log(f"Tri par l'API en mode « {self._tri_mode} »")
         self.run_every(self.refresh, "now+5", int(self.args.get("refresh_seconds", 60)))
         self.run_daily(self._log_push_stats, "00:00:30")
         mode = f", tâches dans HA ({self._espace}{', boîte d’entrée Google' if self._inbox else ''})" if self._espace else ""
@@ -730,6 +744,18 @@ class RelanceVigie(Hass):
             return
         self._triage_count += 1
 
+        complet = bool(kwargs.get("complet"))
+        if self._tri_mode == "api" and self._espace:
+            if not self._tri_api(ecrire=True, complet=complet):
+                self.log("Tri : l'API n'a pas abouti, la routine prend le relais", level="WARNING")
+                self._fire_routine(token)
+            return
+        if not complet:
+            self._fire_routine(token)
+        if self._tri_mode == "ombre" and self._espace:
+            self._tri_api(ecrire=False, complet=complet)
+
+    def _fire_routine(self, token):
         try:
             response = httpx.post(
                 ROUTINE_URL.format(self.args["routine_id"]),
@@ -749,6 +775,167 @@ class RelanceVigie(Hass):
             return
         self.log(f"Tri lancé ({self._triage_count}/{MAX_TRIAGES_PER_DAY} aujourd'hui)")
         self.run_in(lambda **_kw: self.push_all("apres_tri"), PUSH_AFTER_TRIAGE)
+
+    # MARK: - Tri par l'API Messages (P9-I)
+
+    def _tri_manque(self, quoi):
+        if not self._tri_manque_logged:
+            self.log(f"Tri par l'API inactif : {quoi}", level="WARNING")
+            self._tri_manque_logged = True
+        return False
+
+    def _tri_api(self, ecrire, complet=False):
+        """Un passage de tri par l'API. `ecrire` False : mode ombre, les changements sont seulement journalisés.
+        Renvoie False si le passage n'a pas abouti (la routine prend alors le relais en mode `api`)."""
+        if not self._tri_lock.acquire(blocking=False):
+            self.log("Tri par l'API : un passage est déjà en cours")
+            return True
+        try:
+            return self._tri_passage(ecrire, complet)
+        except Exception as error:  # noqa: BLE001 — erreur imprévue : journal, et la routine en secours
+            self.log(f"Tri par l'API : erreur {error!r}", level="WARNING")
+            return False
+        finally:
+            self._tri_lock.release()
+
+    def _tri_passage(self, ecrire, complet):
+        try:
+            import anthropic
+        except ImportError:
+            return self._tri_manque("paquet Python « anthropic » absent (python_packages de l'add-on)")
+        try:
+            cle_api = Path(self.args.get("tri_cle_api_file", "/config/anthropic_api_key")).read_text().strip()
+            consigne = Path(self.args.get("tri_consigne_file", "/config/aiguillage_tri_consigne.md")).read_text()
+        except FileNotFoundError as error:
+            return self._tri_manque(f"fichier absent ({error.filename})")
+        self._tri_manque_logged = False
+
+        etat = self._tri_etat()
+        mois = datetime.now(PARIS).strftime("%Y-%m")
+        if etat.get("mois") != mois:
+            etat.update(mois=mois, cout_mois=0.0, passages_mois=0)
+        budget = float(self.args.get("tri_budget_mensuel", 30))
+        if etat["cout_mois"] >= budget:
+            self.log(f"Tri par l'API : budget du mois atteint ({etat['cout_mois']:.2f} $ / {budget:.0f} $)",
+                     level="WARNING")
+            return False
+
+        debut = datetime.now(UTC).isoformat()
+        enregistrements = self._service("donnees_apps", "lire", {"espace": self._espace}).get("enregistrements", [])
+        memo_entity = self.args.get("tri_memo_entity", "todo.aiguillage_memo")
+        try:
+            memo = self._service("todo", "get_items", {"entity_id": memo_entity, "status": "needs_action"})
+            memo = (memo.get(memo_entity) or {}).get("items", [])
+        except Exception as error:  # noqa: BLE001 — la consigne garde une copie du mémo
+            self.log(f"Tri par l'API : mémo illisible ({error!r}), copie de la consigne utilisée", level="WARNING")
+            memo = None
+        choisies = aiguillage_tri.selection(enregistrements, etat.get("dernier_tri"), complet)
+        if not choisies:
+            self.log("Tri par l'API : aucune tâche à trier")
+            etat["dernier_tri"] = debut
+            self._tri_etat(etat)
+            return True
+
+        tags = aiguillage_tri.tags_autorises(enregistrements)
+        titres = [r["valeur"].get("titre") for r in aiguillage_tri.ouvertes(enregistrements)]
+        modele = self.args.get("tri_modele", aiguillage_tri.MODELE)
+        effort = self.args.get("tri_effort", "high")
+        client = anthropic.Anthropic(api_key=cle_api, timeout=180.0, max_retries=2)
+
+        def demander(lot):
+            local = datetime.now(PARIS)
+            maintenant = f"{local:%Y-%m-%d %H:%M} ({JOURS[local.weekday()]}), Europe/Paris"
+            texte = aiguillage_tri.message(maintenant, memo, lot, tags, titres)
+            try:
+                reponse, usage, stop = aiguillage_tri.appeler(client, consigne, texte, modele, effort)
+            except anthropic.APIError as error:
+                self.log(f"Tri par l'API : appel refusé ({type(error).__name__}) : {str(error)[:200]}", level="WARNING")
+                return None, 0.0
+            cout = aiguillage_tri.cout(usage, modele)
+            etat["cout_mois"] = round(etat["cout_mois"] + cout, 4)
+            etat["passages_mois"] = etat.get("passages_mois", 0) + 1
+            self.log(f"Tri par l'API : {len(lot)} tâche(s) envoyée(s), {usage.input_tokens} + "
+                     f"{usage.cache_read_input_tokens or 0} (cache) tokens lus, {usage.output_tokens} écrits, "
+                     f"{cout:.3f} $ ; mois : {etat['cout_mois']:.2f} $")
+            if reponse is None:
+                self.log(f"Tri par l'API : réponse inutilisable (arrêt : {stop})", level="WARNING")
+            return reponse, cout
+
+        reponse, cout = demander(choisies)
+        self._tri_etat(etat)
+        if reponse is None:
+            return False
+
+        aujourdhui = datetime.now(PARIS).date()
+        par_cle = {r["cle"]: r for r in choisies}
+        traces, ecrites, conflits = [], 0, 0
+        for changement in reponse.get("taches", []):
+            record = par_cle.get(changement.get("cle"))
+            if record is None:
+                traces.append({"cle": changement.get("cle"), "refus": ["clé inconnue ou non envoyée"]})
+                continue
+            nouvelle, refus = aiguillage_tri.appliquer(record["valeur"], changement, aujourdhui,
+                                                       datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"), tags)
+            trace = {"cle": record["cle"], "titre": record["valeur"].get("titre"), "raison": changement.get("raison"),
+                     "changements": self._tri_diff(record["valeur"], nouvelle), "refus": refus}
+            if ecrire and nouvelle is not None:
+                statut = self._tri_ecrire(record, nouvelle)
+                if statut == "conflit":
+                    # Modifiée entre-temps : relecture, nouveau passage pour cette seule tâche, un seul essai.
+                    conflits += 1
+                    relu = self._service("donnees_apps", "lire", {"espace": self._espace, "cle": record["cle"]})
+                    relu = (relu or {}).get("enregistrement")
+                    statut = "abandon"
+                    if relu and not relu.get("supprime") and not (relu.get("valeur") or {}).get("fait"):
+                        rep2, _ = demander([relu])
+                        ch2 = next((c for c in (rep2 or {}).get("taches", []) if c.get("cle") == relu["cle"]), None)
+                        if ch2:
+                            nouvelle, refus2 = aiguillage_tri.appliquer(
+                                relu["valeur"], ch2, aujourdhui, datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"), tags)
+                            trace["refus"] += refus2
+                            statut = self._tri_ecrire(relu, nouvelle) if nouvelle is not None else "rien"
+                        self._tri_etat(etat)
+                trace["statut"] = statut
+                ecrites += statut == "ok"
+            traces.append(trace)
+
+        with Path(self.args.get("tri_journal_file", "/config/aiguillage_tri_ombre.jsonl")).open("a") as journal:
+            journal.write(json.dumps({"moment": debut, "mode": "api" if ecrire else "ombre", "complet": complet,
+                                      "envoyees": len(choisies), "cout": round(cout, 4), "taches": traces,
+                                      "resume": reponse.get("resume"), "signalements": reponse.get("signalements")},
+                                     ensure_ascii=False) + "\n")
+        proposees = sum(1 for tr in traces if tr.get("changements"))
+        refus = sum(len(tr.get("refus") or []) for tr in traces)
+        for signal in reponse.get("signalements") or []:
+            self.log(f"Tri par l'API : signalement : {str(signal)[:200]}", level="WARNING")
+        self.log(f"Tri par l'API ({'écrit' if ecrire else 'ombre'}) : {proposees} tâche(s) modifiée(s)"
+                 + (f", {ecrites} écrite(s), {conflits} conflit(s)" if ecrire else "") + f", {refus} refus")
+        etat["dernier_tri"] = debut
+        self._tri_etat(etat)
+        return True
+
+    def _tri_ecrire(self, record, nouvelle):
+        result = self._service("donnees_apps", "ecrire", {
+            "espace": self._espace, "cle": record["cle"], "valeur": nouvelle,
+            "version_attendue": record["version"], "modifie_par": "routine-tri", "op_id": str(uuid.uuid4()),
+        }) or {}
+        return result.get("statut", "?")
+
+    @staticmethod
+    def _tri_diff(avant, apres):
+        if apres is None:
+            return {}
+        return {k: apres.get(k) for k in sorted(set(avant) | set(apres)) if avant.get(k) != apres.get(k)}
+
+    def _tri_etat(self, etat=None):
+        """Lit (sans argument) ou écrit l'état du tri : dernier passage, coût et passages du mois."""
+        if etat is not None:
+            self._tri_etat_path.write_text(json.dumps(etat, indent=2))
+            return etat
+        try:
+            return json.loads(self._tri_etat_path.read_text())
+        except (FileNotFoundError, json.JSONDecodeError):
+            return {}
 
     # MARK: - Appareils
 

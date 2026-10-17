@@ -127,6 +127,15 @@ une action échoue ou qu'une préparation est prête. Présence (plan P9-F) : ra
 (`presence_entity`, `domicile_entity`) et « dans une pièce » (`piece_entity`, pièce dominante sur 2 minutes,
 liste des pièces publiée dans `config:pieces`). Clés d'exemple : `homeassistant/appdaemon/apps/apps.yaml`.
 
+Tri par l'API Messages (plan P9-I, [plans/P9-I-tri-par-api.md](plans/P9-I-tri-par-api.md)) : réglage `tri_mode`
+(`routine` par défaut, `ombre`, `api`). Module `aiguillage_tri.py` : la vigie choisit les tâches à trier, fait **un**
+appel à sortie structurée (Sonnet 5.5, sans outil), puis applique elle-même les changements avec les règles absolues
+(champs seulement si absents, notes existantes intactes, listes jamais cochées). En mode `ombre`, la routine trie
+comme avant et les propositions de l'API vont dans `/config/aiguillage_tri_ombre.jsonl` ; en mode `api`, la routine
+ne sert plus qu'en secours (erreur, refus, budget `tri_budget_mensuel` atteint). Clé API Console dans
+`/config/anthropic_api_key`, consigne dans `/config/aiguillage_tri_consigne.md` (hors dépôt, modèle dans
+[docs/TRI-CONSIGNE.md](docs/TRI-CONSIGNE.md)), état et coût du mois dans `/config/aiguillage_tri_etat.json`.
+
 « Sur la TV » (plan P9-B4) : le bouton de la fiche d'une envie appelle le script HA `script.aiguillage_sur_tv`
 (champ `lien`), qui allume le Freebox Player Pop si besoin et ouvre le lien (`remote.turn_on`, `activity`). Formes de
 liens par plateforme : [docs/LIENS-TV.md](docs/LIENS-TV.md).
@@ -141,7 +150,7 @@ Assistant à chaque rafraîchissement (état dans `/config/relance_inbox.json`),
 nouvelle tâche apparaît dans l'espace (créée dans l'app ou reprise de Google). La routine lit et écrit elle-même
 l'espace `aiguillage` (`donnees_apps.lire` / `ecrire`). La vigie appelle `donnees_apps` par l'API interne de Home Assistant (jeton de l'add-on).
 
-Déjà en place sur Home Assistant : l'app **AppDaemon** (avec `httpx[http2]` et `pyjwt[crypto]`)
+Déjà en place sur Home Assistant : l'app **AppDaemon** (avec `httpx[http2]`, `pyjwt[crypto]` et `anthropic`)
 et l'automatisation **« Relance : enregistrer un appareil »** (déclencheur webhook).
 
 Reste à faire :
