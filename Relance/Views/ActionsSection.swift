@@ -47,6 +47,20 @@ struct ActionsSection: View {
                             }
                         }
                     }
+                    if HAConfig.isActive, !store.mesLieux.groupes.isEmpty {
+                        // Mes lieux habituels (P9-H2) : n'importe quel lieu du groupe, à 150 m.
+                        Menu("Me le rappeler près de…", systemImage: "mappin.and.ellipse") {
+                            ForEach(store.mesLieux.groupes) { groupe in
+                                Button(groupe.lieux.isEmpty ? "\(groupe.nom) (aucun lieu)" : groupe.nom) {
+                                    store.addAction(.pres(groupe: groupe.id, nom: groupe.nom), to: item)
+                                    #if os(iOS)
+                                    ProximityReminders.shared.requestAuthorization()
+                                    #endif
+                                }
+                                .disabled(groupe.lieux.isEmpty || actions.contains { $0.groupe == groupe.id })
+                            }
+                        }
+                    }
                     if let lien {
                         if !actions.contains(where: { $0.type == TacheHA.Action.ouvrirLien }) {
                             Button("Ouvrir le lien", systemImage: "link") {
@@ -65,7 +79,9 @@ struct ActionsSection: View {
             } header: {
                 Text("Actions")
             } footer: {
-                if actions.contains(where: { $0.type == TacheHA.Action.rappelMaison || $0.type == TacheHA.Action.rappelPiece }) {
+                if actions.contains(where: { $0.type == TacheHA.Action.rappelGroupe }) {
+                    Text("Aiguillage te prévient à 150 m d'un lieu du groupe (Réglages › Mes lieux), au plus une fois toutes les 2 heures.")
+                } else if actions.contains(where: { $0.type == TacheHA.Action.rappelMaison || $0.type == TacheHA.Action.rappelPiece }) {
                     Text("Home Assistant te prévient quand tu rentres ou entres dans la pièce, une fois par jour, jusqu'à ce que la tâche soit faite.")
                 } else if !actions.isEmpty {
                     Text("Touche une action pour la lancer. Elles se synchronisent avec tes autres appareils.")

@@ -1,7 +1,7 @@
 # P9-H — Étude : durée d'une tâche, et rappel près d'un lieu habituel (supermarchés)
 
 *Étude du 17/10/2026, demandée par Alexandre. Lire d'abord `P9-00-INDEX.md`. Dépôt : `relance` (app, consigne du tri).
-Pas encore un plan à exécuter : les choix de la section « À valider » sont à faire par Alexandre.*
+Choix faits par Alexandre le 17/10 (voir la fin) : plan à exécuter, H2 d'abord.*
 
 ## H1 — Durée facultative d'une tâche
 
@@ -27,6 +27,8 @@ Pas encore un plan à exécuter : les choix de la section « À valider » sont 
 - Coût estimé : une soirée (modèle, fiche, agenda, tests, consigne).
 
 ## H2 — Rappel près d'un de mes lieux habituels (« liste de lieux »)
+
+*Fait le 17/10 : `MesLieux` (`config:lieux`, cache App Group, groupe « Supermarchés » par défaut), Réglages › Mes lieux (`MesLieuxView` : groupes libres, ajout par la recherche de Plans, la position ou la carte, balayer pour retirer), action `rappel_groupe` (« Me le rappeler près de… », `params.groupe`, `nom`), rattachement automatique d'une liste d'achats pas finie (catégorie Achats) à Supermarchés (`TaskItem.groupesDeLieux`), une zone de 150 m par lieu d'un groupe attendu, dans les 20 de `ProximityPlanner` (`ProximityReminders`, préfixe `g-`), notification « Tu es près de <lieu> · N articles à prendre », au plus une fois toutes les 2 h par tâche, discrète pendant la plage silencieuse. Mention dans la section Liste de la fiche. Test `mesLieux`. À essayer en vrai : renseigner ses supermarchés, puis passer devant avec une liste d'Achats.*
 
 ### Besoin
 
@@ -63,10 +65,9 @@ En passant près de l'un d'eux, Aiguillage rappelle la liste (« 12 articles sur
 Coût estimé : 2 soirées (mes lieux et réglages, action, zones et notification, tests), plus l'essai réel en
 passant devant un magasin.
 
-## À valider avec Alexandre
+## Choix d'Alexandre (17/10)
 
-1. H1 : liste des durées proposées ; la durée seulement avec une heure, ou aussi pour une journée (bloc à placer) ?
-2. H2 : rattachement manuel (« Me le rappeler près de… ») ou automatique pour toute liste d'Achats non finie ?
-3. H2 : rayon (150 m en ville ?) et délai entre deux rappels pour une même tâche (2 h ?).
-4. H2 : groupes libres, ou seulement « Supermarchés » au début ?
-5. Ordre : H1 puis H2, ou H2 d'abord (plus utile pour les courses) ?
+- H1 : durées du menu validées (15, 30, 45 min, 1 h, 1 h 30, 2 h, 3 h, Autre) ; durée seulement avec une heure.
+- H2 : rattachement **automatique** (liste pas finie, catégorie Achats → groupe Supermarchés) **et manuel**
+  (« Me le rappeler près de… ») ; rayon **150 m** ; au plus un rappel toutes les **2 h** par tâche ; groupes
+  **libres** ; **H2 d'abord**, H1 ensuite.

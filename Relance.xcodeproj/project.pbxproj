@@ -60,6 +60,7 @@
 		27F0CD011A092859F31C1B3F /* TasksAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 965A3B9A7F0371E3299ADA39 /* TasksAPI.swift */; };
 		28789DBD3D4F6CA8FB3B49EE /* GoogleAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BC7FD887AB3B53D2F6D6148 /* GoogleAuth.swift */; };
 		2881FCDA8614373C9D68FE76 /* MemoRemote.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04E780457F28B702C2D670A0 /* MemoRemote.swift */; };
+		288A80EA019E31A6363B71A2 /* MesLieux.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8C514064636613D6082D5B0 /* MesLieux.swift */; };
 		2A31CC171D89F227BBCEEC1C /* TaskStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C0DA8FD3D838562DDAE1750 /* TaskStore.swift */; };
 		2AC0B27A5BE6E8D40BC61482 /* HAConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FADF69313D958AAEDF4ED3 /* HAConfig.swift */; };
 		2B193F2E20D03BB637B45F46 /* TaskPriority.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EE508F82F326D596EC1A031 /* TaskPriority.swift */; };
@@ -267,6 +268,7 @@
 		C3FF5C7FBA7C3C77DC664A59 /* RelanceWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4536278168D673F91FE2BD29 /* RelanceWatchApp.swift */; };
 		C47762D7E07EA6871FFE6D32 /* WatchQuickAdd.swift in Sources */ = {isa = PBXBuildFile; fileRef = 967ED0E0B086490E32E03E0B /* WatchQuickAdd.swift */; };
 		C4DADCA5789A103FC6CE009E /* TacheHA.swift in Sources */ = {isa = PBXBuildFile; fileRef = 719434D8C63A56B7090C5E3F /* TacheHA.swift */; };
+		C5E1998C7428837CB8044866 /* MesLieuxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B38217CE3F5D1B7B7925B62E /* MesLieuxView.swift */; };
 		C642E4D5DAD4DB03124288CE /* TaskFields.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C219EEDD1BA5AF2BD37ABCA /* TaskFields.swift */; };
 		C6F18DD0DD71D893DB5B93A1 /* TaskPriority.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EE508F82F326D596EC1A031 /* TaskPriority.swift */; };
 		C79EB0F3703A561BF58D7F3E /* SharedLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761FC1F3864FB766BF0A6485 /* SharedLink.swift */; };
@@ -302,12 +304,14 @@
 		DC1B15409C41F6A7EB9FFA5C /* DoneView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2085B3617089E328A5BF3F30 /* DoneView.swift */; };
 		DC3500607F510BCE3212212F /* TaskDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90710C68F0B11F5A74C59129 /* TaskDetailView.swift */; };
 		DC4A5763DF0968D579111986 /* ReminderOverride.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CF4B1AF23ADE07B4C45F7D2 /* ReminderOverride.swift */; };
+		DCDDB8988DE00A051411531E /* MesLieux.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8C514064636613D6082D5B0 /* MesLieux.swift */; };
 		DED92B856FA78FAE4B00D64F /* SharedMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AC3C376A9AF6A9087AF2A12 /* SharedMessage.swift */; };
 		DF1427A32BC223385A370AB8 /* RelanceWatchWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C2C09E5A407A0A9AE6C08821 /* RelanceWatchWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		DFC6E932EB58DED730E9A2DC /* MacTaskList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E7D25077DE2BEA98118D246 /* MacTaskList.swift */; };
 		E2638191C4ADB72F15EB71FF /* PlatformCompat.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7926432BD1ECAC69B112A06 /* PlatformCompat.swift */; };
 		E337F58207F59D61C12F17B9 /* ReminderScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13C930EA8E752F00D8973CDF /* ReminderScheduler.swift */; };
 		E3FD3372EC844E9BAAB37EEB /* ReminderPlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E48E67DBEFD62C7E6118390 /* ReminderPlanner.swift */; };
+		E41560627C2E4916DF28A900 /* MesLieux.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8C514064636613D6082D5B0 /* MesLieux.swift */; };
 		E49EE1CC985FCC5FDCA27A09 /* TaskTag.swift in Sources */ = {isa = PBXBuildFile; fileRef = B863B8DA8A7D1FFAE24BE87C /* TaskTag.swift */; };
 		E592CBB0902FDB11DB871F9D /* ProximityPlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72B30BDF848AF91385168C9F /* ProximityPlanner.swift */; };
 		E760D750ADA9349B536A92E7 /* DueTextTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4DC1239718727B09A71BA21 /* DueTextTests.swift */; };
@@ -535,9 +539,11 @@
 		A52A26E7A17146871684BD99 /* MacSignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacSignInView.swift; sourceTree = "<group>"; };
 		A6A4EF6EA4834A24EB534187 /* TaskItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskItem.swift; sourceTree = "<group>"; };
 		A7D24B2FA7C99714EB6FC0BD /* TaskActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskActions.swift; sourceTree = "<group>"; };
+		A8C514064636613D6082D5B0 /* MesLieux.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MesLieux.swift; sourceTree = "<group>"; };
 		AD9D4E32E198251993005BCC /* QuickAddSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickAddSheet.swift; sourceTree = "<group>"; };
 		AEAE6516E008CA0F6431F7FC /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 		B30F392FC92433C39C1922E7 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		B38217CE3F5D1B7B7925B62E /* MesLieuxView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MesLieuxView.swift; sourceTree = "<group>"; };
 		B3D83AD9429BAA01C53166A7 /* TagViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagViews.swift; sourceTree = "<group>"; };
 		B5A30FBAE95AD10F86EA6D23 /* RelanceWidgets.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = RelanceWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		B863B8DA8A7D1FFAE24BE87C /* TaskTag.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskTag.swift; sourceTree = "<group>"; };
@@ -734,6 +740,7 @@
 				666C8CA69B643438FA2EC7C2 /* DueText.swift */,
 				F8DEDB1DC8F3AC484AE105AB /* MemoMerge.swift */,
 				5397683CF5FD3589B36E1F13 /* MemoStore.swift */,
+				A8C514064636613D6082D5B0 /* MesLieux.swift */,
 				6203FE3484BB9AB47B0C2D83 /* NoteLines.swift */,
 				59E6DFE31CE62707FB0EB4F9 /* Recettes.swift */,
 				57E018902DF086E23048C8AE /* Recurrence.swift */,
@@ -799,6 +806,7 @@
 				A1781498457E2D3F1F70A8C4 /* ListeSection.swift */,
 				E3D7BA9AC7A9D6DB8068F7BB /* MemoContactsImport.swift */,
 				A3BA2CD7259FBD2501089EDD /* MemoViews.swift */,
+				B38217CE3F5D1B7B7925B62E /* MesLieuxView.swift */,
 				E0C65CE1B1707634DEE54856 /* OnboardingView.swift */,
 				2E5A4192036752DBF4B79400 /* PlaceSearchView.swift */,
 				C7926432BD1ECAC69B112A06 /* PlatformCompat.swift */,
@@ -1249,6 +1257,8 @@
 				F0ABC0FE2A166DEFCDABAA09 /* MemoShareDraft.swift in Sources */,
 				6FD8EAC6F14FB052B287EFDE /* MemoStore.swift in Sources */,
 				D076AD5BAD8313D71FB3A5A1 /* MemoViews.swift in Sources */,
+				DCDDB8988DE00A051411531E /* MesLieux.swift in Sources */,
+				C5E1998C7428837CB8044866 /* MesLieuxView.swift in Sources */,
 				EFC83DD6A67E0F2993AC4368 /* NoteLines.swift in Sources */,
 				07B29052A2CDDC105B8AF1F2 /* NotesTimeCodec.swift in Sources */,
 				13786AEE51D9397701A22CED /* OnboardingView.swift in Sources */,
@@ -1352,6 +1362,7 @@
 				D6948788F05C7941A5F837B8 /* MemoStore.swift in Sources */,
 				D59C52AE4BD1B63ACA82308F /* MemoViews.swift in Sources */,
 				F4C5EFBEC247872881CCA2E0 /* MenuBarView.swift in Sources */,
+				E41560627C2E4916DF28A900 /* MesLieux.swift in Sources */,
 				1F7BE65A34F657867F64CA1D /* NoteLines.swift in Sources */,
 				594F293387ACE61FCAE44667 /* NotesTimeCodec.swift in Sources */,
 				55A1E63CC620B4FD595192AC /* PlaceLocator.swift in Sources */,
@@ -1537,6 +1548,7 @@
 				52F0C7895A89441CDC3EF430 /* MemoRemote.swift in Sources */,
 				09AB56850DCA0F64F41FF3E1 /* MemoShareDraft.swift in Sources */,
 				15329CD0971902FD75BAD125 /* MemoStore.swift in Sources */,
+				288A80EA019E31A6363B71A2 /* MesLieux.swift in Sources */,
 				21ECD757144B4BABAE5727D2 /* NoteLines.swift in Sources */,
 				A3A87C5D3E867E2619C506BA /* NotesTimeCodec.swift in Sources */,
 				A67F4FA45D6A0A7CBDF649FC /* ProximityPlanner.swift in Sources */,

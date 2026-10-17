@@ -89,6 +89,18 @@ extension TaskStore {
         Task { await sync() }
     }
 
+    /// Mes lieux (P9-H2) : sur l'appareil tout de suite, puis dans HA ; les zones suivent.
+    func setMesLieux(_ lieux: MesLieux) {
+        guard lieux != mesLieux else { return }
+        mesLieux = lieux
+        MesLieux.cache(lieux)
+        if let synchro { try? synchro.ecrire(MesLieux.haKey, lieux.valeur) }
+        Task {
+            await reschedule()
+            await sync()
+        }
+    }
+
     /// Active ou coupe une recette (appliquée ensuite par la vigie) ; le reste de la recette est gardé tel quel.
     func setRecette(_ id: String, active: Bool) {
         guard let i = recettes.firstIndex(where: { $0.id == id }), recettes[i].active != active else { return }
@@ -129,6 +141,11 @@ extension TaskStore {
            case .objet(let o) = config.valeur, case .liste(let l)? = o["pieces"] {
             let liste = l.compactMap { if case .texte(let s) = $0 { s } else { nil } }
             if liste != pieces { pieces = liste }
+        }
+        if let config = records.first(where: { $0.cle == MesLieux.haKey && !$0.supprime }),
+           let lieux = MesLieux(valeur: config.valeur), lieux != mesLieux {
+            mesLieux = lieux
+            MesLieux.cache(lieux)
         }
         if let config = records.first(where: { $0.cle == Recette.haKey && !$0.supprime }) {
             let liste = Recette.liste(config.valeur)

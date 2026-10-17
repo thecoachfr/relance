@@ -27,6 +27,7 @@ struct SettingsView: View {
                     NavigationLink("Quand et comment relancer") { ReminderSettingsView() }
                     NavigationLink("Mémo pour le tri") { MemoListView() }
                     NavigationLink("Actions automatiques") { RecettesView() }
+                    if HAConfig.isActive { NavigationLink("Mes lieux") { MesLieuxView() } }
                     NavigationLink("Diagnostic batterie") { DiagnosticView() }
                 }
                 Section {

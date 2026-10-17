@@ -13,7 +13,7 @@
 | E — Audit de la consommation de batterie (mesure de référence, puis après P9) | `P9-E-audit-batterie.md` | relance + HA | 1–2 soirées, plus deux semaines de mesure |
 | F — Présence à la maison (Hue MotionAware, puis Bermuda) | `P9-F-presence-maison.md` | HA + relance | 1 soirée (16/10) |
 | G — Listes de courses (articles cochables, tout coché → Fait, recette → ingrédients) | `P9-G-listes-courses.md` | relance + routine | G1 2–3 soirées, G2 1, G3 1–2, G4 à la carte |
-| H — *Étude* : durée facultative d'une tâche (agenda) ; rappel près de mes lieux habituels (supermarchés) | `P9-H-duree-et-lieux.md` | relance + routine | H1 1 soirée, H2 2 soirées ; choix à valider |
+| H — Durée facultative d'une tâche (agenda) ; rappel près de mes lieux habituels (supermarchés) | `P9-H-duree-et-lieux.md` | relance + routine | H2 (2 soirées) puis H1 (1 soirée) |
 
 **Ordre** : lot 0 ci-dessous (avec E1, la mesure de référence), puis A, B, C, D, et E2 après A4 et D3. C dépend de B (liens testés sur le Player, champs `envie`). D réutilise « Sur la TV » (B) comme une action. F, d'abord une piste, a été fait après D. G (ajouté le 16/10, déposé le 16/10 à 22 h) vient ensuite, indépendant des autres plans.
 

@@ -191,4 +191,26 @@ struct ListeStoreTests {
                                articles: [WatchArticle(id: "a", texte: "Pain", quantite: "2", coche: false)])
         #expect(WatchLink.decode(WatchLink.encode([envoye])) == [envoye])
     }
+
+    /// Mes lieux (P9-H2) : format dans HA, rattachement automatique et manuel.
+    @Test func mesLieux() throws {
+        var lieux = MesLieux.parDefaut
+        lieux.groupes[0].lieux.append(.init(nom: "Carrefour City", adresse: "1 rue X", lat: 48.8, lon: 2.4))
+        let relu = try #require(MesLieux(valeur: lieux.valeur))
+        #expect(relu == lieux && relu.lieu(lieux.groupes[0].lieux[0].id)?.groupe.id == MesLieux.supermarches)
+
+        let store = TaskStore(auth: SlowAccount(), inMemory: true)
+        let courses = store.add(title: "Courses", day: nil, minutes: nil, category: "Achats")
+        #expect(courses.groupesDeLieux.isEmpty)  // pas de liste
+        store.addArticle("Pain", to: courses)
+        #expect(courses.groupesDeLieux == [MesLieux.supermarches])
+        store.toggleArticle(id: try #require(courses.liste?.articles.first?.id), of: courses)
+        #expect(courses.groupesDeLieux.isEmpty)  // liste finie (et tâche faite)
+
+        let pharmacie = store.add(title: "Ordonnance", day: nil, minutes: nil)
+        store.addAction(.pres(groupe: "pharma", nom: "Pharmacies"), to: pharmacie)
+        #expect(pharmacie.groupesDeLieux == ["pharma"])
+        let action = try #require(pharmacie.actions.first)
+        #expect(action.titre == "Me le rappeler près de : Pharmacies" && !action.auToucher)
+    }
 }

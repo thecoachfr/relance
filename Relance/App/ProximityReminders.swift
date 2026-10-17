@@ -10,6 +10,12 @@ import UserNotifications
 final class ProximityReminders: NSObject, CLLocationManagerDelegate {
     static let shared = ProximityReminders()
     static let radius: CLLocationDistance = 200
+    /// Lieux habituels (P9-H2) : plus près, pour ne pas sonner au magasin de la rue d'à côté.
+    static let groupRadius: CLLocationDistance = 150
+    /// Au plus un rappel par tâche dans cet intervalle, même devant plusieurs magasins du groupe.
+    static let groupInterval: TimeInterval = 2 * 3600
+    private static let groupNotifiedKey = "groupNotified"
+    nonisolated private static let groupPrefix = "g-"
     static let maxRegions = 20
     private static let notifiedKey = "nearbyNotified"
     nonisolated private static let prefix = "relance-lieu-"
@@ -50,17 +56,33 @@ final class ProximityReminders: NSObject, CLLocationManagerDelegate {
         let allowed = authorization == .authorizedAlways || authorization == .authorizedWhenInUse
         let active = ReminderScheduler.isEnabledOnThisDevice && allowed
         var centers: [String: CLLocationCoordinate2D] = [:]
-        let candidates = marked.compactMap { item -> ProximityPlanner.Candidate? in
+        var candidates = marked.compactMap { item -> ProximityPlanner.Candidate? in
             guard let center = PlaceLocator.shared.coordinate(for: item) else { return nil }
             centers[item.localID.uuidString] = center
             return .init(id: item.localID.uuidString, latitude: center.latitude, longitude: center.longitude,
                          urgent: item.priority == .urgent, due: item.dueInstant())
         }
+        // Mes lieux (P9-H2) : chaque lieu d'un groupe rattaché à une tâche active est une zone ; urgente et échéance
+        // d'après les tâches qui l'attendent.
+        let lieux = store?.mesLieux ?? MesLieux.cached()
+        let rattachees = tasks.map { ($0, $0.groupesDeLieux) }.filter { !$0.1.isEmpty }
+        for groupe in lieux.groupes {
+            let enAttente = rattachees.filter { $0.1.contains(groupe.id) }.map(\.0)
+            guard !enAttente.isEmpty else { continue }
+            for lieu in groupe.lieux {
+                let id = Self.groupPrefix + lieu.id
+                centers[id] = CLLocationCoordinate2D(latitude: lieu.lat, longitude: lieu.lon)
+                candidates.append(.init(id: id, latitude: lieu.lat, longitude: lieu.lon,
+                                        urgent: enAttente.contains { $0.priority == .urgent },
+                                        due: enAttente.compactMap { $0.dueInstant() }.min()))
+            }
+        }
         let here = location.location.map { (latitude: $0.coordinate.latitude, longitude: $0.coordinate.longitude) }
         let chosen = active ? ProximityPlanner.choose(candidates, near: here, max: Self.maxRegions) : []
         let wanted = chosen.compactMap { id -> CLCircularRegion? in
             guard let center = centers[id] else { return nil }
-            let region = CLCircularRegion(center: center, radius: Self.radius, identifier: Self.prefix + id)
+            let radius = id.hasPrefix(Self.groupPrefix) ? Self.groupRadius : Self.radius
+            let region = CLCircularRegion(center: center, radius: radius, identifier: Self.prefix + id)
             region.notifyOnEntry = true
             region.notifyOnExit = false
             return region
@@ -89,7 +111,14 @@ final class ProximityReminders: NSObject, CLLocationManagerDelegate {
         let id = region.identifier
         guard id.hasPrefix(Self.prefix) else { return }
         EnergyMetrics.count(.zone)
-        Task { @MainActor in await notify(taskID: String(id.dropFirst(Self.prefix.count))) }
+        let cle = String(id.dropFirst(Self.prefix.count))
+        Task { @MainActor in
+            if cle.hasPrefix(Self.groupPrefix) {
+                await notifyGroup(lieuID: String(cle.dropFirst(Self.groupPrefix.count)))
+            } else {
+                await notify(taskID: cle)
+            }
+        }
     }
 
     /// Déplacement important : on garde les lieux les plus proches.
@@ -105,6 +134,39 @@ final class ProximityReminders: NSObject, CLLocationManagerDelegate {
         Task { @MainActor in
             if let store { await update(tasks: store.activeTasks()) }
         }
+    }
+
+    /// Près d'un de mes lieux (P9-H2) : chaque tâche qui attend ce groupe, au plus une fois toutes les 2 h.
+    private func notifyGroup(lieuID: String, now: Date = .now) async {
+        guard let store, ReminderScheduler.isEnabledOnThisDevice,
+              let (lieu, groupe) = store.mesLieux.lieu(lieuID) else { return }
+        var notified = AppGroup.defaults.dictionary(forKey: Self.groupNotifiedKey) as? [String: Double] ?? [:]
+        notified = notified.filter { now.timeIntervalSince1970 - $0.value < Self.groupInterval }
+        let c = Calendar.current.dateComponents([.hour, .minute], from: now)
+        let quiet = store.scheduler.settings.isQuiet(minuteOfDay: (c.hour ?? 0) * 60 + (c.minute ?? 0))
+        for item in store.activeTasks() where item.groupesDeLieux.contains(groupe.id) {
+            let taskID = item.localID.uuidString
+            guard notified[taskID] == nil else { continue }
+            notified[taskID] = now.timeIntervalSince1970
+            let content = UNMutableNotificationContent()
+            content.title = item.title
+            content.subtitle = "Tu es près de \(lieu.nom)"
+            if let liste = item.liste, !liste.articles.isEmpty {
+                let restants = liste.articles.count - liste.cochés
+                content.body = restants == 1 ? "1 article à prendre." : "\(restants) articles à prendre."
+            } else {
+                content.body = item.dueInstant().map { "Prévu " + DueText.long(due: $0, hasTime: item.dueMinutes != nil).lowercased() + "." }
+                    ?? "Sans date."
+            }
+            content.sound = quiet ? nil : .default
+            content.interruptionLevel = quiet ? .passive : .timeSensitive
+            content.threadIdentifier = taskID
+            content.categoryIdentifier = ReminderScheduler.Category.nearby
+            content.userInfo = ["taskID": taskID]
+            try? await UNUserNotificationCenter.current().add(
+                UNNotificationRequest(identifier: "\(taskID)|groupe|\(Int(now.timeIntervalSince1970))", content: content, trigger: nil))
+        }
+        AppGroup.defaults.set(notified, forKey: Self.groupNotifiedKey)
     }
 
     /// « Tu es près de … » : une fois par jour et par tâche, discret pendant la plage silencieuse.

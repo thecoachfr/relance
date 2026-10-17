@@ -8,6 +8,7 @@ nonisolated extension TacheHA.Action {
     static let surTV = "sur_tv"
     static let rappelMaison = "rappel_maison"
     static let rappelPiece = "rappel_piece"
+    static let rappelGroupe = "rappel_groupe"
     /// Pièces de la maison (zones de HA), publiées par la vigie sous cette clé : `{"pieces": ["Salon", …]}`.
     static let piecesKey = "config:pieces"
 
@@ -15,6 +16,22 @@ nonisolated extension TacheHA.Action {
     static func dans(_ piece: String) -> Self {
         Self(type: rappelPiece, executant: "ha", declencheur: .objet(["quand": .texte("piece")]),
              params: .objet(["piece": .texte(piece)]))
+    }
+
+    /// « Me le rappeler près de <groupe> » (P9-H2) : l'appareil prévient en passant près d'un des lieux du groupe.
+    static func pres(groupe: String, nom: String) -> Self {
+        Self(type: rappelGroupe, declencheur: .objet(["quand": .texte("lieu")]),
+             params: .objet(["groupe": .texte(groupe), "nom": .texte(nom)]))
+    }
+
+    var groupe: String? {
+        guard case .objet(let p)? = params, case .texte(let s)? = p["groupe"] else { return nil }
+        return s
+    }
+
+    var nomGroupe: String? {
+        guard case .objet(let p)? = params, case .texte(let s)? = p["nom"] else { return groupe }
+        return s
     }
 
     var piece: String? {
@@ -38,6 +55,7 @@ nonisolated extension TacheHA.Action {
         case Self.surTV: "Sur la TV"
         case Self.rappelMaison: "Me le rappeler à la maison"
         case Self.rappelPiece: "Me le rappeler dans : \(piece ?? "?")"
+        case Self.rappelGroupe: "Me le rappeler près de : \(nomGroupe ?? "?")"
         case "playlist_spotify": "Ajouter à la playlist « À écouter »"
         case "preparer": "Préparer"
         default: type
@@ -50,6 +68,7 @@ nonisolated extension TacheHA.Action {
         case Self.surTV: "tv"
         case Self.rappelMaison: "house"
         case Self.rappelPiece: "figure.walk.arrival"
+        case Self.rappelGroupe: "mappin.and.ellipse"
         case "playlist_spotify": "music.note.list"
         case "preparer": "doc.text.magnifyingglass"
         default: "bolt"
@@ -57,7 +76,7 @@ nonisolated extension TacheHA.Action {
     }
 
     /// Exécutée par l'appareil quand on la touche (les autres le sont par la vigie ou une routine).
-    var auToucher: Bool { executant == "appareil" }
+    var auToucher: Bool { executant == "appareil" && type != Self.rappelGroupe }
 
     var lien: URL? {
         guard case .objet(let p)? = params, case .texte(let s)? = p["lien"] else { return nil }
@@ -67,6 +86,9 @@ nonisolated extension TacheHA.Action {
     /// « Faite le 16/10 à 19:33 · Envoyé à la TV », « Échec · TV injoignable », « À faire ».
     var etatTexte: String {
         let quand = maj.flatMap { TacheHA.date($0) }.map { " le " + $0.formatted(.dateTime.day().month(.twoDigits).hour().minute()) } ?? ""
+        if type == Self.rappelGroupe, etat == "a_faire" {
+            return ["En passant près d'un lieu du groupe", resultat].compactMap { $0 }.joined(separator: " · ")
+        }
         if type == Self.rappelMaison || type == Self.rappelPiece, etat == "a_faire" {
             // Reste « à faire » : elle rappelle à chaque passage, une fois par jour, jusqu'à ce que la tâche soit faite.
             let quand = type == Self.rappelMaison ? "En rentrant à la maison" : "En entrant dans : \(piece ?? "?")"

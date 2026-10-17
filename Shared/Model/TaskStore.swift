@@ -33,6 +33,8 @@ final class TaskStore {
     var recettes: [Recette] = []
     /// Pièces de la maison (publiées par la vigie, P9-F4) pour « Me le rappeler dans… ».
     var pieces: [String] = []
+    /// Mes lieux habituels en groupes (P9-H2), `config:lieux` dans HA.
+    var mesLieux = MesLieux.cached()
     /// Forcé par les tests, sans toucher au réglage partagé de l'appareil (que l'app hôte lit aussi).
     var haActiveOverride: Bool?
     /// Coupé par les tests de synchro : le centre de notifications du simulateur peut bloquer des dizaines de secondes.
