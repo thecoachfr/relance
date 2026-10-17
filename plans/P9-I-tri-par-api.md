@@ -122,7 +122,7 @@ Python refuse un changement, le note dans le journal et garde le reste de la tâ
   section 4 de `P9-00-INDEX.md` sera à mettre à jour à la bascule.
 - Dans le dépôt, on versionne un **modèle sans données personnelles** (`docs/TRI-CONSIGNE.md`), comme
   `docs/ROUTINE-ACTIONS.md`.
-- **Mise en cache** : la consigne va dans `system` avec un `cache_control` ; le mémo et les tâches vont dans le
+- **Mise en cache** (retirée le 17/10 : les passages, espacés de plus de 5 min, ne lisaient jamais le cache et en payaient l'écriture) : la consigne allait dans `system` avec un `cache_control` ; le mémo et les tâches vont dans le
   message. Avec un seul appel par passage et des passages espacés, le cache ne servira guère qu'aux reprises après
   conflit. C'est sans effet sur le résultat et ça ne coûte rien de le prévoir.
 

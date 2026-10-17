@@ -374,7 +374,8 @@ def appeler(client, consigne, texte, modele=MODELE, effort="high"):
     reponse = client.messages.create(
         model=modele,
         max_tokens=16000,
-        system=[{"type": "text", "text": consigne, "cache_control": {"type": "ephemeral"}}],
+        # Pas de cache : les passages sont espacés de plus de 5 min, l'écriture du cache coûterait sans servir.
+        system=consigne,
         messages=[{"role": "user", "content": texte}],
         output_config={"effort": effort, "format": {"type": "json_schema", "schema": SCHEMA}},
     )
