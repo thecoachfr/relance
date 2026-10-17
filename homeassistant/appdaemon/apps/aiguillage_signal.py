@@ -309,15 +309,16 @@ if hass is not None:
                 db.close()
 
         async def _chercher(self, event_name, data, **kwargs):
-            await self.run_in_executor(self._chercher_sync, str((data or {}).get("requete") or ""))
+            data = data or {}
+            await self.run_in_executor(self._chercher_sync, str(data.get("requete") or ""), data.get("jour"))
 
-        def _chercher_sync(self, requete):
+        def _chercher_sync(self, requete, jour=None):
             db = memoire.ouvrir(self._db_path)
             try:
-                trouve = memoire.chercher(db, requete)
+                trouve = memoire.chercher(db, requete, jour=jour)
             finally:
                 db.close()
-            valeur = {"requete": requete, "moment": datetime.now(UTC).isoformat(), **trouve}
+            valeur = {"requete": requete, "jour": jour, "moment": datetime.now(UTC).isoformat(), **trouve}
             while len(json.dumps(valeur, ensure_ascii=False).encode()) > 60_000 and valeur["messages"]:
                 valeur["messages"].pop()  # limite de 64 Ko par enregistrement
             self._service("donnees_apps", "ecrire", {

@@ -67,7 +67,11 @@ def test_base_recherche_et_doublons():
     assert msg["auteur"] == "Paul" and msg["quand"] == "2026-10-17 18:30"
     assert [c["texte"] for c in msg["contexte"]] == ["Bonjour", "Je note, merci"]
     assert m.chercher(db, "genial")["messages"] or not m.fts(db)  # accents ignorés avec FTS5
-    assert m.chercher(db, "")["messages"] == []
+    # Sans mot : les derniers messages, ou ceux d'un jour.
+    assert [x["texte"] for x in m.chercher(db, "")["messages"]][-1] == "Je note, merci"
+    assert len(m.chercher(db, "*", limite=2)["messages"]) == 2
+    assert len(m.chercher(db, "a", jour="2026-10-17")["messages"]) == 3
+    assert m.chercher(db, "", jour="2026-10-16")["messages"] == []
     # Modification puis suppression : l'index suit.
     m.appliquer(db, {"op": "modif", "conversation": "Paul", "ts": TS + 10, "auteur": "Paul", "texte": "Plutôt la crêperie"})
     assert not m.chercher(db, "tonton")["messages"] and m.chercher(db, "crêperie")["messages"]

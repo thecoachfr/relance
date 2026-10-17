@@ -152,12 +152,22 @@ def _termes(requete):
     return [m for m in re.findall(r"\w+", requete or "", flags=re.UNICODE) if len(m) > 1][:8]
 
 
-def chercher(db, requete, limite=30):
+def derniers(db, limite=30, jour=None):
+    """Les `limite` derniers messages (ou ceux d'un `jour` AAAA-MM-JJ), dans l'ordre chronologique."""
+    if jour:
+        lignes = db.execute("SELECT * FROM messages WHERE jour = ? ORDER BY ts LIMIT ?", (jour, limite * 4)).fetchall()
+    else:
+        lignes = db.execute("SELECT * FROM messages ORDER BY ts DESC LIMIT ?", (limite,)).fetchall()[::-1]
+    return {"messages": [_court(r) for r in lignes], "resumes": []}
+
+
+def chercher(db, requete, limite=30, jour=None):
     """Messages qui contiennent tous les mots de la requête (avec leur voisin d'avant et d'après), et résumés qui en
-    parlent. Renvoie {"messages": [...], "resumes": [...]}."""
+    parlent. Renvoie {"messages": [...], "resumes": [...]}. Sans mot (requête vide, « * ») : les derniers messages,
+    ou tous ceux du `jour` donné."""
     termes = _termes(requete)
     if not termes:
-        return {"messages": [], "resumes": []}
+        return derniers(db, limite, jour)
     if fts(db):
         expr = " AND ".join('"' + t.replace('"', "") + '"*' for t in termes)
         lignes = db.execute(

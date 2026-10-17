@@ -34,6 +34,9 @@ Le plus simple : le **skill personnel `memoire-signal`** (hors dépôt, `~/.clau
    "recherche"}` et réponds-moi en citant les dates. » Le résultat contient au plus 30 messages (les plus récents
    d'abord) qui ont **tous** les mots de la requête, chacun avec le message d'avant et d'après, plus les résumés qui
    en parlent.
+3. **Les derniers messages, ou ceux d'un jour** : même événement avec `{"requete": "*"}` (30 derniers messages) ou
+   `{"requete": "*", "jour": "2026-10-17"}` (tous les messages de ce jour). Les mots d'une seule lettre sont ignorés :
+   une requête « a » revient à « * ».
 
 ## Réglages
 
