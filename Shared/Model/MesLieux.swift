@@ -21,6 +21,8 @@ nonisolated struct MesLieux: Codable, Equatable, Sendable {
     }
 
     var groupes: [Groupe] = []
+    /// Mon domicile : proposé en tête de la recherche de lieu (« Maison »), pour les tâches de la maison.
+    var domicile: Lieu?
 
     static let haKey = "config:lieux"
     private static let cacheKey = "mesLieux"
@@ -36,11 +38,17 @@ nonisolated struct MesLieux: Codable, Equatable, Sendable {
         return nil
     }
 
+    /// La ligne 📍 d'un de mes lieux : nom, adresse, et lien Plans du point (coordonnées gardées).
+    static func contact(_ lieu: Lieu) -> TaskContact {
+        TaskContact(name: lieu.nom, address: lieu.adresse,
+                    link: TaskContact.mapsLink(name: lieu.nom, latitude: lieu.lat, longitude: lieu.lon))
+    }
+
     // MARK: - Home Assistant et cache
 
     var valeur: JSONValeur { (try? JSONValeur(self)) ?? .objet([:]) }
 
-    init(groupes: [Groupe] = []) { self.groupes = groupes }
+    init(groupes: [Groupe] = [], domicile: Lieu? = nil) { (self.groupes, self.domicile) = (groupes, domicile) }
 
     init?(valeur: JSONValeur) {
         guard let lu = try? valeur.decoder(MesLieux.self) else { return nil }

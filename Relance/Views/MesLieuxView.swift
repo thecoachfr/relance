@@ -6,12 +6,31 @@ import SwiftUI
 struct MesLieuxView: View {
     @Environment(TaskStore.self) private var store
     @State private var ajoutDans: String?
+    @State private var choixDomicile = false
     @State private var nouveauGroupe = false
     @State private var nomDuGroupe = ""
     @State private var erreur: String?
 
     var body: some View {
         Form {
+            Section {
+                if let maison = store.mesLieux.domicile {
+                    Label {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(maison.nom)
+                            if let adresse = maison.adresse { Text(adresse).font(.subheadline).foregroundStyle(.secondary) }
+                        }
+                    } icon: { Image(systemName: "house.fill") }
+                    .swipeActions { Button("Retirer", role: .destructive) { changerDomicile(nil) } }
+                    Button("Changer", systemImage: "arrow.triangle.2.circlepath") { choixDomicile = true }
+                } else {
+                    Button("Définir mon domicile", systemImage: "house") { choixDomicile = true }
+                }
+            } header: {
+                Text("Domicile")
+            } footer: {
+                Text("Proposé en tête de la recherche de lieu d'une tâche (« Maison »). Pour un rappel en rentrant, préfère « Me le rappeler à la maison », détecté par Home Assistant.")
+            }
             ForEach(store.mesLieux.groupes) { groupe in
                 Section {
                     ForEach(groupe.lieux) { lieu in
@@ -45,6 +64,18 @@ struct MesLieuxView: View {
         .sheet(item: Binding(get: { ajoutDans.map(Identite.init) }, set: { ajoutDans = $0?.id })) { cible in
             PlaceSearchView { contact in ajouter(contact, dans: cible.id) }
         }
+        .sheet(isPresented: $choixDomicile) {
+            PlaceSearchView { contact in
+                Task {
+                    guard let point = await Self.position(contact) else {
+                        erreur = "Pas de position pour « \(contact.name) » : choisis-le sur la carte."
+                        return
+                    }
+                    changerDomicile(.init(nom: "Maison", adresse: contact.address ?? contact.name,
+                                          lat: point.latitude, lon: point.longitude))
+                }
+            }
+        }
         .alert("Nouveau groupe", isPresented: $nouveauGroupe) {
             TextField("Pharmacies", text: $nomDuGroupe)
             Button("Créer") { creerGroupe() }
@@ -62,6 +93,20 @@ struct MesLieuxView: View {
         store.setMesLieux(lieux)
     }
 
+    private func changerDomicile(_ lieu: MesLieux.Lieu?) {
+        var lieux = store.mesLieux
+        lieux.domicile = lieu
+        store.setMesLieux(lieux)
+    }
+
+    /// Coordonnées du lieu choisi : lien Plans du point, sinon l'adresse cherchée par Plans.
+    static func position(_ contact: TaskContact) async -> (latitude: Double, longitude: Double)? {
+        if let point = contact.coordinate { return point }
+        guard let adresse = contact.address,
+              let place = try? await CLGeocoder().geocodeAddressString(adresse).first?.location else { return nil }
+        return (place.coordinate.latitude, place.coordinate.longitude)
+    }
+
     private func creerGroupe() {
         let nom = nomDuGroupe.trimmingCharacters(in: .whitespaces)
         nomDuGroupe = ""
@@ -74,12 +119,7 @@ struct MesLieuxView: View {
     /// Le lieu choisi, avec ses coordonnées (lien Plans du point, sinon l'adresse cherchée par Plans).
     private func ajouter(_ contact: TaskContact, dans groupe: String) {
         Task {
-            var point = contact.coordinate
-            if point == nil, let adresse = contact.address,
-               let place = try? await CLGeocoder().geocodeAddressString(adresse).first?.location {
-                point = (place.coordinate.latitude, place.coordinate.longitude)
-            }
-            guard let point else {
+            guard let point = await Self.position(contact) else {
                 erreur = "Pas de position pour « \(contact.name) » : choisis-le sur la carte."
                 return
             }

@@ -196,6 +196,12 @@ struct ListeStoreTests {
     @Test func mesLieux() throws {
         var lieux = MesLieux.parDefaut
         lieux.groupes[0].lieux.append(.init(nom: "Carrefour City", adresse: "1 rue X", lat: 48.8, lon: 2.4))
+        // Ancien format, sans domicile : toujours lisible.
+        let ancien = try #require(MesLieux(valeur: .objet(["groupes": .liste([])])))
+        #expect(ancien.domicile == nil && ancien.groupes.isEmpty)
+        lieux.domicile = .init(nom: "Maison", adresse: "1 rue Y, 94140 Alfortville", lat: 48.81, lon: 2.42)
+        let maison = MesLieux.contact(try #require(lieux.domicile))
+        #expect(maison.name == "Maison" && maison.coordinate?.latitude == 48.81)
         let relu = try #require(MesLieux(valeur: lieux.valeur))
         #expect(relu == lieux && relu.lieu(lieux.groupes[0].lieux[0].id)?.groupe.id == MesLieux.supermarches)
 

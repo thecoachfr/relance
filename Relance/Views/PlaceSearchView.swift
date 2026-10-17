@@ -12,6 +12,11 @@ struct PlaceSearchView: View {
     @State private var pointPicker: Bool?
     @FocusState private var focused: Bool
 
+    private func choisir(_ contact: TaskContact) {
+        onPick(contact)
+        dismiss()
+    }
+
     var body: some View {
         NavigationStack {
             List {
@@ -21,6 +26,25 @@ struct PlaceSearchView: View {
                         .focused($focused)
                         .autocorrectionDisabled()
                         .onSubmit { if let first = search.results.first { pick(first) } }
+                }
+                // Mes lieux (P9-H2) : la maison et mes lieux habituels, en un toucher.
+                if search.query.isEmpty {
+                    let lieux = MesLieux.cached()
+                    let habituels = lieux.groupes.flatMap(\.lieux)
+                    if lieux.domicile != nil || !habituels.isEmpty {
+                        Section("Mes lieux") {
+                            if let maison = lieux.domicile {
+                                Button { choisir(MesLieux.contact(maison)) } label: {
+                                    Label(maison.nom, systemImage: "house.fill")
+                                }
+                            }
+                            ForEach(habituels) { lieu in
+                                Button { choisir(MesLieux.contact(lieu)) } label: {
+                                    Label(lieu.nom, systemImage: "mappin")
+                                }
+                            }
+                        }
+                    }
                 }
                 // Un spot photo, un banc, un point de vue : un point plutôt qu'une adresse.
                 if search.query.isEmpty {
