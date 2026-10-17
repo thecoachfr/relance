@@ -147,8 +147,12 @@ struct TaskRow: View {
     /// Même texte que dans les widgets et l'activité en direct (`DueText`).
     private var status: (text: String, symbol: String, color: Color)? {
         guard let due = item.dueInstant() else { return nil }
-        let text = DueText.long(due: due, hasTime: item.dueMinutes != nil, now: now)
+        var text = DueText.long(due: due, hasTime: item.dueMinutes != nil, now: now)
         if item.isOverdue(now: now) { return (text, "clock.fill", .red) }
+        // Avec une durée (P9-H1) : la plage, « Aujourd'hui à 14:00 – 14:30 ».
+        if let duree = item.dureeMinutes, item.dueMinutes != nil {
+            text += " – " + DueText.clock(due.addingTimeInterval(TimeInterval(duree * 60)))
+        }
         let symbol = Calendar.current.isDateInToday(item.dueDay!) ? "clock" : "calendar"
         return (text, symbol, .secondary)
     }

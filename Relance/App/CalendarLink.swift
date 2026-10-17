@@ -11,6 +11,11 @@ final class CalendarLink {
     static let marker = "📅 Dans l'agenda"
     static let duration: TimeInterval = 3600
 
+    /// Durée de la tâche (P9-H1), sinon une heure.
+    static func duration(of item: TaskItem) -> TimeInterval {
+        item.dureeMinutes.map { TimeInterval($0 * 60) } ?? duration
+    }
+
     private let store = EKEventStore()
 
     var isAuthorized: Bool { EKEventStore.authorizationStatus(for: .event) == .fullAccess }
@@ -68,7 +73,8 @@ final class CalendarLink {
         guard isAuthorized else { return }
         for item in items where item.calendarEventID != nil {
             guard let event = event(for: item), let start = item.dueInstant(), item.dueMinutes != nil else { continue }
-            guard event.startDate != start || event.title != item.title else { continue }
+            let end = start.addingTimeInterval(Self.duration(of: item))
+            guard event.startDate != start || event.endDate != end || event.title != item.title else { continue }
             fill(event, from: item, start: start)
             try? store.save(event, span: .thisEvent)
         }
@@ -77,7 +83,7 @@ final class CalendarLink {
     private func fill(_ event: EKEvent, from item: TaskItem, start: Date) {
         event.title = item.title
         event.startDate = start
-        event.endDate = start.addingTimeInterval(Self.duration)
+        event.endDate = start.addingTimeInterval(Self.duration(of: item))
         let contact = TaskContact(notes: item.notes)
         event.location = contact?.address
         event.url = contact?.link

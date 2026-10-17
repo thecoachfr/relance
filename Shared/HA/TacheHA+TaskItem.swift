@@ -12,6 +12,7 @@ extension TacheHA {
         notes = lieu.map { TaskContact.notes(item.notes, setting: $0.contact) } ?? item.notes
         liste = item.liste
         notes = Liste.notes(notes, setting: liste)
+        duree = item.dueMinutes == nil ? nil : item.dureeMinutes
         jour = Self.jour(item.dueDay)
         heure = item.dueDay == nil ? nil : Self.heure(item.dueMinutes)
         categorie = item.category
@@ -55,6 +56,7 @@ extension TacheHA {
         item.actions = actions
         item.liste = liste
         item.listeBaseRaw = item.listeRaw
+        item.dureeMinutes = duree
         item.haExtrasRaw = autres.isEmpty ? nil : (try? JSONEncoder().encode(autres)).map { String(decoding: $0, as: UTF8.self) }
         item.isDirty = false
     }

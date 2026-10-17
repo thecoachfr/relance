@@ -191,6 +191,17 @@ final class TaskStore {
         return created
     }
 
+    // MARK: - Durée (P9-H1)
+
+    /// Durée en minutes (`nil` = aucune) ; l'événement d'agenda suit à la prochaine réconciliation.
+    func setDuree(_ minutes: Int?, of item: TaskItem) {
+        let minutes = minutes.flatMap { $0 > 0 ? $0 : nil }
+        guard minutes != item.dureeMinutes else { return }
+        item.dureeMinutes = minutes
+        item.markChanged()
+        commit()
+    }
+
     // MARK: - Actions (P9-D1)
 
     /// Ajoute, remplace (même `id`) ou retire des actions ; synchronisé comme le reste de la tâche.

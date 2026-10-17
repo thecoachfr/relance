@@ -5,6 +5,8 @@ Choix faits par Alexandre le 17/10 (voir la fin) : plan à exécuter, H2 d'abord
 
 ## H1 — Durée facultative d'une tâche
 
+*Fait le 17/10 : champ `duree` (minutes) dans `TacheHA` (`v: 2`), `TaskItem.dureeMinutes`, envoyé seulement avec une heure ; ligne « Durée » sous l'heure dans la fiche (iPhone, iPad, Mac : Aucune, 15, 30, 45 min, 1 h, 1 h 30, 2 h, 3 h, Autre par pas de 15 min jusqu'à 12 h, `DureeRow`) ; l'événement d'agenda dure autant (1 h sans durée) et suit les changements (`CalendarLink.duration(of:)`) ; la liste montre la plage (« Aujourd'hui à 14:00 – 14:30 ») ; règle R de la consigne du tri (durée dite dans le titre → `duree`, retirée du titre ; `duree` recopiée sinon). Tests `DureeTests`.*
+
 ### Existant (lu le 17/10)
 
 - « Ajouter à l'agenda » (`Relance/App/CalendarLink.swift`) crée un événement d'**une heure fixe**

@@ -165,12 +165,14 @@ nonisolated struct TacheHA: Codable, Equatable, Sendable {
     var actions: [Action] = []
     /// Liste d'articles cochables (P9-G), voir `TacheHA+Liste.swift`.
     var liste: Liste?
+    /// Durée en minutes (P9-H1), seulement avec une heure : l'événement d'agenda dure autant.
+    var duree: Int?
     /// Champs de premier niveau que l'app ne connaît pas (ajoutés par la vigie, la routine ou une version plus
     /// récente) : recopiés tels quels, pour qu'une modification sur l'iPhone ne les efface pas.
     var autres: [String: JSONValeur] = [:]
 
     enum CodingKeys: String, CodingKey, CaseIterable {
-        case v, titre, notes, jour, heure, categorie, priorite, tags, relances, fait, lieu, envie, actions, liste
+        case v, titre, notes, jour, heure, categorie, priorite, tags, relances, fait, lieu, envie, actions, liste, duree
         case faitLe = "fait_le"
         case googleID = "google_id"
     }
@@ -201,6 +203,7 @@ nonisolated struct TacheHA: Codable, Equatable, Sendable {
             (try? JSONEncoder().encode(valeur)).flatMap { try? JSONDecoder().decode(Action.self, from: $0) }
         }
         liste = try? c.decodeIfPresent(Liste.self, forKey: .liste)
+        duree = (try? c.decodeIfPresent(Int.self, forKey: .duree)).flatMap { $0 }.flatMap { $0 > 0 ? $0 : nil }
         let connus = Set(CodingKeys.allCases.map(\.rawValue))
         let tout = try decoder.container(keyedBy: AnyKey.self)
         for key in tout.allKeys where !connus.contains(key.stringValue) {
@@ -211,7 +214,7 @@ nonisolated struct TacheHA: Codable, Equatable, Sendable {
     /// Les champs absents ne sont pas écrits (JSON plus lisible pour la routine et la vigie).
     func encode(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(lieu == nil && envie == nil && actions.isEmpty && liste == nil ? v : max(v, 2), forKey: .v)
+        try c.encode(lieu == nil && envie == nil && actions.isEmpty && liste == nil && duree == nil ? v : max(v, 2), forKey: .v)
         try c.encode(titre, forKey: .titre)
         if !notes.isEmpty { try c.encode(notes, forKey: .notes) }
         try c.encodeIfPresent(jour, forKey: .jour)
@@ -227,6 +230,7 @@ nonisolated struct TacheHA: Codable, Equatable, Sendable {
         try c.encodeIfPresent(envie, forKey: .envie)
         if !actions.isEmpty { try c.encode(actions, forKey: .actions) }
         try c.encodeIfPresent(liste, forKey: .liste)
+        try c.encodeIfPresent(duree, forKey: .duree)
         let connus = Set(CodingKeys.allCases.map(\.rawValue))
         var tout = encoder.container(keyedBy: AnyKey.self)
         for (key, value) in autres where !connus.contains(key) { try tout.encode(value, forKey: AnyKey(key)) }

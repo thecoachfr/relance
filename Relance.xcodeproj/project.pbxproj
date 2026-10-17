@@ -231,6 +231,7 @@
 		A9D25158884B43503A37002A /* SharedMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AC3C376A9AF6A9087AF2A12 /* SharedMessage.swift */; };
 		AA5DF43C8963DCD3BDDCD321 /* TacheHA+TaskItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51E76C6EB4ADDD641DA38896 /* TacheHA+TaskItem.swift */; };
 		AB24AEB09104DFA277722A61 /* DueText.swift in Sources */ = {isa = PBXBuildFile; fileRef = 666C8CA69B643438FA2EC7C2 /* DueText.swift */; };
+		AC123E3FDCBA451F62C28169 /* DureeRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61778EC8217DA0E828BF65E1 /* DureeRow.swift */; };
 		ACD3D16A96525F6F236691B5 /* Recurrence.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57E018902DF086E23048C8AE /* Recurrence.swift */; };
 		AE595E878BC032D23FDCCD8D /* TacheHA+TaskItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51E76C6EB4ADDD641DA38896 /* TacheHA+TaskItem.swift */; };
 		AE79BC95B7E650B9496AA144 /* PlaceLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4803928305D83EDF5F053D3B /* PlaceLocator.swift */; };
@@ -336,7 +337,9 @@
 		F99122E816391BB02ECD729E /* TaskStore+Liste.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE0CBB1753FF6D341BE553EB /* TaskStore+Liste.swift */; };
 		FA2B6044BDAC65C92DEC372D /* DueText.swift in Sources */ = {isa = PBXBuildFile; fileRef = 666C8CA69B643438FA2EC7C2 /* DueText.swift */; };
 		FA5C8325CD39F4F8787E9D42 /* TriageViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = B94FACB36938B4FB532C381F /* TriageViews.swift */; };
+		FAF11E56FEAFF5E250E9C9AF /* DureeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30CC842C8E9E1937E48E46CF /* DureeTests.swift */; };
 		FB05E9F723FF63E217A0F3E7 /* TaskIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B19813EA3F6E02B516AA5F8 /* TaskIntents.swift */; };
+		FB1699F3D7AB1A4384E5522E /* DureeRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61778EC8217DA0E828BF65E1 /* DureeRow.swift */; };
 		FCADCDD9B760FA6E3679D35D /* ToSee.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A3B053B5BF69150A21C6DA2 /* ToSee.swift */; };
 		FCFE9052F1D340E3D024856D /* TaskLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC6BAC9DF11A10BB3CFAC2F3 /* TaskLiveActivity.swift */; };
 		FDFCD763FD51D164B3989C0D /* TasksAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 965A3B9A7F0371E3299ADA39 /* TasksAPI.swift */; };
@@ -453,6 +456,7 @@
 		2F79F1BB3DA9597815EB03EE /* MemoShareView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoShareView.swift; sourceTree = "<group>"; };
 		2FD7A3A536C16BA93AFF03B6 /* RelanceWidgetsBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelanceWidgetsBundle.swift; sourceTree = "<group>"; };
 		2FE0AB94C1F8EF86B799B335 /* TaskRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskRow.swift; sourceTree = "<group>"; };
+		30CC842C8E9E1937E48E46CF /* DureeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DureeTests.swift; sourceTree = "<group>"; };
 		31B339A2445E0E4BF2299831 /* SharedPhoto.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedPhoto.swift; sourceTree = "<group>"; };
 		356BC2CE21D14CF0CBA3C9B6 /* TasksProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksProvider.swift; sourceTree = "<group>"; };
 		394F54E0EF2B79881E9F3836 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -488,6 +492,7 @@
 		5C400C99C88D8FAF16375386 /* ActionsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionsTests.swift; sourceTree = "<group>"; };
 		5CD9D6E8A5C0731F41756F44 /* SiriCaptureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SiriCaptureTests.swift; sourceTree = "<group>"; };
 		5FFB746BA5E4C74B3B145047 /* TodoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoView.swift; sourceTree = "<group>"; };
+		61778EC8217DA0E828BF65E1 /* DureeRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DureeRow.swift; sourceTree = "<group>"; };
 		61A994C34CC736F16CBEE82E /* SharedPlaceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedPlaceTests.swift; sourceTree = "<group>"; };
 		6203FE3484BB9AB47B0C2D83 /* NoteLines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteLines.swift; sourceTree = "<group>"; };
 		666C8CA69B643438FA2EC7C2 /* DueText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DueText.swift; sourceTree = "<group>"; };
@@ -664,6 +669,7 @@
 			children = (
 				5C400C99C88D8FAF16375386 /* ActionsTests.swift */,
 				E4DC1239718727B09A71BA21 /* DueTextTests.swift */,
+				30CC842C8E9E1937E48E46CF /* DureeTests.swift */,
 				DE8D7DCB6EBC8D7F85AE9B02 /* EnvieFieldTests.swift */,
 				1C3F65EA3092E1881DEA6CE5 /* EnviesTests.swift */,
 				203193BF1B5EE7BBFCBA5F53 /* EnvieSuggestionTests.swift */,
@@ -801,6 +807,7 @@
 				7E7598AD45ABC35C0448C201 /* ContactSection.swift */,
 				9966A98CACCCB07E311345FA /* DiagnosticView.swift */,
 				2085B3617089E328A5BF3F30 /* DoneView.swift */,
+				61778EC8217DA0E828BF65E1 /* DureeRow.swift */,
 				4544084AD09A0D9E5EC2923F /* HASettingsSection.swift */,
 				DA74C2AD3519045DE673C1B1 /* InboxView.swift */,
 				A1781498457E2D3F1F70A8C4 /* ListeSection.swift */,
@@ -1241,6 +1248,7 @@
 				B1FF51214CA50C5C123E2C32 /* DiagnosticView.swift in Sources */,
 				DC1B15409C41F6A7EB9FFA5C /* DoneView.swift in Sources */,
 				FA2B6044BDAC65C92DEC372D /* DueText.swift in Sources */,
+				FB1699F3D7AB1A4384E5522E /* DureeRow.swift in Sources */,
 				B04F3548AE5D3BCBFD303E59 /* EnergyMetrics.swift in Sources */,
 				129BBE1FBC165864FBA0C6CE /* EnvieSuggestions.swift in Sources */,
 				28789DBD3D4F6CA8FB3B49EE /* GoogleAuth.swift in Sources */,
@@ -1344,6 +1352,7 @@
 				95209752641755F1E477430C /* DateDetection.swift in Sources */,
 				04F1DE7BAA4BE9774C28DAA5 /* DemoData.swift in Sources */,
 				AB24AEB09104DFA277722A61 /* DueText.swift in Sources */,
+				AC123E3FDCBA451F62C28169 /* DureeRow.swift in Sources */,
 				3D64BDAD7CC844B33E35716A /* EnvieSuggestions.swift in Sources */,
 				092960B2E85CCE39F272B33A /* GoogleAuth.swift in Sources */,
 				6F427AFAE378B76CFA22DF05 /* GoogleRefreshSession.swift in Sources */,
@@ -1462,6 +1471,7 @@
 			files = (
 				1DA6F94EA96F552A12FC16B0 /* ActionsTests.swift in Sources */,
 				E760D750ADA9349B536A92E7 /* DueTextTests.swift in Sources */,
+				FAF11E56FEAFF5E250E9C9AF /* DureeTests.swift in Sources */,
 				C84E6A3B183F5D5D3D39D043 /* EnvieFieldTests.swift in Sources */,
 				1765A8B5866503765A68DFB8 /* EnvieSuggestionTests.swift in Sources */,
 				BB2D3E72F85A27A82A60C7B1 /* EnviesTests.swift in Sources */,

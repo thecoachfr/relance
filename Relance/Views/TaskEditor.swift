@@ -38,6 +38,7 @@ struct TaskEditor: View {
                             Toggle("Heure", isOn: $hasTime)
                             if hasTime {
                                 DatePicker("À", selection: $time, displayedComponents: .hourAndMinute)
+                                DureeRow(item: item)
                             }
                             RecurrenceRow(notes: $notes, day: day)
                         }

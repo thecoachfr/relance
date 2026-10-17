@@ -58,6 +58,7 @@ struct TaskDetailView: View {
                                 Toggle("Heure", isOn: $hasTime).labelsHidden()
                             }
                         }
+                        if hasTime { DureeRow(item: item) }
                         RecurrenceRow(notes: $notes, day: day)
                     }
                     #else
@@ -67,6 +68,7 @@ struct TaskDetailView: View {
                         Toggle("Heure", isOn: $hasTime)
                         if hasTime {
                             DatePicker("À", selection: $time, displayedComponents: .hourAndMinute)
+                            DureeRow(item: item)
                         }
                         RecurrenceRow(notes: $notes, day: day)
                     }
