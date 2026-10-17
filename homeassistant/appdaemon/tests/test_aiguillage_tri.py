@@ -72,6 +72,22 @@ def test_vue_et_message():
     assert donnees["memo"].startswith("ILLISIBLE") and donnees["taches"][0]["cle"] == CLE
 
 
+def test_vides_sans_effet():
+    v = {"titre": "Appeler maman", "fait": False}
+    vide = ch(titre="", categorie="", tags=[], jour="", heure="", priorite="", duree=0,
+              lieu=None, envie=None)
+    assert t.appliquer(v, vide, AUJ, NOW, TAGS) == (None, [])
+
+
+def test_schema_unions_limitees():
+    def compte(s):
+        n = 1 if "anyOf" in s or isinstance(s.get("type"), list) else 0
+        for sous in list(s.get("properties", {}).values()) + s.get("anyOf", []) + ([s["items"]] if "items" in s else []):
+            n += compte(sous)
+        return n
+    assert compte(t.SCHEMA) <= 16
+
+
 def test_schema_strict():
     def parcourt(s):
         if s.get("type") == "object":

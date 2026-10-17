@@ -140,28 +140,30 @@ def _objet(proprietes):
     return {"type": "object", "properties": proprietes, "required": list(proprietes), "additionalProperties": False}
 
 
-_ARTICLE = _objet({"texte": {"type": "string"}, "quantite": _ou_null({"type": "string"}),
+# L'API limite les champs « nullables » (16 au plus) : seuls les quatre objets facultatifs le sont ; ailleurs,
+# « vide » vaut « pas de changement » ("" pour un texte, 0 pour un nombre, [] pour une liste).
+_ARTICLE = _objet({"texte": {"type": "string"}, "quantite": {"type": "string"},
                    "rayon": {"type": "string", "enum": list(RAYONS)}})
 SCHEMA = _objet({
     "taches": {"type": "array", "items": _objet({
         "cle": {"type": "string"},
-        "titre": _ou_null({"type": "string"}),
-        "categorie": _ou_null({"type": "string", "enum": list(CATEGORIES)}),
-        "tags": _ou_null({"type": "array", "items": {"type": "string"}}),
-        "jour": _ou_null({"type": "string"}),
-        "heure": _ou_null({"type": "string"}),
-        "priorite": _ou_null({"type": "string", "enum": ["Urgente", "Basse"]}),
-        "duree": _ou_null({"type": "integer"}),
-        "lieu": _ou_null(_objet({"nom": {"type": "string"}, "adresse": _ou_null({"type": "string"}),
-                                 "telephone": _ou_null({"type": "string"}), "lien": _ou_null({"type": "string"})})),
+        "titre": {"type": "string"},
+        "categorie": {"type": "string", "enum": ["", *CATEGORIES]},
+        "tags": {"type": "array", "items": {"type": "string"}},
+        "jour": {"type": "string"},
+        "heure": {"type": "string"},
+        "priorite": {"type": "string", "enum": ["", "Urgente", "Basse"]},
+        "duree": {"type": "integer"},
+        "lieu": _ou_null(_objet({"nom": {"type": "string"}, "adresse": {"type": "string"},
+                                 "telephone": {"type": "string"}, "lien": {"type": "string"}})),
         "envie": _ou_null(_objet({"type": {"type": "string", "enum": list(TYPES_ENVIE)},
-                                  "note": _ou_null({"type": "string"}),
-                                  "plateforme": _ou_null({"type": "string", "enum": list(PLATEFORMES)})})),
+                                  "note": {"type": "string"},
+                                  "plateforme": {"type": "string", "enum": ["", *PLATEFORMES]}})),
         "notes_a_la_fin": {"type": "array", "items": {"type": "string"}},
         "partage_revu": {"type": "boolean"},
         "liste_nouvelle": _ou_null(_objet({"articles": {"type": "array", "items": _ARTICLE},
-                                           "parts": _ou_null({"type": "integer"}),
-                                           "recette_proposee": _ou_null({"type": "string"})})),
+                                           "parts": {"type": "integer"},
+                                           "recette_proposee": {"type": "string"}})),
         "recette_preparee": _ou_null(_objet({
             "titre": {"type": "string"},
             "articles": {"type": "array", "items": _ARTICLE},
@@ -276,7 +278,7 @@ def appliquer(valeur, ch, aujourdhui, maintenant, tags_ok):
             refus.append("priorite (déjà fixée)")
         elif ch["priorite"] in ("Urgente", "Basse"):
             t["priorite"] = ch["priorite"]
-    if ch.get("duree") is not None:
+    if ch.get("duree"):
         if not absent("duree") or absent("heure") or not 1 <= int(ch["duree"]) <= 1440:
             refus.append("duree (déjà fixée, pas d'heure, ou hors limites)")
         else:
