@@ -25,7 +25,7 @@
 
 ## Chercher depuis Claude (claude.ai ou Claude Code, connecteur Home Assistant)
 
-Deux façons, à demander telles quelles à Claude :
+Le plus simple : le **skill personnel `memoire-signal`** (hors dépôt, `~/.claude/skills/memoire-signal/` pour Claude Code ; même dossier zippé à importer dans claude.ai, Réglages › Skills) fait tout seul les appels ci-dessous ; il suffit de demander « qu'est-ce que Yoann m'a conseillé comme resto ? ». Sans le skill, deux façons, à demander telles quelles à Claude :
 
 1. **Par les résumés** (le plus simple) : « Lis l'espace `memoire` de donnees_apps (`donnees_apps.lire`,
    `{"espace": "memoire"}`) et dis-moi ce que Yoann m'a conseillé comme restaurant. »
