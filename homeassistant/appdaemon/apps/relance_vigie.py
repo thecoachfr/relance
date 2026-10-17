@@ -842,7 +842,11 @@ class RelanceVigie(Hass):
         titres = [r["valeur"].get("titre") for r in aiguillage_tri.ouvertes(enregistrements)]
         modele = self.args.get("tri_modele", aiguillage_tri.MODELE)
         effort = self.args.get("tri_effort", "high")
-        client = anthropic.Anthropic(api_key=cle_api, timeout=180.0, max_retries=2)
+        # Clé d'utilisateur (« sk-ant-usr-… », non rattachée à un espace de travail) : l'API exige l'en-tête
+        # anthropic-workspace-id ; l'identifiant (wrkspc_…) va dans `tri_workspace_id` (apps.yaml de HA).
+        espace_travail = self.args.get("tri_workspace_id")
+        client = anthropic.Anthropic(api_key=cle_api, timeout=180.0, max_retries=2,
+                                     default_headers={"anthropic-workspace-id": espace_travail} if espace_travail else None)
 
         def demander(lot):
             local = datetime.now(PARIS)
@@ -851,7 +855,7 @@ class RelanceVigie(Hass):
             try:
                 reponse, usage, stop = aiguillage_tri.appeler(client, consigne, texte, modele, effort)
             except anthropic.APIError as error:
-                self.log(f"Tri par l'API : appel refusé ({type(error).__name__}) : {str(error)[:200]}", level="WARNING")
+                self.log(f"Tri par l'API : appel refusé ({type(error).__name__}) : {str(error)[:400]}", level="WARNING")
                 return None, 0.0
             cout = aiguillage_tri.cout(usage, modele)
             etat["cout_mois"] = round(etat["cout_mois"] + cout, 4)

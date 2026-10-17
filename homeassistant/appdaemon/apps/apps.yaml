@@ -20,6 +20,8 @@ relance_vigie:
   # consigne dans /config/aiguillage_tri_consigne.md (hors dépôt, modèle dans docs/TRI-CONSIGNE.md).
   tri_mode: ombre
   tri_budget_mensuel: 30
+  # Seulement avec une clé d'utilisateur (sk-ant-usr-…) : identifiant de l'espace de travail de la Console.
+  # tri_workspace_id: wrkspc_…
   # Rappels « à la maison » (P9-F2) : présence au salon (Hue MotionAware, helper Template).
   presence_entity: binary_sensor.presence_salon
   # Bermuda (P9-F4) : retour à la maison (iPhone) et pièce d'Alexandre (montre, sinon iPhone).
