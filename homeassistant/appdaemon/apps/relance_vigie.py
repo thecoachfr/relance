@@ -808,6 +808,8 @@ class RelanceVigie(Hass):
             consigne = Path(self.args.get("tri_consigne_file", "/config/aiguillage_tri_consigne.md")).read_text()
         except FileNotFoundError as error:
             return self._tri_manque(f"fichier absent ({error.filename})")
+        if not cle_api.startswith("sk-ant-"):
+            return self._tri_manque("clé API vide ou illisible (/config/anthropic_api_key)")
         self._tri_manque_logged = False
 
         etat = self._tri_etat()
