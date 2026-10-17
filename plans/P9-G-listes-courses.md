@@ -79,6 +79,7 @@ Les ingrédients bruts vont dans les notes (`🍳 Recette : …` suivi du texte)
 - **Accepté quand** : trois recettes réelles (un lien avec données structurées, un texte, une photo) donnent des listes correctes ; deux recettes fusionnées sans doublon ; aucune modification des articles saisis à la main.
 
 ### G4 — Confort (après G1 à G3, au choix)
+- *Fait le 17/10 (demande d'Alexandre, tâche « Achat fourniture pour intervenons ménage maison ») : règle Q de la consigne du tri : une tâche d'achats ou de choses à prendre sans liste, dont les notes énumèrent des objets (puces, tirets, numéros, virgules), reçoit une `liste` tirée de cette énumération (`source: routine`), notes et titre inchangés.*
 - **Siri et dictée** : « ajoute du lait à la liste de courses » ajoute un article à la liste ouverte au lieu de créer une tâche (s'il n'y en a pas, en crée une).
 - **Lieu** : supermarché attaché à la liste (champ `lieu`, A1) ; l'alerte de proximité (A4) prévient en passant devant.
 - **Recette d'action (D2)** : par exemple « liste de courses non finie → rappel à la maison le samedi matin » (déclencheur `presence`, F2) ou « rappel dans l'entrée » (F3).
