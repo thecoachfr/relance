@@ -14,6 +14,8 @@
 | F — Présence à la maison (Hue MotionAware, puis Bermuda) | `P9-F-presence-maison.md` | HA + relance | 1 soirée (16/10) |
 | G — Listes de courses (articles cochables, tout coché → Fait, recette → ingrédients) | `P9-G-listes-courses.md` | relance + routine | G1 2–3 soirées, G2 1, G3 1–2, G4 à la carte |
 | H — Durée facultative d'une tâche (agenda) ; rappel près de mes lieux habituels (supermarchés) | `P9-H-duree-et-lieux.md` | relance + routine | H2 (2 soirées) puis H1 (1 soirée) |
+| I — Le tri par l'API Messages (crédits API de Max au lieu du quota de messages), la routine restant en secours | `P9-I-tri-par-api.md` | relance + HA | I1 30 min, I2 1–2 soirées, I3 1 soirée + une semaine d'ombre, I4 1 soirée |
+| J — Mémoire des échanges Signal avec Yoann (texte cherchable, résumé de chaque nuit, recherche depuis Claude) | `P9-J-memoire-signal.md` | HA (+ relance pour J4) | J1–J3 2–3 soirées ; J4 2 ; J5 une demi-soirée |
 
 **Ordre** : lot 0 ci-dessous (avec E1, la mesure de référence), puis A, B, C, D, et E2 après A4 et D3. C dépend de B (liens testés sur le Player, champs `envie`). D réutilise « Sur la TV » (B) comme une action. F, d'abord une piste, a été fait après D. G (ajouté le 16/10, déposé le 16/10 à 22 h) vient ensuite, indépendant des autres plans.
 
