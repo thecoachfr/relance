@@ -343,7 +343,7 @@ final class TaskStore {
         if !needTimeNow.isEmpty {
             // Selon le profil de la priorité (une tâche Basse ne demande pas d'heure, d'origine).
             let asks = needTimeNow.compactMap { task($0) }
-                .filter { $0.dueMinutes == nil && !$0.isCompleted && scheduler.settings[$0.priority].askTime }
+                .filter { $0.dueMinutes == nil && !$0.isCompleted && scheduler.settings[$0.priority].askTime && $0.groupesDeLieux.isEmpty }
             needTimeNow = []
             await scheduler.askTimeNow(for: asks.map { $0.plannable() })
         }

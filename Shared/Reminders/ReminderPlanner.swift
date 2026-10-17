@@ -20,6 +20,9 @@ nonisolated struct PlannableTask: Sendable, Equatable {
     var toSee: ToSee?
     /// Site du premier lien des notes (« youtube.com ») : montré dans une suggestion d'envie.
     var linkHost: String?
+    /// Rattachée à mes lieux (liste de courses et ses magasins) : le passage devant le magasin tient lieu
+    /// d'heure, pas de « À quelle heure ? ».
+    var atMyPlaces = false
 }
 
 nonisolated struct ReminderSettings: Sendable, Equatable {
@@ -191,7 +194,8 @@ nonisolated struct ReminderPlanner: Sendable {
     /// avant l'heure, à l'heure, relance(s) après, puis les moments de la journée (matin, midi, soir)
     /// le jour prévu et chaque jour de retard.
     private func events(for task: PlannableTask, dayStart: Date, horizon: Date) -> [(date: Date, kind: ReminderKind)] {
-        let profile = task.reminders?.applied(to: settings[task.priority]) ?? settings[task.priority]
+        var profile = task.reminders?.applied(to: settings[task.priority]) ?? settings[task.priority]
+        if task.atMyPlaces { profile.askTime = false }
         var events: [(Date, ReminderKind)] = []
         let slots = ReminderProfile.Slot.allCases.filter { profile.slots.contains($0) }
             .map { at(dayStart, settings.minutes(of: $0)) }

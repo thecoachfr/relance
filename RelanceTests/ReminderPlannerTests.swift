@@ -49,6 +49,14 @@ struct ReminderPlannerTests {
         #expect(a.prefix(2).map(\.1) == [.askTime, .evening])
     }
 
+    /// Liste de courses rattachée à mes lieux : le magasin tient lieu d'heure, pas de « À quelle heure ? ».
+    @Test func dateOnlyTaskAtMyPlacesDoesNotAskTime() {
+        var t = task("a", day: 12)
+        t.atMyPlaces = true
+        let a = taskReminders(planner.plan(tasks: [t], inboxCount: 0, now: date(11, 21)), "a")
+        #expect(!a.isEmpty && !a.contains { $0.1 == .askTime })
+    }
+
     @Test func quietHoursMuteFollowUpButNotDue() {
         let plan = planner.plan(tasks: [task("a", day: 12, minutes: 22 * 60 + 15)], inboxCount: 0, now: date(12, 8))
         let sameDay = taskReminders(plan, "a").filter { calendar.isDate($0.0, inSameDayAs: date(12, 0)) }

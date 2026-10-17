@@ -219,4 +219,17 @@ struct ListeStoreTests {
         let action = try #require(pharmacie.actions.first)
         #expect(action.titre == "Me le rappeler près de : Pharmacies" && !action.auToucher)
     }
+
+    /// Liste du jour sans heure rattachée aux magasins : dans À faire, pas dans À trier, pas de « À quelle heure ? »
+    /// (17/10, remarque d'Alexandre : elle passait dans À trier).
+    @Test func listeDuJourSansHeureResteDansAFaire() {
+        let store = TaskStore(auth: SlowAccount(), inMemory: true)
+        let courses = store.add(title: "Courses", day: .now, minutes: nil, category: "Achats")
+        #expect(courses.needsTriage)  // pas encore de liste : l'heure manque
+        store.addArticle("Pain", to: courses)
+        #expect(!courses.needsTriage && courses.plannable().atMyPlaces)
+        let sansDate = store.add(title: "Courses plus tard", day: nil, minutes: nil, category: "Achats")
+        store.addArticle("Lait", to: sansDate)
+        #expect(sansDate.needsTriage)  // sans date : toujours à trier
+    }
 }

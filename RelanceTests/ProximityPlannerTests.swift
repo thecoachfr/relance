@@ -60,4 +60,17 @@ struct ProximityPlannerTests {
         let old = try? JSONDecoder().decode(ToSeeSettings.self, from: Data(#"{"atOpening":true,"time":600}"#.utf8))
         #expect(old?.nearbyKinds == ["photoSpot"])
     }
+
+    /// Franprix à 15 h, autre magasin du groupe à 15 h 20 : il rappelle aussi ; pas le Franprix une seconde fois.
+    @Test func eachShopOfTheGroupReminds() {
+        let t0 = Date(timeIntervalSince1970: 1_000_000)
+        let franprix = ProximityReminders.groupKey(taskID: "courses", lieuID: "franprix")
+        var notified = [franprix: t0.timeIntervalSince1970]
+        let later = t0.addingTimeInterval(20 * 60)
+        notified = ProximityReminders.recentGroupNotifications(notified, now: later)
+        #expect(notified[ProximityReminders.groupKey(taskID: "courses", lieuID: "monop")] == nil)
+        #expect(notified[franprix] != nil)
+        // Plus de 2 h après : le Franprix peut rappeler à nouveau.
+        #expect(ProximityReminders.recentGroupNotifications(notified, now: t0.addingTimeInterval(2 * 3600 + 1)).isEmpty)
+    }
 }

@@ -30,7 +30,7 @@ Choix faits par Alexandre le 17/10 (voir la fin) : plan à exécuter, H2 d'abord
 
 ## H2 — Rappel près d'un de mes lieux habituels (« liste de lieux »)
 
-*Fait le 17/10 : `MesLieux` (`config:lieux`, cache App Group, groupe « Supermarchés » par défaut), Réglages › Mes lieux (`MesLieuxView` : groupes libres, ajout par la recherche de Plans, la position ou la carte, balayer pour retirer), action `rappel_groupe` (« Me le rappeler près de… », `params.groupe`, `nom`), rattachement automatique d'une liste d'achats pas finie (catégorie Achats) à Supermarchés (`TaskItem.groupesDeLieux`), une zone de 150 m par lieu d'un groupe attendu, dans les 20 de `ProximityPlanner` (`ProximityReminders`, préfixe `g-`), notification « Tu es près de <lieu> · N articles à prendre », au plus une fois toutes les 2 h par tâche, discrète pendant la plage silencieuse. Mention dans la section Liste de la fiche. Test `mesLieux`. **Domicile (17/10, remarque d'Alexandre : « nettoyer la terrasse » n'avait pas de lieu « Maison »)** : `MesLieux.domicile`, réglé dans Réglages › Mes lieux › Domicile ; la recherche de lieu d'une tâche propose en tête « Mes lieux » (la maison, puis mes lieux habituels) en un toucher, avec le point exact. À essayer en vrai : renseigner ses supermarchés, puis passer devant avec une liste d'Achats.*
+*Fait le 17/10 : `MesLieux` (`config:lieux`, cache App Group, groupe « Supermarchés » par défaut), Réglages › Mes lieux (`MesLieuxView` : groupes libres, ajout par la recherche de Plans, la position ou la carte, balayer pour retirer), action `rappel_groupe` (« Me le rappeler près de… », `params.groupe`, `nom`), rattachement automatique d'une liste d'achats pas finie (catégorie Achats) à Supermarchés (`TaskItem.groupesDeLieux`), une zone de 150 m par lieu d'un groupe attendu, dans les 20 de `ProximityPlanner` (`ProximityReminders`, préfixe `g-`), notification « Tu es près de <lieu> · N articles à prendre », au plus une fois toutes les 2 h par tâche et par magasin (17/10, d'abord par tâche seulement : le second magasin restait muet), la notification d'un autre magasin remplaçant la précédente, discrète pendant la plage silencieuse. Liste rattachée datée sans heure : dans À faire, pas dans À trier, pas de « À quelle heure ? » (17/10). Mention dans la section Liste de la fiche. Test `mesLieux`. **Domicile (17/10, remarque d'Alexandre : « nettoyer la terrasse » n'avait pas de lieu « Maison »)** : `MesLieux.domicile`, réglé dans Réglages › Mes lieux › Domicile ; la recherche de lieu d'une tâche propose en tête « Mes lieux » (la maison, puis mes lieux habituels) en un toucher, avec le point exact. À essayer en vrai : renseigner ses supermarchés, puis passer devant avec une liste d'Achats.*
 
 ### Besoin
 
@@ -59,7 +59,7 @@ En passant près de l'un d'eux, Aiguillage rappelle la liste (« 12 articles sur
    plus proches de la position actuelle sont surveillés (déjà le principe d'A4), donc un groupe de 30
    supermarchés reste possible.
 4. **Notification** en entrant dans la zone : « Courses : 12 articles à prendre · Carrefour City », avec
-   l'ouverture de la liste ; une fois par passage et au plus toutes les 2 h par tâche ; rien si la liste est
+   l'ouverture de la liste ; une fois par passage et au plus toutes les 2 h par tâche et par magasin ; rien si la liste est
    finie ou la tâche faite ; pas la nuit (22 h – 7 h).
 5. **Montre** : rien de plus (la notification de l'iPhone s'y affiche) ; la liste s'ouvre sur la montre (G2).
 6. **Batterie** (plan E) : la surveillance de zones est peu coûteuse (pas de GPS continu) ; à mesurer dans E2.
@@ -71,5 +71,5 @@ passant devant un magasin.
 
 - H1 : durées du menu validées (15, 30, 45 min, 1 h, 1 h 30, 2 h, 3 h, Autre) ; durée seulement avec une heure.
 - H2 : rattachement **automatique** (liste pas finie, catégorie Achats → groupe Supermarchés) **et manuel**
-  (« Me le rappeler près de… ») ; rayon **150 m** ; au plus un rappel toutes les **2 h** par tâche ; groupes
+  (« Me le rappeler près de… ») ; rayon **150 m** ; au plus un rappel toutes les **2 h** par tâche et par magasin (17/10) ; groupes
   **libres** ; **H2 d'abord**, H1 ensuite.

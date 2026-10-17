@@ -12,8 +12,9 @@ final class ProximityReminders: NSObject, CLLocationManagerDelegate {
     static let radius: CLLocationDistance = 200
     /// Lieux habituels (P9-H2) : plus près, pour ne pas sonner au magasin de la rue d'à côté.
     static let groupRadius: CLLocationDistance = 150
-    /// Au plus un rappel par tâche dans cet intervalle, même devant plusieurs magasins du groupe.
-    static let groupInterval: TimeInterval = 2 * 3600
+    /// Au plus un rappel par tâche et par magasin dans cet intervalle : chaque autre magasin du groupe rappelle
+    /// (17/10, remarque d'Alexandre : rien au second magasin après le Franprix).
+    nonisolated static let groupInterval: TimeInterval = 2 * 3600
     private static let groupNotifiedKey = "groupNotified"
     nonisolated private static let groupPrefix = "g-"
     static let maxRegions = 20
@@ -136,18 +137,28 @@ final class ProximityReminders: NSObject, CLLocationManagerDelegate {
         }
     }
 
-    /// Près d'un de mes lieux (P9-H2) : chaque tâche qui attend ce groupe, au plus une fois toutes les 2 h.
+    /// Clé du dernier rappel d'une tâche devant un magasin.
+    nonisolated static func groupKey(taskID: String, lieuID: String) -> String { taskID + "|" + lieuID }
+
+    /// Rappels encore récents (moins de 2 h), les autres oubliés.
+    nonisolated static func recentGroupNotifications(_ notified: [String: Double], now: Date) -> [String: Double] {
+        notified.filter { now.timeIntervalSince1970 - $0.value < groupInterval }
+    }
+
+    /// Près d'un de mes lieux (P9-H2) : chaque tâche qui attend ce groupe, au plus une fois toutes les 2 h devant
+    /// ce magasin. La notification remplace celle d'un autre magasin (une seule par tâche, la plus récente).
     private func notifyGroup(lieuID: String, now: Date = .now) async {
         guard let store, ReminderScheduler.isEnabledOnThisDevice,
               let (lieu, groupe) = store.mesLieux.lieu(lieuID) else { return }
         var notified = AppGroup.defaults.dictionary(forKey: Self.groupNotifiedKey) as? [String: Double] ?? [:]
-        notified = notified.filter { now.timeIntervalSince1970 - $0.value < Self.groupInterval }
+        notified = Self.recentGroupNotifications(notified, now: now)
         let c = Calendar.current.dateComponents([.hour, .minute], from: now)
         let quiet = store.scheduler.settings.isQuiet(minuteOfDay: (c.hour ?? 0) * 60 + (c.minute ?? 0))
         for item in store.activeTasks() where item.groupesDeLieux.contains(groupe.id) {
             let taskID = item.localID.uuidString
-            guard notified[taskID] == nil else { continue }
-            notified[taskID] = now.timeIntervalSince1970
+            let key = Self.groupKey(taskID: taskID, lieuID: lieuID)
+            guard notified[key] == nil else { continue }
+            notified[key] = now.timeIntervalSince1970
             let content = UNMutableNotificationContent()
             content.title = item.title
             content.subtitle = "Tu es près de \(lieu.nom)"
@@ -164,7 +175,7 @@ final class ProximityReminders: NSObject, CLLocationManagerDelegate {
             content.categoryIdentifier = ReminderScheduler.Category.nearby
             content.userInfo = ["taskID": taskID]
             try? await UNUserNotificationCenter.current().add(
-                UNNotificationRequest(identifier: "\(taskID)|groupe|\(Int(now.timeIntervalSince1970))", content: content, trigger: nil))
+                UNNotificationRequest(identifier: "\(taskID)|groupe", content: content, trigger: nil))
         }
         AppGroup.defaults.set(notified, forKey: Self.groupNotifiedKey)
     }
