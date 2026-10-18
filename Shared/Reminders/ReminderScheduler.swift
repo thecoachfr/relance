@@ -180,6 +180,15 @@ final class ReminderScheduler {
         center.removeDeliveredNotifications(withIdentifiers: toRemove)
     }
 
+    /// La photo jointe à la tâche, si elle est déjà sur l'appareil.
+    private static func imageAttachment(_ id: String) -> UNNotificationAttachment? {
+        let piece = TacheHA.Piece(id: id, nom: "", type: "image/jpeg", taille: 0)
+        guard let local = PiecesJointes.local(piece) else { return nil }
+        let copie = FileManager.default.temporaryDirectory.appending(path: "\(id)-\(UUID().uuidString).jpg")
+        guard (try? FileManager.default.copyItem(at: local, to: copie)) != nil else { return nil }
+        return try? UNNotificationAttachment(identifier: id, url: copie)
+    }
+
     private func request(for reminder: PlannedReminder) -> UNNotificationRequest {
         let content = UNMutableNotificationContent()
         content.title = reminder.title
@@ -206,6 +215,8 @@ final class ReminderScheduler {
         default: Category.task
         }
         if let taskID = reminder.taskID { content.userInfo = ["taskID": taskID] }
+        // Image jointe (P9-K) : copiée, car iOS déplace le fichier d'une pièce jointe de notification.
+        if let id = reminder.imageID, let attachment = Self.imageAttachment(id) { content.attachments = [attachment] }
 
         let components = Calendar.current.dateComponents(
             [.year, .month, .day, .hour, .minute, .second], from: reminder.fireDate)

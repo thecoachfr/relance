@@ -16,7 +16,7 @@
 | H — Durée facultative d'une tâche (agenda) ; rappel près de mes lieux habituels (supermarchés) | `P9-H-duree-et-lieux.md` | relance + routine | H2 (2 soirées) puis H1 (1 soirée) |
 | I — Le tri par l'API Messages (crédits API de Max au lieu du quota de messages), la routine restant en secours | `P9-I-tri-par-api.md` | relance + HA | I1 30 min, I2 1–2 soirées, I3 1 soirée + une semaine d'ombre, I4 1 soirée |
 | J — Mémoire des échanges Signal avec Yoann (texte cherchable, résumé de chaque nuit, recherche depuis Claude) | `P9-J-memoire-signal.md` | HA (+ relance pour J4) | J1–J3 2–3 soirées ; J4 2 ; J5 une demi-soirée |
-| K — *Étude* : pièces jointes (photo, PDF, scan) rangées dans HA, texte lu sur l'appareil pour le tri | `P9-K-pieces-jointes.md` | relance + ha-donnees-apps + routine | K1–K4 environ 5 soirées ; choix à valider |
+| K — Pièces jointes (photo, PDF, scan) rangées dans HA, texte lu sur l'appareil pour le tri, copie Drive | `P9-K-pieces-jointes.md` | relance + ha-donnees-apps + routine | fait le 18/10 (essais à faire) |
 
 **Ordre** : lot 0 ci-dessous (avec E1, la mesure de référence), puis A, B, C, D, et E2 après A4 et D3. C dépend de B (liens testés sur le Player, champs `envie`). D réutilise « Sur la TV » (B) comme une action. F, d'abord une piste, a été fait après D. G (ajouté le 16/10, déposé le 16/10 à 22 h) vient ensuite, indépendant des autres plans.
 
@@ -66,6 +66,7 @@ Les tâches sont dans l'espace `aiguillage` de `donnees_apps` (`Shared/HA/TacheH
 - `envie.type` : `voir`, `lire`, `ecouter`, `regarder` (existants) et `resto`, `magasin`, `spot_photo` (nouveaux, plan A). Champs `plateforme`, `id_titre`, `tmdb`, `dispo_fr`, `dispo_maj` : plan B.
 - `envie` (B1, 16/10) : l'app garde tels quels les champs qu'elle ne connaît pas (`tmdb`, `dispo_fr`, `dispo_maj`…), pour que la vigie puisse les écrire sans qu'une réécriture de l'app les efface.
 - `actions` : plan D (B ajoute seulement l'action `sur_tv` déclenchée au toucher).
+- `pieces` : plan K (18/10), facultatif : `[{id (SHA-256 du fichier rangé dans HA), nom, type, taille, ajoute_le, source, texte (1 500 caractères lus sur l'appareil), drive?}]` ; copie `📎 N pièces jointes` dans les notes.
 - `duree` : plan H1 (17/10), facultatif : durée en minutes (entier), seulement avec `heure` ; l'événement d'agenda dure autant.
 - `liste` : plan G (16/10), facultatif : `{"articles": [{"id", "texte", "quantite", "rayon", "coche", "maj", "source"}], "parts", "recettes": [{"titre", "lien"}]}` ; quantités indicatives en texte libre ; copie lisible `🛒 Liste : 3/12 cochés` dans les notes ; fusion des coches article par article (détail et tests dans `P9-G-listes-courses.md`). La routine de tri doit connaître ce champ avant sa mise en service (section 4).
 - **Compatibilité, obligatoire pendant la transition** : continuer d'écrire les lignes techniques des notes (`📍 …`, `👀 À voir`, `🎬 À regarder`… et les nouvelles `🍽 À tester`, `🛍 Magasin`, `📷 Spot photo`), car la vigie, la routine de tri, la carte du Nest Hub (`nest-hub-entree-card`) et le mode Google Tasks les lisent. Le champ structuré fait foi ; la ligne en est une copie. Lecture : si le champ manque, le déduire de la ligne (anciennes tâches), sans réécrire toutes les tâches d'un coup.

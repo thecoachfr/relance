@@ -140,6 +140,10 @@ Mémoire des échanges Signal (plan P9-J) : `aiguillage_memoire.py`, branché da
 résumés la nuit, purges, recherche par l'événement `aiguillage_memoire_chercher`). Mode d'emploi :
 [docs/MEMOIRE-SIGNAL.md](docs/MEMOIRE-SIGNAL.md).
 
+Pièces jointes (plan P9-K) : les fichiers d'une tâche (photo, PDF, scan) sont rangés dans Home Assistant par
+l'API `fichiers` de `ha-donnees-apps` 0.3.0 (`/api/donnees_apps/fichiers/aiguillage`, même jeton) ; la tâche garde leurs
+métadonnées et le début du texte lu sur l'appareil (champ `pieces`), que la routine de tri utilise.
+
 « Sur la TV » (plan P9-B4) : le bouton de la fiche d'une envie appelle le script HA `script.aiguillage_sur_tv`
 (champ `lien`), qui allume le Freebox Player Pop si besoin et ouvre le lien (`remote.turn_on`, `activity`). Formes de
 liens par plateforme : [docs/LIENS-TV.md](docs/LIENS-TV.md).

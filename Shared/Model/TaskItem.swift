@@ -123,6 +123,7 @@ final class TaskItem {
             hasPlace: TaskContact(notes: notes)?.destination != nil,
             toSee: toSee,
             linkHost: toSee == nil ? nil : ToSee.link(in: notes)?.host()?.replacingOccurrences(of: "www.", with: ""),
-            atMyPlaces: !groupesDeLieux.isEmpty)
+            atMyPlaces: !groupesDeLieux.isEmpty,
+            imageID: pieces.first(where: \.estImage)?.id)
     }
 }

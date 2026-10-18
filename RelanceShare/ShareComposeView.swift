@@ -5,6 +5,7 @@ import SwiftUI
 struct ShareComposeView: View {
     let original: String
     var photo: SharedPhoto?
+    var fichier: FichierPartage?
     @Binding var mode: ShareMode
     let onDone: () -> Void
     let onCancel: () -> Void
@@ -31,6 +32,10 @@ struct ShareComposeView: View {
     @State private var recipeText = false
     /// En faire une liste de courses, préparée ensuite par la routine de tri.
     @State private var asList = false
+    /// Joindre le fichier partagé (P9-K), à une nouvelle tâche ou à une tâche existante (clé HA).
+    @State private var joindre = false
+    @State private var cible: String?
+    @State private var recentes: [(cle: String, titre: String)] = []
 
     var body: some View {
         NavigationStack {
@@ -90,6 +95,24 @@ struct ShareComposeView: View {
                         } else {
                             Text("Claude lira les ingrédients du texte et en fera une liste à cocher, quantités indicatives.")
                         }
+                    }
+                }
+
+                if HAConfig.isActive, let fichier {
+                    Section {
+                        Toggle(isOn: $joindre) {
+                            Label("Joindre « \(fichier.nom) »", systemImage: "paperclip")
+                        }
+                        if joindre {
+                            Picker("Ajouter à", selection: $cible) {
+                                Text("Cette nouvelle tâche").tag(String?.none)
+                                ForEach(recentes, id: \.cle) { Text($0.titre).tag(Optional($0.cle)) }
+                            }
+                        }
+                    } header: {
+                        Text("Pièce jointe")
+                    } footer: {
+                        if joindre { Text("Rangée dans Home Assistant ; son texte est lu sur l'iPhone pour aider le tri.") }
                     }
                 }
 
@@ -175,6 +198,7 @@ struct ShareComposeView: View {
     }
 
     private func load() {
+        chargerPieceJointe()
         let draft = SharedMessage.draft(from: original)
         title = draft.title
         proposedTitle = draft.title
@@ -280,6 +304,29 @@ struct ShareComposeView: View {
         }
     }
 
+    /// Pièce jointe : cochée d'office pour un PDF ou une capture sans position (pas pour un spot photo ni une recette),
+    /// et la liste des tâches récentes pour l'ajouter à l'une d'elles.
+    private func chargerPieceJointe() {
+        guard HAConfig.isActive, let fichier else { return }
+        let estPhotoDeSpot = photo?.hasLocation == true
+        let estRecette = photo?.texte.map(SharedRecipe.looksLikeRecipe) ?? false
+        joindre = fichier.type.conforms(to: .pdf) || (!estPhotoDeSpot && !estRecette)
+        if original.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, fichier.type.conforms(to: .pdf) {
+            title = (fichier.nom as NSString).deletingPathExtension
+            proposedTitle = title
+        }
+        Task {
+            guard let synchro = await HAConfig.makeSynchroniser(withFallback: false),
+                  let tous = try? synchro.tous() else { return }
+            recentes = tous.filter { UUID(uuidString: $0.cle) != nil }
+                .compactMap { e -> (String, String, String)? in
+                    guard let t = try? TacheHA(valeur: e.valeur), !t.fait, !t.titre.isEmpty else { return nil }
+                    return (e.cle, t.titre, e.modifieLe)
+                }
+                .sorted { $0.2 > $1.2 }.prefix(20).map { (cle: $0.0, titre: $0.1) }
+        }
+    }
+
     /// Lieu d'un point (photo, coordonnées) : nom et adresse proposés par Plans, titre si on n'en a pas.
     private func locate(_ latitude: Double, _ longitude: Double, source: String) {
         place = SharedPlace(name: "Point sur la carte", latitude: latitude, longitude: longitude, source: source)
@@ -319,6 +366,10 @@ struct ShareComposeView: View {
         if asList, kind == nil {
             notes = notes.isEmpty ? "🍳 Recette : \(recipe?.titre ?? cleanTitle)" : notes + "\n🍳 Recette : \(recipe?.titre ?? cleanTitle)"
         }
+        // Pièce jointe à une tâche existante : seule la pièce est ajoutée, pas de nouvelle tâche.
+        if HAConfig.isActive, joindre, let cible, let piece = preparerPiece() {
+            if await joindreA(cible, piece) { return onDone() }
+        }
         if HAConfig.isActive, await addToHA(title: cleanTitle, notes: notes, minutes: minutes) {
             return onDone()
         }
@@ -352,6 +403,10 @@ struct ShareComposeView: View {
         tache.heure = day == nil ? nil : TacheHA.heure(minutes)
         tache.priorite = priority == .normal ? nil : priority.rawValue
         if let place { tache.lieu = place.lieu(link: placeLink) }
+        if joindre, cible == nil, let piece = preparerPiece() {
+            tache.pieces = [piece]
+            tache.notes = TacheHA.Piece.notes(tache.notes, setting: tache.pieces)
+        }
         if asList, kind == nil {
             var liste = TacheHA.Liste(parts: recipe?.parts)
             let entree = recipe.map { $0.entree(lien: SharedLink.url(in: original)) }
@@ -363,6 +418,30 @@ struct ShareComposeView: View {
               (try? synchro.ecrire(UUID().uuidString.lowercased(), valeur)) != nil else { return false }
         _ = await Self.within(seconds: 8) { @MainActor in
             await synchro.synchroniser()
+            await PiecesJointes.envoyerEnAttente()
+            return true
+        }
+        return true
+    }
+
+    /// La pièce prête (photo réduite, texte lu, mise en file d'envoi) ; `nil` si le fichier est illisible.
+    private func preparerPiece() -> TacheHA.Piece? {
+        guard let fichier else { return nil }
+        return try? PiecesJointes.preparer(fichier.donnees, nom: fichier.nom, type: fichier.type, source: "partage")
+    }
+
+    /// Ajoute la pièce à une tâche existante (5 au plus) ; `false` si la tâche n'est plus lisible.
+    private func joindreA(_ cle: String, _ piece: TacheHA.Piece) async -> Bool {
+        guard let synchro = await HAConfig.makeSynchroniser(withFallback: false),
+              let valeur = try? synchro.valeur(cle), var tache = try? TacheHA(valeur: valeur) else { return false }
+        if !tache.pieces.contains(where: { $0.id == piece.id }) && tache.pieces.count < TacheHA.Piece.maxParTache {
+            tache.pieces.append(piece)
+        }
+        tache.notes = TacheHA.Piece.notes(tache.notes, setting: tache.pieces)
+        guard let nouvelle = try? tache.valeur(), (try? synchro.ecrire(cle, nouvelle)) != nil else { return false }
+        _ = await Self.within(seconds: 8) { @MainActor in
+            await synchro.synchroniser()
+            await PiecesJointes.envoyerEnAttente()
             return true
         }
         return true

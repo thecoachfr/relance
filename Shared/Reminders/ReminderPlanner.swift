@@ -23,6 +23,8 @@ nonisolated struct PlannableTask: Sendable, Equatable {
     /// Rattachée à mes lieux (liste de courses et ses magasins) : le passage devant le magasin tient lieu
     /// d'heure, pas de « À quelle heure ? ».
     var atMyPlaces = false
+    /// Première image jointe (P9-K) : montrée dans la notification de l'heure prévue.
+    var imageID: String?
 }
 
 nonisolated struct ReminderSettings: Sendable, Equatable {
@@ -127,6 +129,8 @@ nonisolated struct PlannedReminder: Sendable, Equatable {
     var subtitle = ""
     /// La tâche a une adresse (boutons de la notification).
     var hasPlace = false
+    /// Image jointe à montrer dans la notification (pièce de la tâche, P9-K).
+    var imageID: String?
 }
 
 /// Calcule toutes les relances à programmer. Fonction pure : mêmes tâches + même instant = même plan.
@@ -165,7 +169,8 @@ nonisolated struct ReminderPlanner: Sendable {
                     timeSensitive: isTimeSensitive(task.priority, kind),
                     badge: 0,
                     subtitle: task.priority == .urgent ? TaskPriority.urgent.rawValue : "",
-                    hasPlace: task.hasPlace))
+                    hasPlace: task.hasPlace,
+                    imageID: [.due, .advance, .departure].contains(kind) ? task.imageID : nil))
             }
         }
 

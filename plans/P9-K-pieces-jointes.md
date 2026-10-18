@@ -2,7 +2,7 @@
 
 *Étude du 18/10/2026, demandée par Alexandre (« faisabilité, coût, comment les exploiter »). Lire d'abord
 `P9-00-INDEX.md`. Dépôts : `relance` (app, extension de partage, vigie), `ha-donnees-apps` (stockage des fichiers),
-consigne du tri. Choix de la section 6 à valider avant de commencer.*
+consigne du tri. Choix faits le 18/10 (voir « Choix d'Alexandre » à la fin).*
 
 ## 1. Le besoin
 
@@ -138,3 +138,29 @@ routine TVA lit déjà (plan D5).
 - Disque du NUC : quota et purge ; la sauvegarde complète de HA grossit d'autant (à exclure, ou à garder ?).
 - Confidentialité : les pièces (factures, ordonnances) restent chez Alexandre avec A ; ne jamais en mettre dans un
   dépôt ni dans un journal.
+
+## Choix d'Alexandre (18/10) et état
+
+Choix : **A + option B**, accord pour `ha-donnees-apps` 0.3.0, 10 Mo et 5 pièces par tâche, la routine de tri lit le
+texte des pièces, **tous les lots**.
+
+Fait le 18/10 :
+- **K1** : `ha-donnees-apps` 0.3.0 (API `fichiers`, identifiant = SHA-256, 10 Mo, 1 Go par espace, purge des orphelins
+  après 7 jours ; `ClientFichiers` en Swift ; 32 tests pytest, 26 tests Swift). Copiée sur le NUC ; active au
+  prochain redémarrage de HA.
+- **K2** : champ `pieces` (`TacheHA+Pieces.swift`), ligne `📎`, `PiecesJointes` (photo réduite à 2 048 px en JPEG, texte
+  lu par Vision ou PDFKit, cache de l'App Group, file d'envoi jouée à chaque synchro), section « Pièces jointes » de
+  la fiche (vignettes, Quick Look, Photos, Fichiers, scanner de documents, glisser-déposer, « Retirer »), trombone
+  dans les lignes. Tests `PiecesTests`.
+- **K3** : feuille de partage : un PDF, une image ou un autre fichier (10 Mo) se joint à la nouvelle tâche ou à une
+  tâche existante (20 plus récentes) ; cochée d'office pour un PDF ou une capture, pas pour un spot photo ni une
+  recette.
+- **K4** : règle S de la consigne du tri (API des routines, relue identique) : le texte des pièces sert comme un
+  message partagé (catégorie, tags, contact, échéance, liste) ; ligne `💶 montant · créancier · à payer avant le…`
+  pour une facture ; `pieces` recopié tel quel.
+- **K5** : texte des pièces dans Spotlight ; première photo jointe dans la notification de l'heure prévue. La miniature
+  sur la montre n'est pas faite (WatchConnectivity transporte mal les images ; la notification s'affiche déjà sur la
+  montre).
+- **Option B** : « Copier dans Google Drive » (menu d'une vignette) : dossier « Aiguillage – Justificatifs » créé par
+  l'app, accès `drive.file` demandé à la première copie, identifiant Drive noté dans `pieces[].drive`. **À faire par
+  Alexandre** : activer l'API Google Drive dans le projet Google Cloud de l'app (« Relance »).

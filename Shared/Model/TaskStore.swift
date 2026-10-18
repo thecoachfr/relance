@@ -204,6 +204,16 @@ final class TaskStore {
         commit()
     }
 
+    /// Note qu'une pièce a été copiée dans Google Drive (option B du plan P9-K) : `autres.drive`.
+    func setDrive(_ driveID: String, piece id: String, of item: TaskItem) {
+        var pieces = item.pieces
+        guard let i = pieces.firstIndex(where: { $0.id == id }) else { return }
+        pieces[i].autres["drive"] = .texte(driveID)
+        item.pieces = pieces
+        item.markChanged()
+        commit()
+    }
+
     /// Retire une pièce de la tâche ; HA purge le fichier quand plus aucune tâche ne le cite.
     func removePiece(_ id: String, from item: TaskItem) {
         guard item.pieces.contains(where: { $0.id == id }) else { return }

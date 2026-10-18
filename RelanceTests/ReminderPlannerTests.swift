@@ -134,6 +134,15 @@ struct ReminderPlannerTests {
         #expect(plan.contains { $0.taskID == "Répondre à Didier" && $0.kind == .due && $0.fireDate == date(13, 15) })
     }
 
+    /// Image jointe (P9-K) : seulement dans les notifications de l'heure prévue, pas dans les relances.
+    @Test func imageOnlyOnDueReminders() {
+        var t = task("a", day: 12, minutes: 15 * 60)
+        t.imageID = "img"
+        let a = planner.plan(tasks: [t], inboxCount: 0, now: date(12, 8)).filter { $0.taskID == "a" }
+        #expect(a.first { $0.kind == .due }?.imageID == "img")
+        #expect(a.filter { $0.kind != .due }.allSatisfy { $0.imageID == nil })
+    }
+
     @Test func capsAtMaxRequestsKeepingEarliest() {
         let tasks = (0..<30).map { task("t\($0)", day: 12, minutes: 9 * 60) }
         let plan = planner.plan(tasks: tasks, inboxCount: 0, now: date(12, 8))

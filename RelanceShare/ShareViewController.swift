@@ -12,7 +12,8 @@ final class ShareViewController: UIViewController {
             let text = await Self.sharedText(from: extensionContext)
             let memo = await Self.memoDraft(from: extensionContext)
             let photo = await Self.sharedPhoto(from: extensionContext)
-            let host = UIHostingController(rootView: ShareRootView(original: text, memoDraft: memo, photo: photo) { [weak self] in
+            let fichier = await Self.sharedFile(from: extensionContext)
+            let host = UIHostingController(rootView: ShareRootView(original: text, memoDraft: memo, photo: photo, fichier: fichier) { [weak self] in
                 self?.extensionContext?.completeRequest(returningItems: nil)
             } onCancel: { [weak self] in
                 self?.extensionContext?.cancelRequest(withError: CocoaError(.userCancelled))
@@ -41,6 +42,29 @@ final class ShareViewController: UIViewController {
         }
         return (texts.isEmpty ? urls : texts + urls.filter { url in !texts.contains { $0.contains(url) } })
             .joined(separator: "\n")
+    }
+
+    /// Fichier partagé (PDF, image, autre) à joindre à une tâche (P9-K), 10 Mo au plus.
+    private static func sharedFile(from context: NSExtensionContext?) async -> FichierPartage? {
+        let providers = (context?.inputItems as? [NSExtensionItem] ?? []).flatMap { $0.attachments ?? [] }
+        for type in [UTType.pdf, .image, .data] {
+            guard let provider = providers.first(where: { $0.hasItemConformingToTypeIdentifier(type.identifier) }),
+                  let item = try? await provider.loadItem(forTypeIdentifier: type.identifier) else { continue }
+            let nom = provider.suggestedName
+            switch item {
+            case let url as URL:
+                guard let data = try? Data(contentsOf: url), data.count <= PiecesJointes.tailleMax else { return nil }
+                return FichierPartage(donnees: data, nom: nom ?? url.lastPathComponent,
+                                      type: UTType(filenameExtension: url.pathExtension) ?? type)
+            case let data as Data:
+                return data.count <= PiecesJointes.tailleMax ? FichierPartage(donnees: data, nom: nom ?? "Pièce jointe", type: type) : nil
+            case let image as UIImage:
+                return image.jpegData(compressionQuality: 0.9).map { FichierPartage(donnees: $0, nom: nom ?? "Capture.jpg", type: .jpeg) }
+            default:
+                continue
+            }
+        }
+        return nil
     }
 
     /// Photo partagée depuis Photos : position et date lues dans le fichier (rien n'est gardé de l'image).
@@ -99,4 +123,11 @@ final class ShareViewController: UIViewController {
             phone: c.phoneNumbers.first?.value.stringValue, email: c.emailAddresses.first.map { $0.value as String },
             url: c.urlAddresses.first.map { $0.value as String })
     }
+}
+
+/// Fichier reçu par la feuille de partage, à joindre à une tâche (P9-K).
+struct FichierPartage: Sendable {
+    var donnees: Data
+    var nom: String
+    var type: UTType
 }

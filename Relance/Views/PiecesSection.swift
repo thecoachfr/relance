@@ -30,6 +30,11 @@ struct PiecesSection: View {
                             Button { ouvrir(piece) } label: { PieceVignette(piece: piece) }
                                 .buttonStyle(.plain)
                                 .contextMenu {
+                                    if piece.autres["drive"] == nil {
+                                        Button("Copier dans Google Drive", systemImage: "icloud.and.arrow.up") { copierDansDrive(piece) }
+                                    } else {
+                                        Label("Copiée dans Google Drive", systemImage: "checkmark.icloud")
+                                    }
                                     Button("Retirer", systemImage: "trash", role: .destructive) {
                                         store.removePiece(piece.id, from: item)
                                     }
@@ -98,6 +103,23 @@ struct PiecesSection: View {
             erreur = nil
             if let url = await PiecesJointes.fichier(piece) { apercu = url } else {
                 erreur = "Pièce pas encore disponible : Home Assistant injoignable ou envoi en cours depuis un autre appareil."
+            }
+        }
+    }
+
+    /// Option B : une copie dans le dossier « Aiguillage – Justificatifs » de Google Drive (factures pour la TVA).
+    private func copierDansDrive(_ piece: TacheHA.Piece) {
+        Task {
+            erreur = nil
+            guard let url = await PiecesJointes.fichier(piece) else {
+                erreur = "Pièce pas encore disponible sur cet appareil."
+                return
+            }
+            do {
+                let id = try await DriveCopie.copier(url, nom: piece.nom, type: piece.type)
+                store.setDrive(id, piece: piece.id, of: item)
+            } catch {
+                erreur = error.localizedDescription
             }
         }
     }

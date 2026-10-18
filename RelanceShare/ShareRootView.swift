@@ -13,6 +13,8 @@ struct ShareRootView: View {
     let memoDraft: (title: String, details: String)
     /// Photo partagée (position, date), `nil` si on n'a pas partagé d'image.
     var photo: SharedPhoto?
+    /// Fichier partagé (PDF, image), à joindre à une tâche (P9-K).
+    var fichier: FichierPartage?
     let onDone: () -> Void
     let onCancel: () -> Void
 
@@ -20,7 +22,7 @@ struct ShareRootView: View {
 
     var body: some View {
         switch mode {
-        case .task: ShareComposeView(original: original, photo: photo, mode: $mode, onDone: onDone, onCancel: onCancel)
+        case .task: ShareComposeView(original: original, photo: photo, fichier: fichier, mode: $mode, onDone: onDone, onCancel: onCancel)
         case .memo: MemoShareView(draft: memoDraft, mode: $mode, onDone: onDone, onCancel: onCancel)
         }
     }

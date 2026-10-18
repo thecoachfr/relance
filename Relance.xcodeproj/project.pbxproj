@@ -52,6 +52,7 @@
 		21ECD757144B4BABAE5727D2 /* NoteLines.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6203FE3484BB9AB47B0C2D83 /* NoteLines.swift */; };
 		222F32FBA6221F72C83CE3A4 /* PlatformCompat.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7926432BD1ECAC69B112A06 /* PlatformCompat.swift */; };
 		228D62C2B5808AC281A2E867 /* WatchTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECE60A54F2DC6987A632676A /* WatchTask.swift */; };
+		23121BD3A8B1F6561B0B8FDE /* DriveCopie.swift in Sources */ = {isa = PBXBuildFile; fileRef = 308AC798B0C5F67DE15CB0A5 /* DriveCopie.swift */; };
 		247C32763E86A8C9B4EA4D2B /* PriorityViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = C668853F8DA6D5749B17B534 /* PriorityViews.swift */; };
 		257B9AB2824CB698FD0CA93B /* SiriCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87BBA1DB8D8D2DF9BA98DDCF /* SiriCapture.swift */; };
 		25C1676B0FC5CF26CD5223E9 /* TacheHA.swift in Sources */ = {isa = PBXBuildFile; fileRef = 719434D8C63A56B7090C5E3F /* TacheHA.swift */; };
@@ -161,6 +162,7 @@
 		6FD8EAC6F14FB052B287EFDE /* MemoStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5397683CF5FD3589B36E1F13 /* MemoStore.swift */; };
 		7017AB893472EE48C6DD4F57 /* ActionsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7DBE3DA8E8AC20FAB30C99D /* ActionsSection.swift */; };
 		7133AAFEED4BE920E2634CED /* SharedPlaceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61A994C34CC736F16CBEE82E /* SharedPlaceTests.swift */; };
+		72052E137B25166DBDA38FA8 /* DriveCopie.swift in Sources */ = {isa = PBXBuildFile; fileRef = 308AC798B0C5F67DE15CB0A5 /* DriveCopie.swift */; };
 		7279A70EC91C14590F6E4DE9 /* MemoHA.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F9BBE7BB317EE70061CDB73 /* MemoHA.swift */; };
 		72B3AB693C6106E42B8D7808 /* TaskTag.swift in Sources */ = {isa = PBXBuildFile; fileRef = B863B8DA8A7D1FFAE24BE87C /* TaskTag.swift */; };
 		731F6DF1F8AA3768BA2DFFB2 /* TaskRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FE0AB94C1F8EF86B799B335 /* TaskRow.swift */; };
@@ -468,6 +470,7 @@
 		2F79F1BB3DA9597815EB03EE /* MemoShareView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoShareView.swift; sourceTree = "<group>"; };
 		2FD7A3A536C16BA93AFF03B6 /* RelanceWidgetsBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelanceWidgetsBundle.swift; sourceTree = "<group>"; };
 		2FE0AB94C1F8EF86B799B335 /* TaskRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskRow.swift; sourceTree = "<group>"; };
+		308AC798B0C5F67DE15CB0A5 /* DriveCopie.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DriveCopie.swift; sourceTree = "<group>"; };
 		30CC842C8E9E1937E48E46CF /* DureeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DureeTests.swift; sourceTree = "<group>"; };
 		31B339A2445E0E4BF2299831 /* SharedPhoto.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedPhoto.swift; sourceTree = "<group>"; };
 		356BC2CE21D14CF0CBA3C9B6 /* TasksProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksProvider.swift; sourceTree = "<group>"; };
@@ -879,6 +882,7 @@
 		691015D6F3F55109D9AF46E9 /* Google */ = {
 			isa = PBXGroup;
 			children = (
+				308AC798B0C5F67DE15CB0A5 /* DriveCopie.swift */,
 				9BC7FD887AB3B53D2F6D6148 /* GoogleAuth.swift */,
 			);
 			path = Google;
@@ -1266,6 +1270,7 @@
 				134CDA592AB93A092C18F96B /* DemoData.swift in Sources */,
 				B1FF51214CA50C5C123E2C32 /* DiagnosticView.swift in Sources */,
 				DC1B15409C41F6A7EB9FFA5C /* DoneView.swift in Sources */,
+				72052E137B25166DBDA38FA8 /* DriveCopie.swift in Sources */,
 				FA2B6044BDAC65C92DEC372D /* DueText.swift in Sources */,
 				FB1699F3D7AB1A4384E5522E /* DureeRow.swift in Sources */,
 				B04F3548AE5D3BCBFD303E59 /* EnergyMetrics.swift in Sources */,
@@ -1373,6 +1378,7 @@
 				5AFC2FE6F6F4C53E1D72D6D9 /* ContactSection.swift in Sources */,
 				95209752641755F1E477430C /* DateDetection.swift in Sources */,
 				04F1DE7BAA4BE9774C28DAA5 /* DemoData.swift in Sources */,
+				23121BD3A8B1F6561B0B8FDE /* DriveCopie.swift in Sources */,
 				AB24AEB09104DFA277722A61 /* DueText.swift in Sources */,
 				AC123E3FDCBA451F62C28169 /* DureeRow.swift in Sources */,
 				3D64BDAD7CC844B33E35716A /* EnvieSuggestions.swift in Sources */,

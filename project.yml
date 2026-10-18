@@ -213,6 +213,8 @@ targets:
               NSExtensionActivationSupportsWebURLWithMaxCount: 1
               # Une photo : la position et la date de prise de vue donnent un spot photo (P9-A3).
               NSExtensionActivationSupportsImageWithMaxCount: 1
+              # Un PDF ou un autre fichier : pièce jointe (P9-K).
+              NSExtensionActivationSupportsFileWithMaxCount: 1
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: fr.alexandrefau.relance.share

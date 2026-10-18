@@ -11,6 +11,14 @@ struct TaskEntity: AppEntity, IndexedEntity {
     var id: String
     var title: String
     var subtitle: String
+    /// Notes visibles et texte des pièces jointes (P9-K) : retrouvés par Spotlight.
+    var contenu = ""
+
+    var attributeSet: CSSearchableItemAttributeSet {
+        let attributs = defaultAttributeSet
+        attributs.contentDescription = contenu.isEmpty ? subtitle : contenu
+        return attributs
+    }
 
     var displayRepresentation: DisplayRepresentation {
         DisplayRepresentation(title: "\(title)", subtitle: "\(subtitle)")
@@ -20,6 +28,8 @@ struct TaskEntity: AppEntity, IndexedEntity {
         id = item.localID.uuidString
         title = item.title
         subtitle = item.dueInstant().map { DueText.long(due: $0, hasTime: item.dueMinutes != nil, now: now) } ?? "Sans date"
+        contenu = ([NoteLines.visible(item.notes)] + item.pieces.compactMap(\.texte))
+            .filter { !$0.isEmpty }.joined(separator: "\n")
     }
 }
 
