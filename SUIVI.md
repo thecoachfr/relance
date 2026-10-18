@@ -84,6 +84,7 @@ Code fait et fusionné dans `main` (désactivé tant qu'on ne bascule pas dans l
 ## 2. Reste à faire / à vérifier
 
 ### P9 : ce qui reste (16/10 au soir, dernier build : 46, a7cb3d2)
+- **Notifications du matin (18/10, remarque d'Alexandre)** : les relances qui tombent avec « Ta journée » (report « demain matin », moment du matin, retard) sont fondues dedans : une seule notification au réveil, avec « · urgent : <titres> » s'il y a des urgentes (et alors sensible au temps). L'heure prévue, le rappel « avant », le départ et « À quelle heure ? » restent à part (`ReminderPlanner.folding`).
 
 - **Fait** : rappel « Me le rappeler dans… » essayé (Bureau, 16/10 à 22 h 08, notification reçue).
 - **À essayer par Alexandre** : Nest Hub avec des tâches du jour, puis sans personne dans l'espace de vie depuis 10 min (photo) ; Spotify : un album et un épisode dans « À écouter », puis lecture ; A4 en se déplaçant ; notification et écran du résultat d'une action à la prochaine préparation.

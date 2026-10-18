@@ -169,7 +169,7 @@ nonisolated struct ReminderPlanner: Sendable {
             }
         }
 
-        reminders += digests(tasks: tasks, inboxCount: inboxCount, now: now, horizon: horizon)
+        reminders += folding(into: digests(tasks: tasks, inboxCount: inboxCount, now: now, horizon: horizon), &reminders)
         reminders += suggestions(tasks: tasks, history: history, now: now, horizon: horizon)
 
         reminders.sort { $0.fireDate < $1.fireDate }
@@ -290,6 +290,35 @@ nonisolated struct ReminderPlanner: Sendable {
         }
         return digests
     }
+
+    /// Relances du matin (report « demain matin », moment du matin, retard) qui tombent avec le résumé « Ta journée » :
+    /// retirées et résumées dedans (« · urgent : Faire la facture, Répondre à Didier »), une seule notification au
+    /// réveil (demande d'Alexandre, 18/10). L'heure prévue, le rappel « avant », le départ et « À quelle heure ? »
+    /// restent à part.
+    private func folding(into digests: [PlannedReminder], _ reminders: inout [PlannedReminder]) -> [PlannedReminder] {
+        // « À quelle heure ? » reste à part : c'est une question, avec ses boutons pour choisir l'heure.
+        let foldable: Set<ReminderKind> = [.snoozed, .evening, .overdue, .followUp]
+        var digests = digests
+        for i in digests.indices where digests[i].id.hasPrefix("digest|") && !digests[i].id.hasPrefix("digest|evening") {
+            let fire = digests[i].fireDate
+            let folded = reminders.filter {
+                $0.taskID != nil && foldable.contains($0.kind) && abs($0.fireDate.timeIntervalSince(fire)) <= Self.foldWindow
+            }
+            guard !folded.isEmpty else { continue }
+            let ids = Set(folded.map(\.id))
+            reminders.removeAll { ids.contains($0.id) }
+            var urgent: [String] = []
+            for r in folded where r.subtitle == TaskPriority.urgent.rawValue && !urgent.contains(r.title) { urgent.append(r.title) }
+            if !urgent.isEmpty {
+                digests[i].body += " · urgent : " + urgent.prefix(2).joined(separator: ", ") + (urgent.count > 2 ? "…" : "")
+            }
+            digests[i].timeSensitive = folded.contains(where: \.timeSensitive)
+        }
+        return digests
+    }
+
+    /// Écart toléré entre une relance et le résumé du matin pour la fondre dedans.
+    static let foldWindow: TimeInterval = 15 * 60
 
     /// « Demain » : « 3 tâches, dont 1 urgente · la première à 9 h · 1 encore en retard ». Rien si demain est vide
     /// et que rien n'est en retard.

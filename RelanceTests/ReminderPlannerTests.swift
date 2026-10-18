@@ -118,6 +118,22 @@ struct ReminderPlannerTests {
         #expect(digest.badge == 1)
     }
 
+    /// Report « demain matin » d'urgentes : fondu dans le résumé du matin, une seule notification (18/10).
+    @Test func morningRemindersFoldIntoDigest() {
+        let tasks = [task("Faire la facture", day: 13, minutes: 16 * 60, snoozed: date(13, 7, 30), priority: .urgent),
+                     task("Répondre à Didier", day: 13, minutes: 15 * 60, snoozed: date(13, 7, 30), priority: .urgent),
+                     task("Pain", day: 13, minutes: 18 * 60)]
+        let plan = planner.plan(tasks: tasks, inboxCount: 0, now: date(12, 22))
+        let matin = plan.filter { abs($0.fireDate.timeIntervalSince(date(13, 7, 30))) <= 15 * 60 }
+        #expect(matin.count == 1)
+        let digest = try! #require(matin.first)
+        #expect(digest.kind == .digest && digest.title == "Ta journée")
+        #expect(digest.body == "3 aujourd'hui · urgent : Faire la facture, Répondre à Didier")
+        #expect(digest.timeSensitive)
+        // L'heure prévue reste une notification à part.
+        #expect(plan.contains { $0.taskID == "Répondre à Didier" && $0.kind == .due && $0.fireDate == date(13, 15) })
+    }
+
     @Test func capsAtMaxRequestsKeepingEarliest() {
         let tasks = (0..<30).map { task("t\($0)", day: 12, minutes: 9 * 60) }
         let plan = planner.plan(tasks: tasks, inboxCount: 0, now: date(12, 8))
@@ -139,9 +155,10 @@ struct ReminderPlannerTests {
         // 20 h, 20 h 30, 21 h, 21 h 30 ; 22 h et après : plage silencieuse.
         #expect(sameDay.map(\.0) == [date(12, 20), date(12, 20, 30), date(12, 21), date(12, 21, 30)])
         #expect(plan.filter { $0.taskID == "a" }.allSatisfy { $0.timeSensitive && $0.subtitle == "Urgente" })
-        // En retard : 7 h 30, midi et 20 h.
+        // En retard : midi et 20 h ; celle de 7 h 30 est fondue dans le résumé du matin (18/10).
         let nextDay = taskReminders(plan, "a").filter { calendar.isDate($0.0, inSameDayAs: date(13, 0)) }
-        #expect(nextDay.map(\.0) == [date(13, 7, 30), date(13, 12), date(13, 20)])
+        #expect(nextDay.map(\.0) == [date(13, 12), date(13, 20)])
+        #expect(plan.contains { $0.kind == .digest && $0.fireDate == date(13, 7, 30) && $0.body.hasSuffix("urgent : a") })
     }
 
     @Test func lowFiresOnceAndNeverWhenDateOnly() {
