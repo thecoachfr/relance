@@ -16,6 +16,7 @@
 | H — Durée facultative d'une tâche (agenda) ; rappel près de mes lieux habituels (supermarchés) | `P9-H-duree-et-lieux.md` | relance + routine | H2 (2 soirées) puis H1 (1 soirée) |
 | I — Le tri par l'API Messages (crédits API de Max au lieu du quota de messages), la routine restant en secours | `P9-I-tri-par-api.md` | relance + HA | I1 30 min, I2 1–2 soirées, I3 1 soirée + une semaine d'ombre, I4 1 soirée |
 | J — Mémoire des échanges Signal avec Yoann (texte cherchable, résumé de chaque nuit, recherche depuis Claude) | `P9-J-memoire-signal.md` | HA (+ relance pour J4) | J1–J3 2–3 soirées ; J4 2 ; J5 une demi-soirée |
+| K — *Étude* : pièces jointes (photo, PDF, scan) rangées dans HA, texte lu sur l'appareil pour le tri | `P9-K-pieces-jointes.md` | relance + ha-donnees-apps + routine | K1–K4 environ 5 soirées ; choix à valider |
 
 **Ordre** : lot 0 ci-dessous (avec E1, la mesure de référence), puis A, B, C, D, et E2 après A4 et D3. C dépend de B (liens testés sur le Player, champs `envie`). D réutilise « Sur la TV » (B) comme une action. F, d'abord une piste, a été fait après D. G (ajouté le 16/10, déposé le 16/10 à 22 h) vient ensuite, indépendant des autres plans.
 
