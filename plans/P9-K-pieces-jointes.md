@@ -146,8 +146,8 @@ texte des pièces, **tous les lots**.
 
 Fait le 18/10 :
 - **K1** : `ha-donnees-apps` 0.3.0 (API `fichiers`, identifiant = SHA-256, 10 Mo, 1 Go par espace, purge des orphelins
-  après 7 jours ; `ClientFichiers` en Swift ; 32 tests pytest, 26 tests Swift). Copiée sur le NUC ; active au
-  prochain redémarrage de HA.
+  après 7 jours ; `ClientFichiers` en Swift ; 32 tests pytest, 26 tests Swift). Copiée sur le NUC, active depuis
+  le redémarrage de HA du 18/10.
 - **K2** : champ `pieces` (`TacheHA+Pieces.swift`), ligne `📎`, `PiecesJointes` (photo réduite à 2 048 px en JPEG, texte
   lu par Vision ou PDFKit, cache de l'App Group, file d'envoi jouée à chaque synchro), section « Pièces jointes » de
   la fiche (vignettes, Quick Look, Photos, Fichiers, scanner de documents, glisser-déposer, « Retirer »), trombone
@@ -164,3 +164,7 @@ Fait le 18/10 :
 - **Option B** : « Copier dans Google Drive » (menu d'une vignette) : dossier « Aiguillage – Justificatifs » créé par
   l'app, accès `drive.file` demandé à la première copie, identifiant Drive noté dans `pieces[].drive`. **À faire par
   Alexandre** : activer l'API Google Drive dans le projet Google Cloud de l'app (« Relance »).
+
+Essai réel (18/10, build 58) : un PDF partagé vers Aiguillage arrive dans HA (`/config/donnees_apps/fichiers/aiguillage/`),
+la tâche le cite avec 502 caractères de texte lu et la ligne `📎 1 pièce jointe`. Reste : copie Google Drive (API
+Drive à activer dans le projet Google Cloud), passage de la routine de tri sur une tâche avec pièce.
