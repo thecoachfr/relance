@@ -64,6 +64,8 @@ extension TaskStore {
             try haPush(synchro)
             await synchro.synchroniser()
             try haPull(synchro, firstSync: firstSync)
+            // Pièces jointes en attente (app ou extension de partage) : le fichier suit la tâche.
+            await PiecesJointes.envoyerEnAttente()
             if spawnedDuringPull {
                 spawnedDuringPull = false
                 try haPush(synchro)

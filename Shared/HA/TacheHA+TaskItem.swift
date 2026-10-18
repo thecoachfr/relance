@@ -13,6 +13,8 @@ extension TacheHA {
         liste = item.liste
         notes = Liste.notes(notes, setting: liste)
         duree = item.dueMinutes == nil ? nil : item.dureeMinutes
+        pieces = item.pieces
+        notes = Piece.notes(notes, setting: pieces)
         jour = Self.jour(item.dueDay)
         heure = item.dueDay == nil ? nil : Self.heure(item.dueMinutes)
         categorie = item.category
@@ -57,6 +59,7 @@ extension TacheHA {
         item.liste = liste
         item.listeBaseRaw = item.listeRaw
         item.dureeMinutes = duree
+        item.pieces = pieces
         item.haExtrasRaw = autres.isEmpty ? nil : (try? JSONEncoder().encode(autres)).map { String(decoding: $0, as: UTF8.self) }
         item.isDirty = false
     }
@@ -139,6 +142,12 @@ extension TaskItem {
     var actions: [TacheHA.Action] {
         get { actionsRaw.flatMap { try? JSONDecoder().decode([TacheHA.Action].self, from: Data($0.utf8)) } ?? [] }
         set { actionsRaw = newValue.isEmpty ? nil : (try? JSONEncoder().encode(newValue)).map { String(decoding: $0, as: UTF8.self) } }
+    }
+
+    /// Pièces jointes (P9-K), rangées en JSON dans `piecesRaw`.
+    var pieces: [TacheHA.Piece] {
+        get { piecesRaw.flatMap { try? JSONDecoder().decode([TacheHA.Piece].self, from: Data($0.utf8)) } ?? [] }
+        set { piecesRaw = newValue.isEmpty ? nil : (try? JSONEncoder().encode(newValue)).map { String(decoding: $0, as: UTF8.self) } }
     }
 
     /// Liste d'articles (P9-G), rangée en JSON dans `listeRaw` ; `nil` sans liste.

@@ -48,6 +48,11 @@ struct TaskRow: View {
                 // Étiquette sous le statut, comme les tags dans Rappels : rien n'est jamais coupé.
                 statusLabel
                 listeLabel
+                if !item.pieces.isEmpty {
+                    Label("\(item.pieces.count)", systemImage: "paperclip")
+                        .font(.subheadline).foregroundStyle(.secondary).labelStyle(.titleAndIcon)
+                        .accessibilityLabel(item.pieces.count == 1 ? "1 pièce jointe" : "\(item.pieces.count) pièces jointes")
+                }
                 if item.category != nil || !item.tags.isEmpty {
                     HStack(spacing: 8) {
                         if let category = item.category { CategoryChip(name: category, onSelection: isSelected) }

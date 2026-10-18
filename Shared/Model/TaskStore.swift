@@ -191,6 +191,27 @@ final class TaskStore {
         return created
     }
 
+    // MARK: - Pièces jointes (P9-K)
+
+    /// Joint des pièces déjà préparées (`PiecesJointes.preparer`), 5 au plus ; l'envoi part à la synchro.
+    func addPieces(_ nouvelles: [TacheHA.Piece], to item: TaskItem) {
+        var pieces = item.pieces
+        for p in nouvelles where !pieces.contains(where: { $0.id == p.id }) { pieces.append(p) }
+        pieces = Array(pieces.prefix(TacheHA.Piece.maxParTache))
+        guard pieces != item.pieces else { return }
+        item.pieces = pieces
+        item.markChanged()
+        commit()
+    }
+
+    /// Retire une pièce de la tâche ; HA purge le fichier quand plus aucune tâche ne le cite.
+    func removePiece(_ id: String, from item: TaskItem) {
+        guard item.pieces.contains(where: { $0.id == id }) else { return }
+        item.pieces.removeAll { $0.id == id }
+        item.markChanged()
+        commit()
+    }
+
     // MARK: - Durée (P9-H1)
 
     /// Durée en minutes (`nil` = aucune) ; l'événement d'agenda suit à la prochaine réconciliation.

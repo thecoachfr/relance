@@ -13,7 +13,7 @@ packages:
   # Stockage des tâches dans Home Assistant avec fallback iCloud (dépôt privé : Xcode Cloud doit y avoir accès).
   DonneesHA:
     url: https://github.com/thecoachfr/ha-donnees-apps
-    from: 0.2.0
+    from: 0.3.0
 settings:
   base:
     DEVELOPMENT_TEAM: GD6W292ZXP
@@ -128,6 +128,7 @@ targets:
       - Relance/Views/ActionsSection.swift
       - Relance/Views/ListeSection.swift
       - Relance/Views/DureeRow.swift
+      - Relance/Views/PiecesSection.swift
       - Relance/Views/RecettesView.swift
     configFiles:
       Debug: Relance/Resources/Secrets.xcconfig
@@ -187,6 +188,8 @@ targets:
       - Shared/HA/HAConfig.swift
       - Shared/HA/TacheHA.swift
       - Shared/HA/TacheHA+Liste.swift
+      - Shared/HA/TacheHA+Pieces.swift
+      - Shared/Model/PiecesJointes.swift
       - Shared/HA/MemoHA.swift
     dependencies:
       - package: DonneesHA
