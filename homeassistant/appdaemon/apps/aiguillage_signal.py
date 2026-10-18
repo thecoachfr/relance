@@ -190,6 +190,10 @@ if hass is not None:
             self._memoire_etat_path = Path(self.args.get("memoire_etat_file", "/config/aiguillage_memoire_etat.json"))
             self.run_daily(self._nuit, self.args.get("memoire_heure", "03:00:00"))
             self.listen_event(self._chercher, "aiguillage_memoire_chercher")
+            # Import d'un historique (J5) : événement « aiguillage_memoire_importer » {fichier, expediteur,
+            # conversation}, puis résumés par la Batch API, suivis toutes les 10 min.
+            self.listen_event(self._importer, "aiguillage_memoire_importer")
+            self.run_every(self._suivre_batch, "now+90", 600)
             self._tache = asyncio.ensure_future(self._boucle())
 
         async def terminate(self):
@@ -345,7 +349,9 @@ if hass is not None:
                 client = self._client_api()
                 if client is not None:
                     self._resumer_tout(db, client, conversations, aujourdhui)
-                retires = memoire.purger_textes(db, aujourdhui)
+                garder = (conf.get("memoire") or {}).get("garder_textes_jours", 365)
+                retires = memoire.purger_textes(db, aujourdhui, garder)
+                self._nettoyer_donnees(aujourdhui)
                 purgees = self._purger_pieces(db)
             finally:
                 db.close()
@@ -386,10 +392,7 @@ if hass is not None:
                     return
                 maintenant = datetime.now(UTC).isoformat()
                 memoire.enregistrer_resume(db, niveau, nom, periode, resultat, maintenant)
-                self._service("donnees_apps", "ecrire", {
-                    "espace": "memoire", "cle": memoire.cle_donnees(nom, niveau, periode),
-                    "valeur": {"conversation": nom, "niveau": niveau, "periode": periode, **resultat},
-                    "modifie_par": "memoire", "op_id": str(uuid.uuid4())})
+                self._publier_resume(nom, niveau, periode, resultat, aujourdhui)
                 self.log(f"Signal : mémoire, résumé {niveau} {periode} ({len(resultat['faits'])} fait(s)) ; "
                          f"mois : {etat['cout_mois']:.2f} $")
 
@@ -404,6 +407,148 @@ if hass is not None:
                     jours = memoire.resumes(db, "jour", nom, debut.isoformat(), fin.isoformat())
                     if jours and not memoire.resumes(db, niveau, nom, periode, periode):
                         faire(niveau, nom, periode, memoire.texte_resumes(nom, niveau, periode, jours))
+
+        # Résumés du jour gardés dans donnees_apps : les 60 derniers jours (les plus anciens restent dans SQLite,
+        # trouvés par la recherche) ; semaines et mois : tous.
+        JOURS_DANS_DONNEES = 60
+
+        def _publier_resume(self, nom, niveau, periode, resultat, aujourdhui):
+            if niveau == "jour" and periode < (aujourdhui - timedelta(days=self.JOURS_DANS_DONNEES)).isoformat():
+                return
+            self._service("donnees_apps", "ecrire", {
+                "espace": "memoire", "cle": memoire.cle_donnees(nom, niveau, periode),
+                "valeur": {"conversation": nom, "niveau": niveau, "periode": periode, **resultat},
+                "modifie_par": "memoire", "op_id": str(uuid.uuid4())})
+
+        def _nettoyer_donnees(self, aujourdhui):
+            limite = (aujourdhui - timedelta(days=self.JOURS_DANS_DONNEES)).isoformat()
+            lu = self._service("donnees_apps", "lire", {"espace": "memoire"}) or {}
+            for r in lu.get("enregistrements", []):
+                periode = ((r.get("valeur") or {}).get("periode") or "")
+                if not r.get("supprime") and "-jour-" in r["cle"] and periode and periode < limite:
+                    self._service("donnees_apps", "supprimer", {"espace": "memoire", "cle": r["cle"],
+                                                                "modifie_par": "memoire", "op_id": str(uuid.uuid4())})
+
+        # MARK: - Import d'un historique (J5)
+
+        async def _importer(self, event_name, data, **kwargs):
+            try:
+                await self.run_in_executor(self._importer_sync, data or {})
+            except Exception as exc:  # noqa: BLE001
+                self.log(f"Signal : mémoire, ERREUR à l'import {exc!r}", level="WARNING")
+
+        def _importer_sync(self, data):
+            fichier, expediteur, nom = Path(str(data.get("fichier"))), data.get("expediteur"), data.get("conversation")
+            if not (fichier.is_file() and expediteur and nom):
+                self.log("Signal : mémoire, import : fichier, expediteur et conversation requis", level="WARNING")
+                return
+            lignes = [json.loads(l) for l in fichier.read_text().splitlines() if l.strip()]
+            db = memoire.ouvrir(self._db_path)
+            try:
+                ops = memoire.ops_depuis_export(lignes, nom, expediteur, avant_ts=memoire.premier_ts(db))
+                ajoutes = memoire.importer(db, ops)
+                total = memoire.compter(db)
+            finally:
+                db.close()
+            self.log(f"Signal : mémoire, import de {len(lignes)} ligne(s) : {ajoutes} message(s) ajouté(s), "
+                     f"{total} au total")
+            if data.get("resumer", True):
+                self._lancer_batch(nom, "jour")
+
+        def _lancer_batch(self, nom, phase):
+            """Lance un batch de résumés : `jour` (jours sans résumé) puis `periodes` (semaines et mois)."""
+            client = self._client_api()
+            if client is None:
+                return
+            aujourdhui = datetime.now(memoire.PARIS).date()
+            modele = self.args.get("memoire_modele", "claude-sonnet-5-5")
+            effort = self.args.get("memoire_effort", "medium")
+            db = memoire.ouvrir(self._db_path)
+            try:
+                if phase == "jour":
+                    textes = {memoire.id_batch(nom, "jour", j): memoire.texte_jour(nom, j, memoire.messages_du_jour(db, nom, j))
+                              for j in memoire.jours_sans_resume(db, nom, aujourdhui.isoformat())}
+                else:
+                    textes = {}
+                    for niveau, periode, debut, fin in memoire.periodes_sans_resume(db, nom, aujourdhui):
+                        jours = memoire.resumes(db, "jour", nom, debut.isoformat(), fin.isoformat())
+                        textes[memoire.id_batch(nom, niveau, periode)] = memoire.texte_resumes(nom, niveau, periode, jours)
+            finally:
+                db.close()
+            etat = self._memoire_etat()
+            if not textes:
+                etat.pop("import", None)
+                self._memoire_etat(etat)
+                if phase == "jour":
+                    return self._lancer_batch(nom, "periodes")
+                self.log("Signal : mémoire, import terminé : tous les résumés sont faits")
+                return
+            batch = client.messages.batches.create(requests=[
+                {"custom_id": cid, "params": memoire.params_resume(texte, modele, effort)} for cid, texte in textes.items()])
+            etat["import"] = {"batch": batch.id, "phase": phase, "conversation": nom, "modele": modele,
+                              "requetes": len(textes), "lance_le": datetime.now(UTC).isoformat()}
+            self._memoire_etat(etat)
+            self.log(f"Signal : mémoire, batch {phase} lancé ({len(textes)} résumé(s), {batch.id})")
+
+        async def _suivre_batch(self, **kwargs):
+            if not (self._memoire_etat().get("import") or {}).get("batch"):
+                return
+            try:
+                await self.run_in_executor(self._suivre_batch_sync)
+            except Exception as exc:  # noqa: BLE001
+                self.log(f"Signal : mémoire, ERREUR au suivi du batch {exc!r}", level="WARNING")
+
+        def _suivre_batch_sync(self):
+            etat = self._memoire_etat()
+            imp = etat.get("import") or {}
+            client = self._client_api()
+            if client is None:
+                return
+            batch = client.messages.batches.retrieve(imp["batch"])
+            if batch.processing_status != "ended":
+                return
+            nom, aujourdhui = imp["conversation"], datetime.now(memoire.PARIS).date()
+            prefixe = memoire.cle_donnees(nom, "x", "x")[: -len("-x-x")] + "-"
+            prix = {"claude-sonnet-5-5": (2.0, 10.0), "claude-haiku-5-5": (0.10, 0.50)}.get(imp.get("modele"), (4.0, 20.0))
+            faits, echecs, cout = 0, 0, 0.0
+            db = memoire.ouvrir(self._db_path)
+            try:
+                for res in client.messages.batches.results(imp["batch"]):
+                    niveau, periode = res.custom_id[len(prefixe):].split("-", 1)
+                    if res.result.type != "succeeded":
+                        echecs += 1
+                        continue
+                    message = res.result.message
+                    cout += (message.usage.input_tokens * prix[0] + message.usage.output_tokens * prix[1]) / 2e6
+                    resultat = memoire.lire_reponse(message)
+                    if resultat is None:
+                        echecs += 1
+                        continue
+                    memoire.enregistrer_resume(db, niveau, nom, periode, resultat, datetime.now(UTC).isoformat())
+                    try:
+                        self._publier_resume(nom, niveau, periode, resultat, aujourdhui)
+                    except Exception as exc:  # noqa: BLE001 - le résumé est dans SQLite, la copie est secondaire
+                        self.log(f"Signal : mémoire, copie de {periode} impossible ({exc!r})", level="WARNING")
+                    faits += 1
+            finally:
+                db.close()
+            etat["cout_import"] = round(etat.get("cout_import", 0.0) + cout, 4)
+            etat.pop("import", None)
+            self._memoire_etat(etat)
+            self.log(f"Signal : mémoire, batch {imp['phase']} fini : {faits} résumé(s), {echecs} échec(s), "
+                     f"{cout:.2f} $ (import : {etat['cout_import']:.2f} $)")
+            # Les échecs d'un jour sont repris par le batch suivant (`jour` repart des jours sans résumé, une fois).
+            if imp["phase"] == "jour" and echecs and not imp.get("reprise"):
+                self._lancer_batch(nom, "jour")
+                etat = self._memoire_etat()
+                if etat.get("import"):
+                    etat["import"]["reprise"] = True
+                    self._memoire_etat(etat)
+                return
+            if imp["phase"] == "jour":
+                self._lancer_batch(nom, "periodes")
+            else:
+                self.log("Signal : mémoire, import terminé")
 
         def _purger_pieces(self, db):
             base = self._hote.replace("ws://", "http://").replace("wss://", "https://")

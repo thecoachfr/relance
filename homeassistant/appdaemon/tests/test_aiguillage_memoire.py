@@ -106,6 +106,75 @@ def test_periodes_et_cles():
     assert m.cle_donnees("Paul Éric", "jour", "2026-10-17") == "paul-eric-jour-2026-10-17"
 
 
+def test_purge_desactivee():
+    db = m.ouvrir(":memory:")
+    m.appliquer(db, lire(recu("Très ancien", ts=TS - 900 * 86_400_000)))
+    m.enregistrer_resume(db, "jour", "Paul", m.jour_de(TS - 900 * 86_400_000),
+                         {"resume": "r", "faits": [], "mots_cles": []}, "x")
+    assert m.purger_textes(db, date(2026, 10, 17), jours=0) == 0 and m.compter(db) == 1
+
+
+EXPORT = [
+    {"date": "2024-03-02T09:15:00.120000", "sender": "Me", "body": "On mange où ?", "quote": "", "sticker": None,
+     "attachments": [], "deleted": False, "call": False},
+    {"date": "2024-03-02T09:16:30.000000", "sender": "PaulExemple", "body": "Chez Tonton", "quote": "On mange où ?",
+     "sticker": None, "attachments": [{"name": "menu.JPG", "path": "x"}], "deleted": False, "call": False},
+    {"date": "2024-03-02T09:17:00.000000", "sender": "PaulExemple", "body": "", "quote": "", "sticker": {"id": 1},
+     "attachments": [], "deleted": False, "call": False},
+    {"date": "2024-03-02T10:00:00.000000", "sender": "PaulExemple", "body": "", "quote": "", "sticker": None,
+     "attachments": [], "deleted": False, "call": True},
+    {"date": "2024-03-02T11:00:00.000000", "sender": "PaulExemple", "body": "effacé", "quote": "", "sticker": None,
+     "attachments": [], "deleted": True, "call": False},
+    {"date": "2024-03-04T08:00:00.000000", "sender": "Quelquun", "body": "groupe ?", "quote": "", "sticker": None,
+     "attachments": [], "deleted": False, "call": False},
+    {"date": "2026-10-17T18:30:00.000000", "sender": "Me", "body": "Déjà capturé en direct", "quote": "",
+     "sticker": None, "attachments": [], "deleted": False, "call": False},
+]
+
+
+def test_import_export():
+    db = m.ouvrir(":memory:")
+    m.appliquer(db, lire(recu("En direct", ts=TS)))
+    ops = m.ops_depuis_export(EXPORT, "Paul", "PaulExemple", avant_ts=m.premier_ts(db))
+    assert [o["texte"] for o in ops] == ["On mange où ?", "Chez Tonton", ""]
+    assert ops[0]["auteur"] == m.MOI and ops[0]["sens"] == "envoye" and ops[1]["auteur"] == "Paul"
+    assert ops[1]["citation"] == "On mange où ?" and ops[1]["pieces"][0]["type"] == "photo"
+    assert ops[2]["pieces"][0]["type"] == "autocollant"
+    assert m.jour_de(ops[0]["ts"]) == "2024-03-02"
+    assert datetime.fromtimestamp(ops[0]["ts"] / 1000, m.PARIS).strftime("%H:%M") == "09:15"
+    assert m.importer(db, ops) == 3 and m.importer(db, ops) == 0  # deux fois : pas de doublon
+    assert m.chercher(db, "tonton")["messages"][0]["quand"] == "2024-03-02 09:16"
+    assert m.jours_sans_resume(db, "Paul", "2026-10-17") == ["2024-03-02"]
+    assert m.jours_sans_resume(db, "Paul", "2026-10-18") == ["2024-03-02", "2026-10-17"]
+
+
+def test_periodes_sans_resume():
+    db = m.ouvrir(":memory:")
+    for jour in ("2024-02-28", "2024-03-02", "2026-10-15"):
+        m.enregistrer_resume(db, "jour", "Paul", jour, {"resume": "r", "faits": [], "mots_cles": []}, "x")
+    m.enregistrer_resume(db, "mois", "Paul", "2024-02", {"resume": "r", "faits": [], "mots_cles": []}, "x")
+    periodes = [(n, p) for n, p, _, _ in m.periodes_sans_resume(db, "Paul", date(2026, 10, 18))]
+    # Semaine du 26/02/2024 (lundi) → 3/03 : une seule ; mois de février déjà résumé ; semaine 42 (jusqu'au
+    # dimanche 18/10) et octobre 2026 pas finis.
+    assert periodes == [("semaine", "2024-W09"), ("mois", "2024-03")]
+    assert ("semaine", "2026-W42") in [(n, p) for n, p, _, _ in m.periodes_sans_resume(db, "Paul", date(2026, 10, 19))]
+    assert m.id_batch("Paul", "semaine", "2024-W09") == "paul-semaine-2024-W09"
+
+
+def test_parametres_et_reponse():
+    p = m.params_resume("texte", "claude-haiku-5-5", "low")
+    assert p["model"] == "claude-haiku-5-5" and p["output_config"]["effort"] == "low"
+
+    class Bloc:
+        type, text = "text", '{"resume": "ok", "faits": [], "mots_cles": []}'
+
+    class Msg:
+        stop_reason, content = "end_turn", [Bloc()]
+    assert m.lire_reponse(Msg())["resume"] == "ok"
+    Msg.stop_reason = "max_tokens"
+    assert m.lire_reponse(Msg()) is None
+
+
 def test_schema():
     assert m.SCHEMA["additionalProperties"] is False
     assert set(m.SCHEMA["required"]) == set(m.SCHEMA["properties"])

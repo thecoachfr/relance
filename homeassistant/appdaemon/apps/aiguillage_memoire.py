@@ -13,7 +13,7 @@ Fonctions pures et accès SQLite, testés hors Home Assistant par `tests/test_ai
 fictifs). Les résumés sont faits par l'API Messages (`resumer`, client `anthropic` en paramètre).
 """
 
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 import json
 import re
 import sqlite3
@@ -217,7 +217,10 @@ def resumes(db, niveau, conversation, debut, fin):
 
 
 def purger_textes(db, aujourdhui, jours=365):
-    """Retire les messages de plus de `jours` jours dont le jour est résumé. Renvoie le nombre retiré."""
+    """Retire les messages de plus de `jours` jours dont le jour est résumé (0 ou None : rien). Renvoie le nombre
+    retiré."""
+    if not jours:
+        return 0
     limite = (aujourdhui - timedelta(days=jours)).isoformat()
     cur = db.execute(
         "DELETE FROM messages WHERE jour < ? AND EXISTS (SELECT 1 FROM resumes r WHERE r.niveau = 'jour' "
@@ -282,16 +285,26 @@ def texte_resumes(conversation, niveau, periode, liste):
     return "\n".join(lignes)
 
 
+def params_resume(texte, modele="claude-sonnet-5-5", effort="medium"):
+    return {"model": modele, "max_tokens": 8000, "system": CONSIGNE,
+            "messages": [{"role": "user", "content": texte}],
+            "output_config": {"effort": effort, "format": {"type": "json_schema", "schema": SCHEMA}}}
+
+
+def lire_reponse(message):
+    """Message de l'API (direct ou dans un résultat de batch) → résultat décodé, ou None."""
+    if message.stop_reason != "end_turn":
+        return None
+    try:
+        return json.loads(next((b.text for b in message.content if b.type == "text"), ""))
+    except json.JSONDecodeError:
+        return None
+
+
 def resumer(client, texte, modele="claude-sonnet-5-5", effort="medium"):
     """Un appel à l'API Messages, sortie structurée. Renvoie (résultat ou None, usage)."""
-    reponse = client.messages.create(
-        model=modele, max_tokens=8000, system=CONSIGNE,
-        messages=[{"role": "user", "content": texte}],
-        output_config={"effort": effort, "format": {"type": "json_schema", "schema": SCHEMA}},
-    )
-    if reponse.stop_reason != "end_turn":
-        return None, reponse.usage
-    return json.loads(next((b.text for b in reponse.content if b.type == "text"), "")), reponse.usage
+    reponse = client.messages.create(**params_resume(texte, modele, effort))
+    return lire_reponse(reponse), reponse.usage
 
 
 def semaine_precedente(aujourdhui):
@@ -311,3 +324,98 @@ def cle_donnees(conversation, niveau, periode):
     ascii_ = unicodedata.normalize("NFKD", conversation).encode("ascii", "ignore").decode()
     nom = re.sub(r"[^a-z0-9]+", "-", ascii_.lower()).strip("-") or "conversation"
     return f"{nom}-{niveau}-{periode}"
+
+
+# MARK: - Import d'un historique (J5, export `sigexport` de Signal Desktop)
+
+_TYPES_FICHIER = {"photo": ("jpg", "jpeg", "png", "heic", "heif", "gif", "webp"), "vidéo": ("mp4", "mov", "m4v"),
+                  "audio": ("m4a", "aac", "mp3", "ogg", "opus", "wav")}
+
+
+def _type_fichier(nom):
+    ext = (nom or "").rsplit(".", 1)[-1].lower() if "." in (nom or "") else ""
+    return next((t for t, exts in _TYPES_FICHIER.items() if ext in exts), "fichier")
+
+
+def ops_depuis_export(lignes, conversation, expediteur, moi="Me", avant_ts=None):
+    """Lignes de `data.json` (une par message, `{date, sender, body, quote, sticker, attachments, deleted, call}`,
+    `date` en heure locale de Paris) → opérations « ajout ». `expediteur` : le nom de l'ami dans l'export ; seuls ses
+    messages et ceux de `moi` sont gardés, avant `avant_ts` (début de la capture en direct, pour éviter les
+    doublons)."""
+    out = []
+    for ligne in lignes:
+        if ligne.get("call") or ligne.get("deleted") or ligne.get("sender") not in (moi, expediteur):
+            continue
+        try:
+            moment = datetime.fromisoformat(ligne["date"])
+        except (KeyError, ValueError):
+            continue
+        if moment.tzinfo is None:
+            moment = moment.replace(tzinfo=PARIS)
+        ts = int(moment.timestamp() * 1000)
+        if avant_ts and ts >= avant_ts:
+            continue
+        pieces = [{"type": _type_fichier(a.get("name")), "nom": a.get("name"), "taille": None, "id": None}
+                  for a in ligne.get("attachments") or []]
+        if ligne.get("sticker"):
+            pieces.append({"type": "autocollant", "nom": None, "taille": None, "id": None})
+        texte = ligne.get("body") or ""
+        if not texte and not pieces:
+            continue
+        envoye = ligne["sender"] == moi
+        out.append({"op": "ajout", "conversation": conversation, "ts": ts, "auteur": MOI if envoye else conversation,
+                    "sens": "envoye" if envoye else "recu", "texte": texte,
+                    "citation": (ligne.get("quote") or "").strip() or None, "pieces": pieces})
+    return out
+
+
+def importer(db, ops):
+    """Ajoute d'un coup les opérations « ajout » (doublons ignorés). Renvoie le nombre de messages ajoutés."""
+    avant = compter(db)
+    db.executemany(
+        "INSERT OR IGNORE INTO messages (conversation, ts, jour, auteur, sens, texte, citation, pieces) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        [(o["conversation"], o["ts"], jour_de(o["ts"]), o["auteur"], o["sens"], o["texte"], o["citation"],
+          json.dumps(o["pieces"], ensure_ascii=False) if o["pieces"] else None) for o in ops])
+    db.commit()
+    return compter(db) - avant
+
+
+def premier_ts(db):
+    r = db.execute("SELECT MIN(ts) FROM messages").fetchone()
+    return r[0] if r else None
+
+
+def jours_sans_resume(db, conversation, avant_jour):
+    """Jours (AAAA-MM-JJ, avant `avant_jour` exclu) qui ont des messages mais pas de résumé du jour."""
+    return [r[0] for r in db.execute(
+        "SELECT DISTINCT jour FROM messages m WHERE conversation = ? AND jour < ? AND NOT EXISTS (SELECT 1 FROM "
+        "resumes r WHERE r.niveau = 'jour' AND r.conversation = m.conversation AND r.periode = m.jour) ORDER BY jour",
+        (conversation, avant_jour))]
+
+
+def periodes_sans_resume(db, conversation, aujourdhui):
+    """Semaines (AAAA-Wss) et mois (AAAA-MM) terminés avant `aujourdhui`, avec des résumés du jour mais sans
+    résumé à leur niveau : [(niveau, periode, debut, fin)]."""
+    jours = [date.fromisoformat(r["periode"]) for r in db.execute(
+        "SELECT periode FROM resumes WHERE niveau = 'jour' AND conversation = ? ORDER BY periode", (conversation,))]
+    vus, out = set(), []
+    for j in jours:
+        lundi = j - timedelta(days=j.weekday())
+        annee, num, _ = lundi.isocalendar()
+        semaine = ("semaine", f"{annee}-W{num:02d}", lundi, lundi + timedelta(days=6))
+        debut_mois = j.replace(day=1)
+        fin_mois = (debut_mois + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+        mois = ("mois", f"{j:%Y-%m}", debut_mois, fin_mois)
+        for niveau, periode, debut, fin in (semaine, mois):
+            if (niveau, periode) in vus or fin >= aujourdhui:
+                continue
+            vus.add((niveau, periode))
+            if not resumes(db, niveau, conversation, periode, periode):
+                out.append((niveau, periode, debut, fin))
+    return out
+
+
+def id_batch(conversation, niveau, periode):
+    """custom_id d'une requête de batch (lettres, chiffres, « - » et « _ », 64 caractères au plus)."""
+    return cle_donnees(conversation, niveau, periode)[:64]
