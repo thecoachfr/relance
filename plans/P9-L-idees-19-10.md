@@ -6,10 +6,10 @@ ce qui existe déjà, ce qu'on peut faire, le coût et les questions à trancher
 | | Idée | Verdict | Coût |
 |---|---|---|---|
 | L1 | Concerts et spectacles (date, billets) | Faisable, s'appuie sur Envies et P9-K | 2 soirées |
-| L2 | App TV : marquer écoutés les titres de la playlist | Pas possible aujourd'hui ; faisable | 1 soirée (+1 pour l'automatique) |
+| L2 | App TV : « Écouté » sur chaque morceau de la playlist | Seule l'envie la plus récente l'a ; faisable | 1 soirée (+1 pour l'automatique) |
 | L3 | Tour d'UX sur le placement des boutons de la fiche | Utile : les actions sont tout en bas | 1 soirée d'audit + 1–2 de reprise |
 | L4 | Reconnaissance de texte (rendez-vous chez le dentiste…) | Existe en partie (partage de capture) ; à rendre immédiat | 1–2 soirées |
-| L5 | Nest Hub : bouton pour couper l'alarme du détecteur de fumée | Dépend du modèle : le détecteur n'est pas dans HA | ½ soirée si compatible |
+| L5 | Nest Hub : couper l'alarme du détecteur de fumée (Netatmo) en cuisinant | Pas faisable à distance, à notre connaissance ; bandeau d'alerte possible | ½ soirée (bandeau) |
 | L6 | Nest Hub : afficher ce qui passe (TV ou musique), quelle que soit la source | Faisable : un capteur « En ce moment » | 1 soirée |
 | L7 | Nest Hub : changer le contenu sans changer de dashboard | Faisable : une seule carte, pages basculées sur place | 2 soirées |
 
@@ -57,8 +57,12 @@ pas, aujourd'hui, marquer écoutés tous les titres de la playlist depuis la TV.
   en relançant `spotify_jeton.py`) et marque écouté un titre de la playlist joué jusqu'au bout. Plus rien à faire à
   la main ; 1 soirée de plus.
 
-**Question** : un titre écouté est-il **retiré** de la playlist (elle reste une file d'attente), ou **gardé** et
-seulement marqué ?
+**Précision d'Alexandre (19/10)** : il veut dire « fait » sur chacun des morceaux qu'il voit ; seul le dernier le
+permet. Explication (19/10) : la playlist compte 10 morceaux (copie de la vigie) ; la rangée « Dans la playlist »
+les montre tous, sans « Écouté » ; le bouton n'existe que sur les envies encore à faire, rangées plus bas, et
+sans doute une seule l'est encore (les autres morceaux viennent d'envies déjà faites, d'albums ou d'ajouts directs
+dans Spotify). Retenu par défaut : « Écouté » sur chaque morceau **retire le morceau de la playlist** (une file
+d'attente) et coche l'envie liée s'il y en a une.
 
 ## L3 — Tour d'UX : placement des boutons de la fiche
 
@@ -100,19 +104,23 @@ n'arrive qu'**au passage du tri**, et l'appareil photo n'est pas proposé dans l
 
 ## L5 — Nest Hub : couper l'alarme du détecteur de fumée de l'entrée
 
-**Vérifié dans HA (19/10)** : aucun détecteur de fumée n'y est connu (ni `smoke` ni « fumée » parmi les capteurs).
-Tout dépend donc du modèle :
-- **Zigbee** (Frient, Heiman, Aqara…, par Zigbee2MQTT, déjà installé) : l'alarme est un capteur et la plupart
-  exposent une commande « silence » ou « alarme off ». Le bouton est simple : il apparaît en grand, en rouge, sur
-  le Hub seulement pendant l'alarme (« Fumée dans l'entrée — Couper l'alarme »), avec une notification sur les
-  iPhone. ½ soirée.
-- **Nest Protect** : Google n'ouvre pas le Protect aux applications tierces (l'API Device Access couvre caméras,
-  thermostats et sonnettes, pas le Protect, à revérifier). On ne pourrait que le couper depuis l'app Google Home.
-- **Détecteur autonome sans radio** (le cas le plus courant) : impossible de le couper à distance. On pourrait le
-  remplacer par un modèle Zigbee, ou en ajouter un dans l'entrée.
+**Modèle (Alexandre, 19/10)** : Détecteur de Fumée Intelligent **Netatmo**, dans l'app Netatmo Sécurité ; but :
+cuisiner sans qu'il sonne. Le compte Netatmo est déjà relié à HA (caméra Welcome, stations), mais le détecteur n'y
+crée aucune entité.
 
-**Question** : quel modèle (marque, ou photo de l'étiquette) ? Et pourquoi le couper : une fausse alerte en
-cuisinant ?
+Ce qu'on sait (sources publiques, 19/10) :
+- La **mise en sourdine** depuis l'app passe par **Bluetooth** entre le téléphone et le détecteur, pas par le
+  cloud ; un appui sur le bouton du détecteur le fait taire 15 min.
+- Dans HA, les alarmes Netatmo n'arrivent que comme **événements de webhook** (fumée, sourdine…), sans entité ni
+  commande ; aucune commande « sourdine » documentée dans l'API publique (à revérifier sur dev.netatmo.com).
+- Dans Apple Maison (HomeKit), il n'apparaît que comme un capteur de fumée, sans commande.
+
+Donc **pas de bouton « couper l'alarme » sur le Hub**, et on ne désactive pas un détecteur de fumée à l'avance (c'est
+un appareil de sécurité). Ce qu'on peut faire :
+- Un **bandeau rouge** sur le Hub et une notification pendant l'alarme (événement de webhook à capter dans HA) :
+  « Fumée dans l'entrée — appuie sur le bouton du détecteur pour 15 min de silence ».
+- Pour les fausses alertes en cuisinant : allumer la hotte plus tôt, ou demander à Netatmo si une sourdine
+  préventive existe ; le placement du détecteur (distance à la cuisine) est la vraie solution.
 
 ## L6 — Nest Hub : ce qui passe en ce moment, quelle que soit la source
 
@@ -157,7 +165,7 @@ d'Alexandre).
    L4 et P9-K.
 2. **L3**, avant d'ajouter d'autres sections à la fiche.
 3. Nest Hub : **L7** d'abord (L6 et L5 deviennent des pages ou des bandeaux de la nouvelle carte), puis **L6**,
-   puis **L5** selon le modèle du détecteur.
+   puis le bandeau d'alarme de **L5**.
 
 Le code des cartes du Nest Hub reste hors du dépôt public (fiche et cartes dans HA, dossier `claude/` de
 `ha-config`) ; seule cette étude est ici.
