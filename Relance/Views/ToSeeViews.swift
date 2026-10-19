@@ -29,9 +29,10 @@ struct ToSeeSection: View {
     var kind: ToSee.Kind = .outing
     /// Pièces jointes de la tâche : les billets d'une sortie (P9-L1).
     var pieces: [TacheHA.Piece] = []
+    /// Aperçu du billet, tenu par la fiche (voir `PiecesSection.apercu`) ; `nil` hors d'une fiche (saisie rapide).
+    var apercu: Binding<URL?>? = nil
     /// Passer en envie retire l'échéance du formulaire.
     var onEnable: () -> Void = {}
-    @State private var billet: URL?
     @State private var billetAbsent = false
 
     private var toSee: ToSee? { ToSee(notes: notes) }
@@ -97,15 +98,15 @@ struct ToSeeSection: View {
                 Text("Pour une sortie, un resto, un magasin, un spot photo, un livre, un album, un film : gardé à part, sans relance chaque jour.")
             }
         }
-        .quickLookPreview($billet)
     }
 
     private func set(_ toSee: ToSee) { notes = ToSee.notes(notes, setting: toSee) }
 
     private func ouvrir(_ piece: TacheHA.Piece) {
         Task {
-            billet = await PiecesJointes.lisible(piece)
-            billetAbsent = billet == nil
+            let url = await PiecesJointes.lisible(piece)
+            apercu?.wrappedValue = url
+            billetAbsent = url == nil
         }
     }
 

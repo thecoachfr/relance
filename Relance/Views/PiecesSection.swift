@@ -16,7 +16,9 @@ struct PiecesSection: View {
     @State private var choixPhotos = false
     @State private var choixFichiers = false
     @State private var scanner = false
-    @State private var apercu: URL?
+    /// Aperçu (Quick Look) tenu par la fiche : un seul `quickLookPreview` pour toute la fiche. Avec un par section
+    /// (pièces, billet), celui qui n'avait rien à montrer refermait l'autre aussitôt (19/10, build 62).
+    @Binding var apercu: URL?
     @State private var enCours = 0
     @State private var erreur: String?
 
@@ -94,7 +96,6 @@ struct PiecesSection: View {
                 Task { await joindreFichiers(urls, source: "fichier") }
                 return true
             }
-            .quickLookPreview($apercu)
         }
     }
 

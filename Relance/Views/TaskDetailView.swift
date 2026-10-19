@@ -1,3 +1,4 @@
+import QuickLook
 import SwiftUI
 
 /// Détail d'une tâche dans la colonne de droite (iPad) : chaque modification est enregistrée
@@ -23,6 +24,8 @@ struct TaskDetailView: View {
     @State private var searchingPlace = false
     /// Réglages rares (priorité, relances, catégorie, tags, agenda, tri) : repliés par défaut, mémorisé.
     @AppStorage("ficheOptionsOuvertes") private var showMore = false
+    /// Pièce jointe ou billet affiché en plein écran : un seul aperçu pour la fiche.
+    @State private var apercu: URL?
     /// Fiche ouverte en feuille (iPhone) : la barre de navigation porte « Fermer » ; une action la ferme.
     var onClose: (() -> Void)? = nil
 
@@ -82,10 +85,10 @@ struct TaskDetailView: View {
             }
             ContactSection(notes: $notes, searching: $searchingPlace, memoSource: (category, tags), title: title)
             ListeSection(item: item)
-            PiecesSection(item: item)
+            PiecesSection(item: item, apercu: $apercu)
             // Une envie montre sa section en haut ; « ranger dans les envies » est un réglage rare (Plus d'options).
             if ToSee(notes: notes) != nil {
-                ToSeeSection(notes: $notes, availability: item.availability, pieces: item.pieces) { hasDay = false }
+                ToSeeSection(notes: $notes, availability: item.availability, pieces: item.pieces, apercu: $apercu) { hasDay = false }
             }
             ActionsSection(item: item, lien: item.envie()?.lien.flatMap(URL.init(string:)) ?? ToSee.link(in: NoteLines.visible(notes)))
             Section {
@@ -125,11 +128,12 @@ struct TaskDetailView: View {
                 }
                 if ToSee(notes: notes)?.kind.isDated != false { CalendarSection(item: item) }
                 if ToSee(notes: notes) == nil {
-                    ToSeeSection(notes: $notes, availability: item.availability, pieces: item.pieces) { hasDay = false }
+                    ToSeeSection(notes: $notes, availability: item.availability, pieces: item.pieces, apercu: $apercu) { hasDay = false }
                 }
                 RetriageSection(item: item)
             }
         }
+        .quickLookPreview($apercu)
         .deleteTaskConfirmation(item, isPresented: $confirmDelete) { onClose?() }
         .placeSearch(isPresented: $searchingPlace, notes: $notes)
         #if os(macOS)
