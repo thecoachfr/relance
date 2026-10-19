@@ -11,7 +11,7 @@ ce qui existe déjà, ce qu'on peut faire, le coût et les questions à trancher
 | L4 | Reconnaissance de texte (rendez-vous chez le dentiste…) | **Fait le 19/10** (à essayer) | — |
 | L5 | Nest Hub : couper l'alarme du détecteur de fumée (Netatmo) en cuisinant | **Abandonné** (Alexandre, 19/10) | — |
 | L6 | Nest Hub : afficher ce qui passe (TV ou musique), quelle que soit la source | Faisable : un capteur « En ce moment » | 1 soirée |
-| L7 | Nest Hub : changer le contenu sans changer de dashboard | **Fait le 19/10** (à voir sur le Hub) | — |
+| L7 | Nest Hub : changer le contenu sans changer de dashboard | **Fait et validé sur le Hub le 19/10** | — |
 
 ## L1 — Concerts et spectacles
 
@@ -220,8 +220,8 @@ d'Alexandre).
 quatre pages construites une fois et basculées par une classe (1 ms mesuré sur un banc avec faux `hass`) : Accueil
 (l'ancienne vue légère), Maison (lumières en tuiles, volets), Musique (lecteur en grand, stations), Aiguillage (tâches
 du jour et en retard, coche avec Annuler). Onglets de 52 px en bas, icônes en SVG intégrés ; retour à l'Accueil après
-2 min. Plus de bascule de vue par l'heure (fini le rechargement Cast). Capture HA 1024 × 600 vérifiée. Reste : photo
-du Hub (fluidité, lisibilité des onglets).
+2 min. Plus de bascule de vue par l'heure (fini le rechargement Cast). Capture HA 1024 × 600 vérifiée. Vu sur le Hub par
+Alexandre le 19/10 vers 21 h 55 (photo de l'Accueil, pages essayées) : « nickel ».
 
 ## Ordre proposé
 
