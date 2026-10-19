@@ -13,6 +13,7 @@
 from datetime import UTC, date, datetime
 import json
 import os
+import secrets
 import threading
 import time
 from pathlib import Path
@@ -24,6 +25,7 @@ import jwt
 from appdaemon.plugins.hass import Hass
 
 import aiguillage_actions
+import aiguillage_agenda
 import aiguillage_spotify
 import aiguillage_tmdb
 import aiguillage_tri
@@ -318,6 +320,30 @@ class RelanceVigie(Hass):
             return None
         return aiguillage_spotify.Client(ids)
 
+    def _publier_agenda(self, records):
+        """Agenda « Sorties » (iCalendar) dans le dossier web de HA, derrière une clé secrète créée une fois
+        (`/config/aiguillage_agenda_token`, jamais dans un dépôt) : Google Agenda et le Calendrier d'Apple s'y
+        abonnent. Réécrit seulement si une sortie a changé."""
+        try:
+            jeton_path = Path(self.args.get("agenda_token_file", "/config/aiguillage_agenda_token"))
+            if not jeton_path.exists():
+                jeton_path.write_text(secrets.token_urlsafe(24))
+                self.log("Agenda : clé de l'abonnement créée")
+            jeton = jeton_path.read_text().strip()
+            dossier = Path(self.args.get("agenda_dir", "/homeassistant/www/aiguillage")) / jeton
+            fichier = dossier / "sorties.ics"
+            texte = aiguillage_agenda.ics(records, datetime.now(UTC))
+            ancien = fichier.read_text() if fichier.exists() else ""
+            if aiguillage_agenda.sans_horodatage(ancien) == aiguillage_agenda.sans_horodatage(texte):
+                return
+            dossier.mkdir(parents=True, exist_ok=True)
+            tmp = fichier.with_suffix(".tmp")
+            tmp.write_text(texte)
+            os.replace(tmp, fichier)
+            self.log(f"Agenda : {len(aiguillage_agenda.sorties(records))} sortie(s) publiée(s)")
+        except Exception as error:  # noqa: BLE001
+            self.log(f"Agenda : publication impossible : {error!r}", level="WARNING")
+
     def spotify_pass(self, **kwargs):
         """Passage des actions (P9-D2, D3) : recettes appliquées aux tâches, puis actions de HA dues exécutées
         (aujourd'hui `playlist_spotify`), puis copie de la playlist pour la TV. Une action faite ou en échec n'est
@@ -328,6 +354,7 @@ class RelanceVigie(Hass):
         except Exception as error:  # noqa: BLE001
             self.log(f"Actions : tâches illisibles : {error!r}", level="WARNING")
             return
+        self._publier_agenda(records)
         recettes = self._recettes(records)
         client = self._spotify_client()
         today = date.today()
