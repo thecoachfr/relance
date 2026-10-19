@@ -66,6 +66,8 @@ targets:
         NSSupportsLiveActivities: true
         # Ancien nom et variantes : Siri reconnaît toujours « nouvelle Relance ».
         NSCalendarsFullAccessUsageDescription: Aiguillage ajoute à ton agenda les tâches que tu choisis, et met l'événement à jour quand l'heure de la tâche change.
+        # Scanner un rendez-vous ou un document à joindre (VisionKit) : sans cette phrase, iOS ferme l'app (19/10).
+        NSCameraUsageDescription: Aiguillage utilise l'appareil photo pour scanner un rendez-vous ou un document à joindre à une tâche. Le texte est lu sur l'iPhone.
         NSLocationWhenInUseUsageDescription: Aiguillage te prévient quand tu passes près du lieu d'une tâche que tu as choisie.
         NSLocationAlwaysAndWhenInUseUsageDescription: Pour te prévenir quand tu passes près du lieu d'une tâche, même quand Aiguillage est fermée. Ta position reste sur l'iPhone.
         INAlternativeAppNames:

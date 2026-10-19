@@ -62,6 +62,8 @@
 	<false/>
 	<key>NSCalendarsFullAccessUsageDescription</key>
 	<string>Aiguillage ajoute à ton agenda les tâches que tu choisis, et met l'événement à jour quand l'heure de la tâche change.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Aiguillage utilise l'appareil photo pour scanner un rendez-vous ou un document à joindre à une tâche. Le texte est lu sur l'iPhone.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Pour te prévenir quand tu passes près du lieu d'une tâche, même quand Aiguillage est fermée. Ta position reste sur l'iPhone.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>

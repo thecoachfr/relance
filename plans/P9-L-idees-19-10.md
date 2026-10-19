@@ -145,6 +145,7 @@ n'arrive qu'**au passage du tri**, et l'appareil photo n'est pas proposé dans l
 - Saisie rapide : « Scanner un rendez-vous » (scanner de documents d'iOS) remplit la tâche de la même façon et joint
   le scan en PDF (mode HA). Le bouton n'apparaît pas dans le simulateur (pas d'appareil photo).
 - Le tri garde le dernier mot (catégorie, contact du mémo, titre).
+- Build 60 : le scan plantait (pas de `NSCameraUsageDescription` dans l'Info.plist, ajoutée le 19/10).
 - Reste : essai réel (capture d'un SMS Doctolib partagée, carton du dentiste scanné).
 
 ## L5 — Nest Hub : couper l'alarme du détecteur de fumée de l'entrée
