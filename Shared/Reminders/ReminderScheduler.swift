@@ -208,7 +208,7 @@ final class ReminderScheduler {
         case .askTime: Category.askTime
         case .departure: Category.departure
         // Avant l'heure : Itinéraire s'il y a une adresse, sinon Fait seulement.
-        case .advance, .toSeeOpening, .toSeeEnding, .toSeeLastWeekend:
+        case .advance, .toSeeOpening, .toSeeEnding, .toSeeLastWeekend, .eventWeek, .eventEve, .eventSoon:
             reminder.hasPlace ? Category.departure : Category.early
         case .suggestion:
             Category.suggestion(ToSee.Kind.allCases.first { $0.title == reminder.subtitle } ?? .read)

@@ -86,6 +86,8 @@ nonisolated enum ReminderKind: String, Sendable, Equatable {
     case toSeeOpening, toSeeEnding, toSeeLastWeekend
     /// Une envie proposée au bon moment (« Un moment pour lire ce soir ? »).
     case suggestion
+    /// Sortie réservée (P9-L1) : une semaine avant, la veille au soir, 2 h avant (avec le billet).
+    case eventWeek, eventEve, eventSoon
 }
 
 /// Relances des « À voir » : peu nombreuses, autour de la période (Réglages › Relances › À voir).
@@ -145,6 +147,10 @@ nonisolated struct ReminderPlanner: Sendable {
         var reminders: [PlannedReminder] = []
 
         for task in tasks {
+            if task.toSee?.kind.isDated == true {
+                reminders += eventReminders(task, now: now, horizon: horizon)
+                continue
+            }
             if let toSee = task.toSee, task.dueDay == nil {
                 reminders += toSeeReminders(task, toSee, now: now, horizon: horizon)
                 continue
@@ -182,7 +188,7 @@ nonisolated struct ReminderPlanner: Sendable {
         // et les résumés passent d'abord ; les relances (souvent répétées) remplissent la place qui reste.
         // Le plan est recalculé à chaque ouverture et chaque synchro, la suite sera programmée plus tard.
         if reminders.count > settings.maxRequests {
-            let essential: Set<ReminderKind> = [.departure, .advance, .due, .snoozed, .digest]
+            let essential: Set<ReminderKind> = [.departure, .advance, .due, .snoozed, .digest, .eventEve, .eventSoon]
             let kept = reminders.filter { essential.contains($0.kind) }.prefix(settings.maxRequests)
             let rest = reminders.filter { !essential.contains($0.kind) }.prefix(settings.maxRequests - kept.count)
             reminders = (Array(kept) + rest).sorted { $0.fireDate < $1.fireDate }
@@ -387,6 +393,32 @@ nonisolated struct ReminderPlanner: Sendable {
         }
     }
 
+    /// Sortie réservée (P9-L1) : une semaine avant (heure des envies), la veille au soir, puis 2 h avant avec la
+    /// photo du billet s'il y en a une (sans heure : le matin du jour). Ni relance ni retard : c'est un rendez-vous.
+    private func eventReminders(_ task: PlannableTask, now: Date, horizon: Date) -> [PlannedReminder] {
+        guard let dueDay = task.dueDay, let dayStart = calendar.date(from: dueDay) else { return [] }
+        let time = task.dueMinutes.map { " à " + Self.formatTime($0) } ?? ""
+        let day = dayStart.formatted(.dateTime.weekday(.wide).day().month(.wide))
+        var events: [(Date, ReminderKind, String)] = []
+        if let week = calendar.date(byAdding: .day, value: -7, to: dayStart) {
+            events.append((at(week, settings.toSee.time), .eventWeek, "Dans une semaine : \(day)\(time)."))
+        }
+        if let eve = calendar.date(byAdding: .day, value: -1, to: dayStart) {
+            events.append((at(eve, settings.evening), .eventEve, "Demain\(time)."))
+        }
+        if let minutes = task.dueMinutes {
+            events.append((at(dayStart, minutes - 120), .eventSoon, "Dans 2 h\(time) · ton billet est dans la fiche."))
+        } else {
+            events.append((at(dayStart, settings.morning), .eventSoon, "Aujourd'hui · ton billet est dans la fiche."))
+        }
+        return events.filter { $0.0 > now && $0.0 <= horizon && !isMuted($0.0, $0.1) }.map { date, kind, body in
+            PlannedReminder(id: "\(task.id)|\(kind.rawValue)|\(Int(date.timeIntervalSince1970))", taskID: task.id,
+                            fireDate: date, kind: kind, title: task.title, body: body,
+                            timeSensitive: kind == .eventSoon, badge: 0, subtitle: ToSee.Kind.event.title,
+                            hasPlace: task.hasPlace, imageID: kind == .eventSoon ? task.imageID : nil)
+        }
+    }
+
     /// La plage silencieuse coupe tout, sauf l'échéance elle-même et un report choisi explicitement.
     private func isMuted(_ date: Date, _ kind: ReminderKind) -> Bool {
         // L'heure prévue, le départ et un report choisi passent toujours : rater un départ, c'est rater le rendez-vous.
@@ -395,7 +427,7 @@ nonisolated struct ReminderPlanner: Sendable {
     }
 
     func isOverdue(_ task: PlannableTask, at date: Date) -> Bool {
-        guard let d = task.dueDay, let dayStart = calendar.date(from: d) else { return false }
+        guard task.toSee?.kind.isDated != true, let d = task.dueDay, let dayStart = calendar.date(from: d) else { return false }
         if let minutes = task.dueMinutes { return at(dayStart, minutes) < date }
         return calendar.date(byAdding: .day, value: 1, to: dayStart)! <= date
     }
@@ -416,7 +448,7 @@ nonisolated struct ReminderPlanner: Sendable {
         case .overdue, .snoozed:
             if isOverdue(task, at: date) { return lateText(task, at: date) + "." }
             return "Reporté · prévu\(time)."
-        case .digest, .toSeeOpening, .toSeeEnding, .toSeeLastWeekend, .suggestion: return ""
+        case .digest, .toSeeOpening, .toSeeEnding, .toSeeLastWeekend, .suggestion, .eventWeek, .eventEve, .eventSoon: return ""
         }
     }
 

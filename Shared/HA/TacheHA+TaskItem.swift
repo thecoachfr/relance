@@ -122,6 +122,7 @@ nonisolated extension ToSee.Kind {
     var haType: String {
         switch self {
         case .outing: "voir"
+        case .event: "sortie"
         case .restaurant: "resto"
         case .shop: "magasin"
         case .photoSpot: "spot_photo"
@@ -172,7 +173,7 @@ extension TaskItem {
             (envie.plateforme, envie.idTitre, envie.lien, envie.autres)
                 = (previous.plateforme, previous.idTitre, previous.lien, previous.autres)
         }
-        if envie.lien == nil, [.watch, .listen, .read].contains(toSee.kind), let url = ToSee.link(in: notes) {
+        if envie.lien == nil, [.watch, .listen, .read, .event].contains(toSee.kind), let url = ToSee.link(in: notes) {
             envie.lien = url.absoluteString
         }
         if let url = envie.lien.flatMap(URL.init(string:)) {

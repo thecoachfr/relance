@@ -48,9 +48,12 @@ def ref_lien(url):
     parts = [p for p in u.path.split("/") if p]
     if hote == "open.spotify.com":
         parts = [p for p in parts if not p.startswith("intl-")]
+        # Identifiant Spotify : 22 caractères. Au-delà, du texte collé au lien (19/10 : « …MFSz » + « b52c4f4a »,
+        # refusé par l'API en 400) : on garde les 22 premiers.
         if len(parts) >= 2 and parts[0] in SPOTIFY_TYPES and re.fullmatch(r"[A-Za-z0-9]+", parts[1]):
-            return {"type": "ecouter", "plateforme": "spotify", "id_titre": f"{parts[0]}:{parts[1]}",
-                    "lien": f"https://open.spotify.com/{parts[0]}/{parts[1]}"}
+            ident = parts[1][:22]
+            return {"type": "ecouter", "plateforme": "spotify", "id_titre": f"{parts[0]}:{ident}",
+                    "lien": f"https://open.spotify.com/{parts[0]}/{ident}"}
         return None
     if hote in ("youtube.com", "youtu.be", "music.youtube.com"):
         if hote == "youtu.be":

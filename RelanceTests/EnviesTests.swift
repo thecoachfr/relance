@@ -38,7 +38,7 @@ struct EnviesTests {
         #expect(ToSee(.photoSpot, note: "").lines == ["📷 Spot photo"])
         #expect(ToSee(.photoSpot, note: "brume\nmatin").lines == ["📷 Spot photo · brume matin"])
         #expect(ToSee(notes: "📷 Spot photo ·  ")?.note == nil)
-        #expect(ToSee.Kind.allCases.filter(\.isPlace) == [.outing, .restaurant, .shop, .photoSpot])
+        #expect(ToSee.Kind.allCases.filter(\.isPlace) == [.outing, .event, .restaurant, .shop, .photoSpot])
         #expect(ToSee.Kind.restaurant.doneTitle == "Testé" && ToSee.Kind.photoSpot.doneTitle == "Photographié")
         #expect(ToSee.kind(in: "le resto italien de la rue de Lyon à tester")?.kind == .restaurant)
     }

@@ -49,6 +49,8 @@ struct QuickAddSheet: View {
     }
 
     private var isToSee: Bool { ToSee(notes: notes) != nil }
+    /// Une envie sans échéance (toutes sauf la sortie réservée, P9-L1, qui garde sa date et son heure).
+    private var isUndated: Bool { ToSee(notes: notes).map { !$0.kind.isDated } ?? false }
     /// Type de l'envie en cours, ou celui de l'onglet.
     private var kind: ToSee.Kind {
         if let toSee = ToSee(notes: notes) { return toSee.kind }
@@ -95,7 +97,7 @@ struct QuickAddSheet: View {
                     }
                 }
                 ToSeeSection(notes: $notes, kind: kind) { day = nil; manual = true }
-                if !isToSee {
+                if !isUndated {
                 Section("Échéance") {
                     Picker("Jour", selection: dayChoice) {
                         Text("Aujourd'hui").tag(DayChoice.today)
@@ -221,13 +223,13 @@ struct QuickAddSheet: View {
             day = nil
         }
         // Envie : la période de la phrase remplit le début et la fin ; pas d'échéance à reconnaître.
-        guard !isToSee else {
+        guard !isUndated else {
             if !manualPriority { priority = TaskPriority.detect(in: text)?.priority ?? .normal }
             if let period { notes = ToSee.notes(notes, setting: period.toSee) }
             return
         }
         // Une période n'est pas une échéance (sinon « du 10/10 » devenait l'échéance et la suite était perdue).
-        if period != nil {
+        if period != nil, !isToSee {
             if !manualPriority { priority = TaskPriority.detect(in: text)?.priority ?? .normal }
             return
         }
@@ -242,8 +244,8 @@ struct QuickAddSheet: View {
     private var cleanTitle: String {
         var title = text
         if let spokenKind { title.removeSubrange(spokenKind.range) }
-        if isToSee, let period = ToSee.period(in: title) { title.removeSubrange(period.range) }
-        else if !manual, period == nil, let found = detected { title.removeSubrange(found.range) }
+        if isUndated, let period = ToSee.period(in: title) { title.removeSubrange(period.range) }
+        else if !manual, period == nil || isToSee, let found = detected { title.removeSubrange(found.range) }
         if !manualPriority { title = TaskPriority.removing(TaskPriority.detect(in: title), from: title) }
         return title.trimmingCharacters(in: .whitespacesAndNewlines)
     }
@@ -253,8 +255,8 @@ struct QuickAddSheet: View {
         let c = Calendar.current.dateComponents([.hour, .minute], from: time)
         // Sans date, une répétition n'a pas de point de départ : on la retire.
         let kept = day == nil ? Recurrence.notes(notes, setting: nil) : notes
-        let item = store.add(title: cleanTitle, day: isToSee ? nil : day,
-                             minutes: hasTime && !isToSee ? (c.hour! * 60 + c.minute!) : nil,
+        let item = store.add(title: cleanTitle, day: isUndated ? nil : day,
+                             minutes: hasTime && !isUndated && day != nil ? (c.hour! * 60 + c.minute!) : nil,
                              category: category, priority: priority, notes: kept)
         if avecListe, !isToSee {
             let maintenant = TacheHA.timestamp(.now)

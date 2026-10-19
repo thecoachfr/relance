@@ -25,11 +25,11 @@ CATEGORIES = ("Administratif", "Maison", "Santé", "Achats", "Travail", "Famille
 TAGS_DE_BASE = ("SCI", "Micro", "Photo", "Syndic", "Travaux", "Spectacle")
 PLATEFORMES = ("netflix", "disney", "apple_tv", "canal", "prime", "youtube", "france_tv", "arte", "max",
                "spotify", "deezer", "apple_music")
-TYPES_ENVIE = ("voir", "resto", "magasin", "spot_photo", "lire", "ecouter", "regarder")
+TYPES_ENVIE = ("voir", "sortie", "resto", "magasin", "spot_photo", "lire", "ecouter", "regarder")
 RAYONS = ("fruits_legumes", "frais", "epicerie", "boissons", "hygiene", "maison", "placard", "autre")
 # Lignes que le tri peut ajouter à la fin des notes, dans l'ordre où il les ajoute.
 LIGNE_LIEU, LIGNE_A_PRENDRE = "📍", "🎒"
-LIGNES_ENVIE = {"👀": "voir", "🍽": "resto", "🛍": "magasin", "📷": "spot_photo", "📖": "lire", "🎧": "ecouter",
+LIGNES_ENVIE = {"👀": "voir", "🎟": "sortie", "🍽": "resto", "🛍": "magasin", "📷": "spot_photo", "📖": "lire", "🎧": "ecouter",
                 "🎬": "regarder"}
 ORDRE_FIN = [LIGNE_LIEU, LIGNE_A_PRENDRE, *LIGNES_ENVIE, "🗓", "🔄", "💡", "➕"]
 DICTE = "🎙 Dicté : "
@@ -103,6 +103,10 @@ def vue(valeur):
     l'objet lu)."""
     garder = ("titre", "notes", "jour", "heure", "duree", "categorie", "tags", "priorite", "lieu", "envie")
     out = {k: valeur[k] for k in garder if valeur.get(k) not in (None, "", [])}
+    # Pièces jointes (P9-K) : nom et texte lu sur l'appareil (billet, facture, convocation).
+    pieces = [{k: p[k] for k in ("nom", "texte") if p.get(k)} for p in valeur.get("pieces") or [] if isinstance(p, dict)]
+    if any(p.get("texte") for p in pieces):
+        out["pieces"] = pieces
     liste = valeur.get("liste")
     if isinstance(liste, dict):
         out["liste"] = {
@@ -323,8 +327,9 @@ def appliquer(valeur, ch, aujourdhui, maintenant, tags_ok):
         v2 = True
 
     lignes += [ajout[p] for p in ORDRE_FIN if p in ajout]
-    # Une envie n'a ni jour ni heure (règle K) : une échéance fixée dans ce passage est retirée.
-    if t.get("envie") and absent_avant(valeur, "jour") and t.get("jour"):
+    # Une envie n'a ni jour ni heure (règle K) : une échéance fixée dans ce passage est retirée. Sauf la sortie
+    # réservée (règle T, P9-L1), datée par son échéance.
+    if t.get("envie") and t["envie"].get("type") != "sortie" and absent_avant(valeur, "jour") and t.get("jour"):
         refus.append("jour sur une envie")
         t.pop("jour", None)
         t.pop("heure", None)

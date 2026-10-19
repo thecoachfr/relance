@@ -11,6 +11,7 @@ TODAY = date(2026, 10, 16)
 
 
 def test_liens():
+    assert s.spotify_ref("https://open.spotify.com/track/4W6n5MoDbQmPhaZHx4MFSzb52c4f4a") == ("track", "4W6n5MoDbQmPhaZHx4MFSz")
     assert s.spotify_ref("https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC?si=x") == ("track", "4uLU6hMCjMI75M1A2tKUQC")
     assert s.spotify_ref("vu ici https://open.spotify.com/intl-fr/album/1ATL5GLyefJaxhQzSPVrLX") == ("album", "1ATL5GLyefJaxhQzSPVrLX")
     assert s.spotify_ref("https://open.spotify.com/episode/abc123") == ("episode", "abc123")

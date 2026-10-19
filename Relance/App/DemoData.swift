@@ -36,6 +36,12 @@ enum DemoData {
         let expo = store.add(title: "Voir l'expo photo de la MEP", day: nil, minutes: nil, category: "Perso")
         expo.notes = "📍 Maison européenne de la photographie · 5 rue de Fourcy, 75004 Paris\n"
             + ToSee(start: day(-30), end: day(19)).lines.joined(separator: "\n")
+        // Sorties réservées (P9-L1) : une à venir, une passée (attend « Vu »).
+        store.add(title: "Concert de Feist à l'Olympia", day: day(4), minutes: 20 * 60, category: "Perso",
+                  notes: "📍 Olympia · 28 boulevard des Capucines, 75009 Paris\nhttps://www.olympiahall.com/\n"
+                      + ToSee(.event).lines.joined(separator: "\n"))
+        store.add(title: "Spectacle au Théâtre de la Ville", day: day(-2), minutes: 19 * 60 + 30, category: "Perso",
+                  notes: ToSee(.event).lines.joined(separator: "\n"))
         store.add(title: "Perfect Days", day: nil, minutes: nil, category: "Perso",
                   notes: "📩 Message partagé\nhttps://www.youtube.com/watch?v=exemple\n" + ToSee(.watch).lines.joined(separator: "\n"))
         store.add(title: "Le film de Kore-eda au cinéma", day: nil, minutes: nil, category: "Perso",

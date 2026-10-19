@@ -26,7 +26,8 @@ DESCRIPTION = "Envies « À écouter » d'Aiguillage, ajoutées par la vigie."
 # Un échec (lien mort, réseau) est retenté le lendemain, pas à chaque modification.
 RETRY_DAYS = 1
 
-LIEN = re.compile(r"https?://open\.spotify\.com/(?:intl-[a-z-]+/)?(track|album|episode|playlist|artist|show)/([A-Za-z0-9]+)")
+# Identifiant : 22 caractères (du texte collé derrière est ignoré, cas du 19/10).
+LIEN = re.compile(r"https?://open\.spotify\.com/(?:intl-[a-z-]+/)?(track|album|episode|playlist|artist|show)/([A-Za-z0-9]{1,22})")
 
 
 def spotify_ref(texte):

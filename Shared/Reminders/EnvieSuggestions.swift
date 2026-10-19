@@ -35,7 +35,7 @@ nonisolated struct EnvieSuggestions: Codable, Equatable, Sendable {
             case .read: read
             case .listen: listen
             case .watch: watch
-            case .outing, .restaurant, .shop, .photoSpot: nil
+            case .outing, .event, .restaurant, .shop, .photoSpot: nil
             }
         }
         set {
@@ -44,7 +44,7 @@ nonisolated struct EnvieSuggestions: Codable, Equatable, Sendable {
             case .read: read = newValue
             case .listen: listen = newValue
             case .watch: watch = newValue
-            case .outing, .restaurant, .shop, .photoSpot: break
+            case .outing, .event, .restaurant, .shop, .photoSpot: break
             }
         }
     }
@@ -57,7 +57,7 @@ nonisolated struct EnvieSuggestions: Codable, Equatable, Sendable {
         case .read: "Un moment pour lire \(moment) ?"
         case .listen: "À écouter \(moment) ?"
         case .watch: "Envie de regarder ça \(moment) ?"
-        case .outing, .restaurant, .shop, .photoSpot: "À voir ?"
+        case .outing, .event, .restaurant, .shop, .photoSpot: "À voir ?"
         }
     }
 }

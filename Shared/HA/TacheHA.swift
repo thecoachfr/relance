@@ -25,7 +25,7 @@ nonisolated struct TacheHA: Codable, Equatable, Sendable {
     /// copie. Les champs que l'app ne connaît pas (`tmdb`, `dispo_fr`, `dispo_maj`, écrits par la vigie en B3)
     /// sont gardés tels quels.
     struct Envie: Codable, Equatable, Sendable {
-        /// `voir`, `resto`, `magasin`, `spot_photo`, `lire`, `ecouter`, `regarder`.
+        /// `voir`, `sortie` (P9-L1, datée par l'échéance), `resto`, `magasin`, `spot_photo`, `lire`, `ecouter`, `regarder`.
         var type: String
         var note: String?
         /// `netflix`, `apple_tv`, `disney`, `canal`, `prime`, `youtube`, `france_tv`, `arte`, `spotify`…

@@ -1,11 +1,14 @@
+import QuickLook
 import SwiftData
 import SwiftUI
 
 extension TaskStore {
     /// Range la tâche dans les envies (sans échéance), ou l'en sort.
     @MainActor func setToSee(_ item: TaskItem, _ toSee: ToSee?) {
+        // Une sortie réservée garde son échéance (sa date et son heure).
+        let keepsDue = toSee == nil || toSee?.kind.isDated == true
         update(item, title: item.title, notes: ToSee.notes(item.notes, setting: toSee),
-               day: toSee == nil ? item.dueDay : nil, minutes: toSee == nil ? item.dueMinutes : nil)
+               day: keepsDue ? item.dueDay : nil, minutes: keepsDue ? item.dueMinutes : nil)
     }
 
     /// Change le type d'une envie (une sortie devient « À regarder »…), sans toucher à sa période.
@@ -24,8 +27,12 @@ struct ToSeeSection: View {
     var availability: Availability?
     /// Type proposé quand on active l'envie (celui du filtre d'où vient la saisie).
     var kind: ToSee.Kind = .outing
+    /// Pièces jointes de la tâche : les billets d'une sortie (P9-L1).
+    var pieces: [TacheHA.Piece] = []
     /// Passer en envie retire l'échéance du formulaire.
     var onEnable: () -> Void = {}
+    @State private var billet: URL?
+    @State private var billetAbsent = false
 
     private var toSee: ToSee? { ToSee(notes: notes) }
 
@@ -35,7 +42,7 @@ struct ToSeeSection: View {
                 notes = ToSee.notes(notes, setting: on ? ToSee(kind) : nil)
                 if on { onEnable() }
             })) {
-                Label("Envie, sans échéance", systemImage: "bookmark")
+                Label(toSee?.kind.isDated == true ? "Envie" : "Envie, sans échéance", systemImage: "bookmark")
             }
             if let toSee {
                 // Sept types : un menu plutôt qu'un sélecteur segmenté (illisible au-delà de cinq sur iPhone).
@@ -48,8 +55,18 @@ struct ToSeeSection: View {
                         get: { toSee.note ?? "" },
                         set: { var t = toSee; t.note = $0.isEmpty ? nil : $0; set(t) }))
                 }
-                dateRow("Début", date: toSee.start) { var t = toSee; t.start = $0; set(t) }
-                dateRow("Fin", date: toSee.end) { var t = toSee; t.end = $0; set(t) }
+                if toSee.kind.isDated {
+                    // La date et l'heure sont celles de l'échéance ; le billet, la première pièce jointe.
+                    if let piece = pieces.first(where: { $0.estPDF || $0.estImage }) ?? pieces.first {
+                        Button("Ouvrir le billet", systemImage: "ticket") { ouvrir(piece) }
+                    }
+                    if billetAbsent {
+                        Text("Billet pas encore disponible sur cet appareil.").font(.footnote).foregroundStyle(.secondary)
+                    }
+                } else {
+                    dateRow("Début", date: toSee.start) { var t = toSee; t.start = $0; set(t) }
+                    dateRow("Fin", date: toSee.end) { var t = toSee; t.end = $0; set(t) }
+                }
                 if let link = ToSee.link(in: notes) {
                     Link(destination: link) {
                         Label("Ouvrir " + (link.host()?.replacingOccurrences(of: "www.", with: "") ?? "le lien"),
@@ -65,7 +82,9 @@ struct ToSeeSection: View {
             }
         } footer: {
             if let toSee {
-                if toSee.kind.isPlace && toSee.kind != .outing && TaskContact(notes: notes) == nil {
+                if toSee.kind.isDated {
+                    Text("Date et heure dans Échéance, billet en pièce jointe (PDF, capture) ou en lien dans les notes. Rappel une semaine avant, la veille au soir et 2 h avant.")
+                } else if toSee.kind.isPlace && toSee.kind != .outing && TaskContact(notes: notes) == nil {
                     Text("Ajoute le lieu (section Lieu) pour le retrouver sur la carte et être prévenu en passant à côté.")
                 } else if toSee.end == nil && toSee.start == nil {
                     Text(toSee.kind == .outing
@@ -78,9 +97,17 @@ struct ToSeeSection: View {
                 Text("Pour une sortie, un resto, un magasin, un spot photo, un livre, un album, un film : gardé à part, sans relance chaque jour.")
             }
         }
+        .quickLookPreview($billet)
     }
 
     private func set(_ toSee: ToSee) { notes = ToSee.notes(notes, setting: toSee) }
+
+    private func ouvrir(_ piece: TacheHA.Piece) {
+        Task {
+            billet = await PiecesJointes.fichier(piece)
+            billetAbsent = billet == nil
+        }
+    }
 
     private func dateRow(_ title: String, date: Date?, change: @escaping (Date?) -> Void) -> some View {
         LabeledContent(title) {
@@ -120,8 +147,14 @@ struct ToSeeListView: View {
         guard let kind else {
             // Tout : un groupe par type, la fin la plus proche d'abord, puis les plus récentes.
             return ToSee.Kind.allCases.map { k in
-                (k.title, seen.filter { $0.1.kind == k && !$0.1.isOver(now: now) }.sorted(by: order).map(\.0))
+                k.isDated ? (k.title, Self.events(seen.map(\.0), now: now).upcoming)
+                    : (k.title, seen.filter { $0.1.kind == k && !$0.1.isOver(now: now) }.sorted(by: order).map(\.0))
             }.filter { !$0.1.isEmpty }
+        }
+        if kind.isDated {
+            let events = Self.events(seen.map(\.0), now: now)
+            return [("À venir", events.upcoming), ("Date à préciser", events.undated), ("Passées", events.past)]
+                .filter { !$0.1.isEmpty }
         }
         let today = Calendar.current.startOfDay(for: now)
         let mine = seen.filter { $0.1.kind == kind }
@@ -135,6 +168,16 @@ struct ToSeeListView: View {
         return [("En ce moment", current.map(\.0)), ("Bientôt", upcoming.map(\.0)),
                 (kind == .outing ? "Sans date" : "Quand tu veux", open.map(\.0)), ("Terminé", over.map(\.0))]
             .filter { !$0.1.isEmpty }
+    }
+
+    /// Sorties réservées (P9-L1) : à venir par date (la plus proche d'abord), sans date, passées (la plus récente
+    /// d'abord, en attendant « Vu »).
+    static func events(_ items: [TaskItem], now: Date = .now) -> (upcoming: [TaskItem], undated: [TaskItem], past: [TaskItem]) {
+        let mine = items.filter { $0.toSee?.kind.isDated == true }
+        let dated = mine.compactMap { item in item.dueInstant().map { (item, $0) } }
+        return (dated.filter { $0.1 >= now }.sorted { $0.1 < $1.1 }.map(\.0),
+                mine.filter { $0.dueDay == nil }.sorted { $0.updatedAt > $1.updatedAt },
+                dated.filter { $0.1 < now }.sorted { $0.1 > $1.1 }.map(\.0))
     }
 
     private static func order(_ a: (TaskItem, ToSee), _ b: (TaskItem, ToSee)) -> Bool {
@@ -227,6 +270,9 @@ struct ToSeeListView: View {
         case .outing?:
             ContentUnavailableView("Rien à voir pour l'instant", systemImage: ToSee.Kind.outing.symbol,
                                    description: Text("Une expo, un festival, un lieu à découvrir."))
+        case .event?:
+            ContentUnavailableView("Aucune sortie prévue", systemImage: ToSee.Kind.event.symbol,
+                                   description: Text("Un concert, un spectacle réservé : partage le billet (PDF, capture) vers Aiguillage, ou touche +."))
         case .read?:
             ContentUnavailableView("Rien à lire pour l'instant", systemImage: ToSee.Kind.read.symbol,
                                    description: Text("Un livre, un article : partage-le depuis Safari ou Livres."))

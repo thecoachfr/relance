@@ -40,8 +40,8 @@ struct TaskDetailView: View {
             }
             ProposalSection(item: item, notes: $notes)
             ContactSection(notes: $notes, searching: $searchingPlace, memoSource: (category, tags), title: title)
-            // Un « À voir » n'a pas d'échéance : ni date, ni agenda.
-            if ToSee(notes: notes) == nil {
+            // Une envie n'a pas d'échéance (ni date, ni agenda), sauf une sortie réservée.
+            if ToSee(notes: notes)?.kind.isDated != false {
                 Section("Échéance") {
                     #if os(macOS)
                     // Mac : l'interrupteur et la valeur sur la même ligne, comme dans Rappels.
@@ -77,8 +77,8 @@ struct TaskDetailView: View {
             }
             ListeSection(item: item)
             PiecesSection(item: item)
-            ToSeeSection(notes: $notes, availability: item.availability) { hasDay = false }
-            if ToSee(notes: notes) == nil { CalendarSection(item: item) }
+            ToSeeSection(notes: $notes, availability: item.availability, pieces: item.pieces) { hasDay = false }
+            if ToSee(notes: notes)?.kind.isDated != false { CalendarSection(item: item) }
             Section {
                 PriorityPicker(priority: $priority)
                 TaskRemindersRow(reminders: $reminders, priority: priority)
@@ -140,6 +140,8 @@ struct TaskDetailView: View {
         // Lieu ajouté, changé ou retiré (bouton) : enregistré tout de suite, comme les autres réglages.
         .onChange(of: TaskContact(notes: notes)) { save() }
         .onChange(of: NearbyReminder.choice(notes)) { save() }
+        // Une sortie devenue une autre envie perd son échéance (les autres envies n'en ont pas).
+        .onChange(of: ToSee(notes: notes)?.kind) { _, kind in if let kind, !kind.isDated { hasDay = false } }
         .onChange(of: ToSee(notes: notes)) { save() }
         .onChange(of: Recurrence(notes: notes)) { save() }
         // Texte : enregistré à la sortie du champ ou de la tâche, pas à chaque frappe (chaque enregistrement synchronise).

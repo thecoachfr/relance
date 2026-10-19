@@ -29,8 +29,8 @@ struct TaskEditor: View {
                 }
                 ProposalSection(item: item, notes: $notes)
                 ContactSection(notes: $notes, searching: $searchingPlace, memoSource: (category, tags), title: title)
-                // Un « À voir » n'a pas d'échéance : ni date, ni agenda.
-                if ToSee(notes: notes) == nil {
+                // Une envie n'a pas d'échéance (ni date, ni agenda), sauf une sortie réservée.
+                if ToSee(notes: notes)?.kind.isDated != false {
                     Section("Échéance") {
                         Toggle("Date", isOn: $hasDay)
                         if hasDay {
@@ -46,8 +46,8 @@ struct TaskEditor: View {
                 }
                 ListeSection(item: item)
                 PiecesSection(item: item)
-                ToSeeSection(notes: $notes, availability: item.availability) { hasDay = false }
-                if ToSee(notes: notes) == nil { CalendarSection(item: item) }
+                ToSeeSection(notes: $notes, availability: item.availability, pieces: item.pieces) { hasDay = false }
+                if ToSee(notes: notes)?.kind.isDated != false { CalendarSection(item: item) }
                 Section {
                     PriorityPicker(priority: $priority)
                     TaskRemindersRow(reminders: $reminders, priority: priority)
@@ -95,6 +95,7 @@ struct TaskEditor: View {
             // et rechargeait la tâche enregistrée, ce qui effaçait le choix pas encore validé.
             .onAppear { if base == nil { load() } }
             .placeSearch(isPresented: $searchingPlace, notes: $notes)
+            .onChange(of: ToSee(notes: notes)?.kind) { _, kind in if let kind, !kind.isDated { hasDay = false } }
         }
     }
 

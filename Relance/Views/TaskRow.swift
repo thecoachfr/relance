@@ -154,6 +154,11 @@ struct TaskRow: View {
         guard let due = item.dueInstant() else { return nil }
         var text = DueText.long(due: due, hasTime: item.dueMinutes != nil, now: now)
         if item.isOverdue(now: now) { return (text, "clock.fill", .red) }
+        // Sortie passée (P9-L1) : pas de retard, la date seulement, en attendant « Vu ».
+        if item.toSee?.kind.isDated == true, due < now {
+            return ("Passée · " + due.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated)),
+                    ToSee.Kind.event.symbol, .secondary)
+        }
         // Avec une durée (P9-H1) : la plage, « Aujourd'hui à 14:00 – 14:30 ».
         if let duree = item.dureeMinutes, item.dueMinutes != nil {
             text += " – " + DueText.clock(due.addingTimeInterval(TimeInterval(duree * 60)))

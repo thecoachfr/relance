@@ -188,6 +188,16 @@ def test_envie():
     assert nv5 is None and refus5
 
 
+def test_sortie():
+    # Règle T (P9-L1) : un billet devient une sortie datée ; le texte des pièces est montré au modèle.
+    v = {"titre": "Billet", "fait": False, "pieces": [{"id": "x", "nom": "billet.pdf", "texte": "Feist · Olympia · 23/10 20h"}]}
+    assert t.vue(v)["pieces"] == [{"nom": "billet.pdf", "texte": "Feist · Olympia · 23/10 20h"}]
+    nv, refus = t.appliquer(v, ch(jour="2026-10-23", heure="20:00", notes_a_la_fin=["🎟 Sortie"],
+                                  envie={"type": "sortie", "note": None, "plateforme": None}), AUJ, NOW, TAGS)
+    assert refus == [] and nv["jour"] == "2026-10-23" and nv["heure"] == "20:00"
+    assert nv["envie"] == {"type": "sortie"} and nv["notes"].endswith("🎟 Sortie")
+
+
 def test_message_partage():
     v = {"titre": "Message de Paul", "fait": False, "notes": t.PARTAGE_A_REVOIR + "\nTu peux renvoyer le devis ?"}
     nv, refus = t.appliquer(v, ch(titre="renvoyer le devis à Paul", partage_revu=True), AUJ, NOW, TAGS)

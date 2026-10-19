@@ -64,7 +64,7 @@ Les tâches sont dans l'espace `aiguillage` de `donnees_apps` (`Shared/HA/TacheH
 
 - `lieu.telephone` : ajouté en A1 (16/10), le téléphone de la ligne `📍`, pour ne pas le perdre quand le champ fait foi.
 - `lieu.source` : `plans`, `google`, `photo`, `gps`, `memo` (ajouté par la routine) ou `saisie`. `adresse` devient facultative : une photo ou un point GPS n'en a pas forcément.
-- `envie.type` : `voir`, `lire`, `ecouter`, `regarder` (existants) et `resto`, `magasin`, `spot_photo` (nouveaux, plan A). Champs `plateforme`, `id_titre`, `tmdb`, `dispo_fr`, `dispo_maj` : plan B.
+- `envie.type` : `voir`, `lire`, `ecouter`, `regarder` (existants) et `resto`, `magasin`, `spot_photo` (nouveaux, plan A), `sortie` (plan L1, 19/10 : sortie réservée, datée par `jour` et `heure` de la tâche, ligne `🎟 Sortie`). Champs `plateforme`, `id_titre`, `tmdb`, `dispo_fr`, `dispo_maj` : plan B.
 - `envie` (B1, 16/10) : l'app garde tels quels les champs qu'elle ne connaît pas (`tmdb`, `dispo_fr`, `dispo_maj`…), pour que la vigie puisse les écrire sans qu'une réécriture de l'app les efface.
 - `actions` : plan D (B ajoute seulement l'action `sur_tv` déclenchée au toucher).
 - `pieces` : plan K (18/10), facultatif : `[{id (SHA-256 du fichier rangé dans HA), nom, type, taille, ajoute_le, source, texte (1 500 caractères lus sur l'appareil), drive?}]` ; copie `📎 N pièces jointes` dans les notes.

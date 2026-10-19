@@ -5,7 +5,7 @@ ce qui existe déjà, ce qu'on peut faire, le coût et les questions à trancher
 
 | | Idée | Verdict | Coût |
 |---|---|---|---|
-| L1 | Concerts et spectacles (date, billets) | Faisable, s'appuie sur Envies et P9-K | 2 soirées |
+| L1 | Concerts et spectacles (date, billets) | **Fait le 19/10** (build à essayer) | — |
 | L2 | App TV : « Écouté » sur chaque morceau de la playlist | **Fait et essayé le 19/10** | option automatique : 1 soirée |
 | L3 | Tour d'UX sur le placement des boutons de la fiche | Utile : les actions sont tout en bas | 1 soirée d'audit + 1–2 de reprise |
 | L4 | Reconnaissance de texte (rendez-vous chez le dentiste…) | Existe en partie (partage de capture) ; à rendre immédiat | 1–2 soirées |
@@ -38,9 +38,22 @@ billets) et elle n'a pas sa liste à elle.
 - Plus tard : la routine cherche dans Gmail les confirmations de billetterie (Fnac, Ticketmaster, See Tickets…) ;
   peu utile si les billets arrivent surtout par les apps.
 
-**Questions** : (1) les billets arrivent-ils surtout en PDF, dans Wallet ou dans les apps des billetteries ? (2) une
-sortie du jour sur le Nest Hub, oui ou non ? (3) « Sortie » comme nouveau type, ou un drapeau « réservé » sur
-`👀 À voir` (moins de code, mais deux idées sous un même type) ?
+**Choix d'Alexandre (19/10)** : nouveau type `🎟 Sortie` ; billets en PDF, dans les apps de billetterie (lien) ou en
+capture ; sortie du jour sur le Nest Hub ; rappels une semaine avant, la veille au soir et 2 h avant.
+
+**Fait le 19/10** :
+- App : type `ToSee.Kind.event` (« 🎟 Sortie », `envie.type: sortie`), seule envie qui garde l'échéance de la tâche
+  (`isDated`) : fiche avec Échéance et Agenda, « Ouvrir le billet » (première pièce jointe, Quick Look) et le lien des
+  notes ; saisie rapide avec date et heure. Envies › Sorties : À venir (par date), Date à préciser, Passées (« Passée ·
+  sam. 17 oct. », jamais « en retard ») ; une sortie passée quitte À faire et n'est pas comptée en retard.
+- Rappels : `eventWeek` (J−7 à l'heure des envies), `eventEve` (veille à l'heure du soir), `eventSoon` (2 h avant, avec
+  l'image jointe ; sans heure, le matin du jour), ni relance ni retard. Tests `SortieTests` (183 tests verts).
+- Nest Hub : les deux cartes montrent une sortie le jour même seulement, jamais en retard (`?v=5d63e00e`,
+  `?v=a16c16ed`).
+- Tri : règle T (billet ou réservation datée, y compris le texte d'une pièce jointe → `🎟 Sortie`, `envie.type:
+  sortie`, `jour` et `heure` de l'événement, salle, titre « Artiste à salle », tag Spectacle) dans la routine (relue
+  identique) et dans la consigne du tri par API ; `aiguillage_tri.py` accepte `sortie` et montre `pieces` (nom, texte).
+- Reste : essai réel (partager un billet PDF, laisser le tri le ranger, recevoir les rappels, voir le Hub le jour J).
 
 ## L2 — App TV : marquer écoutés les titres de la playlist
 

@@ -259,6 +259,7 @@ extension ToSee.Kind {
     var mapColor: Color {
         switch self {
         case .outing: .purple
+        case .event: .pink
         case .restaurant: .orange
         case .shop: .teal
         case .photoSpot: .indigo

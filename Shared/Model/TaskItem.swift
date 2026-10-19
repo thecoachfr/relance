@@ -71,8 +71,9 @@ final class TaskItem {
         return calendar.date(byAdding: .day, value: 1, to: dueDay)
     }
 
+    /// Une sortie passée n'est pas en retard : elle attend « Vu » dans Envies (Passées).
     func isOverdue(now: Date = .now, calendar: Calendar = .current) -> Bool {
-        guard !isCompleted, let due = dueInstant(calendar: calendar) else { return false }
+        guard !isCompleted, toSee?.kind.isDated != true, let due = dueInstant(calendar: calendar) else { return false }
         return due < now
     }
 

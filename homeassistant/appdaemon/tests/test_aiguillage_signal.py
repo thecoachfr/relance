@@ -12,6 +12,9 @@ SOURCES = {YOANN: "Yoann"}
 
 
 def test_liens_spotify():
+    # Texte collé derrière l'identifiant (19/10) : les 22 premiers caractères.
+    assert s.ref_lien("https://open.spotify.com/track/4W6n5MoDbQmPhaZHx4MFSzb52c4f4a")["lien"] == \
+        "https://open.spotify.com/track/4W6n5MoDbQmPhaZHx4MFSz"
     assert s.ref_lien("https://open.spotify.com/track/5rSkTcePXM5wBURKo1tj56?si=abc") == {
         "type": "ecouter", "plateforme": "spotify", "id_titre": "track:5rSkTcePXM5wBURKo1tj56",
         "lien": "https://open.spotify.com/track/5rSkTcePXM5wBURKo1tj56"}

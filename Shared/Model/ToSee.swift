@@ -6,17 +6,20 @@ import Foundation
 /// « 🍽 À tester », « 🛍 Magasin », « 📷 Spot photo », « 📖 À lire », « 🎧 À écouter », « 🎬 À regarder »), suivi
 /// d'une note facultative (« 📷 Spot photo · au couchant »), et « 🗓 Du 10/09/2026 au 31/01/2027 »
 /// (ou « 🗓 Jusqu'au … », « 🗓 À partir du … »).
+/// Exception, la sortie réservée (« 🎟 Sortie » : concert, spectacle, P9-L1) : elle garde l'échéance de la tâche,
+/// qui est sa date et son heure (`isDated`), et ses billets en pièces jointes ou en lien.
 /// Lignes lues aussi par la routine de tri et l'écran du Nest Hub : garder les marqueurs.
 nonisolated struct ToSee: Equatable, Sendable {
     enum Kind: String, CaseIterable, Identifiable, Sendable {
         // Les envies qui se passent quelque part d'abord (carte), puis les autres.
-        case outing, restaurant, shop, photoSpot, read, listen, watch
+        case outing, event, restaurant, shop, photoSpot, read, listen, watch
 
         var id: Self { self }
 
         var marker: String {
             switch self {
             case .outing: "👀 À voir"
+            case .event: "🎟 Sortie"
             case .restaurant: "🍽 À tester"
             case .shop: "🛍 Magasin"
             case .photoSpot: "📷 Spot photo"
@@ -29,6 +32,7 @@ nonisolated struct ToSee: Equatable, Sendable {
         /// « À voir », « Restos à tester »… : titre d'un groupe, d'un choix de type.
         var title: String {
             switch self {
+            case .event: "Sorties"
             case .restaurant: "Restos à tester"
             case .shop: "Magasins"
             case .photoSpot: "Spots photo"
@@ -40,6 +44,7 @@ nonisolated struct ToSee: Equatable, Sendable {
         var shortTitle: String {
             switch self {
             case .outing: "Voir"
+            case .event: "Sorties"
             case .restaurant: "Restos"
             case .shop: "Magasins"
             case .photoSpot: "Spots"
@@ -52,6 +57,7 @@ nonisolated struct ToSee: Equatable, Sendable {
         var symbol: String {
             switch self {
             case .outing: "ticket"
+            case .event: "theatermasks"
             case .restaurant: "fork.knife"
             case .shop: "bag"
             case .photoSpot: "camera"
@@ -62,12 +68,15 @@ nonisolated struct ToSee: Equatable, Sendable {
         }
 
         /// Une envie qui a sa place sur la carte (avec un lieu).
-        var isPlace: Bool { [.outing, .restaurant, .shop, .photoSpot].contains(self) }
+        var isPlace: Bool { [.outing, .event, .restaurant, .shop, .photoSpot].contains(self) }
+
+        /// Une sortie réservée garde l'échéance de la tâche (sa date et son heure) ; les autres envies n'en ont pas.
+        var isDated: Bool { self == .event }
 
         /// Le bouton « Fait » : « Vu », « Lu », « Écouté », « Testé », « Photographié ».
         var doneTitle: String {
             switch self {
-            case .outing, .watch, .shop: "Vu"
+            case .outing, .event, .watch, .shop: "Vu"
             case .restaurant: "Testé"
             case .photoSpot: "Photographié"
             case .read: "Lu"
@@ -79,6 +88,7 @@ nonisolated struct ToSee: Equatable, Sendable {
         var doneSection: String {
             switch self {
             case .outing, .watch, .shop: "Déjà vu"
+            case .event: "Déjà vues"
             case .restaurant: "Déjà testé"
             case .photoSpot: "Déjà photographié"
             case .read: "Déjà lu"
@@ -90,6 +100,7 @@ nonisolated struct ToSee: Equatable, Sendable {
         var example: String {
             switch self {
             case .outing: "Expo photo à la MEP"
+            case .event: "Concert de Feist à l'Olympia"
             case .restaurant: "Le petit italien de la rue de Lyon"
             case .shop: "La boutique de papeterie du Marais"
             case .photoSpot: "Le pont Marie au couchant"

@@ -326,6 +326,7 @@
 		E337F58207F59D61C12F17B9 /* ReminderScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13C930EA8E752F00D8973CDF /* ReminderScheduler.swift */; };
 		E3FD3372EC844E9BAAB37EEB /* ReminderPlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E48E67DBEFD62C7E6118390 /* ReminderPlanner.swift */; };
 		E41560627C2E4916DF28A900 /* MesLieux.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8C514064636613D6082D5B0 /* MesLieux.swift */; };
+		E42CE43A0A99AD8DF1D4D2B3 /* SortieTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0C8FD13B6104E3EB44DD8C2 /* SortieTests.swift */; };
 		E49EE1CC985FCC5FDCA27A09 /* TaskTag.swift in Sources */ = {isa = PBXBuildFile; fileRef = B863B8DA8A7D1FFAE24BE87C /* TaskTag.swift */; };
 		E592CBB0902FDB11DB871F9D /* ProximityPlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72B30BDF848AF91385168C9F /* ProximityPlanner.swift */; };
 		E760D750ADA9349B536A92E7 /* DueTextTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4DC1239718727B09A71BA21 /* DueTextTests.swift */; };
@@ -555,6 +556,7 @@
 		9E48E67DBEFD62C7E6118390 /* ReminderPlanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderPlanner.swift; sourceTree = "<group>"; };
 		9E8C4B98CC17E47DEB59005B /* CategoryViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryViews.swift; sourceTree = "<group>"; };
 		9FC595196AA59A6F7E158258 /* RelanceMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RelanceMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A0C8FD13B6104E3EB44DD8C2 /* SortieTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SortieTests.swift; sourceTree = "<group>"; };
 		A1781498457E2D3F1F70A8C4 /* ListeSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListeSection.swift; sourceTree = "<group>"; };
 		A2F3B0D9F7B7B77D50FC3CFD /* TaskFieldsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskFieldsTests.swift; sourceTree = "<group>"; };
 		A3BA2CD7259FBD2501089EDD /* MemoViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoViews.swift; sourceTree = "<group>"; };
@@ -704,6 +706,7 @@
 				4DCCE35813EA2892D8D3C8B7 /* SharedMessageTests.swift */,
 				61A994C34CC736F16CBEE82E /* SharedPlaceTests.swift */,
 				5CD9D6E8A5C0731F41756F44 /* SiriCaptureTests.swift */,
+				A0C8FD13B6104E3EB44DD8C2 /* SortieTests.swift */,
 				A2F3B0D9F7B7B77D50FC3CFD /* TaskFieldsTests.swift */,
 				ECE0C2026CE65FA5D4B37A30 /* TaskProposalTests.swift */,
 				BE4BC2D4DF42F4878D28C1E9 /* TaskStoreSyncTests.swift */,
@@ -1521,6 +1524,7 @@
 				F943FD7BDC4BD07D3207600E /* SharedMessageTests.swift in Sources */,
 				7133AAFEED4BE920E2634CED /* SharedPlaceTests.swift in Sources */,
 				7798AF9EF9D14E9ABC93128C /* SiriCaptureTests.swift in Sources */,
+				E42CE43A0A99AD8DF1D4D2B3 /* SortieTests.swift in Sources */,
 				BE74730645836843419E4772 /* TaskFieldsTests.swift in Sources */,
 				B85E898B8DFB8DC6057BF730 /* TaskProposalTests.swift in Sources */,
 				6FA4BFC948DDB87891AA78EA /* TaskStoreSyncTests.swift in Sources */,
