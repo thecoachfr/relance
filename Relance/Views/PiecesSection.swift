@@ -203,7 +203,7 @@ private struct PieceVignette: View {
 
 #if os(iOS)
 /// Scanner de documents d'iOS (VisionKit) : les pages scannées, réunies en un PDF.
-private struct ScannerDocument: UIViewControllerRepresentable {
+struct ScannerDocument: UIViewControllerRepresentable {
     let fini: (Data?) -> Void
 
     func makeUIViewController(context: Context) -> VNDocumentCameraViewController {

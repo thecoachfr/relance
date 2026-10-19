@@ -34,9 +34,15 @@ struct PriorityFooter: View {
     let priority: TaskPriority
     /// Relances propres à la tâche : le texte décrit alors ce qui s'applique vraiment.
     var reminders: ReminderOverride?
+    /// Sortie réservée (P9-L1) : ses propres rappels, pas ceux de la priorité.
+    var isEvent = false
 
     var body: some View {
         let profile = store.scheduler.settings[priority]
-        Text(ReminderSummary.text(for: reminders?.applied(to: profile) ?? profile) + ".")
+        if isEvent {
+            Text("Sortie : rappel une semaine avant, la veille au soir et 2 h avant.")
+        } else {
+            Text(ReminderSummary.text(for: reminders?.applied(to: profile) ?? profile) + ".")
+        }
     }
 }

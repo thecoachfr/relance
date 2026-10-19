@@ -24,6 +24,8 @@ struct ShareComposeView: View {
     @State private var fetchingTitle = false
     /// Lieu lu dans un lien Plans ou Google Maps, et ce lien.
     @State private var place: SharedPlace?
+    /// Rendez-vous reconnu dans le texte (P9-L4) : pas de spot photo, ni d'avertissement de position.
+    @State private var appointment = false
     @State private var placeLink: URL?
     /// Envie proposée d'après la catégorie de Plans, et la sorte de lieu (« bar ») notée sur sa ligne.
     @State private var suggestion: (kind: ToSee.Kind, label: String?)?
@@ -59,7 +61,7 @@ struct ShareComposeView: View {
                     }
                 }
 
-                if let photo, !photo.hasLocation, !recipeText {
+                if let photo, !photo.hasLocation, !recipeText, !appointment {
                     Section {
                         Label("Cette photo n'a pas de position. Dans Photos, touche Options en haut de la feuille de partage et active « Lieu », ou ajoute le lieu ensuite dans la tâche.",
                               systemImage: "location.slash")
@@ -71,7 +73,7 @@ struct ShareComposeView: View {
                         Label {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(place.name)
-                                let details = [suggestion?.label?.capitalizedFirst, place.address == place.name ? nil : place.address]
+                                let details = [suggestion?.label?.capitalizedFirst, place.address == place.name ? nil : place.address, place.phone]
                                     .compactMap { $0 }.joined(separator: " · ")
                                 if !details.isEmpty {
                                     Text(details).font(.subheadline).foregroundStyle(.secondary)
@@ -220,6 +222,27 @@ struct ShareComposeView: View {
             proposedTitle = title
             return
         }
+        // Un rendez-vous (P9-L4) : capture d'un SMS ou d'un e-mail, carton photographié, message partagé.
+        // Date, heure, adresse et téléphone lus sur l'appareil ; la capture est jointe (cochée d'office).
+        if SharedLink.url(in: original) == nil || photo != nil,
+           let rdv = SharedAppointment.detect(in: photo?.texte ?? original) {
+            appointment = true
+            kind = nil
+            day = rdv.day
+            if let m = rdv.minutes {
+                hasTime = true
+                time = Calendar.current.date(bySettingHour: m / 60, minute: m % 60, second: 0, of: .now)!
+            }
+            if photo != nil || title.isEmpty {
+                title = rdv.title
+                proposedTitle = title
+            }
+            if rdv.address != nil || rdv.phone != nil {
+                place = SharedPlace(name: rdv.placeName ?? rdv.address ?? rdv.title, address: rdv.address,
+                                    source: "saisie", phone: rdv.phone)
+            }
+            return
+        }
         // Une photo : un spot photo, à l'endroit où elle a été prise.
         if let photo {
             kind = .photoSpot
@@ -353,7 +376,7 @@ struct ShareComposeView: View {
         // Une photo seule n'a pas de message : pas de ligne 📩 (la routine chercherait un titre dans le vide).
         var notes = original.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             ? "" : SharedMessage.notes(original: original, titleEdited: cleanTitle != proposedTitle)
-        if let dateLine = photo?.dateLine {
+        if !appointment, let dateLine = photo?.dateLine {
             notes = notes.isEmpty ? dateLine : notes + "\n" + dateLine
         }
         if let place {

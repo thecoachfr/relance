@@ -7,9 +7,9 @@ ce qui existe déjà, ce qu'on peut faire, le coût et les questions à trancher
 |---|---|---|---|
 | L1 | Concerts et spectacles (date, billets) | **Fait le 19/10** (build à essayer) | — |
 | L2 | App TV : « Écouté » sur chaque morceau de la playlist | **Fait et essayé le 19/10** | option automatique : 1 soirée |
-| L3 | Tour d'UX sur le placement des boutons de la fiche | Utile : les actions sont tout en bas | 1 soirée d'audit + 1–2 de reprise |
-| L4 | Reconnaissance de texte (rendez-vous chez le dentiste…) | Existe en partie (partage de capture) ; à rendre immédiat | 1–2 soirées |
-| L5 | Nest Hub : couper l'alarme du détecteur de fumée (Netatmo) en cuisinant | Pas faisable à distance, à notre connaissance ; bandeau d'alerte possible | ½ soirée (bandeau) |
+| L3 | Tour d'UX sur le placement des boutons de la fiche | **Fait le 19/10** (à essayer) | — |
+| L4 | Reconnaissance de texte (rendez-vous chez le dentiste…) | **Fait le 19/10** (à essayer) | — |
+| L5 | Nest Hub : couper l'alarme du détecteur de fumée (Netatmo) en cuisinant | **Abandonné** (Alexandre, 19/10) | — |
 | L6 | Nest Hub : afficher ce qui passe (TV ou musique), quelle que soit la source | Faisable : un capteur « En ce moment » | 1 soirée |
 | L7 | Nest Hub : changer le contenu sans changer de dashboard | Faisable : une seule carte, pages basculées sur place | 2 soirées |
 
@@ -98,8 +98,22 @@ courante. Sur Mac, elles sont dans la barre d'outils.
 - Les sections vides ne prennent qu'une ligne « Ajouter… » (pièces jointes, liste, durée) au lieu d'un bloc.
 - Vérifier aussi : la saisie rapide, les menus contextuels des lignes, la barre de la carte, l'iPad en deux colonnes.
 
-**Méthode** : captures dans le simulateur (démo), critique écrite, maquette de 2 variantes proposées en mode
-interactif, puis reprise. **Question** : d'autres écrans qui te gênent, en plus de la fiche ?
+**Choix d'Alexandre (19/10)** : barre du bas Fait · Reporter · ⋯ ; enregistrement immédiat avec « Fermer » ; l'essentiel
+d'abord, le reste dans « Plus d'options ».
+
+**Fait le 19/10** (critique avec le skill design-critique et les règles d'Apple, captures avant et après dans le
+simulateur) :
+- Une seule fiche (`TaskDetailView`) pour l'iPhone et l'iPad : sur iPhone, `TaskEditor` n'est plus qu'une feuille
+  qui l'enveloppe, avec « Fermer » ; plus d'Annuler / OK (chaque changement est enregistré, comme sur iPad).
+- Barre du bas (iOS) : **Fait** (bouton principal), **Reporter** (Dans 1 h, Ce soir si l'heure du soir est à plus de
+  30 min, Demain matin), **⋯** (Partager, Supprimer avec confirmation si un événement d'agenda suit la tâche). Une
+  action ferme la feuille. Raccourcis de l'iPad gardés : ⌘↩ Fait, ⌘L Reporter d'une heure, ⌘⌫ Supprimer.
+- Ordre : titre, notes ; échéance ; lieu ; liste, pièces jointes, envie (si c'en est une) ; actions ; puis « Plus
+  d'options » replié (mémorisé) avec un résumé (catégorie, priorité, tags) : priorité et relances, catégorie et tags,
+  agenda, « Envie, sans échéance » pour une tâche ordinaire, retrier avec Claude et mémo. Une tâche simple tient en
+  un écran et demi (4,5 avant).
+- Correction : sous Relances, une sortie dit « rappel une semaine avant, la veille au soir et 2 h avant ».
+- Mac inchangé (barre d'outils).
 
 ## L4 — Reconnaissance de texte (rendez-vous, convocations)
 
@@ -119,7 +133,19 @@ n'arrive qu'**au passage du tri**, et l'appareil photo n'est pas proposé dans l
 - Coût faible : tout est sur l'appareil, sans API ; la détection en français est à vérifier sur de vraies
   convocations (cartes de rendez-vous, SMS de rappel, e-mails de Doctolib).
 
-**Question** : surtout des captures (SMS, e-mails, Doctolib) ou des photos de cartons papier ?
+**Fait le 19/10** :
+- `SharedAppointment` (pur, testé par `RendezVousTests`) : un texte est un rendez-vous s'il contient un indice
+  (RDV, rendez-vous, convocation, Doctolib, Dr, cabinet, séance, examen, dentiste, kiné…) et une date à venir. Il en
+  tire un titre (« Rendez-vous chez le dentiste », « Séance de kiné », « Assemblée générale »…), la date et l'heure
+  (formes françaises « mardi 4 novembre 2026 à 14h30 », « 06/11 à 9h », sans année → la prochaine, puis le détecteur
+  d'Apple), l'adresse, le téléphone (mis en forme « 01 43 78 87 05 ») et le praticien (« Dr … »).
+- Feuille de partage : une capture ou une photo dont le texte est un rendez-vous n'est plus un spot photo ; la date,
+  l'heure et le lieu (nom, adresse, téléphone) sont remplis, la capture est jointe. Même chose pour un texte partagé
+  sans lien.
+- Saisie rapide : « Scanner un rendez-vous » (scanner de documents d'iOS) remplit la tâche de la même façon et joint
+  le scan en PDF (mode HA). Le bouton n'apparaît pas dans le simulateur (pas d'appareil photo).
+- Le tri garde le dernier mot (catégorie, contact du mémo, titre).
+- Reste : essai réel (capture d'un SMS Doctolib partagée, carton du dentiste scanné).
 
 ## L5 — Nest Hub : couper l'alarme du détecteur de fumée de l'entrée
 
@@ -183,8 +209,7 @@ d'Alexandre).
 1. **L2** (petit, vérifié, utile tout de suite), puis **L4** (sur l'appareil, sans risque) et **L1**, qui utilise
    L4 et P9-K.
 2. **L3**, avant d'ajouter d'autres sections à la fiche.
-3. Nest Hub : **L7** d'abord (L6 et L5 deviennent des pages ou des bandeaux de la nouvelle carte), puis **L6**,
-   puis le bandeau d'alarme de **L5**.
+3. Nest Hub : **L7** d'abord, puis **L6** (L5 abandonné le 19/10).
 
 Le code des cartes du Nest Hub reste hors du dépôt public (fiche et cartes dans HA, dossier `claude/` de
 `ha-config`) ; seule cette étude est ici.

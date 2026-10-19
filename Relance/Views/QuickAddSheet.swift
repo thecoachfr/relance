@@ -1,4 +1,8 @@
 import SwiftUI
+import UniformTypeIdentifiers
+#if os(iOS)
+import VisionKit
+#endif
 
 /// D'où la saisie rapide est ouverte : ses valeurs par défaut suivent l'onglet.
 enum QuickAddContext: Equatable {
@@ -36,6 +40,10 @@ struct QuickAddSheet: View {
     @State private var articles: [String] = []
     @State private var article = ""
     @FocusState private var articleActif: Bool
+    /// « Scanner un rendez-vous » (P9-L4) : carton, convocation ou courrier photographié, texte lu sur l'iPhone.
+    @State private var scanning = false
+    @State private var scanPDF: Data?
+    @State private var scanMessage: String?
 
     init(context: QuickAddContext = .today, category: String? = nil) {
         self.context = context
@@ -82,6 +90,15 @@ struct QuickAddSheet: View {
                         .onSubmit(save)
                         .onChange(of: text) { detect() }
                 }
+                #if os(iOS)
+                if !isToSee, VNDocumentCameraViewController.isSupported {
+                    Section {
+                        Button("Scanner un rendez-vous", systemImage: "doc.text.viewfinder") { scanning = true }
+                    } footer: {
+                        if let scanMessage { Text(scanMessage) }
+                    }
+                }
+                #endif
                 if context == .map { ContactSection(notes: $notes, searching: $searchingPlace) }
                 if !isToSee, let period {
                     Section {
@@ -158,6 +175,15 @@ struct QuickAddSheet: View {
                 }
             }
             .placeSearch(isPresented: $searchingPlace, notes: $notes)
+            #if os(iOS)
+            .fullScreenCover(isPresented: $scanning) {
+                ScannerDocument { pdf in
+                    scanning = false
+                    if let pdf { lireRendezVous(pdf) }
+                }
+                .ignoresSafeArea()
+            }
+            #endif
             .navigationTitle(isToSee ? kind.title : "Nouvelle tâche")
             .inlineNavigationTitle()
             .toolbar {
@@ -267,7 +293,44 @@ struct QuickAddSheet: View {
             }
             store.setListe(TacheHA.Liste(articles: liste), of: item)
         }
+        // Le scan du rendez-vous devient une pièce jointe (mode Home Assistant), préparé hors du fil principal.
+        if let scanPDF, HAConfig.isActive {
+            Task {
+                let piece = await Task.detached(priority: .userInitiated) {
+                    try? PiecesJointes.preparer(scanPDF, nom: "Rendez-vous.pdf", type: .pdf, source: "scan")
+                }.value
+                if let piece {
+                    store.addPieces([piece], to: item)
+                    await store.sync()
+                }
+            }
+        }
         dismiss()
+    }
+
+    /// Texte du scan lu sur l'iPhone, puis le rendez-vous qu'il décrit : titre, date, heure, adresse, téléphone.
+    private func lireRendezVous(_ pdf: Data) {
+        scanPDF = pdf
+        let texte = PiecesJointes.texte(pdf, type: "application/pdf") ?? ""
+        guard let rdv = SharedAppointment.detect(in: texte) else {
+            let premiere = texte.split(separator: "\n").first.map(String.init)
+            if text.isEmpty, let premiere { text = String(premiere.prefix(60)) }
+            scanMessage = texte.isEmpty ? "Aucun texte lu sur le scan." : "Aucune date de rendez-vous trouvée : complète la tâche."
+            return
+        }
+        manual = true
+        text = rdv.title
+        day = rdv.day
+        pickOther = true
+        if let m = rdv.minutes {
+            hasTime = true
+            time = Calendar.current.date(bySettingHour: m / 60, minute: m % 60, second: 0, of: .now)!
+        }
+        if rdv.address != nil || rdv.phone != nil {
+            notes = TaskContact.notes(notes, setting: TaskContact(name: rdv.placeName ?? rdv.address ?? rdv.title,
+                                                                  address: rdv.address, phone: rdv.phone))
+        }
+        scanMessage = "Lu sur le scan" + (HAConfig.isActive ? " ; il sera joint à la tâche." : ".")
     }
 }
 

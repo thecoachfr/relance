@@ -21,8 +21,14 @@ struct TaskDetailView: View {
     @State private var base: TaskFields?
     @State private var confirmDelete = false
     @State private var searchingPlace = false
+    /// Réglages rares (priorité, relances, catégorie, tags, agenda, tri) : repliés par défaut, mémorisé.
+    @AppStorage("ficheOptionsOuvertes") private var showMore = false
+    /// Fiche ouverte en feuille (iPhone) : la barre de navigation porte « Fermer » ; une action la ferme.
+    var onClose: (() -> Void)? = nil
 
     var body: some View {
+        // Ordre (P9-L3, 19/10) : l'essentiel d'abord (titre, échéance, lieu, ce que la tâche contient, actions),
+        // les réglages rares dans « Plus d'options » ; Fait, Reporter et Supprimer dans la barre du bas.
         Form {
             Section {
                 TextField("Titre", text: $title, prompt: Text("Titre"), axis: .vertical)
@@ -39,7 +45,6 @@ struct TaskDetailView: View {
                     .formFieldWithoutLabel()
             }
             ProposalSection(item: item, notes: $notes)
-            ContactSection(notes: $notes, searching: $searchingPlace, memoSource: (category, tags), title: title)
             // Une envie n'a pas d'échéance (ni date, ni agenda), sauf une sortie réservée.
             if ToSee(notes: notes)?.kind.isDated != false {
                 Section("Échéance") {
@@ -75,56 +80,75 @@ struct TaskDetailView: View {
                     #endif
                 }
             }
+            ContactSection(notes: $notes, searching: $searchingPlace, memoSource: (category, tags), title: title)
             ListeSection(item: item)
             PiecesSection(item: item)
-            ToSeeSection(notes: $notes, availability: item.availability, pieces: item.pieces) { hasDay = false }
-            if ToSee(notes: notes)?.kind.isDated != false { CalendarSection(item: item) }
-            Section {
-                PriorityPicker(priority: $priority)
-                TaskRemindersRow(reminders: $reminders, priority: priority)
-            } header: {
-                // Sur Mac, la ligne porte déjà le nom « Priorité ».
-                #if os(iOS)
-                Text("Priorité")
-                #endif
-            } footer: {
-                PriorityFooter(priority: priority, reminders: reminders)
-            }
-            Section {
-                CategoryPicker(category: $category)
-                TagsRow(tags: $tags)
+            // Une envie montre sa section en haut ; « ranger dans les envies » est un réglage rare (Plus d'options).
+            if ToSee(notes: notes) != nil {
+                ToSeeSection(notes: $notes, availability: item.availability, pieces: item.pieces) { hasDay = false }
             }
             ActionsSection(item: item, lien: item.envie()?.lien.flatMap(URL.init(string:)) ?? ToSee.link(in: NoteLines.visible(notes)))
-            RetriageSection(item: item)
-            // Sur Mac, ces actions sont dans la barre d'outils et le menu Tâche.
-            #if os(iOS)
             Section {
-                Button(item.isCompleted ? "Marquer à faire" : "Marquer fait",
-                       systemImage: item.isCompleted ? "arrow.uturn.backward" : "checkmark") {
-                    item.isCompleted ? store.reopen(item) : store.complete(item)
-                }
-                .tabletShortcut(.return, modifiers: .command)
-                if !item.isCompleted {
-                    Button("Reporter d'une heure", systemImage: "clock") {
-                        store.snooze(item, until: .now.addingTimeInterval(3600))
+                Button {
+                    withAnimation { showMore.toggle() }
+                } label: {
+                    HStack {
+                        Label("Plus d'options", systemImage: "slider.horizontal.3")
+                        Spacer()
+                        if !showMore { Text(moreSummary).foregroundStyle(.secondary).lineLimit(1) }
+                        Image(systemName: "chevron.right")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(.tertiary)
+                            .rotationEffect(.degrees(showMore ? 90 : 0))
                     }
-                    .tabletShortcut("l", modifiers: .command)
-                    Button("Demain matin", systemImage: "sunrise") { store.moveToTomorrow(item) }
+                    .contentShape(Rectangle())
                 }
-                Button("Supprimer", systemImage: "trash", role: .destructive) {
-                    if item.calendarEventID != nil { confirmDelete = true } else { store.delete(item) }
-                }
-                .tabletShortcut(.delete, modifiers: .command)
+                .buttonStyle(.plain)
+                .accessibilityValue(showMore ? "Ouvert" : "Fermé")
+                .accessibilityHint("Priorité, relances, catégorie, tags, agenda, tri")
             }
-            #endif
+            if showMore {
+                Section {
+                    PriorityPicker(priority: $priority)
+                    TaskRemindersRow(reminders: $reminders, priority: priority)
+                } header: {
+                    // Sur Mac, la ligne porte déjà le nom « Priorité ».
+                    #if os(iOS)
+                    Text("Priorité")
+                    #endif
+                } footer: {
+                    PriorityFooter(priority: priority, reminders: reminders, isEvent: ToSee(notes: notes)?.kind.isDated == true)
+                }
+                Section {
+                    CategoryPicker(category: $category)
+                    TagsRow(tags: $tags)
+                }
+                if ToSee(notes: notes)?.kind.isDated != false { CalendarSection(item: item) }
+                if ToSee(notes: notes) == nil {
+                    ToSeeSection(notes: $notes, availability: item.availability, pieces: item.pieces) { hasDay = false }
+                }
+                RetriageSection(item: item)
+            }
         }
-        .deleteTaskConfirmation(item, isPresented: $confirmDelete)
+        .deleteTaskConfirmation(item, isPresented: $confirmDelete) { onClose?() }
         .placeSearch(isPresented: $searchingPlace, notes: $notes)
         #if os(macOS)
         .toolbar { macActions }
         #endif
-        // Le titre est déjà le premier champ : pas de doublon dans la barre.
-        .hiddenNavigationBar()
+        #if os(iOS)
+        .toolbar { bottomBar }
+        // Raccourcis de l'iPad pour les actions rangées dans des menus (⌘L reporter d'une heure, ⌘⌫ supprimer).
+        .background {
+            Group {
+                Button("Reporter d'une heure") { reporter(.now.addingTimeInterval(3600)) }.keyboardShortcut("l")
+                Button("Supprimer") { supprimer() }.keyboardShortcut(.delete)
+            }
+            .opacity(0)
+            .accessibilityHidden(true)
+        }
+        // Colonne de l'iPad : le titre est déjà le premier champ, pas de barre en haut. Feuille de l'iPhone : « Fermer ».
+        .toolbar(onClose == nil ? .hidden : .automatic, for: .navigationBar)
+        #endif
         .onAppear(perform: load)
         .onChange(of: item.localID) { loaded = false; load() }
         // Modifiée ailleurs (synchro, routine de tri, autre appareil) : on recharge si rien n'est en cours de saisie.
@@ -172,6 +196,80 @@ struct TaskDetailView: View {
         }
     }
     #endif
+
+    #if os(iOS)
+    /// Barre du bas (P9-L3) : Fait à gauche, Reporter au centre, le reste dans « ⋯ » (Supprimer avec confirmation
+    /// si un événement d'agenda suit la tâche). Toujours visible, quelle que soit la longueur de la fiche.
+    @ToolbarContentBuilder private var bottomBar: some ToolbarContent {
+        ToolbarItemGroup(placement: .bottomBar) {
+            Button {
+                item.isCompleted ? store.reopen(item) : store.complete(item)
+                onClose?()
+            } label: {
+                // Icône et texte côte à côte : un `Label` seul n'affiche que l'icône dans la barre d'iOS 26.
+                HStack(spacing: 6) {
+                    Image(systemName: item.isCompleted ? "arrow.uturn.backward" : "checkmark")
+                    Text(item.isCompleted ? "Remettre à faire" : "Fait")
+                }
+                .fontWeight(.semibold)
+            }
+            .buttonStyle(.borderedProminent)
+            .accessibilityLabel(item.isCompleted ? "Remettre à faire" : "Marquer fait")
+            .tabletShortcut(.return, modifiers: .command)
+            Spacer()
+            if !item.isCompleted {
+                Menu {
+                    Button("Dans 1 h", systemImage: "clock") { reporter(.now.addingTimeInterval(3600)) }
+                    if let soir = ceSoir { Button("Ce soir", systemImage: "moon") { reporter(soir) } }
+                    Button("Demain matin", systemImage: "sunrise") { store.moveToTomorrow(item); onClose?() }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "clock.arrow.circlepath")
+                        Text("Reporter")
+                    }
+                }
+                .accessibilityLabel("Reporter")
+                Spacer()
+            }
+            Menu {
+                ShareLink(item: ([title] + [NoteLines.visible(notes)].filter { !$0.isEmpty }).joined(separator: "\n")) {
+                    Label("Partager", systemImage: "square.and.arrow.up")
+                }
+                Divider()
+                Button("Supprimer", systemImage: "trash", role: .destructive) { supprimer() }
+            } label: {
+                Label("Plus", systemImage: "ellipsis.circle")
+            }
+            .accessibilityLabel("Plus d'actions")
+        }
+    }
+
+    /// « Ce soir » : l'heure du soir des réglages, seulement si elle est encore à venir.
+    private var ceSoir: Date? {
+        let m = store.scheduler.settings.evening
+        let soir = Calendar.current.date(bySettingHour: m / 60, minute: m % 60, second: 0, of: .now)!
+        return soir > .now.addingTimeInterval(30 * 60) ? soir : nil
+    }
+
+    private func reporter(_ date: Date) {
+        store.snooze(item, until: date)
+        onClose?()
+    }
+    #endif
+
+    private func supprimer() {
+        if item.calendarEventID != nil { confirmDelete = true } else { store.delete(item); onClose?() }
+    }
+
+    /// Résumé de « Plus d'options » replié : ce qui n'est pas réglé par défaut.
+    private var moreSummary: String {
+        var parts: [String] = []
+        if let category { parts.append(category) }
+        if priority != .normal { parts.append(priority.rawValue) }
+        if !tags.isEmpty { parts.append(tags.count == 1 ? "#\(tags[0])" : "\(tags.count) tags") }
+        if reminders != nil { parts.append("Relances") }
+        return parts.joined(separator: " · ")
+    }
 
     /// Le champ Notes sans les lignes techniques (lieu, agenda, message partagé), gardées à l'enregistrement.
     private var visibleNotes: Binding<String> {
