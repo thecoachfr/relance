@@ -10,7 +10,7 @@ ce qui existe déjà, ce qu'on peut faire, le coût et les questions à trancher
 | L3 | Tour d'UX sur le placement des boutons de la fiche | **Fait le 19/10** (à essayer) | — |
 | L4 | Reconnaissance de texte (rendez-vous chez le dentiste…) | **Fait le 19/10** (à essayer) | — |
 | L5 | Nest Hub : couper l'alarme du détecteur de fumée (Netatmo) en cuisinant | **Abandonné** (Alexandre, 19/10) | — |
-| L6 | Nest Hub : afficher ce qui passe (TV ou musique), quelle que soit la source | **Fait le 19/10** (à voir sur le Hub) | — |
+| L6 | Nest Hub : afficher ce qui passe (TV ou musique), quelle que soit la source | **Fait et validé sur le Hub le 19/10** | — |
 | L7 | Nest Hub : changer le contenu sans changer de dashboard | **Fait et validé sur le Hub le 19/10** | — |
 
 ## L1 — Concerts et spectacles
