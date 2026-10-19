@@ -330,7 +330,10 @@ struct QuickAddSheet: View {
             notes = TaskContact.notes(notes, setting: TaskContact(name: rdv.placeName ?? rdv.address ?? rdv.title,
                                                                   address: rdv.address, phone: rdv.phone))
         }
-        scanMessage = "Lu sur le scan" + (HAConfig.isActive ? " ; il sera joint à la tâche." : ".")
+        // Date lue, heure non lue (écriture à la main) : le dire, l'interrupteur Heure est prêt à régler.
+        if rdv.minutes == nil { hasTime = true }
+        scanMessage = (rdv.minutes == nil ? "Date lue, mais pas l'heure : règle-la ci-dessus." : "Lu sur le scan.")
+            + (HAConfig.isActive ? " Le scan sera joint à la tâche." : "")
     }
 }
 

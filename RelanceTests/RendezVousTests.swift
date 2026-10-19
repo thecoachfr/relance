@@ -50,6 +50,36 @@ struct RendezVousTests {
         #expect(SharedAppointment.detect(in: "RDV dentiste le 02/10/2026 à 10h", now: now, calendar: calendar) == nil)
     }
 
+    /// Carton du dentiste scanné (19/10) : « 17ʰ20 » écrit à la main, lu « +20 » sur la page puis « 17+20 » dans la
+    /// bande relue à côté de « Heure: » (`SharedPhoto.text`).
+    @Test func cartonManuscrit() {
+        let lu = """
+        Rendez-vous
+        Date:
+        22/10
+        Heure:
+        +20
+        Date:
+        Heure:
+        Merci de prévenir par téléphone au
+        s 48 heures à l'avance
+        01 43 78 8
+        05
+        Heure: 17+20
+        """
+        let rdv = SharedAppointment.detect(in: lu, now: now, calendar: calendar)
+        #expect(rdv?.day == day(22, 10))
+        #expect(rdv?.minutes == 17 * 60 + 20)
+        #expect(SharedAppointment.labeledTime(in: "Heure : 9h") == 9 * 60)
+        #expect(SharedAppointment.labeledTime(in: "48 heures à l'avance") == nil)
+        // Deuxième lecture du même scan : « 17+20 » sur une ligne seule, « Heure: +20 » à côté de l'étiquette.
+        let autre = "Rendez-vous | Date: | 22/10 | Heure: | 01 43 78 8 | 17+20 | $ 48 heures à l'avance | Heure: +20"
+        #expect(SharedAppointment.detect(in: autre, now: now, calendar: calendar)?.minutes == 17 * 60 + 20)
+        #expect(SharedAppointment.looseTime(in: "48 heures à l'avance, +20") == nil)
+        #expect(SharedAppointment.looseTime(in: "vers 9 h") == 9 * 60)
+        #expect(SharedPhoto.isFormLabel("Heure:") && SharedPhoto.isFormLabel("Date :") && !SharedPhoto.isFormLabel("Heure: 17h"))
+    }
+
     @Test func telephoneInternational() {
         #expect(SharedAppointment.phone(in: "Appeler le +33 6 12 34 56 78") == "06 12 34 56 78")
     }

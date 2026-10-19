@@ -104,7 +104,7 @@ struct ToSeeSection: View {
 
     private func ouvrir(_ piece: TacheHA.Piece) {
         Task {
-            billet = await PiecesJointes.fichier(piece)
+            billet = await PiecesJointes.lisible(piece)
             billetAbsent = billet == nil
         }
     }

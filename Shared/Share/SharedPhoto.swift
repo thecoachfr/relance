@@ -51,13 +51,51 @@ nonisolated struct SharedPhoto: Equatable, Sendable {
         let options = [kCGImageSourceCreateThumbnailFromImageAlways: true, kCGImageSourceThumbnailMaxPixelSize: 2048,
                        kCGImageSourceCreateThumbnailWithTransform: true] as CFDictionary
         guard let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options) else { return nil }
+        let observations = recognize(image, correction: true)
+        var lines = observations.compactMap { $0.topCandidates(1).first?.string }
+        // Formulaires remplis à la main (carton de rendez-vous, 19/10) : « Heure: » imprimé, « 17ʰ20 » écrit à côté
+        // et souvent manqué. On relit, agrandie, la bande à droite de chaque étiquette courte ; ce qui est lu de plus
+        // s'ajoute à la fin (« Heure: » puis « 17+20 »).
+        for o in observations {
+            guard let label = o.topCandidates(1).first?.string, isFormLabel(label),
+                  let band = band(of: o.boundingBox, in: image) else { continue }
+            let extra = recognize(band, correction: false).compactMap { $0.topCandidates(1).first?.string }
+                .filter { !isFormLabel($0) }
+            if !extra.isEmpty { lines.append(label + " " + extra.joined(separator: " ")) }
+        }
+        return lines.isEmpty ? nil : lines.joined(separator: "\n")
+    }
+
+    private static func recognize(_ image: CGImage, correction: Bool) -> [VNRecognizedTextObservation] {
         let request = VNRecognizeTextRequest()
         request.recognitionLevel = .accurate
         request.recognitionLanguages = ["fr-FR", "it-IT", "en-US"]
-        request.usesLanguageCorrection = true
+        request.usesLanguageCorrection = correction
+        if !correction { request.minimumTextHeight = 0 }
         try? VNImageRequestHandler(cgImage: image).perform([request])
-        let lines = (request.results ?? []).compactMap { $0.topCandidates(1).first?.string }
-        return lines.isEmpty ? nil : lines.joined(separator: "\n")
+        return request.results ?? []
+    }
+
+    /// « Heure: », « Date : », « Le », « RDV » : une étiquette de formulaire, suivie d'une valeur écrite à la main.
+    static func isFormLabel(_ text: String) -> Bool {
+        let t = text.trimmingCharacters(in: .whitespaces).lowercased()
+        return t.range(of: #"^(heure|horaire|date|le|à|rdv|rendez-vous|jour)\s*:?$"#, options: .regularExpression) != nil
+    }
+
+    /// La bande qui part de l'étiquette jusqu'au bord droit, quatre fois plus haute qu'elle (l'écriture déborde
+    /// au-dessus), agrandie deux fois.
+    private static func band(of box: CGRect, in image: CGImage) -> CGImage? {
+        let w = CGFloat(image.width), h = CGFloat(image.height)
+        let height = box.height * h * 4
+        let rect = CGRect(x: box.minX * w, y: max(0, h - box.midY * h - height * 0.65),
+                          width: w - box.minX * w, height: height).integral
+        guard rect.width > 8, rect.height > 8, let crop = image.cropping(to: rect),
+              let ctx = CGContext(data: nil, width: crop.width * 2, height: crop.height * 2, bitsPerComponent: 8,
+                                  bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(),
+                                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
+        ctx.interpolationQuality = .high
+        ctx.draw(crop, in: CGRect(x: 0, y: 0, width: crop.width * 2, height: crop.height * 2))
+        return ctx.makeImage()
     }
 
     /// « Photo du 12 octobre 2026 », gardée dans les notes (pas de vignette : taille des enregistrements).

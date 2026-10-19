@@ -146,6 +146,14 @@ n'arrive qu'**au passage du tri**, et l'appareil photo n'est pas proposé dans l
   le scan en PDF (mode HA). Le bouton n'apparaît pas dans le simulateur (pas d'appareil photo).
 - Le tri garde le dernier mot (catégorie, contact du mémo, titre).
 - Build 60 : le scan plantait (pas de `NSCameraUsageDescription` dans l'Info.plist, ajoutée le 19/10).
+- Essai d'Alexandre (build 61, carton du dentiste) : l'heure écrite à la main (« 17ʰ20 », un trait du logo dessus)
+  n'était pas lue, la date si (22/10). Corrigé le 19/10 : `SharedPhoto.text` relit, agrandie, la bande à droite de
+  chaque étiquette de formulaire (« Heure: », « Date: »…) ; `SharedAppointment` prend l'heure après « Heure » (« 17+20 »,
+  le H en exposant lu « + ») ou, à défaut, une heure seule dans le texte. Vérifié en rejouant le vrai scan avec le code
+  de l'app sur le Mac (22/10 à 17 h 20). Sans heure lue, la saisie rapide le dit (« Date lue, mais pas l'heure »).
+- Pièce jointe impossible à ouvrir : le cache range les fichiers sous leur empreinte, sans extension, et Quick Look ne
+  sait pas les ouvrir ; l'aperçu, les vignettes et « Ouvrir le billet » passent désormais par une copie nommée
+  (`PiecesJointes.lisible`, « Rendez-vous.pdf »).
 - Reste : essai réel (capture d'un SMS Doctolib partagée, carton du dentiste scanné).
 
 ## L5 — Nest Hub : couper l'alarme du détecteur de fumée de l'entrée

@@ -42,6 +42,27 @@ nonisolated enum PiecesJointes {
         return local(piece)
     }
 
+    /// Copie du fichier avec son nom et son extension (« Rendez-vous.pdf ») pour Quick Look, les vignettes et
+    /// le partage : le cache range les fichiers sous leur empreinte, sans extension, et Quick Look ne sait alors
+    /// pas les ouvrir (constaté le 19/10 sur un scan). Copie dans le dossier temporaire, refaite si absente.
+    static func lisible(_ piece: Piece) async -> URL? {
+        guard let source = await fichier(piece) else { return nil }
+        let ext = UTType(mimeType: piece.type)?.preferredFilenameExtension
+        var nom = (piece.nom as NSString).deletingPathExtension
+            .replacingOccurrences(of: "/", with: "-").trimmingCharacters(in: .whitespaces)
+        if nom.isEmpty { nom = "Pièce jointe" }
+        let dossier = FileManager.default.temporaryDirectory.appending(path: "Apercu").appending(path: String(piece.id.prefix(16)))
+        let cible = dossier.appending(path: ext.map { nom + "." + $0 } ?? piece.nom)
+        if FileManager.default.fileExists(atPath: cible.path) { return cible }
+        do {
+            try FileManager.default.createDirectory(at: dossier, withIntermediateDirectories: true)
+            try FileManager.default.copyItem(at: source, to: cible)
+            return cible
+        } catch {
+            return nil
+        }
+    }
+
     // MARK: - Préparation
 
     enum Erreur: LocalizedError {

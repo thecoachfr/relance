@@ -101,7 +101,7 @@ struct PiecesSection: View {
     private func ouvrir(_ piece: TacheHA.Piece) {
         Task {
             erreur = nil
-            if let url = await PiecesJointes.fichier(piece) { apercu = url } else {
+            if let url = await PiecesJointes.lisible(piece) { apercu = url } else {
                 erreur = "Pièce pas encore disponible : Home Assistant injoignable ou envoi en cours depuis un autre appareil."
             }
         }
@@ -192,7 +192,7 @@ private struct PieceVignette: View {
     }
 
     private func charger() async {
-        guard let url = await PiecesJointes.fichier(piece) else { return }
+        guard let url = await PiecesJointes.lisible(piece) else { return }
         let requete = QLThumbnailGenerator.Request(fileAt: url, size: CGSize(width: 84, height: 84), scale: echelle,
                                                    representationTypes: .thumbnail)
         if let vignette = try? await QLThumbnailGenerator.shared.generateBestRepresentation(for: requete) {

@@ -57,7 +57,8 @@ nonisolated enum SharedAppointment {
     static func when(in text: String, now: Date = .now, calendar: Calendar = .current) -> (Date, Int?)? {
         let today = calendar.startOfDay(for: now)
         for found in frenchDates(in: text, now: now, calendar: calendar) where found.0 >= today {
-            return found
+            // Heure écrite ailleurs que juste après la date (« Heure : 17ʰ20 » sur un carton) : celle de l'étiquette.
+            return (found.0, found.1 ?? labeledTime(in: text) ?? looseTime(in: text))
         }
         guard let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.date.rawValue) else { return nil }
         for m in detector.matches(in: text, range: NSRange(text.startIndex..., in: text)) {
@@ -69,13 +70,38 @@ nonisolated enum SharedAppointment {
         return nil
     }
 
+    /// « Heure : 17h20 », « Heure: 17+20 » (H en exposant lu « + »), « Horaire : 9 h », « à 17ʰ20 » : l'heure qui suit
+    /// une étiquette, en minutes depuis minuit.
+    static func labeledTime(in text: String) -> Int? {
+        let pattern = #"\b(?:heure|horaire)\s*:?\s*(\d{1,2})\s*(?:h|H|ʰ|\+|:|\.)\s*(\d{2})?"#
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) else { return nil }
+        for m in regex.matches(in: text, range: NSRange(text.startIndex..., in: text)) {
+            func g(_ k: Int) -> Int? { Range(m.range(at: k), in: text).flatMap { Int(text[$0]) } }
+            guard let h = g(1), (0...23).contains(h) else { continue }
+            let mn = g(2) ?? 0
+            if (0...59).contains(mn) { return h * 60 + mn }
+        }
+        return nil
+    }
+
+    /// Dernier recours : une heure seule dans le texte (« 17+20 », « 17h20 », « 9 h », « 14:30 ») ; « 48 heures » ou
+    /// « +20 » n'en sont pas.
+    static func looseTime(in text: String) -> Int? {
+        let pattern = #"(?<![\d+])\b([01]?\d|2[0-3])\s?(?:(?:h|H|ʰ)(?:\s?([0-5]\d))?(?![\p{L}\d])|[+:]\s?([0-5]\d)\b)"#
+        guard let regex = try? NSRegularExpression(pattern: pattern),
+              let m = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)) else { return nil }
+        func g(_ k: Int) -> Int? { Range(m.range(at: k), in: text).flatMap { Int(text[$0]) } }
+        guard let h = g(1) else { return nil }
+        return h * 60 + (g(2) ?? g(3) ?? 0)
+    }
+
     private static let mois = ["janvier": 1, "février": 2, "fevrier": 2, "mars": 3, "avril": 4, "mai": 5, "juin": 6,
                                "juillet": 7, "août": 8, "aout": 8, "septembre": 9, "octobre": 10, "novembre": 11,
                                "décembre": 12, "decembre": 12, "janv": 1, "févr": 2, "fevr": 2, "avr": 4, "juil": 7,
                                "sept": 9, "oct": 10, "nov": 11, "déc": 12, "dec": 12]
 
     private static func frenchDates(in text: String, now: Date, calendar: Calendar) -> [(Date, Int?)] {
-        let heure = #"(?:\s*(?:à|a|,|-)?\s*(\d{1,2})\s*(?:h|:)\s*(\d{2})?)?"#
+        let heure = #"(?:\s*(?:à|a|,|-)?\s*(\d{1,2})\s*(?:h|ʰ|:)\s*(\d{2})?)?"#
         let patterns = [
             // 04/11/2026, 4/11, 04.11.26
             #"\b(\d{1,2})[/.](\d{1,2})(?:[/.](\d{2,4}))?"# + heure,
