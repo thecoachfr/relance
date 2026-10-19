@@ -155,7 +155,7 @@ n'arrive qu'**au passage du tri**, et l'appareil photo n'est pas proposé dans l
   sait pas les ouvrir ; l'aperçu, les vignettes et « Ouvrir le billet » passent désormais par une copie nommée
   (`PiecesJointes.lisible`, « Rendez-vous.pdf »).
 - Build 62 : la pièce s'ouvrait puis se refermait aussitôt (un `quickLookPreview` par section, pièces et billet ;
-  celui qui n'avait rien à montrer refermait l'autre). Un seul aperçu, tenu par la fiche, depuis le 19/10.
+  celui qui n'avait rien à montrer refermait l'autre). Un seul aperçu, tenu par la fiche, depuis le 19/10 ; vérifié par Alexandre sur le build 63 (l'aperçu reste ouvert).
 - Reste : essai réel (capture d'un SMS Doctolib partagée, carton du dentiste scanné).
 
 ## L5 — Nest Hub : couper l'alarme du détecteur de fumée de l'entrée
