@@ -8,7 +8,9 @@ La vigie (`relance_vigie.py`) s'en sert :
   l'épisode à la playlist « À écouter » (créée privée si absente), sans doublon, puis noter dans `envie.playlist`
   {ajoute_le, playlist, ajoutes, statut} (dans `envie`, que l'app conserve en entier) ;
 - sur l'événement `aiguillage_spotify_lire` (script `script.aiguillage_spotify_sur_tv`), lancer la lecture sur
-  l'appareil Spotify Connect du Freebox Player.
+  l'appareil Spotify Connect du Freebox Player ;
+- sur l'événement `aiguillage_spotify_ecoute` (script `script.aiguillage_spotify_ecoute`, « Écouté » d'un titre de la
+  playlist sur la TV, P9-L2), retirer le titre de la playlist et cocher l'envie liée.
 
 Identifiant, secret et jeton de rafraîchissement : `/config/spotify_aiguillage.json`, écrit une fois par
 `homeassistant/scripts/spotify_jeton.py` sur le Mac ; jamais dans un dépôt.
@@ -157,6 +159,43 @@ def copie_playlist(items, playlist_id, maj):
     return {"playlist": playlist_id, "maj": maj, "titres": pistes[:MAX_TITRES]}
 
 
+def album_de(elements, ref):
+    """Identifiant de l'album du titre `ref` (type, id) dans les éléments de la playlist, ou None."""
+    for it in elements:
+        e = it.get("item") or it.get("track") or {}
+        if e.get("uri") == uri(*ref):
+            return (e.get("album") or {}).get("id")
+    return None
+
+
+def album_reste(elements, album_id, retire):
+    """Vrai s'il reste dans la playlist un autre titre de l'album `album_id` que l'URI `retire`."""
+    for it in elements:
+        e = it.get("item") or it.get("track") or {}
+        if e.get("uri") and e["uri"] != retire and (e.get("album") or {}).get("id") == album_id:
+            return True
+    return False
+
+
+def envies_ecoutees(records, ref, album_id, album_fini):
+    """Enregistrements des envies à cocher après « Écouté » sur le titre `ref` : celles dont le lien est ce titre,
+    et celles dont le lien est son album quand plus aucun titre de l'album ne reste dans la playlist."""
+    out = []
+    for r in records:
+        valeur = r.get("valeur") or {}
+        if r.get("supprime") or valeur.get("fait") or not is_to_listen(valeur):
+            continue
+        lien = lien_de(valeur)
+        if lien == ref or (album_fini and album_id and lien == ("album", album_id)):
+            out.append(r)
+    return out
+
+
+def cochee(valeur, fait_le):
+    """La tâche cochée (même forme que l'app TV et l'iPhone), le reste recopié tel quel."""
+    return dict(valeur, fait=True, fait_le=fait_le)
+
+
 class Client:
     """Appels à l'API Web avec un jeton d'accès obtenu par le jeton de rafraîchissement."""
 
@@ -227,6 +266,10 @@ class Client:
         for i in range(0, len(nouveaux), 100):
             self._call("POST", f"/playlists/{pid}/items", json={"uris": nouveaux[i:i + 100]})
         return pid, len(nouveaux)
+
+    def retirer(self, playlist_id, kind, ident):
+        """Retire le titre de la playlist (toutes ses occurrences ; API de février 2026 : `items`)."""
+        self._call("DELETE", f"/playlists/{playlist_id}/items", json={"items": [{"uri": uri(kind, ident)}]})
 
     def appareils(self):
         return self._call("GET", "/me/player/devices").get("devices", [])

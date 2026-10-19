@@ -173,6 +173,7 @@ class RelanceVigie(Hass):
         self.listen_event(lambda *_a, **_kw: self.on_presence(None, None, None, None), "aiguillage_test_maison")
         # Bouton « Lire sur la TV » (app TV ou iPhone) via script.aiguillage_spotify_sur_tv.
         self.listen_event(self.on_spotify_lire, "aiguillage_spotify_lire")
+        self.listen_event(self.on_spotify_ecoute, "aiguillage_spotify_ecoute")
         self._refreshes = 0
         self._triage_handle = None
         self._triage_day = None
@@ -604,6 +605,37 @@ class RelanceVigie(Hass):
             self.log(f"Spotify : lecture de {ref[0]} {ref[1][:8]}… sur « {cible.get('name')} »")
         except Exception as error:  # noqa: BLE001
             self.log(f"Spotify : lecture en échec : {error!r}", level="WARNING")
+
+    def on_spotify_ecoute(self, event_name, data, **kwargs):
+        """« Écouté » sur un titre de la playlist (app TV, P9-L2) : retire le titre de « À écouter », coche l'envie
+        liée (même titre, ou son album quand il n'en reste plus rien), puis recopie la playlist pour la TV."""
+        ref = aiguillage_spotify.spotify_ref(data.get("lien", ""))
+        client = self._spotify_client()
+        if client is None or not ref:
+            return
+        try:
+            pid = client.playlist()
+            elements = client.elements(pid)
+            album_id = aiguillage_spotify.album_de(elements, ref)
+            client.retirer(pid, *ref)
+            album_fini = bool(album_id) and not aiguillage_spotify.album_reste(elements, album_id, aiguillage_spotify.uri(*ref))
+            records = self._service("donnees_apps", "lire", {"espace": self._espace}).get("enregistrements", [])
+        except Exception as error:  # noqa: BLE001
+            self.log(f"Spotify : « Écouté » en échec : {error!r}", level="WARNING")
+            return
+        fait_le = datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
+        for r in aiguillage_spotify.envies_ecoutees([r for r in records if self._is_task_key(r.get("cle", ""))],
+                                                    ref, album_id, album_fini):
+            try:
+                self._service("donnees_apps", "ecrire", {
+                    "espace": self._espace, "cle": r["cle"], "valeur": aiguillage_spotify.cochee(r["valeur"], fait_le),
+                    "version_attendue": r["version"], "modifie_par": "vigie", "op_id": str(uuid.uuid4()),
+                })
+                self.log(f"Spotify : « {r['valeur'].get('titre')} » écouté (coché)")
+            except Exception as error:  # noqa: BLE001
+                self.log(f"Spotify : « {r['valeur'].get('titre')} » non coché : {error!r}", level="WARNING")
+        self.log(f"Spotify : {ref[0]} {ref[1][:8]}… retiré de « À écouter »")
+        self._copier_playlist(client, records)
 
     def _load_known_keys(self):
         try:

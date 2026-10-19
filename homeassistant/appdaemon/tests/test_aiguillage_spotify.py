@@ -73,6 +73,32 @@ def test_copie_playlist():
     assert c["titres"][1]["image"] == "mid" and c["titres"][1]["artistes"] == "Robots in Lilac"
 
 
+def test_ecoute():
+    def el(i, album):
+        return {"item": {"type": "track", "id": i, "uri": f"spotify:track:{i}", "name": i, "album": {"id": album}}}
+    elements = [el("T1", "AL"), el("T2", "AL"), el("T3", "AUTRE")]
+    assert s.album_de(elements, ("track", "T1")) == "AL"
+    assert s.album_de(elements, ("track", "X")) is None
+    assert s.album_reste(elements, "AL", "spotify:track:T1")
+    assert not s.album_reste(elements, "AUTRE", "spotify:track:T3")
+
+    def tache(cle, lien, **kw):
+        return {"cle": cle, "version": 3, "valeur": dict({"titre": cle, "envie": {"type": "ecouter", "lien": lien}}, **kw)}
+    records = [
+        tache("morceau", "https://open.spotify.com/track/T1"),
+        tache("album", "https://open.spotify.com/album/AL"),
+        tache("deja", "https://open.spotify.com/track/T1", fait=True),
+        tache("autre", "https://open.spotify.com/track/T9"),
+        {"cle": "lu", "version": 1, "valeur": {"titre": "lu", "envie": {"type": "lire", "lien": "https://open.spotify.com/track/T1"}}},
+    ]
+    # L'album garde des titres : seul le morceau est coché.
+    assert [r["cle"] for r in s.envies_ecoutees(records, ("track", "T1"), "AL", False)] == ["morceau"]
+    # Plus rien de l'album : l'album aussi.
+    assert [r["cle"] for r in s.envies_ecoutees(records, ("track", "T1"), "AL", True)] == ["morceau", "album"]
+    c = s.cochee({"titre": "x", "envie": {"type": "ecouter"}}, "2026-10-19T15:00:00Z")
+    assert c == {"titre": "x", "envie": {"type": "ecouter"}, "fait": True, "fait_le": "2026-10-19T15:00:00Z"}
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_"):

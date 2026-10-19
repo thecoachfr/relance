@@ -6,7 +6,7 @@ ce qui existe déjà, ce qu'on peut faire, le coût et les questions à trancher
 | | Idée | Verdict | Coût |
 |---|---|---|---|
 | L1 | Concerts et spectacles (date, billets) | Faisable, s'appuie sur Envies et P9-K | 2 soirées |
-| L2 | App TV : « Écouté » sur chaque morceau de la playlist | Seule l'envie la plus récente l'a ; faisable | 1 soirée (+1 pour l'automatique) |
+| L2 | App TV : « Écouté » sur chaque morceau de la playlist | **Fait le 19/10** (à essayer) | option automatique : 1 soirée |
 | L3 | Tour d'UX sur le placement des boutons de la fiche | Utile : les actions sont tout en bas | 1 soirée d'audit + 1–2 de reprise |
 | L4 | Reconnaissance de texte (rendez-vous chez le dentiste…) | Existe en partie (partage de capture) ; à rendre immédiat | 1–2 soirées |
 | L5 | Nest Hub : couper l'alarme du détecteur de fumée (Netatmo) en cuisinant | Pas faisable à distance, à notre connaissance ; bandeau d'alerte possible | ½ soirée (bandeau) |
@@ -63,6 +63,12 @@ les montre tous, sans « Écouté » ; le bouton n'existe que sur les envies enc
 sans doute une seule l'est encore (les autres morceaux viennent d'envies déjà faites, d'albums ou d'ajouts directs
 dans Spotify). Retenu par défaut : « Écouté » sur chaque morceau **retire le morceau de la playlist** (une file
 d'attente) et coche l'envie liée s'il y en a une.
+
+**Fait le 19/10** : bouton « Écouté » dans la fiche d'un titre de la playlist (app TV 14d8528) → script
+`script.aiguillage_spotify_ecoute` → événement `aiguillage_spotify_ecoute` → la vigie retire le titre (`DELETE
+/playlists/{id}/items`, corps `items`), coche les envies liées (`envies_ecoutees`, tests dans
+`tests/test_aiguillage_spotify.py`) et recopie la playlist. Reste : essai d'Alexandre sur un vrai titre ; option
+automatique (historique d'écoute) pas faite.
 
 ## L3 — Tour d'UX : placement des boutons de la fiche
 
