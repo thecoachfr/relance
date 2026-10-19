@@ -10,7 +10,7 @@ ce qui existe déjà, ce qu'on peut faire, le coût et les questions à trancher
 | L3 | Tour d'UX sur le placement des boutons de la fiche | **Fait le 19/10** (à essayer) | — |
 | L4 | Reconnaissance de texte (rendez-vous chez le dentiste…) | **Fait le 19/10** (à essayer) | — |
 | L5 | Nest Hub : couper l'alarme du détecteur de fumée (Netatmo) en cuisinant | **Abandonné** (Alexandre, 19/10) | — |
-| L6 | Nest Hub : afficher ce qui passe (TV ou musique), quelle que soit la source | Faisable : un capteur « En ce moment » | 1 soirée |
+| L6 | Nest Hub : afficher ce qui passe (TV ou musique), quelle que soit la source | **Fait le 19/10** (à voir sur le Hub) | — |
 | L7 | Nest Hub : changer le contenu sans changer de dashboard | **Fait et validé sur le Hub le 19/10** | — |
 
 ## L1 — Concerts et spectacles
@@ -196,7 +196,12 @@ La carte n'affiche plus qu'une tuile, avec la pièce, la pochette ou le logo de 
 conviennent (volume des LS50, chaîne suivante). Les lecteurs en double dans HA (`entryway_2`, `salon_ls50_5`,
 `freebox_player_pop_4`…) sont à trier en passant. 1 soirée.
 
-**Question** : la TV d'abord, ou la musique d'abord, quand les deux jouent ?
+**Choix d'Alexandre (19/10)** : la musique d'abord, « on verra à l'usage ».
+
+**Fait le 19/10**, directement dans la carte (pas de nouveau capteur) : sans musique, le lecteur de l'Accueil montre la TV
+(chaîne, programme, sous-titre et logo lus dans `sensor.freebox_player_chaine`, ou l'application ouverte), avec
+Chaînes et Éteindre ; dans la page Musique, la TV s'affiche en haut à droite quand la musique joue, à la place du
+lecteur sinon. Banc d'essai (les deux cas) et capture HA vérifiés.
 
 ## L7 — Nest Hub : changer le contenu sans changer de dashboard
 
