@@ -100,6 +100,42 @@ def test_ecoute():
     assert c == {"titre": "x", "envie": {"type": "ecouter"}, "fait": True, "fait_le": "2026-10-19T15:00:00Z"}
 
 
+def test_coupure_reseau():
+    """Coupure réseau (20/10) : appel rejoué si sans effet double, sinon l'erreur remonte tout de suite."""
+    import types
+    faux = types.ModuleType("httpx")
+    faux.TransportError = type("TransportError", (Exception,), {})
+    sys.modules.setdefault("httpx", faux)
+    erreur = sys.modules["httpx"].TransportError
+    s.time.sleep, dormir = (lambda _: None), s.time.sleep
+    try:
+        essais = []
+
+        def requete(echecs):
+            def f():
+                essais.append(1)
+                if len(essais) <= echecs:
+                    raise erreur("Server disconnected without sending a response.")
+                return "ok"
+            return f
+
+        assert s.Client._envoyer(True, requete(2)) == "ok" and len(essais) == 3
+        essais.clear()
+        try:
+            s.Client._envoyer(True, requete(3))
+            raise AssertionError("l'erreur aurait dû remonter")
+        except erreur:
+            assert len(essais) == 3
+        essais.clear()
+        try:
+            s.Client._envoyer(False, requete(1))  # ajout à la playlist : pas rejoué
+            raise AssertionError("l'erreur aurait dû remonter")
+        except erreur:
+            assert len(essais) == 1
+    finally:
+        s.time.sleep = dormir
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_"):

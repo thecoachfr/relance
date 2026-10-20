@@ -380,7 +380,7 @@ class RelanceVigie(Hass):
                     continue
                 etat, resultat = self._executer(action, tache, client)
                 if etat is None:
-                    continue  # pas exécutable maintenant (Spotify sans identifiants) : on réessaiera
+                    continue  # pas exécutable maintenant (Spotify sans identifiants, coupure réseau) : on réessaiera
                 tache = aiguillage_actions.marquer(tache, action["id"], etat, resultat, maintenant)
                 faites.append(f"{action.get('type')} : {etat}")
             # Échecs et préparations prêtes (routine comprise) : notification visible, une fois par état.
@@ -581,6 +581,10 @@ class RelanceVigie(Hass):
                 return "echec", "Pas de lien Spotify vers un morceau, un album ou un épisode"
             try:
                 _, ajoutes = client.ajouter(*ref)
+            except httpx.TransportError as error:
+                # Coupure réseau : l'action reste à faire, le passage suivant (1 h au plus) la reprend sans doublon.
+                self.log(f"Spotify : ajout reporté (réseau) : {error!r}", level="WARNING")
+                return None, None
             except Exception as error:  # noqa: BLE001
                 return "echec", f"Spotify : {error!r}"[:300]
             return "faite", ("Déjà dans « À écouter »" if ajoutes == 0

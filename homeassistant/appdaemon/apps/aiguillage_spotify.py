@@ -19,12 +19,17 @@ Identifiant, secret et jeton de rafraîchissement : `/config/spotify_aiguillage.
 from datetime import date
 import base64
 import re
+import time
 
 API = "https://api.spotify.com/v1"
 NOM_PLAYLIST = "À écouter"
 DESCRIPTION = "Envies « À écouter » d'Aiguillage, ajoutées par la vigie."
 # Un échec (lien mort, réseau) est retenté le lendemain, pas à chaque modification.
 RETRY_DAYS = 1
+# Coupures réseau (20/10 : connexion fermée sans réponse, poignée de main TLS interrompue) : nouvel essai après ces
+# pauses, seulement pour les appels sans effet double (lecture, jeton, PUT, DELETE ; pas l'ajout à la playlist).
+PAUSES_RESEAU = (1, 3)
+SANS_EFFET_DOUBLE = {"GET", "PUT", "DELETE"}
 
 # Identifiant : 22 caractères (du texte collé derrière est ignoré, cas du 19/10).
 LIEN = re.compile(r"https?://open\.spotify\.com/(?:intl-[a-z-]+/)?(track|album|episode|playlist|artist|show)/([A-Za-z0-9]{1,22})")
@@ -211,9 +216,9 @@ class Client:
         if self._acces:
             return self._acces
         basic = base64.b64encode(f"{self._ids['client_id']}:{self._ids['client_secret']}".encode()).decode()
-        r = httpx.post("https://accounts.spotify.com/api/token", timeout=self._timeout,
-                       headers={"Authorization": f"Basic {basic}"},
-                       data={"grant_type": "refresh_token", "refresh_token": self._ids["refresh_token"]})
+        r = self._envoyer(True, lambda: httpx.post(
+            "https://accounts.spotify.com/api/token", timeout=self._timeout, headers={"Authorization": f"Basic {basic}"},
+            data={"grant_type": "refresh_token", "refresh_token": self._ids["refresh_token"]}))
         r.raise_for_status()
         self._acces = r.json()["access_token"]
         return self._acces
@@ -222,9 +227,23 @@ class Client:
         import httpx
 
         url = path if path.startswith("http") else API + path
-        r = httpx.request(method, url, headers={"Authorization": f"Bearer {self._token()}"}, timeout=self._timeout, **kw)
+        jeton = self._token()
+        r = self._envoyer(method in SANS_EFFET_DOUBLE, lambda: httpx.request(
+            method, url, headers={"Authorization": f"Bearer {jeton}"}, timeout=self._timeout, **kw))
         r.raise_for_status()
         return r.json() if r.content else {}
+
+    @staticmethod
+    def _envoyer(rejouable, requete):
+        """La requête, rejouée après une coupure réseau (`httpx.TransportError`) si elle est sans effet double."""
+        import httpx
+
+        for pause in (PAUSES_RESEAU if rejouable else ()):
+            try:
+                return requete()
+            except httpx.TransportError:
+                time.sleep(pause)
+        return requete()
 
     def _pages(self, path, params=None):
         data = self._call("GET", path, params=dict(params or {}, limit=50))
