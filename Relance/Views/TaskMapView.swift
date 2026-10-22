@@ -22,6 +22,7 @@ struct TaskMapView: View {
     /// Tâches au même endroit : on les liste (aucun zoom ne les sépare).
     @State private var sameSpot: [UUID]?
     @State private var adding = false
+    @State private var trajets = false
     /// Filtre : vide = tout, « taches » = les tâches qui ne sont pas des envies, sinon un type d'envie.
     @AppStorage("mapFilter") private var filterRaw = ""
 
@@ -242,6 +243,25 @@ struct TaskMapView: View {
             FloatingSettingsButton()
                 .padding(.leading, 16)
                 .padding(.top, 8)
+        }
+        // Mes trajets (P9-M3) : sous le « + », seulement avec Home Assistant, qui garde l'historique.
+        .overlay(alignment: .topTrailing) {
+            if HAConfig.isConfigured {
+                Button("Mes trajets", systemImage: "point.topleft.down.to.point.bottomright.curvepath") { trajets = true }
+                    .labelStyle(.iconOnly)
+                    .font(.title3.weight(.semibold))
+                    .frame(width: 48, height: 48)
+                    .background(.regularMaterial, in: .circle)
+                    .shadow(radius: 3, y: 1)
+                    .padding(.trailing, 16)
+                    .padding(.top, 64)
+            }
+        }
+        .sheet(isPresented: $trajets) {
+            NavigationStack {
+                TrajetsCarteView()
+                    .toolbar { ToolbarItem(placement: .confirmationAction) { Button("OK") { trajets = false } } }
+            }
         }
         .sheet(isPresented: $adding) { QuickAddSheet(context: .map) }
         #endif

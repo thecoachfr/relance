@@ -107,6 +107,19 @@ reçu et rangé (une visite réelle, gardée).
 - Lien avec l'existant : les arrêts peuvent servir de source au lieu d'une tâche (« Ma position » à l'heure d'un arrêt).
 - Plus tard, au choix : vue sur le Hub (les trois vues : Hub TV, Nest Hub, Hub iPad, voir la règle commune).
 
+*Fait le 22–23/10, à essayer sur l'iPhone* : `Relance/Views/TrajetsCarteView.swift`, ouvert depuis l'onglet Carte (bouton
+sous le « + », si Home Assistant est réglé) ou Réglages › Mes trajets › Voir mes trajets (iPhone et iPad ; pas sur Mac).
+Tracé bleu coupé aux trous de plus de 10 min ou aux sauts de plus de 2 km, arrêts numérotés et nommés par Plans (10 au
+plus), « 17,3 km · 1 arrêt », heures et durée de chaque arrêt ; jour précédent ou suivant **avec des données** (sinon
+±1 jour), calendrier, Aujourd'hui. Toucher la carte : « Déjà venu ici ? » (arrêts à moins de 150 m, puis jours où un
+point est passé tout près ; toucher une date ouvre ce jour). **Échange avec HA** (`TrajetsService`) : l'app écrit
+`demande` `{id, type: "jour", jour}` ou `{id, type: "venu", lat, lon, rayon}` dans l'espace `trajets` de `donnees_apps`
+(jeton `apps-perso`) ; `aiguillage_trajets` répond dans `reponse` (même id ; points `[t, lat, lon]` éclaircis pour
+tenir dans 64 Ko, distance par source sans double compte, jours voisins) ; l'app relit toutes les 0,5 s, 15 s au plus.
+Rien n'est gardé sur l'appareil. Essai réel par l'API le 23/10 vers 0 h : journée du 22/10 → 388 points, 17,3 km,
+1 arrêt, jour précédent 21/10. Tests : Python 2 de plus, Swift `TrajetsCarteTests` (3). Pas encore vu à l'écran
+(le simulateur n'a pas Home Assistant).
+
 ### M4 — Tracé précis en mouvement (S3, option)
 - Interrupteur **Tracé précis** (coupé par défaut, ou « pendant 24 h ») : `CLLocationUpdate.liveUpdates` (ou
   `CLBackgroundActivitySession`) déclenché quand `CMMotionActivityManager` signale marche, vélo ou voiture ; filtre de

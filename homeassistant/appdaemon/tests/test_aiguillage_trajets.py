@@ -111,3 +111,33 @@ def test_gpx_sante_eclairci(tmp_path):
     base = db(tmp_path)
     assert m.ajouter_points(base, garde, "sante") == 3
     assert m.ajouter_points(base, garde, "sante") == 0           # import rejoué : rien en double
+
+
+def test_reponse_jour(tmp_path):
+    base = db(tmp_path)
+    t0 = int(datetime(2026, 10, 22, 9, 0, tzinfo=m.PARIS).timestamp())
+    # Une marche vers le nord (montre) et les mêmes lieux par l'app Compagnon : la distance ne double pas.
+    marche = [{"t": t0 + i * 10, "lat": LAT + i * 0.0002, "lon": LON} for i in range(500)]   # ~11 km
+    m.ajouter_points(base, marche, "sante")
+    m.ajouter_points(base, [{"t": t0, "lat": LAT, "lon": LON}, {"t": t0 + 4990, "lat": LAT + 0.0998, "lon": LON}], "compagnon")
+    m.ajouter_point(base, {"t": t0 - 3 * 86400, "lat": LAT, "lon": LON}, "compagnon")          # 19/10
+    m.ajouter_visites(base, [{"arrivee": t0 + 2 * 86400, "depart": None, "lat": LAT, "lon": LON, "precision": 50}], "aiguillage")
+    r = m.reponse_jour(base, "2026-10-22")
+    assert r["km"] == 11.1 and len(r["points"]) == 502
+    assert r["points"][0] == [t0, LAT, LON]
+    assert (r["precedent"], r["suivant"]) == ("2026-10-19", "2026-10-24")
+    petit = m.reponse_jour(base, "2026-10-22", taille_max=4000)                                # éclairci pour tenir
+    assert 3 <= len(petit["points"]) < 200 and petit["km"] == 11.1
+    vide = m.reponse_jour(base, "2026-10-21")
+    assert vide["points"] == [] and vide["precedent"] == "2026-10-19" and vide["suivant"] == "2026-10-22"
+
+
+def test_repondre(tmp_path):
+    base = db(tmp_path)
+    m.ajouter_visites(base, [{"arrivee": 1792650000, "depart": 1792653600, "lat": LAT, "lon": LON, "precision": 50}], "aiguillage")
+    r = m.repondre(base, {"id": "a1", "type": "venu", "lat": LAT, "lon": LON})
+    assert r["id"] == "a1" and r["rayon"] == 150 and r["visites"][0]["depart"] == 1792653600
+    assert m.repondre(base, {"id": "a2", "type": "venu", "lat": 200, "lon": 0})["erreur"] == "point invalide"
+    assert m.repondre(base, {"id": "a3", "type": "jour", "jour": "pas une date"})["erreur"]
+    assert m.repondre(base, None)["erreur"] == "type inconnu"
+    assert m.repondre(base, {"id": "a4", "type": "jour", "jour": "2026-10-22"})["id"] == "a4"

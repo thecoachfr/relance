@@ -231,6 +231,78 @@ def deja_venu(db, lat, lon, rayon=150, limite=20):
     return {"visites": visites, "jours": jours}
 
 
+# MARK: - Réponses à l'app (M3)
+
+TAILLE_REPONSE_MAX = 60_000  # octets : limite de 64 Ko par enregistrement de donnees_apps
+
+
+def km(points):
+    """Distance parcourue (km), source par source, la plus longue gardée : deux sources du même trajet ne s'ajoutent pas."""
+    par_source = {}
+    for p in points:
+        par_source.setdefault(p.get("source"), []).append(p)
+    total = 0.0
+    for pts in par_source.values():
+        total = max(total, sum(distance_m(a["lat"], a["lon"], b["lat"], b["lon"]) for a, b in zip(pts, pts[1:])))
+    return round(total / 1000, 1)
+
+
+def jours_voisins(db, jour):
+    """Jour précédent et jour suivant qui ont des points ou des visites (navigation de l'écran)."""
+    debut, fin = bornes_jour(jour)
+    avant = max(x for x in (db.execute("SELECT MAX(t) FROM points WHERE t < ?", (debut,)).fetchone()[0],
+                            db.execute("SELECT MAX(arrivee) FROM visites WHERE arrivee < ?", (debut,)).fetchone()[0], -1)
+                if x is not None)
+    apres = [x for x in (db.execute("SELECT MIN(t) FROM points WHERE t >= ?", (fin,)).fetchone()[0],
+                         db.execute("SELECT MIN(arrivee) FROM visites WHERE arrivee >= ?", (fin,)).fetchone()[0])
+             if x is not None]
+    jour_de = lambda t: datetime.fromtimestamp(t, PARIS).date().isoformat()
+    return (jour_de(avant) if avant >= 0 else None), (jour_de(min(apres)) if apres else None)
+
+
+def reponse_jour(db, jour, taille_max=TAILLE_REPONSE_MAX):
+    """Journée pour l'écran « Mes trajets » : points [t, lat, lon] (éclaircis s'il le faut pour tenir dans 64 Ko),
+    visites, distance, jours voisins."""
+    jour = jour if isinstance(jour, date) else date.fromisoformat(jour)
+    contenu = lire_jour(db, jour)
+    precedent, suivant = jours_voisins(db, jour)
+    points, pas = contenu["points"], 10
+    while True:
+        valeur = {"type": "jour", "jour": jour.isoformat(), "km": km(contenu["points"]),
+                  "points": [[p["t"], round(p["lat"], 5), round(p["lon"], 5)] for p in points],
+                  "visites": [{k: v[k] for k in ("arrivee", "depart", "lat", "lon")} for v in contenu["visites"]],
+                  "precedent": precedent, "suivant": suivant}
+        if len(json.dumps(valeur, separators=(",", ":")).encode()) <= taille_max or len(points) < 3:
+            return valeur
+        points, pas = eclaircir(points, pas), pas * 2
+
+
+def reponse_venu(db, lat, lon, rayon=150):
+    trouve = deja_venu(db, lat, lon, rayon)
+    return {"type": "venu", "lat": lat, "lon": lon, "rayon": rayon,
+            "visites": [{k: v[k] for k in ("arrivee", "depart", "lat", "lon")} for v in trouve["visites"]],
+            "jours": trouve["jours"]}
+
+
+def repondre(db, demande):
+    """Demande de l'app (`{id, type: "jour", jour}` ou `{id, type: "venu", lat, lon, rayon?}`) → réponse, avec son id."""
+    demande = demande if isinstance(demande, dict) else {}
+    try:
+        if demande.get("type") == "jour":
+            valeur = reponse_jour(db, str(demande.get("jour")))
+        elif demande.get("type") == "venu":
+            lat, lon = _nombre(demande.get("lat")), _nombre(demande.get("lon"))
+            if not _coords_valides(lat, lon):
+                raise ValueError("point invalide")
+            rayon = min(max(_nombre(demande.get("rayon")) or 150, 20), 2000)
+            valeur = reponse_venu(db, lat, lon, rayon)
+        else:
+            raise ValueError("type inconnu")
+    except ValueError as exc:
+        valeur = {"type": demande.get("type"), "erreur": str(exc)}
+    return {"id": demande.get("id"), **valeur}
+
+
 # MARK: - App AppDaemon
 
 try:
@@ -239,8 +311,14 @@ except ImportError:  # pragma: no cover
     hass = None
 
 if hass is not None:
+    import os
+    import uuid
+
+    import httpx
 
     CAPTEUR = "sensor.aiguillage_trajets"
+    CORE_API = "http://supervisor/core/api"
+    ESPACE = "trajets"
 
     class AiguillageTrajets(hass.Hass):
 
@@ -253,6 +331,9 @@ if hass is not None:
             # Import d'un historique (M0) : événement « aiguillage_trajets_importer » {fichier, source}, fichier JSONL
             # d'un point par ligne {t, lat, lon, precision, vitesse}, préparé par homeassistant/scripts/trajets_sante.py.
             self.listen_event(self._importer, "aiguillage_trajets_importer")
+            # Écran « Mes trajets » (M3) : l'app écrit `demande` dans l'espace « trajets » de donnees_apps, la réponse
+            # va dans `reponse` (même id).
+            self.listen_event(self._demande, "donnees_apps_modifie", espace=ESPACE, cle="demande")
             # Reprise des points encore dans le recorder (10 jours) : sans doublon, donc à chaque démarrage.
             self.run_in(self._rattraper, 20)
 
@@ -330,3 +411,24 @@ if hass is not None:
             self._derniere = f"{datetime.now():%d/%m %H:%M} import {source}"
             self.log(f"Trajets : import {source}, {ajoutes} point(s) ajouté(s) sur {len(points)}")
             self._publier()
+
+        def _service(self, domain, service, data):
+            """Action HA par l'API REST (`return_response`, exigé par `donnees_apps`, que `call_service` ne passe pas)."""
+            reply = httpx.post(f"{CORE_API}/services/{domain}/{service}?return_response", json=data, timeout=15,
+                               headers={"Authorization": f"Bearer {os.environ['SUPERVISOR_TOKEN']}"})
+            reply.raise_for_status()
+            return reply.json().get("service_response")
+
+        def _demande(self, event_name, data, **kwargs):
+            try:
+                lu = self._service("donnees_apps", "lire", {"espace": ESPACE, "cle": "demande"}) or {}
+                demande = (lu.get("enregistrement") or {}).get("valeur")
+                db = ouvrir(self._db_path)
+                try:
+                    valeur = repondre(db, demande)
+                finally:
+                    db.close()
+                self._service("donnees_apps", "ecrire", {"espace": ESPACE, "cle": "reponse", "valeur": valeur,
+                                                         "modifie_par": "aiguillage_trajets", "op_id": str(uuid.uuid4())})
+            except Exception as exc:  # noqa: BLE001 - l'app attend, puis affiche « pas de réponse »
+                self.log(f"Trajets : demande de l'app sans réponse ({exc!r})", level="WARNING")

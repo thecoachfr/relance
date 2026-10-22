@@ -2,7 +2,7 @@ import CoreLocation
 import SwiftUI
 
 /// Réglages › Mes trajets (P9-M2) : relever ses arrêts pour l'historique gardé dans Home Assistant.
-/// L'écran des trajets lui-même (carte d'une journée, « déjà venu ici ? ») viendra avec M3.
+/// L'écran des trajets lui-même (carte d'une journée, « déjà venu ici ? ») : `TrajetsCarteView` (M3).
 struct TrajetsView: View {
     @State private var actif = TrajetsRecorder.isOn
     @State private var enAttente = TrajetsRecorder.file.count
@@ -11,6 +11,13 @@ struct TrajetsView: View {
 
     var body: some View {
         Form {
+            if HAConfig.isConfigured {
+                Section {
+                    NavigationLink("Voir mes trajets") { TrajetsCarteView() }
+                } footer: {
+                    Text("Aussi depuis l'onglet Carte, sous le « + ».")
+                }
+            }
             Section {
                 Toggle("Relever mes arrêts", isOn: $actif)
                     .onChange(of: actif) { _, on in TrajetsRecorder.shared.activer(on) }
