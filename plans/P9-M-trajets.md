@@ -51,6 +51,10 @@ voyage ou en balade photo (lot M4), puis mesurée avec le protocole du plan E.
   Utile quand même : heures et distances des marches, à montrer dans la journée sans carte. Source `pacer`.
 - **Santé d'Apple** : l'export de Santé (`export.zip`) contient un fichier GPX par entraînement avec tracé
   (`workout-routes/`), par exemple les marches et sorties enregistrées par la montre. Source `sante`.
+  **Export reçu le 22/10** (121 Mo, iCloud Drive › Téléchargements) : **1 919 tracés GPX, du 08/10/2021 au
+  22/10/2026**, tous enregistrés par l'Apple Watch (marches et courses ; les 3 002 marches de Pacer sont dans Santé,
+  mais **sans tracé**). 1,44 million de points (un par seconde, avec précision, vitesse et cap), 619 par tracé en
+  médiane. À l'import : éclaircir (un point tous les 10 m environ) et ranger en source `sante` dans `points`.
 - Si un fichier existe : un script d'import qui le ramène au format de la section 5 (visites et points), avec sa source.
 - Limite commune : ces historiques ne couvrent que les sorties enregistrées volontairement, pas les déplacements de tous les jours.
 
