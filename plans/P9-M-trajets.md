@@ -43,8 +43,12 @@ voyage ou en balade photo (lot M4), puis mesurée avec le protocole du plan E.
   Takeout (« Historique des positions ») sont une autre piste, à chercher dans Drive.
 - **Pacer** (22/10, piste d'Alexandre) : Pacer ne garde un tracé GPS que pour les activités lancées avec son GPS ; le
   reste n'est que des pas, sans position. Export d'après son aide : Profil › Réglages › Data Export, un zip de CSV
-  envoyé par e-mail (pas, poids, sessions GPS) ; GPX annoncé pour les activités GPS. À vérifier sur un vrai export :
-  les CSV des sessions contiennent-ils les points, ou seulement les totaux ? Source `pacer`.
+  envoyé par e-mail (pas, poids, sessions GPS) ; GPX annoncé pour les activités GPS. **Export reçu le 22/10** :
+  quatre CSV, **aucune coordonnée**. `ActivitySessions` : 5 224 sessions du 08/10/2021 au 22/10/2026, dont
+  3 003 « GPS Walk » (début, fin, pas, distance, durée) et 2 221 venues de Santé ; `DetailedSteps` : pas par quart
+  d'heure depuis le 08/09/2022 ; `DailySteps` : pas par jour. Les tracés restent dans le compte Pacer : à voir si
+  l'app exporte un GPX par activité (une à une, donc peu pratique pour 3 000) ou si elle les écrit dans Santé.
+  Utile quand même : heures et distances des marches, à montrer dans la journée sans carte. Source `pacer`.
 - **Santé d'Apple** : l'export de Santé (`export.zip`) contient un fichier GPX par entraînement avec tracé
   (`workout-routes/`), par exemple les marches et sorties enregistrées par la montre. Source `sante`.
 - Si un fichier existe : un script d'import qui le ramène au format de la section 5 (visites et points), avec sa source.
