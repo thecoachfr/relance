@@ -1015,6 +1015,8 @@ class RelanceVigie(Hass):
         if data.get("action") == "build":
             self.record_build(data)
             return
+        if data.get("action") == "trajets":
+            return  # arrêts relevés par l'app (P9-M2) : pour l'app `aiguillage_trajets`
         token = str(data.get("token", "")).strip().lower()
         environment = data.get("environment", "production")
         if len(token) < 32 or not all(c in "0123456789abcdef" for c in token):

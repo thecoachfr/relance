@@ -140,6 +140,10 @@ Mémoire des échanges Signal (plan P9-J) : `aiguillage_memoire.py`, branché da
 résumés la nuit, purges, recherche par l'événement `aiguillage_memoire_chercher`). Mode d'emploi :
 [docs/MEMOIRE-SIGNAL.md](docs/MEMOIRE-SIGNAL.md).
 
+Historique des trajets (plan P9-M) : app AppDaemon `aiguillage_trajets` (`aiguillage_trajets.py`), base
+`/config/aiguillage_trajets.sqlite` : points GPS de l'app Compagnon (gardés au-delà des 10 jours du recorder) et arrêts
+relevés par l'app (Réglages › Mes trajets), envoyés au webhook avec `action: trajets`. Détail : [plans/P9-M-trajets.md](plans/P9-M-trajets.md).
+
 Pièces jointes (plan P9-K) : les fichiers d'une tâche (photo, PDF, scan) sont rangés dans Home Assistant par
 l'API `fichiers` de `ha-donnees-apps` 0.3.0 (`/api/donnees_apps/fichiers/aiguillage`, même jeton) ; la tâche garde leurs
 métadonnées et le début du texte lu sur l'appareil (champ `pieces`), que la routine de tri utilise.

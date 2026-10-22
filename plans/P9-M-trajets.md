@@ -61,6 +61,14 @@ voyage ou en balade photo (lot M4), puis mesurée avec le protocole du plan E.
 - Rattrapage de l'historique encore présent (les 10 derniers jours) au premier lancement.
 - **Accepté quand** : les points d'une journée sont dans le stockage, sans doublon, et y restent après 10 jours.
 
+*Fait le 22/10 (stockage choisi par Alexandre : SQLite sur le NUC)* : `homeassistant/appdaemon/apps/aiguillage_trajets.py`
+(app `aiguillage_trajets` dans `apps.yaml`, `entite: device_tracker.iphone_17_lex`), base `/config/aiguillage_trajets.sqlite`
+(tables `points` et `visites`, clé source + heure), capteur `sensor.aiguillage_trajets` (points, visites, depuis), journal
+« Trajets : … ». Point ignoré au-delà de 100 m de précision ou s'il répète le précédent (moins de 1 m). Reprise de
+l'historique à chaque démarrage (sans doublon). Déployé le 22/10 à 18 h 46 : **73 points repris, du 12/10 au 22/10**
+(presque rien avant le 20/10 : l'app Compagnon renvoyait le même point à la maison). Fonctions `lire_jour` et
+`deja_venu` déjà prêtes pour M3. Tests : `tests/test_aiguillage_trajets.py` (6).
+
 ### M2 — Visites et changements significatifs dans Aiguillage (S2)
 - Nouveau `TrajetsRecorder` (séparé de `ProximityReminders`, même `CLLocationManager` partagé ou un second) :
   `startMonitoringVisits()` et `startMonitoringSignificantLocationChanges()`, seulement si l'interrupteur
@@ -71,6 +79,17 @@ voyage ou en balade photo (lot M4), puis mesurée avec le protocole du plan E.
 - Visite = `{arrivee, depart, lat, lon, precision}` ; nom du lieu proposé par Plans à l'affichage, pas à l'enregistrement.
 - **Accepté quand** : une journée de déplacements donne ses arrêts avec heures d'arrivée et de départ ; la part
   d'Aiguillage dans Réglages › Batterie ne bouge pas de façon visible (comparaison avec E1).
+
+*Code fait le 22/10, à installer (build) et à essayer sur l'iPhone* : **visites seulement**, pas de changements
+significatifs dans Aiguillage (l'app Compagnon les envoie déjà, M1 les garde). `Relance/App/TrajetsRecorder.swift`
+(`startMonitoringVisits` si Réglages › Mes trajets › « Relever mes arrêts » et localisation « Toujours » ; lancé au
+démarrage dans `AppDelegate`), file des arrêts dans l'App Group (`trajets.file`, 500 au plus ; même arrivée = même
+arrêt, le départ connu gardé), envoi au **webhook de l'app** (`action: trajets`, champ `visites` : `{arrivee, depart?,
+lat, lon, precision}` en secondes Unix) au plus toutes les 3 h en arrière-plan et à chaque retour au premier plan,
+« Envoyer maintenant » dans l'écran. Automatisation « Relance : enregistrer un appareil » : champ `visites` ajouté à
+l'événement `relance_register` (22/10) ; la vigie ignore `action: trajets`. Compteur MetricKit « arrêt » dans le
+Diagnostic batterie. Tests : `RelanceTests/TrajetsTests.swift` (4). Essai du webhook local le 22/10 à 18 h 50 : arrêt
+reçu et rangé (une visite réelle, gardée).
 
 ### M3 — Écran « Mes trajets » (iPhone, iPad, Mac)
 - **Jour** : carte avec le tracé (points S1 + S2 + S3, triés par heure, lissés), les arrêts en épingles, et la liste

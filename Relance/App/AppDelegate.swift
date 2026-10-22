@@ -39,6 +39,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         }
         // Relancée par iOS à l'entrée dans une zone : la surveillance doit reprendre dès le lancement.
         ProximityReminders.shared.start(store: store)
+        // Historique des trajets (P9-M2) : iOS relance aussi l'app pour chaque arrêt relevé.
+        TrajetsRecorder.shared.start()
         store.onTasksChanged = { [liveActivity] in
             let tasks = store.activeTasks()
             Task { await ProximityReminders.shared.update(tasks: tasks) }

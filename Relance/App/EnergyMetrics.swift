@@ -10,6 +10,7 @@ nonisolated final class EnergyMetrics: NSObject, MXMetricManagerSubscriber, @unc
     enum Wake: String, CaseIterable {
         case push = "Push de la vigie"
         case zone = "Entrée dans une zone"
+        case visite = "Arrêt relevé (trajets)"
     }
 
     /// Résumé d'un rapport MetricKit (en général 24 h).

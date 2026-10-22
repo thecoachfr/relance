@@ -78,6 +78,7 @@ struct DiagnosticView: View {
         switch wake {
         case .push: "push"
         case .zone: "zone"
+        case .visite: "arrêt"
         }
     }
 

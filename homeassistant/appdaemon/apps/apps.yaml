@@ -41,3 +41,10 @@ aiguillage_signal:
   class: AiguillageSignal
   # workspace_id: wrkspc_…
   memoire_budget_mensuel: 5
+
+# Historique des trajets (P9-M, 22/10) : points GPS de l'app Compagnon gardés au-delà de 10 jours, arrêts envoyés
+# par Aiguillage (webhook, action « trajets »). Base : /config/aiguillage_trajets.sqlite.
+aiguillage_trajets:
+  module: aiguillage_trajets
+  class: AiguillageTrajets
+  entite: device_tracker.iphone_17_lex
