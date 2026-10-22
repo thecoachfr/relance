@@ -18,6 +18,7 @@
 | J — Mémoire des échanges Signal avec Yoann (texte cherchable, résumé de chaque nuit, recherche depuis Claude) | `P9-J-memoire-signal.md` | HA (+ relance pour J4) | J1–J3 2–3 soirées ; J4 2 ; J5 une demi-soirée |
 | K — Pièces jointes (photo, PDF, scan) rangées dans HA, texte lu sur l'appareil pour le tri, copie Drive | `P9-K-pieces-jointes.md` | relance + ha-donnees-apps + routine | fait le 18/10 (essais à faire) |
 | L — Idées du 19/10 : sorties et billets (L1), « Écouté » sur la playlist TV (L2), fiche refaite (L3), rendez-vous lu dans un texte (L4) ; Nest Hub : « En ce moment » (L6), pages sans recharger (L7) ; L5 abandonné | `P9-L-idees-19-10.md` | relance + aiguillage-tv + HA | L1 à L4, L6 et L7 faits le 19/10 |
+| M — Historique de mes trajets sans Google (archive des positions de l'app Compagnon, visites iOS, tracé précis en option, écran « Mes trajets », « déjà venu ici ? ») | `P9-M-trajets.md` | relance + HA | étude du 22/10 ; stockage à décider |
 
 **Ordre** : lot 0 ci-dessous (avec E1, la mesure de référence), puis A, B, C, D, et E2 après A4 et D3. C dépend de B (liens testés sur le Player, champs `envie`). D réutilise « Sur la TV » (B) comme une action. F, d'abord une piste, a été fait après D. G (ajouté le 16/10, déposé le 16/10 à 22 h) vient ensuite, indépendant des autres plans.
 
