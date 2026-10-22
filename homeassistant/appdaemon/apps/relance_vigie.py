@@ -140,6 +140,9 @@ class RelanceVigie(Hass):
         self._spotify_missing_logged = False
         # Radios (22/10) : instance de Music Assistant qui cherche sur TuneIn.
         self._ma_entry = self.args.get("music_assistant_entry")
+        # Favoris de Music Assistant (22/10) : API du serveur MA, jeton longue durée « Aiguillage » créé par Alexandre.
+        self._ma_url = self.args.get("music_assistant_url")
+        self._ma_token_path = Path(self.args.get("music_assistant_token_file", "/config/music_assistant_token"))
         self._radio_handle = None
         self._lock = threading.Lock()
         self._jwt = None
@@ -383,6 +386,7 @@ class RelanceVigie(Hass):
                         break
                     liste, version = nouvelle, ecrit.get("version", version + 1)
                 tache = aiguillage_radio.avec_station(valeur, st, maintenant)
+                self._ma_favori(st)
             try:
                 result = self._service("donnees_apps", "ecrire", {
                     "espace": self._espace, "cle": record["cle"], "valeur": tache,
@@ -402,6 +406,21 @@ class RelanceVigie(Hass):
                 self.log(f"Radios : bibliothèque de Music Assistant illisible : {error!r}", level="WARNING")
         etat, attributs = aiguillage_radio.etat(liste, bibliotheque)
         self.set_state(aiguillage_radio.ENTITE, state=etat, attributes=attributs)
+
+    def _ma_favori(self, st):
+        """Station ajoutée aux favoris de Music Assistant (donc à sa bibliothèque). Sans jeton ni adresse : rien."""
+        try:
+            jeton = self._ma_token_path.read_text().strip()
+        except FileNotFoundError:
+            jeton = ""
+        if not jeton or not self._ma_url:
+            return
+        try:
+            httpx.post(f"{self._ma_url}/api", timeout=30, headers={"Authorization": f"Bearer {jeton}"},
+                       json={"command": "music/favorites/add_item", "args": {"item": st["uri"]}}).raise_for_status()
+            self.log(f"Radios : « {st['nom']} » en favori dans Music Assistant")
+        except Exception as error:  # noqa: BLE001
+            self.log(f"Radios : « {st['nom']} » pas mise en favori : {error!r}", level="WARNING")
 
     # MARK: - Spotify (P9-D4)
 

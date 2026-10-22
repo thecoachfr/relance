@@ -22,6 +22,8 @@ relance_vigie:
   tri_budget_mensuel: 30
   # Radios (22/10) : instance de Music Assistant qui cherche les stations sur TuneIn (Paramètres › Appareils).
   # music_assistant_entry: 01K…
+  # Favoris (22/10) : adresse du serveur MA (« base_url » de http://<ha>:8095/info) ; jeton dans /config/music_assistant_token.
+  # music_assistant_url: http://192.168.1.x:8095
   # Seulement avec une clé d'utilisateur (sk-ant-usr-…) : identifiant de l'espace de travail de la Console.
   # tri_workspace_id: wrkspc_…
   # Rappels « à la maison » (P9-F2) : présence au salon (Hue MotionAware, helper Template).
