@@ -185,6 +185,7 @@ class RelanceVigie(Hass):
         # Bouton « Lire sur la TV » (app TV ou iPhone) via script.aiguillage_spotify_sur_tv.
         self.listen_event(self.on_spotify_lire, "aiguillage_spotify_lire")
         self.listen_event(self.on_spotify_ecoute, "aiguillage_spotify_ecoute")
+        self.listen_event(self.on_spotify_aime, "aiguillage_spotify_aime")
         self._refreshes = 0
         self._triage_handle = None
         self._triage_day = None
@@ -741,6 +742,22 @@ class RelanceVigie(Hass):
                 self.log(f"Spotify : « {r['valeur'].get('titre')} » non coché : {error!r}", level="WARNING")
         self.log(f"Spotify : {ref[0]} {ref[1][:8]}… retiré de « À écouter »")
         self._copier_playlist(client, records)
+
+    def on_spotify_aime(self, event_name, data, **kwargs):
+        """« J'aime » sur un titre (Hub TV, 22/10) : ajouté aux titres likés de Spotify, sans toucher à la playlist ni
+        à l'envie. Échec (droit `user-library-modify` pas encore accordé) : notification visible aux iPhone."""
+        ref = aiguillage_spotify.spotify_ref(data.get("lien", ""))
+        client = self._spotify_client()
+        if client is None or not ref:
+            return
+        try:
+            client.aimer(*ref)
+        except Exception as error:  # noqa: BLE001
+            self.log(f"Spotify : « J'aime » en échec : {error!r}", level="WARNING")
+            self.notify_all("Spotify : « J'aime » en échec", "Relancer homeassistant/scripts/spotify_jeton.py sur le Mac "
+                            "(droit des titres likés).", cause="action")
+            return
+        self.log(f"Spotify : {ref[0]} {ref[1][:8]}… ajouté aux titres likés")
 
     def _load_known_keys(self):
         try:

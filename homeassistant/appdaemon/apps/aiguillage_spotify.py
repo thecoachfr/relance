@@ -291,6 +291,18 @@ class Client:
         """Retire le titre de la playlist (toutes ses occurrences ; API de février 2026 : `items`)."""
         self._call("DELETE", f"/playlists/{playlist_id}/items", json={"items": [{"uri": uri(kind, ident)}]})
 
+    def aimer(self, kind, ident):
+        """Ajoute le titre (ou l'album) aux titres likés (22/10, droit `user-library-modify`). API de février 2026 :
+        `PUT /me/library` ; repli sur l'ancien `PUT /me/tracks` (ou `/me/albums`) s'il n'existe pas."""
+        import httpx
+
+        try:
+            self._call("PUT", "/me/library", params={"uris": uri(kind, ident)})
+        except httpx.HTTPStatusError as error:
+            if error.response.status_code not in (404, 405) or kind not in ("track", "album"):
+                raise
+            self._call("PUT", f"/me/{kind}s", params={"ids": ident})
+
     def appareils(self):
         return self._call("GET", "/me/player/devices").get("devices", [])
 

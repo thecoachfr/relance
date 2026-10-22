@@ -18,7 +18,7 @@ OUTIL = Path(__file__).resolve().parents[3] / "spotify-library-tool"
 CIBLE = Path("/Volumes/addon_configs/a0d7b954_appdaemon/spotify_aiguillage.json")
 SCOPES = (
     "playlist-read-private playlist-read-collaborative playlist-modify-private playlist-modify-public "
-    "user-read-playback-state user-modify-playback-state"
+    "user-read-playback-state user-modify-playback-state user-library-modify"
 )
 
 
