@@ -75,3 +75,17 @@ def test_liste_et_etat():
     assert r.ajouter(liste, st, "autre", MAINTENANT) is None
     etat, attributs = r.etat(liste)
     assert etat == "1" and attributs["radios"] == [{k: st[k] for k in ("id", "nom", "uri", "image")}]
+
+
+def test_bibliotheque_de_music_assistant_d_abord():
+    # Réponse réelle de music_assistant.get_library du 22/10.
+    biblio = [{"uri": "library://radio/4", "name": "Radio Nova", "image": "http://cdn-profiles.tunein.com/s17696/images/logoq.png?t=163167"},
+              {"uri": "library://radio/9", "name": "Tsugi Radio", "image": "https://cdn-radiotime-logos.tunein.com/s257284q.png"}]
+    liste = r.ajouter(None, r.station(TSUGI[0]), "325e59c0", MAINTENANT)
+    liste = r.ajouter(liste, r.station(OXIGENIO[0]), "396ac8e1", MAINTENANT)
+    etat, attributs = r.etat(liste, biblio)
+    assert etat == "3" and [x["nom"] for x in attributs["radios"]] == ["Radio Nova", "Tsugi Radio", "Rádio Oxigénio"]
+    nova = attributs["radios"][0]
+    assert nova == {"id": "tunein_s17696", "nom": "Radio Nova", "uri": "library://radio/4",
+                    "image": "https://cdn-profiles.tunein.com/s17696/images/logoq.png?t=163167"}
+    assert attributs["radios"][1]["uri"] == "library://radio/9"  # la station de la bibliothèque l'emporte

@@ -127,7 +127,23 @@ def ajouter(liste, st, cle_tache, maintenant):
     return {"radios": radios}
 
 
-def etat(liste):
-    """(état, attributs) de `sensor.aiguillage_radios`."""
-    radios = [{k: r[k] for k in ("id", "nom", "uri", "image") if r.get(k)} for r in (liste or {}).get("radios") or []]
+def de_bibliotheque(item):
+    """Radio de la bibliothèque de Music Assistant (`get_library`) → entrée de la liste. L'id reprend l'identifiant
+    TuneIn lu dans l'adresse du logo (`…/s44491/…` → `tunein_s44491`), pour reconnaître une station déjà là."""
+    m = re.search(r"/(s\d+)(?:q?\.|/)", item.get("image") or "")
+    out = {"id": f"tunein_{m.group(1)}" if m else identifiant(item.get("uri")), "nom": item.get("name") or "",
+           "uri": item.get("uri") or ""}
+    if item.get("image"):
+        out["image"] = item["image"].replace("http://", "https://", 1)
+    return out
+
+
+def etat(liste, bibliotheque=None):
+    """(état, attributs) de `sensor.aiguillage_radios` : les radios de la bibliothèque de Music Assistant (22/10,
+    ordre de MA), puis celles d'Aiguillage qui n'y sont pas déjà (même id ou même nom)."""
+    radios = [de_bibliotheque(i) for i in bibliotheque or [] if i.get("uri")]
+    vus = {r["id"] for r in radios} | {_plier(r["nom"]) for r in radios}
+    for r in (liste or {}).get("radios") or []:
+        if r.get("id") not in vus and _plier(r.get("nom")) not in vus:
+            radios.append({k: r[k] for k in ("id", "nom", "uri", "image") if r.get(k)})
     return str(len(radios)), {"radios": radios, "friendly_name": "Aiguillage · radios", "icon": "mdi:radio"}

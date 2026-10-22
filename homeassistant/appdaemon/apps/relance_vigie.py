@@ -380,7 +380,15 @@ class RelanceVigie(Hass):
                 continue
             quoi = tache["envie"]["radio"].get("nom") or tache["envie"]["radio"]["statut"]
             self.log(f"Radios : « {valeur.get('titre')} » → {quoi} ({result.get('statut')})")
-        etat, attributs = aiguillage_radio.etat(liste)
+        # Radios de la bibliothèque de Music Assistant (22/10) : en tête de la liste du Hub.
+        bibliotheque = []
+        if self._ma_entry:
+            try:
+                bibliotheque = (self._service("music_assistant", "get_library", {
+                    "config_entry_id": self._ma_entry, "media_type": "radio", "limit": 100}) or {}).get("items") or []
+            except Exception as error:  # noqa: BLE001
+                self.log(f"Radios : bibliothèque de Music Assistant illisible : {error!r}", level="WARNING")
+        etat, attributs = aiguillage_radio.etat(liste, bibliotheque)
         self.set_state(aiguillage_radio.ENTITE, state=etat, attributes=attributs)
 
     # MARK: - Spotify (P9-D4)
