@@ -89,3 +89,25 @@ def test_lire_jour_et_deja_venu(tmp_path):
 
 def test_distance():
     assert abs(m.distance_m(LAT, LON, LAT + 0.01, LON) - 1112) < 5
+
+
+GPX = """<gpx><trk><trkseg>
+<trkpt lon="2.357000" lat="48.853000"><ele>32</ele><time>2026-10-22T06:51:37Z</time><extensions><speed>1.3</speed><hAcc>11.5</hAcc></extensions></trkpt>
+<trkpt lon="2.357010" lat="48.853010"><time>2026-10-22T06:51:38Z</time><extensions><speed>1.3</speed><hAcc>10</hAcc></extensions></trkpt>
+<trkpt lon="2.357000" lat="48.853200"><time>2026-10-22T06:51:52Z</time><extensions><speed>-1</speed><hAcc>250</hAcc></extensions></trkpt>
+<trkpt lon="2.357000" lat="48.853300"><time>2026-10-22T06:52:00Z</time><extensions><hAcc>9</hAcc></extensions></trkpt>
+<trkpt lon="2.357000" lat="48.853305"><time>2026-10-22T06:52:01Z</time></trkpt>
+</trkseg></trk></gpx>"""
+
+
+def test_gpx_sante_eclairci(tmp_path):
+    points = m.lire_gpx(GPX)
+    assert len(points) == 4                                      # le point à 250 m de précision est retiré
+    assert points[0] == {"t": int(datetime.fromisoformat("2026-10-22T06:51:37+00:00").timestamp()),
+                         "lat": 48.853, "lon": 2.357, "precision": 11.5, "vitesse": 1.3}
+    garde = m.eclaircir(points)
+    # Le 2e point (à ~1 m) est sauté ; le dernier est toujours gardé.
+    assert [p["lat"] for p in garde] == [48.853, 48.8533, 48.853305]
+    base = db(tmp_path)
+    assert m.ajouter_points(base, garde, "sante") == 3
+    assert m.ajouter_points(base, garde, "sante") == 0           # import rejoué : rien en double

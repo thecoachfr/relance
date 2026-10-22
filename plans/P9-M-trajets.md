@@ -54,7 +54,11 @@ voyage ou en balade photo (lot M4), puis mesurée avec le protocole du plan E.
   **Export reçu le 22/10** (121 Mo, iCloud Drive › Téléchargements) : **1 919 tracés GPX, du 08/10/2021 au
   22/10/2026**, tous enregistrés par l'Apple Watch (marches et courses ; les 3 002 marches de Pacer sont dans Santé,
   mais **sans tracé**). 1,44 million de points (un par seconde, avec précision, vitesse et cap), 619 par tracé en
-  médiane. À l'import : éclaircir (un point tous les 10 m environ) et ranger en source `sante` dans `points`.
+  médiane. **Importé le 22/10 à 23 h 53** : `homeassistant/scripts/trajets_sante.py` (lit les GPX, retire les points
+  à plus de 100 m de précision, garde un point tous les 10 m environ et le dernier) → JSONL copié dans
+  `/config/trajets_import.jsonl`, puis événement `aiguillage_trajets_importer` {fichier, source: "sante"} (fichier
+  hors de `/config` refusé, import rejouable sans doublon), copie retirée ensuite. **159 381 points gardés** (sur
+  1 440 643), base à 14 Mo. Les marches Pacer (heures et distances, sans tracé) ne sont pas importées : à voir avec M3.
 - Si un fichier existe : un script d'import qui le ramène au format de la section 5 (visites et points), avec sa source.
 - Limite commune : ces historiques ne couvrent que les sorties enregistrées volontairement, pas les déplacements de tous les jours.
 

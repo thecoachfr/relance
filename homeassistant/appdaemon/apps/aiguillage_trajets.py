@@ -16,6 +16,7 @@ Suivi : capteur `sensor.aiguillage_trajets` et journal AppDaemon (« Trajets : �
 from datetime import date, datetime, time, timedelta
 import json
 import math
+import re
 import sqlite3
 from zoneinfo import ZoneInfo
 
@@ -95,6 +96,46 @@ def lire_visites(brut):
     return out
 
 
+# MARK: - Tracés de Santé (M0)
+
+GPX_POINT = re.compile(r'<trkpt\s+lon="([^"]+)"\s+lat="([^"]+)">(.*?)</trkpt>', re.S)
+GPX_TIME = re.compile(r"<time>([^<]+)</time>")
+GPX_HACC = re.compile(r"<hAcc>([^<]+)</hAcc>")
+GPX_SPEED = re.compile(r"<speed>([^<]+)</speed>")
+
+
+def lire_gpx(texte):
+    """Tracé GPX de l'export Santé (`workout-routes/`) → points (un par seconde), triés par heure."""
+    out = []
+    for lon, lat, corps in GPX_POINT.findall(texte):
+        quand, hacc, vit = GPX_TIME.search(corps), GPX_HACC.search(corps), GPX_SPEED.search(corps)
+        lat, lon = _nombre(lat), _nombre(lon)
+        if not quand or not _coords_valides(lat, lon):
+            continue
+        try:
+            t = int(datetime.fromisoformat(quand.group(1).replace("Z", "+00:00")).timestamp())
+        except ValueError:
+            continue
+        precision = _nombre(hacc.group(1)) if hacc else None
+        if precision is not None and precision > PRECISION_POINT_MAX:
+            continue
+        vitesse = _nombre(vit.group(1)) if vit else None
+        out.append({"t": t, "lat": lat, "lon": lon, "precision": round(precision, 1) if precision is not None else None,
+                    "vitesse": round(vitesse, 2) if vitesse is not None and vitesse >= 0 else None})
+    return sorted(out, key=lambda p: p["t"])
+
+
+def eclaircir(points, pas_m=10):
+    """Garde un point tous les `pas_m` mètres environ (plus le dernier) : assez pour une carte, 10 à 20 fois moins lourd."""
+    garde = []
+    for p in points:
+        if not garde or distance_m(garde[-1]["lat"], garde[-1]["lon"], p["lat"], p["lon"]) >= pas_m:
+            garde.append(p)
+    if points and garde[-1] is not points[-1]:
+        garde.append(points[-1])
+    return garde
+
+
 # MARK: - Base SQLite
 
 def ouvrir(chemin):
@@ -122,6 +163,15 @@ def ajouter_point(db, point, source):
                      (source, point["t"], point["lat"], point["lon"], point.get("precision"), point.get("vitesse")))
     db.commit()
     return cur.rowcount > 0
+
+
+def ajouter_points(db, points, source):
+    """Ajout en bloc (import d'un historique), sans doublon. Renvoie le nombre de points ajoutés."""
+    avant = db.total_changes
+    db.executemany("INSERT OR IGNORE INTO points (source, t, lat, lon, precision, vitesse) VALUES (?, ?, ?, ?, ?, ?)",
+                   [(source, p["t"], p["lat"], p["lon"], p.get("precision"), p.get("vitesse")) for p in points])
+    db.commit()
+    return db.total_changes - avant
 
 
 def ajouter_visites(db, visites, source):
@@ -200,6 +250,9 @@ if hass is not None:
             self._derniere = "aucune"
             self.listen_state(self._position, self._entite, attribute="all")
             self.listen_event(self._lot, "relance_register", action="trajets")
+            # Import d'un historique (M0) : événement « aiguillage_trajets_importer » {fichier, source}, fichier JSONL
+            # d'un point par ligne {t, lat, lon, precision, vitesse}, préparé par homeassistant/scripts/trajets_sante.py.
+            self.listen_event(self._importer, "aiguillage_trajets_importer")
             # Reprise des points encore dans le recorder (10 jours) : sans doublon, donc à chaque démarrage.
             self.run_in(self._rattraper, 20)
 
@@ -253,4 +306,27 @@ if hass is not None:
                 db.close()
             self._derniere = f"{datetime.now():%d/%m %H:%M} {len(visites)} visite(s)"
             self.log(f"Trajets : {len(visites)} visite(s) reçue(s) de l'app ({data.get('device') or '?'})")
+            self._publier()
+
+        def _importer(self, event_name, data, **kwargs):
+            data = data or {}
+            fichier, source = str(data.get("fichier") or ""), str(data.get("source") or "sante")
+            if not fichier.startswith("/config/"):
+                self.log(f"Trajets : import refusé, fichier hors de /config ({fichier})", level="WARNING")
+                return
+            try:
+                with open(fichier, encoding="utf-8") as f:
+                    points = [json.loads(ligne) for ligne in f if ligne.strip()]
+            except (OSError, json.JSONDecodeError) as exc:
+                self.log(f"Trajets : import illisible ({exc!r})", level="WARNING")
+                return
+            points = [p for p in points if isinstance(p, dict) and _coords_valides(_nombre(p.get("lat")), _nombre(p.get("lon")))
+                      and isinstance(p.get("t"), int) and p["t"] >= DEBUT_VALIDE]
+            db = ouvrir(self._db_path)
+            try:
+                ajoutes = ajouter_points(db, points, source)
+            finally:
+                db.close()
+            self._derniere = f"{datetime.now():%d/%m %H:%M} import {source}"
+            self.log(f"Trajets : import {source}, {ajoutes} point(s) ajouté(s) sur {len(points)}")
             self._publier()
