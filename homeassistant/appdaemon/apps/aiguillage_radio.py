@@ -77,6 +77,32 @@ def choisir(resultats, cherche):
     return stations[0] if len(stations) == 1 else None
 
 
+def homonymes(resultats, cherche):
+    """Stations dont le nom est identique au nom cherché (plusieurs : à départager par le pays)."""
+    voulu = sorted(_sans_mot_radio(cherche))
+    return [r for r in resultats if r.get("uri") and voulu and sorted(_sans_mot_radio(r.get("name"))) == voulu]
+
+
+PAYS = {"portugaise": "portugal", "portugais": "portugal", "suisse": "switzerland", "belge": "belgium",
+        "anglaise": "uk", "britannique": "uk", "espagnole": "spain", "italienne": "italy", "allemande": "germany",
+        "americaine": "united states", "canadienne": "canada"}
+
+
+def departager(stations, lieux, note=""):
+    """Parmi des stations du même nom, celle du pays dit dans la note (« radio portugaise »), sinon de France ;
+    `lieux` = {uri: lieu donné par TuneIn, ex. « Hereford , UK », « France »}. Sinon la première (22/10 : la
+    première « Sunshine Radio » de TuneIn était anglaise, Alexandre voulait celle de la Côte d'Azur)."""
+    mots = _plier(note).split()
+    pays = next((PAYS[m] for m in mots if m in PAYS), "france")
+    return next((st for st in stations if pays in _plier(lieux.get(st["uri"]))), stations[0] if stations else None)
+
+
+def uri_tunein(uri):
+    """Identifiant TuneIn (`s325460`) d'une uri de Music Assistant, ou None."""
+    m = re.search(r"/radio/(s\d+)$", uri or "")
+    return m.group(1) if m else None
+
+
 def identifiant(uri):
     """`tunein--aPad5vVY://radio/s257284` → `tunein_s257284` (stable, sans l'instance de Music Assistant)."""
     m = re.search(r"/radio/([^/?#]+)$", uri or "")

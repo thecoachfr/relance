@@ -89,3 +89,13 @@ def test_bibliotheque_de_music_assistant_d_abord():
     assert nova == {"id": "tunein_s17696", "nom": "Radio Nova", "uri": "library://radio/4",
                     "image": "https://cdn-profiles.tunein.com/s17696/images/logoq.png?t=163167"}
     assert attributs["radios"][1]["uri"] == "library://radio/9"  # la station de la bibliothèque l'emporte
+
+
+def test_homonymes_departages_par_le_pays():
+    ex = r.homonymes(SUNSHINE, "Sunshine Radio")
+    assert [x["uri"][-7:] for x in ex] == ["s118816", "s325460"]
+    lieux = {ex[0]["uri"]: "Hereford , UK", ex[1]["uri"]: "France"}
+    assert r.departager(ex, lieux)["uri"].endswith("s325460")
+    assert r.departager(ex, lieux, "radio anglaise")["uri"].endswith("s118816")
+    assert r.departager(ex, {})["uri"].endswith("s118816")
+    assert r.uri_tunein(ex[1]["uri"]) == "s325460" and r.uri_tunein("library://radio/4") is None

@@ -351,6 +351,18 @@ class RelanceVigie(Hass):
                 self.log(f"Radios : « {cherche} » non cherchée : {error!r}", level="WARNING")
                 continue
             trouve = aiguillage_radio.choisir(resultats, cherche)
+            homonymes = aiguillage_radio.homonymes(resultats, cherche)
+            if len(homonymes) > 1:
+                # Même nom (22/10, deux « Sunshine Radio ») : le pays donné par TuneIn départage.
+                lieux = {}
+                for st in homonymes:
+                    try:
+                        fiche = httpx.get("https://opml.radiotime.com/Describe.ashx", timeout=10, params={
+                            "id": aiguillage_radio.uri_tunein(st["uri"]), "render": "json"}).json()
+                        lieux[st["uri"]] = ((fiche.get("body") or [{}])[0]).get("location") or ""
+                    except Exception as error:  # noqa: BLE001
+                        self.log(f"Radios : pays de {st.get('name')} illisible : {error!r}", level="WARNING")
+                trouve = aiguillage_radio.departager(homonymes, lieux, (valeur.get("envie") or {}).get("note") or "")
             maintenant = datetime.now(UTC).isoformat(timespec="seconds")
             if trouve is None:
                 statut = "ambigu" if resultats else "introuvable"
