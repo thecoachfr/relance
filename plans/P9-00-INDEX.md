@@ -78,7 +78,7 @@ Les tâches sont dans l'espace `aiguillage` de `donnees_apps` (`Shared/HA/TacheH
 ## 4. La routine de tri « Relance · tri »
 
 - C'est une tâche planifiée du compte claude.ai d'Alexandre (lancée chaque matin et par la vigie à chaque nouvelle tâche). Sa consigne impose aujourd'hui : « renvoie dans valeur l'objet COMPLET lu… n'ajoute aucun autre champ ». **Avant de mettre en service un nouveau champ**, sa consigne doit le connaître, sinon elle risque de le perdre en réécrivant une tâche.
-- **Plan I (17/10)** : le tri passe par l'API Messages (`tri_mode` dans `apps.yaml`). Une fois en mode `api`, la consigne qui fait foi est `/config/aiguillage_tri_consigne.md` dans HA (modèle `docs/TRI-CONSIGNE.md`) ; la routine ne sert plus qu'en secours, et une nouvelle règle se met dans les deux consignes tant qu'elle existe.
+- **Plan I (17/10)** : le tri passe par l'API Messages (`tri_mode` dans `apps.yaml`). **En mode `api` depuis le 22/10/2026 à 22 h 37** (choix d'Alexandre), horaire de la routine retiré (elle reste en secours, sans horaire). Une fois en mode `api`, la consigne qui fait foi est `/config/aiguillage_tri_consigne.md` dans HA (modèle `docs/TRI-CONSIGNE.md`) ; la routine ne sert plus qu'en secours, et une nouvelle règle se met dans les deux consignes tant qu'elle existe.
 - **La consigne complète n'est pas versionnée** : elle contient une copie du mémo avec des données personnelles, et `relance` est public. Claude Code rédige seulement les **paragraphes à ajouter ou à modifier** (dans le plan concerné ou dans SUIVI, sans donnée personnelle) ; Alexandre les fait appliquer à la tâche planifiée depuis le chat Claude, puis on vérifie un passage de la routine sur une tâche d'essai.
 
 ## 5. Règles de travail (toutes les sessions P9)
