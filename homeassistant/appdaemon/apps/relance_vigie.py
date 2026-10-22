@@ -26,6 +26,7 @@ from appdaemon.plugins.hass import Hass
 
 import aiguillage_actions
 import aiguillage_agenda
+import aiguillage_radio
 import aiguillage_spotify
 import aiguillage_tmdb
 import aiguillage_tri
@@ -57,6 +58,9 @@ TMDB_PER_PASS = 10
 # Playlist Spotify « À écouter » (P9-D4) : même rythme que TMDB.
 SPOTIFY_DEBOUNCE = 30
 SPOTIFY_PER_PASS = 10
+# Radios à ajouter (22/10) : recherche TuneIn par Music Assistant, même rythme.
+RADIO_DEBOUNCE = 30
+RADIO_PER_PASS = 5
 
 
 def tache_depuis_google(item):
@@ -134,6 +138,9 @@ class RelanceVigie(Hass):
         self._spotify_path = Path(self.args.get("spotify_file", "/config/spotify_aiguillage.json"))
         self._spotify_handle = None
         self._spotify_missing_logged = False
+        # Radios (22/10) : instance de Music Assistant qui cherche sur TuneIn.
+        self._ma_entry = self.args.get("music_assistant_entry")
+        self._radio_handle = None
         self._lock = threading.Lock()
         self._jwt = None
         self._jwt_issued_at = 0.0
@@ -157,6 +164,8 @@ class RelanceVigie(Hass):
             self.run_in(lambda **_kw: self._load_known_keys(), 1)
             self.run_every(self.tmdb_pass, "now+90", 3600)
             self.run_every(self.spotify_pass, "now+120", 3600)
+            self.run_every(self.radio_pass, "now+60", 3600)
+            self.listen_event(lambda *_a, **_kw: self.radio_pass(), "aiguillage_radio_pass")
         # Rappels « à la maison » (P9-F2) : présence approchée par la zone Hue MotionAware du salon.
         self._presence = self.args.get("presence_entity")
         if self._espace and self._presence:
@@ -251,6 +260,9 @@ class RelanceVigie(Hass):
         if self._spotify_handle:
             self.cancel_timer(self._spotify_handle)
         self._spotify_handle = self.run_in(self.spotify_pass, SPOTIFY_DEBOUNCE)
+        if self._radio_handle:
+            self.cancel_timer(self._radio_handle)
+        self._radio_handle = self.run_in(self.radio_pass, RADIO_DEBOUNCE)
 
     def _push_after_change(self, **kwargs):
         self._push_handle = None
@@ -307,6 +319,68 @@ class RelanceVigie(Hass):
                 continue
             # Conflit (modifiée entre-temps) : le prochain passage reprendra la nouvelle version.
             self.log(f"TMDB : « {valeur.get('titre')} » → {summary} ({result.get('statut')})")
+
+    # MARK: - Radios (22/10)
+
+    def radio_pass(self, **kwargs):
+        """Envies « À écouter » de plateforme `tunein` : station cherchée par Music Assistant, ajoutée à
+        `config:radios`, tâche cochée. Publie toujours `sensor.aiguillage_radios` (état perdu au redémarrage de HA)."""
+        self._radio_handle = None
+        try:
+            records = self._service("donnees_apps", "lire", {"espace": self._espace}).get("enregistrements", [])
+        except Exception as error:  # noqa: BLE001
+            self.log(f"Radios : tâches illisibles : {error!r}", level="WARNING")
+            return
+        actuel = next((r for r in records if r.get("cle") == aiguillage_radio.CLE_RADIOS and not r.get("supprime")), None)
+        liste, version = (actuel or {}).get("valeur"), (actuel or {}).get("version", 0)
+        today = date.today()
+        dues = [r for r in records if self._is_task_key(r.get("cle", "")) and r.get("valeur")
+                and aiguillage_radio.a_chercher(r["valeur"], today)]
+        if dues and not self._ma_entry:
+            self.log("Radios : music_assistant_entry absent d'apps.yaml, recherche impossible", level="WARNING")
+            dues = []
+        for record in dues[:RADIO_PER_PASS]:
+            valeur = record["valeur"]
+            cherche = aiguillage_radio.requete(valeur.get("titre", ""))
+            try:
+                reponse = self._service("music_assistant", "search", {
+                    "config_entry_id": self._ma_entry, "name": cherche, "media_type": ["radio"], "limit": 5})
+                resultats = (reponse or {}).get("radio") or []
+            except Exception as error:  # noqa: BLE001
+                self.log(f"Radios : « {cherche} » non cherchée : {error!r}", level="WARNING")
+                continue
+            trouve = aiguillage_radio.choisir(resultats, cherche)
+            maintenant = datetime.now(UTC).isoformat(timespec="seconds")
+            if trouve is None:
+                statut = "ambigu" if resultats else "introuvable"
+                tache = aiguillage_radio.avec_statut(valeur, statut, resultats, today)
+            else:
+                st = aiguillage_radio.station(trouve)
+                nouvelle = aiguillage_radio.ajouter(liste, st, record["cle"], maintenant)
+                if nouvelle is not None:
+                    try:
+                        ecrit = self._service("donnees_apps", "ecrire", {
+                            "espace": self._espace, "cle": aiguillage_radio.CLE_RADIOS, "valeur": nouvelle,
+                            "version_attendue": version, "modifie_par": "vigie", "op_id": str(uuid.uuid4())})
+                    except Exception as error:  # noqa: BLE001
+                        ecrit = {"statut": repr(error)}
+                    if (ecrit or {}).get("statut") != "ok":
+                        # Conflit ou erreur : la tâche reste à faire, le prochain passage relit la liste.
+                        self.log(f"Radios : « {st['nom']} » non ajoutée : {(ecrit or {}).get('statut')}", level="WARNING")
+                        break
+                    liste, version = nouvelle, ecrit.get("version", version + 1)
+                tache = aiguillage_radio.avec_station(valeur, st, maintenant)
+            try:
+                result = self._service("donnees_apps", "ecrire", {
+                    "espace": self._espace, "cle": record["cle"], "valeur": tache,
+                    "version_attendue": record["version"], "modifie_par": "vigie", "op_id": str(uuid.uuid4())})
+            except Exception as error:  # noqa: BLE001
+                self.log(f"Radios : « {valeur.get('titre')} » non écrite : {error!r}", level="WARNING")
+                continue
+            quoi = tache["envie"]["radio"].get("nom") or tache["envie"]["radio"]["statut"]
+            self.log(f"Radios : « {valeur.get('titre')} » → {quoi} ({result.get('statut')})")
+        etat, attributs = aiguillage_radio.etat(liste)
+        self.set_state(aiguillage_radio.ENTITE, state=etat, attributes=attributs)
 
     # MARK: - Spotify (P9-D4)
 

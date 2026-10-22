@@ -24,7 +24,7 @@ PRIX = {"claude-sonnet-5-5": (2.0, 10.0, 0.20, 2.50), "claude-haiku-5-5": (0.10,
 CATEGORIES = ("Administratif", "Maison", "Santé", "Achats", "Travail", "Famille", "Perso")
 TAGS_DE_BASE = ("SCI", "Micro", "Photo", "Syndic", "Travaux", "Spectacle")
 PLATEFORMES = ("netflix", "disney", "apple_tv", "canal", "prime", "youtube", "france_tv", "arte", "max",
-               "spotify", "deezer", "apple_music")
+               "spotify", "deezer", "apple_music", "tunein")
 TYPES_ENVIE = ("voir", "sortie", "resto", "magasin", "spot_photo", "lire", "ecouter", "regarder")
 RAYONS = ("fruits_legumes", "frais", "epicerie", "boissons", "hygiene", "maison", "placard", "autre")
 # Lignes que le tri peut ajouter à la fin des notes, dans l'ordre où il les ajoute.
@@ -164,6 +164,7 @@ SCHEMA = _objet({
                                   "note": {"type": "string"},
                                   "plateforme": {"type": "string", "enum": ["", *PLATEFORMES]}})),
         "notes_a_la_fin": {"type": "array", "items": {"type": "string"}},
+        "retirer_jour": {"type": "boolean"},
         "partage_revu": {"type": "boolean"},
         "liste_nouvelle": _ou_null(_objet({"articles": {"type": "array", "items": _ARTICLE},
                                            "parts": {"type": "integer"},
@@ -334,6 +335,15 @@ def appliquer(valeur, ch, aujourdhui, maintenant, tags_ok):
         t.pop("jour", None)
         t.pop("heure", None)
         t.pop("duree", None)
+    # Date mise d'office par l'app (tâche créée dans « À faire », 22/10) : retirée quand la tâche devient une envie
+    # dans ce passage, seulement si c'est aujourd'hui ou un jour passé, sans heure.
+    if ch.get("retirer_jour"):
+        jour = valeur.get("jour") or ""
+        envie_neuve = absent_avant(valeur, "envie") and t.get("envie") and t["envie"].get("type") != "sortie"
+        if envie_neuve and _JOUR.fullmatch(jour) and absent_avant(valeur, "heure") and jour <= aujourdhui.isoformat():
+            t.pop("jour", None)
+        else:
+            refus.append("retirer_jour (pas d'envie ajoutée maintenant, heure fixée ou jour à venir)")
 
     # Listes : nouvelle seulement sans liste ; recette à préparer : ajouts à la fin, quantités ajustées.
     if ch.get("liste_nouvelle"):

@@ -7,3 +7,4 @@ build/
 
 # Mémo de contexte de la routine de tri : informations personnelles, jamais sur GitHub
 memo-contexte.md
+__pycache__/

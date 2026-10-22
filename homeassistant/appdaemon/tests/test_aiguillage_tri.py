@@ -20,7 +20,7 @@ def ch(**kw):
     """Une entrée de réponse, avec les valeurs par défaut du schéma."""
     base = {"cle": CLE, "titre": None, "categorie": None, "tags": None, "jour": None, "heure": None, "priorite": None,
             "duree": None, "lieu": None, "envie": None, "notes_a_la_fin": [], "partage_revu": False,
-            "liste_nouvelle": None, "recette_preparee": None, "raison": "essai"}
+            "liste_nouvelle": None, "recette_preparee": None, "retirer_jour": False, "raison": "essai"}
     return base | kw
 
 
@@ -186,6 +186,23 @@ def test_envie():
                               ch(notes_a_la_fin=["🎧 À écouter"], envie={"type": "lire", "note": None,
                                                                          "plateforme": None}), AUJ, NOW, TAGS)
     assert nv5 is None and refus5
+
+
+def test_radio_et_jour_mis_par_l_app():
+    # Tâche créée dans « À faire » (jour du jour mis par l'app) : devient une radio, le jour est retiré (22/10).
+    v = {"titre": "Écouter radio tsugi", "fait": False, "jour": "2026-10-17"}
+    nv, refus = t.appliquer(v, ch(titre="Radio Tsugi", notes_a_la_fin=["🎧 À écouter · radio"], retirer_jour=True,
+                                  envie={"type": "ecouter", "note": "radio", "plateforme": "tunein"}), AUJ, NOW, TAGS)
+    assert refus == [] and "jour" not in nv
+    assert nv["envie"] == {"type": "ecouter", "note": "radio", "plateforme": "tunein"}
+    assert nv["notes"] == "🎙 Dicté : Écouter radio tsugi\n🎧 À écouter · radio"
+    # Jour à venir, heure fixée, ou pas d'envie ajoutée maintenant : le jour reste.
+    for avant, envie in (({"jour": "2026-10-20"}, True), ({"jour": "2026-10-17", "heure": "20:00"}, True),
+                         ({"jour": "2026-10-17", "envie": {"type": "regarder"}}, False)):
+        lignes = ["🎬 À regarder"] if envie else []
+        nv2, refus2 = t.appliquer({"titre": "Série MobLand", "fait": False, **avant},
+                                  ch(notes_a_la_fin=lignes, retirer_jour=True), AUJ, NOW, TAGS)
+        assert (nv2 or avant)["jour"] == avant["jour"] and any("retirer_jour" in x for x in refus2)
 
 
 def test_sortie():

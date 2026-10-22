@@ -20,6 +20,8 @@ relance_vigie:
   # consigne dans /config/aiguillage_tri_consigne.md (hors dépôt, modèle dans docs/TRI-CONSIGNE.md).
   tri_mode: ombre
   tri_budget_mensuel: 30
+  # Radios (22/10) : instance de Music Assistant qui cherche les stations sur TuneIn (Paramètres › Appareils).
+  # music_assistant_entry: 01K…
   # Seulement avec une clé d'utilisateur (sk-ant-usr-…) : identifiant de l'espace de travail de la Console.
   # tri_workspace_id: wrkspc_…
   # Rappels « à la maison » (P9-F2) : présence au salon (Hue MotionAware, helper Template).

@@ -127,6 +127,11 @@ une action échoue ou qu'une préparation est prête. Présence (plan P9-F) : ra
 (`presence_entity`, `domicile_entity`) et « dans une pièce » (`piece_entity`, pièce dominante sur 2 minutes,
 liste des pièces publiée dans `config:pieces`). Clés d'exemple : `homeassistant/appdaemon/apps/apps.yaml`.
 
+Radios (22/10) : une envie À écouter de plateforme `tunein` (« Radio Tsugi », rangée par le tri) est cherchée sur
+TuneIn par Music Assistant (`aiguillage_radio.py`, réglage `music_assistant_entry`), ajoutée à `config:radios` et la
+tâche cochée ; la liste est publiée dans `sensor.aiguillage_radios` pour le Hub, qui la lance par `script.nest_hub_radio`
+(`station` = id, `uri`). Essai à la main : événement `aiguillage_radio_pass`.
+
 Tri par l'API Messages (plan P9-I, [plans/P9-I-tri-par-api.md](plans/P9-I-tri-par-api.md)) : réglage `tri_mode`
 (`routine` par défaut, `ombre`, `api`). Module `aiguillage_tri.py` : la vigie choisit les tâches à trier, fait **un**
 appel à sortie structurée (Sonnet 5.5, sans outil), puis applique elle-même les changements avec les règles absolues
