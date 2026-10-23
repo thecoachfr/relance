@@ -193,6 +193,8 @@ class RelanceVigie(Hass):
         # Activité en direct « En lecture sur les LS50 » du Hub iPad (23/10/2026) : jetons envoyés par l'app
         # (script.hub_ipad_activite → événement hub_ipad_activite), lecteur surveillé, push APNs `liveactivity`.
         self._lecteur_path = Path(self.args.get("hub_ipad_activite_file", "/config/hub_ipad_activite.json"))
+        # Pushs d'activité comptés par jour et par appareil (suivi batterie du Hub, hub-ipad/docs/BATTERIE.md).
+        self._lecteur_stats_path = Path(self.args.get("hub_ipad_push_stats_file", "/config/hub_ipad_push_stats.json"))
         self._ha_url = self.args.get("ha_url", "")
         self._lecteur_lock = threading.Lock()
         self._lecteur_handle = None
@@ -1223,9 +1225,10 @@ class RelanceVigie(Hass):
             self.log(f"Hub iPad : jeton d'activité refusé ({data.get('type')})", level="WARNING")
             return
         self._lecteur_sans_jeton_logged = False
-        self.log(f"Hub iPad : jeton {genre} reçu ({data.get('environnement', 'production')})")
-        if genre == "activite":
-            self.run_in(self._lecteur_passage, 1)
+        self.log(f"Hub iPad : jeton {genre} reçu ({data.get('modele') or 'appareil ?'}, "
+                 f"{data.get('environnement', 'production')})")
+        # Activité : elle reçoit l'état complet ; push-to-start : un appareil arrivé pendant la lecture démarre aussi.
+        self.run_in(self._lecteur_passage, 1)
 
     def on_lecteur(self, entity, attribute, old, new, **kwargs):
         # Anti-rafale : un seul passage 2 s après le premier changement ; les suivants y sont fondus.
@@ -1235,7 +1238,10 @@ class RelanceVigie(Hass):
     def _lecteur_passage(self, **kwargs):
         self._lecteur_handle = None
         etats = {e: self.get_state(e, attribute="all") for e in (aiguillage_lecteur.ENTITE_MA, aiguillage_lecteur.ENTITE_KEF)}
-        actuel = aiguillage_lecteur.contenu(aiguillage_lecteur.choisir_entite(etats), self._ha_url)
+        choisi = aiguillage_lecteur.choisir_entite(etats)
+        actuel = aiguillage_lecteur.contenu(choisi, self._ha_url)
+        # Spotify Connect (KEF en Wi-Fi sans Music Assistant) : pas d'activité sur les appareils qui la masquent.
+        spotify = aiguillage_lecteur.spotify_connect(choisi)
         maintenant = time.time()
         if actuel is None:
             self._lecteur_arret = self._lecteur_arret or maintenant
@@ -1243,47 +1249,52 @@ class RelanceVigie(Hass):
             self._lecteur_arret = None
         with self._lecteur_lock:
             etat = self._lecteur_charger()
-            action, priorite = aiguillage_lecteur.decider(actuel, etat.get("envoye"), etat.get("en_cours"),
-                                                          self._lecteur_arret, maintenant)
-            if action is None:
-                return
-            if action == "start":
-                cibles = [(j, i.get("environnement", "production")) for j, i in etat.get("push_to_start", {}).items()]
-                payload = aiguillage_lecteur.payload_start(actuel, maintenant)
-            else:
-                cibles = [(i["jeton"], i.get("environnement", "production")) for i in etat.get("activites", {}).values()]
-                payload = (aiguillage_lecteur.payload_update(actuel, maintenant) if action == "update" else
-                           aiguillage_lecteur.payload_end({**(etat.get("envoye") or aiguillage_lecteur.REPOS), "etat": "pause"}, maintenant))
-            if not cibles:
+            # Un envoi par appareil (iPad, iPhone) : mises à jour et fin aux activités, démarrage aux appareils sans
+            # activité (aussi ceux arrivés en cours de lecture).
+            action, liste = aiguillage_lecteur.envois(etat, actuel, self._lecteur_arret, maintenant, spotify)
+            if not liste:
                 if action == "end":
-                    etat.update(en_cours=False, envoye=None)
+                    aiguillage_lecteur.apres_envois(etat, action, actuel, [], 0, [], maintenant)
                     self._lecteur_sauver(etat)
                 elif action == "start" and not self._lecteur_sans_jeton_logged:
                     self._lecteur_sans_jeton_logged = True
-                    self.log("Hub iPad : lecture sur les LS50, mais aucun jeton push-to-start (ouvrir l'app une fois)")
+                    self.log("Hub iPad : Spotify pilote les LS50, activité masquée" if spotify else
+                             "Hub iPad : lecture sur les LS50, mais aucun jeton push-to-start (ouvrir l'app une fois)")
                 # update sans jeton d'activité : on attend le jeton (l'état complet partira à son arrivée).
                 return
-            reussis, perimes = 0, []
+            reussis, perimes, demarres, finis, comptes = 0, [], [], [], []
             with httpx.Client(http2=True, timeout=10) as client:
-                for jeton, env in cibles:
+                for genre, jeton, env, appareil, payload, priorite in liste:
                     statut, raison = self._lecteur_envoyer(client, jeton, env, payload, priorite)
+                    nom = aiguillage_lecteur.nom_appareil(etat, appareil)
+                    if statut != 200:
+                        comptes.append((nom, "echec"))
+                    elif genre == "activite":
+                        comptes.append((nom, action or "update"))
+                    else:
+                        comptes.append((nom, "start" if genre == "start" else "fin_spotify"))
                     if statut == 200:
                         reussis += 1
+                        if genre == "start":
+                            demarres.append(appareil)
+                        elif genre == "fin":
+                            finis.append(jeton)
                     elif statut == 410 or raison in ("BadDeviceToken", "Unregistered", "ExpiredToken"):
                         perimes.append(jeton)
                     else:
-                        self.log(f"Hub iPad : APNs {statut} {raison} ({action})", level="WARNING")
-            for jeton in perimes:
-                aiguillage_lecteur.retirer_jeton(etat, jeton)
-            if action == "end":
-                etat.update(en_cours=False, envoye=None, activites={})
-            elif reussis:
-                etat.update(en_cours=True, envoye=actuel)
+                        self.log(f"Hub iPad : APNs {statut} {raison} ({genre}, {action})", level="WARNING")
+            aiguillage_lecteur.apres_envois(etat, action, actuel, demarres, reussis, perimes, maintenant, finis)
             self._lecteur_sauver(etat)
-        self._count_push(f"hub_ipad_{action}", len(cibles))
-        if action != "update":
+            self._lecteur_compter(comptes)
+        for genre in sorted({e[0] for e in liste}):
+            cause = {"start": "start", "fin": "fin_spotify"}.get(genre, action)
+            self._count_push(f"hub_ipad_{cause}", sum(1 for e in liste if e[0] == genre))
+        if finis:
+            self.log(f"Hub iPad : Spotify pilote les LS50, activité terminée sur {len(finis)} appareil(s)")
+        if action not in ("update", None) or demarres:
             titre = (actuel or {}).get("titre", "")
-            self.log(f"Hub iPad : activité {action} ({reussis}/{len(cibles)}){' : ' + titre if titre else ''}")
+            self.log(f"Hub iPad : activité {action or 'start'} ({reussis}/{len(liste)}, {len(demarres)} démarrée(s))"
+                     f"{' : ' + titre if titre else ''}")
 
     def _lecteur_envoyer(self, client, jeton, environnement, payload, priorite):
         try:
@@ -1300,6 +1311,15 @@ class RelanceVigie(Hass):
             return response.status_code, response.json().get("reason", "")
         except ValueError:
             return response.status_code, response.text[:80]
+
+    def _lecteur_compter(self, comptes):
+        try:
+            stats = json.loads(self._lecteur_stats_path.read_text())
+        except (FileNotFoundError, json.JSONDecodeError):
+            stats = {}
+        jour = datetime.now().strftime("%Y-%m-%d")
+        aiguillage_lecteur.compter_pushs(stats, jour, comptes)
+        self._lecteur_stats_path.write_text(json.dumps(stats, indent=2, sort_keys=True, ensure_ascii=False))
 
     def _lecteur_charger(self):
         try:

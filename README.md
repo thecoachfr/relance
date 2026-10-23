@@ -141,6 +141,11 @@ joue ou est en pause, sinon l'enceinte KEF ; `content-state`, décision start / 
 `fr.alexandrefau.hubipad.push-type.liveactivity`, même clé `.p8` et même JWT que pour Aiguillage) ; changement de
 titre, d'état ou de volume : `update` (2 s d'anti-rafale, priorité 10 si le titre change, sinon 5) ; plus rien ne joue
 depuis 5 min : `end`. Réglage `ha_url` (adresse locale de HA, pour les pochettes relatives).
+Plusieurs appareils (23/10, le Hub tourne aussi sur l'iPhone) : un jeton push-to-start par appareil (champs `appareil`,
+`modele` du script), démarrage pour chaque appareil sans activité, mises à jour à chaque activité. Spotify Connect
+(enceinte KEF en `wifi` sans Music Assistant) : pas d'activité sur les appareils qui ont « Masquer l'activité quand
+Spotify pilote » (champ `masquer_spotify`, vrai par défaut), fin de celle en cours. Pushs comptés par jour et par
+appareil dans `/config/hub_ipad_push_stats.json` (31 jours, suivi batterie du Hub).
 
 Tri par l'API Messages (plan P9-I, [plans/P9-I-tri-par-api.md](plans/P9-I-tri-par-api.md)) : réglage `tri_mode`
 (`routine` par défaut, `ombre`, `api`). Module `aiguillage_tri.py` : la vigie choisit les tâches à trier, fait **un**

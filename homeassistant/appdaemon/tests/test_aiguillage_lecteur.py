@@ -100,7 +100,7 @@ def test_ranger_et_retirer_jetons():
     etat = l.etat_vide()
     j1, j2 = "ab" * 32, "cd" * 32
     assert l.ranger_jeton(etat, {"type": "push_to_start", "jeton": j1.upper(), "environnement": "sandbox"}, 5) == "push_to_start"
-    assert etat["push_to_start"][j1] == {"environnement": "sandbox", "maj": 5}
+    assert etat["push_to_start"][j1] == {"environnement": "sandbox", "maj": 5}  # app d'avant : sans appareil
     assert not etat["en_cours"]
     assert l.ranger_jeton(etat, {"type": "activite", "jeton": j2, "activite_id": "A1"}, 6) == "activite"
     assert etat["activites"]["A1"]["jeton"] == j2 and etat["activites"]["A1"]["environnement"] == "production"
@@ -110,3 +110,197 @@ def test_ranger_et_retirer_jetons():
     l.retirer_jeton(etat, j2)
     l.retirer_jeton(etat, j1)
     assert etat["activites"] == {} and etat["push_to_start"] == {}
+
+
+# MARK: - Plusieurs appareils (iPad et iPhone, 23/10/2026)
+
+IPAD, IPHONE = "IPAD-UUID", "IPHONE-UUID"
+P1, P2, P3 = "a1" * 32, "b2" * 32, "c3" * 32
+A1, A2 = "d4" * 40, "e5" * 40
+
+
+def _pts(etat, jeton, appareil, modele):
+    return l.ranger_jeton(etat, {"type": "push_to_start", "jeton": jeton, "appareil": appareil, "modele": modele}, 1)
+
+
+def test_un_jeton_push_to_start_par_appareil():
+    etat = l.etat_vide()
+    _pts(etat, P1, IPAD, "iPad")
+    _pts(etat, P2, IPHONE, "iPhone")
+    assert set(etat["push_to_start"]) == {P1, P2}
+    assert etat["push_to_start"][P2] == {"environnement": "production", "maj": 1, "appareil": IPHONE, "modele": "iPhone"}
+    # L'iPad change de jeton : l'ancien est remplacé, celui de l'iPhone reste.
+    _pts(etat, P3, IPAD, "iPad")
+    assert set(etat["push_to_start"]) == {P2, P3}
+    # Le même jeton renvoyé (retour au premier plan) ne fait rien de plus.
+    _pts(etat, P3, IPAD, "iPad")
+    assert set(etat["push_to_start"]) == {P2, P3}
+
+
+def test_demarrage_sur_chaque_appareil():
+    etat = l.etat_vide()
+    _pts(etat, P1, IPAD, "iPad")
+    _pts(etat, P2, IPHONE, "iPhone")
+    c = l.contenu(MA, HA)
+    action, liste = l.envois(etat, c, None, 100)
+    assert action == "start"
+    assert sorted((g, j, a) for g, j, _, a, _, _ in liste) == [("start", P1, IPAD), ("start", P2, IPHONE)]
+    assert all(p["aps"]["event"] == "start" for *_, p, _ in liste)
+    l.apres_envois(etat, action, c, [IPAD, IPHONE], 2, [], 100)
+    assert etat["en_cours"] and etat["envoye"] == c and set(etat["demarres"]) == {IPAD, IPHONE}
+    # En attendant les jetons d'activité : pas de second démarrage.
+    assert l.envois(etat, c, None, 102) == (None, [])
+
+
+def test_mises_a_jour_a_chaque_activite():
+    etat = l.etat_vide()
+    c = l.contenu(MA, HA)
+    l.ranger_jeton(etat, {"type": "activite", "jeton": A1, "activite_id": "X", "appareil": IPAD}, 1)
+    l.ranger_jeton(etat, {"type": "activite", "jeton": A2, "activite_id": "Y", "appareil": IPHONE}, 1)
+    etat["envoye"] = c
+    action, liste = l.envois(etat, {**c, "volume": 50}, None, 100)
+    assert action == "update"
+    assert sorted((g, j) for g, j, *_ in liste) == [("activite", A1), ("activite", A2)]
+    # Fin : les deux activités, puis tout est vidé.
+    action, liste = l.envois(etat, None, 100, 100 + l.ARRET_AVANT_FIN)
+    assert action == "end" and len(liste) == 2 and all(p["aps"]["event"] == "end" for *_, p, _ in liste)
+    l.apres_envois(etat, action, None, [], 2, [], 500)
+    assert (etat["en_cours"], etat["activites"], etat["demarres"]) == (False, {}, {})
+
+
+def test_iphone_arrive_pendant_la_lecture():
+    """L'activité tourne sur l'iPad ; l'iPhone envoie son premier jeton : il démarre aussi, l'iPad n'est pas redémarré."""
+    etat = l.etat_vide()
+    c = l.contenu(MA, HA)
+    _pts(etat, P1, IPAD, "iPad")
+    l.ranger_jeton(etat, {"type": "activite", "jeton": A1, "activite_id": "X", "appareil": IPAD}, 1)
+    etat["envoye"] = c
+    assert l.envois(etat, c, None, 100) == (None, [])
+    _pts(etat, P2, IPHONE, "iPhone")
+    action, liste = l.envois(etat, c, None, 101)
+    assert action is None and [(g, j) for g, j, *_ in liste] == [("start", P2)]
+    l.apres_envois(etat, action, c, [IPHONE], 1, [], 101)
+    assert l.envois(etat, c, None, 102) == (None, [])
+    # En pause : pas de démarrage pour un nouvel appareil.
+    etat["demarres"] = {}
+    assert [g for g, *_ in l.envois(etat, {**c, "etat": "pause"}, None, 103)[1]] == ["activite"]
+
+
+def test_activite_d_avant_sans_appareil():
+    """Activité de l'app d'avant (sans appareil) : on ne sait pas de quel écran elle est, rien d'autre ne démarre."""
+    etat = l.etat_vide()
+    c = l.contenu(MA, HA)
+    l.ranger_jeton(etat, {"type": "activite", "jeton": A1, "activite_id": "X"}, 1)
+    etat["envoye"] = c
+    _pts(etat, P1, IPAD, "iPad")
+    assert l.envois(etat, c, None, 100) == (None, [])
+
+
+def test_jeton_perime_retire():
+    etat = l.etat_vide()
+    _pts(etat, P1, IPAD, "iPad")
+    _pts(etat, P2, IPHONE, "iPhone")
+    c = l.contenu(MA, HA)
+    action, _ = l.envois(etat, c, None, 100)
+    l.apres_envois(etat, action, c, [IPAD], 1, [P2], 100)
+    assert set(etat["push_to_start"]) == {P1} and set(etat["demarres"]) == {IPAD} and etat["en_cours"]
+
+
+# MARK: - Spotify Connect : pas de doublon sur l'écran verrouillé (23/10/2026)
+
+# États réels du 23/10 vers 11 h 37 : Spotify lancé depuis le téléphone ; Music Assistant au repos, la KEF joue en Wi-Fi.
+MA_REPOS = {**MA, "state": "idle"}
+KEF_SPOTIFY = {"entity_id": l.ENTITE_KEF, "state": "playing", "attributes": {
+    "media_title": "Gas", "media_artist": "BICEP", "media_album_name": "Gas / Ultra / Equarium", "source": "wifi",
+    "media_duration": 218, "volume_level": 0.41}}
+
+
+def test_spotify_connect_reconnu():
+    choisi = l.choisir_entite({l.ENTITE_MA: MA_REPOS, l.ENTITE_KEF: KEF_SPOTIFY})
+    assert choisi is KEF_SPOTIFY and l.spotify_connect(choisi)
+    assert l.spotify_connect({**KEF_SPOTIFY, "state": "paused"})
+    # Music Assistant joue (radio, « À écouter » par Spotify dans Music Assistant) : ce n'est pas Spotify Connect.
+    assert not l.spotify_connect(l.choisir_entite({l.ENTITE_MA: MA, l.ENTITE_KEF: KEF_SPOTIFY}))
+    assert not l.spotify_connect(OPTIQUE)  # TV par l'entrée optique
+    assert not l.spotify_connect({**KEF_SPOTIFY, "state": "idle"})
+    assert not l.spotify_connect(None)
+
+
+def _avec_reglage(etat, jeton, appareil, masquer):
+    return l.ranger_jeton(etat, {"type": "push_to_start", "jeton": jeton, "appareil": appareil, "masquer_spotify": masquer}, 1)
+
+
+def test_reglage_masquer_spotify_par_appareil():
+    etat = l.etat_vide()
+    _avec_reglage(etat, P1, IPAD, "True")     # texte rendu par le modèle du script
+    _avec_reglage(etat, P2, IPHONE, False)    # vrai booléen
+    assert l.masque_spotify(etat, IPAD) and not l.masque_spotify(etat, IPHONE)
+    assert l.masque_spotify(etat, "inconnu") and l.masque_spotify(etat, None)  # par défaut : masqué
+    # Champ absent ou vide (app d'avant) : le réglage ne bouge pas.
+    l.ranger_jeton(etat, {"type": "push_to_start", "jeton": P2, "appareil": IPHONE, "masquer_spotify": ""}, 2)
+    assert not l.masque_spotify(etat, IPHONE)
+
+
+def test_spotify_ne_demarre_que_sur_les_appareils_qui_ne_masquent_pas():
+    etat = l.etat_vide()
+    _avec_reglage(etat, P1, IPAD, True)
+    _avec_reglage(etat, P2, IPHONE, False)
+    c = l.contenu(KEF_SPOTIFY, HA)
+    action, liste = l.envois(etat, c, None, 100, spotify=True)
+    assert action == "start" and [(g, j) for g, j, *_ in liste] == [("start", P2)]
+    # Tout le monde masque : rien.
+    _avec_reglage(etat, P2, IPHONE, True)
+    assert l.envois(etat, c, None, 100, spotify=True) == ("start", [])
+
+
+def test_spotify_termine_l_activite_en_cours_puis_redemarre_apres():
+    etat = l.etat_vide()
+    _avec_reglage(etat, P1, IPAD, True)
+    _avec_reglage(etat, P2, IPHONE, False)
+    radio = l.contenu(MA, HA)
+    action, _ = l.envois(etat, radio, None, 100)
+    l.apres_envois(etat, action, radio, [IPAD, IPHONE], 2, [], 100)
+    l.ranger_jeton(etat, {"type": "activite", "jeton": A1, "activite_id": "X", "appareil": IPAD}, 101)
+    l.ranger_jeton(etat, {"type": "activite", "jeton": A2, "activite_id": "Y", "appareil": IPHONE}, 101)
+    etat["envoye"] = radio
+    # La source bascule sur Spotify Connect : fin sur l'iPad (qui masque), mise à jour sur l'iPhone.
+    spot = l.contenu(KEF_SPOTIFY, HA)
+    action, liste = l.envois(etat, spot, None, 200, spotify=True)
+    assert action == "update"
+    assert sorted((g, j) for g, j, *_ in liste) == [("activite", A2), ("fin", A1)]
+    fin = next(p for g, _, _, _, p, _ in liste if g == "fin")["aps"]
+    assert fin["event"] == "end" and fin["content-state"]["titre"] == radio["titre"]
+    l.apres_envois(etat, action, spot, [], 2, [], 200, finis=[A1])
+    assert list(etat["activites"]) == ["Y"] and IPAD not in etat["demarres"]
+    # Toujours Spotify : rien de plus pour l'iPad.
+    assert l.envois(etat, spot, None, 210, spotify=True) == (None, [])
+    # Retour à Music Assistant : l'iPad redémarre, l'iPhone reçoit la mise à jour.
+    action, liste = l.envois(etat, radio, None, 300)
+    assert action == "update" and sorted((g, j) for g, j, *_ in liste) == [("activite", A2), ("start", P1)]
+
+
+# MARK: - Compte des pushs par appareil (suivi batterie)
+
+def test_nom_appareil_et_compte():
+    etat = l.etat_vide()
+    _pts(etat, P1, IPHONE, "iPhone")
+    assert l.nom_appareil(etat, IPHONE) == "iPhone IPHONE-U"
+    assert l.nom_appareil(etat, "ABCDEF123456") == "appareil ABCDEF12"
+    assert l.nom_appareil(etat, None) == "ancien"
+    stats = {}
+    l.compter_pushs(stats, "2026-10-23", [("iPad A", "start"), ("iPad A", "update"), ("iPad A", "update"), ("iPhone B", "echec")])
+    assert stats == {"2026-10-23": {"iPad A": {"start": 1, "update": 2}, "iPhone B": {"echec": 1}}}
+    assert l.compter_pushs(stats, "2026-10-24", []) == stats  # rien d'envoyé : rien ne bouge
+    for i in range(40):
+        l.compter_pushs(stats, f"2026-11-{i:02d}", [("iPad A", "update")])
+    assert len(stats) == 31 and "2026-10-23" not in stats
+
+
+def test_jetons_d_avant_retires_par_l_ipad():
+    """Jetons sans appareil (app d'avant, seulement sur l'iPad) : retirés quand l'iPad envoie le sien, pas par l'iPhone."""
+    etat = l.etat_vide()
+    l.ranger_jeton(etat, {"type": "push_to_start", "jeton": P1}, 1)
+    _pts(etat, P2, IPHONE, "iPhone")
+    assert set(etat["push_to_start"]) == {P1, P2}
+    _pts(etat, P3, IPAD, "iPad")
+    assert set(etat["push_to_start"]) == {P2, P3}
