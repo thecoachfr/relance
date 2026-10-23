@@ -21,8 +21,10 @@ racine=$(git rev-parse --show-toplevel)
 cd "$racine" || exit 1
 zero=0000000000000000000000000000000000000000
 fichiers=""
+dernier=""
 while read -r _ local_sha _ distant_sha; do
     [ "$local_sha" = "$zero" ] && continue   # suppression d'une branche distante
+    dernier=$local_sha
     if [ "$distant_sha" = "$zero" ]; then
         base=$(git merge-base "$local_sha" origin/main 2>/dev/null || git rev-list --max-parents=0 "$local_sha" | tail -1)
     else
@@ -32,6 +34,13 @@ while read -r _ local_sha _ distant_sha; do
 done
 code=$(printf '%s\n' "$fichiers" | grep -vE "^$|\.md$|^docs/|^design/|^plans/|^\.githooks/${HORS_TESTS:+|$HORS_TESTS}" || true)
 if [ -z "$code" ]; then echo "Envoi sans code (doc seulement) : pas de tests."; exit 0; fi
+# Xcode Cloud ne regarde que le dernier commit d'un envoi : s'il porte [ci skip], tout l'envoi est sauté, code compris
+# (vécu le 23/10/2026 sur Cadrage). Envoyer le code avant le commit de doc, ou retirer [ci skip] du dernier.
+if git log -1 --format=%B "$dernier" 2>/dev/null | grep -q "\[ci skip\]"; then
+    echo "❌ Envoi refusé : le dernier commit porte [ci skip], Xcode Cloud sauterait aussi le code de cet envoi."
+    echo "   Retirer [ci skip] du dernier commit (git commit --amend), ou envoyer d'abord le code. Forcer : SANS_TESTS=1 git push"
+    exit 1
+fi
 
 journal=$(mktemp -t tests-avant-envoi)
 derive="$HOME/Library/Caches/tests-avant-envoi/$(basename "$racine")"
