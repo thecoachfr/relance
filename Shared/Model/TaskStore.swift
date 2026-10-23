@@ -54,7 +54,10 @@ final class TaskStore {
 
     init(auth: any AccountProvider, inMemory: Bool = false) {
         self.auth = auth
-        container = AppGroup.modelContainer(inMemory: inMemory)
+        let base = AppGroup.ouvrirBase(inMemory: inMemory, reparer: !inMemory)
+        container = base.container
+        // Base neuve après une base illisible : la synchro Google repart de zéro (celle de HA relit déjà tout).
+        if base.neuve { AppGroup.defaults.removeObject(forKey: Self.lastSyncKey) }
     }
 
     // MARK: - Lecture
