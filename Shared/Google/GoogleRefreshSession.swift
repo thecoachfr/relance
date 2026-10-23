@@ -8,9 +8,8 @@ import Security
 /// - Extension de partage : lit la connexion que l'app range dans le trousseau partagé (`shared`).
 final class GoogleRefreshSession: @unchecked Sendable {
     private static let service = "fr.alexandrefau.relance.google"
-    /// Groupe de trousseau commun à l'app iPhone et à son extension de partage.
-    static let sharedAccessGroup = "GD6W292ZXP.fr.alexandrefau.relance.shared"
-    static var shared: GoogleRefreshSession { GoogleRefreshSession(accessGroup: sharedAccessGroup) }
+    /// Trousseau commun à l'app iPhone et à son extension de partage (`Groupes.trousseauPartage`).
+    static var shared: GoogleRefreshSession { GoogleRefreshSession(accessGroup: Groupes.trousseauPartage) }
 
     private let accessGroup: String?
     /// Jeton d'accès et renouvellement en cours, sous verrou : deux synchros simultanées ne renouvellent qu'une fois

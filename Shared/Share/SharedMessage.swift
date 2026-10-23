@@ -95,7 +95,7 @@ nonisolated enum SharedMessage {
 /// Tâches partagées sans réseau (ou avant la première connexion) : l'app les envoie à sa prochaine synchro.
 nonisolated enum PendingShares {
     private static let key = "pendingShares"
-    private static var defaults: UserDefaults { UserDefaults(suiteName: "group.fr.alexandrefau.relance") ?? .standard }
+    private static var defaults: UserDefaults { Groupes.defaults }
 
     struct Item: Codable, Equatable {
         var title: String

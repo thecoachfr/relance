@@ -134,7 +134,6 @@ final class TrajetsRecorder: NSObject, CLLocationManagerDelegate {
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.timeoutInterval = 20
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         let visites = file.map { v -> [String: Any] in
             var d: [String: Any] = ["arrivee": v.arrivee, "lat": v.lat, "lon": v.lon, "precision": v.precision]
@@ -144,8 +143,10 @@ final class TrajetsRecorder: NSObject, CLLocationManagerDelegate {
         request.httpBody = try? JSONSerialization.data(withJSONObject: [
             "action": "trajets", "device": UIDevice.current.name, "visites": visites,
         ])
+        // Rejouable : la vigie range chaque visite sous son heure d'arrivée (`aiguillage_trajets.ajouter_visites`,
+        // clé (source, arrivee)) ; un lot reçu deux fois ne crée pas de doublon.
         guard let (_, response) = await Journal.essayer(.reseau, "Envoi des trajets", {
-                  try await URLSession.shared.data(for: request) }),
+                  try await Reseau.envoyer(request, rejouable: true) }),
               Journal.reponseOK(response, .reseau, "Envoi des trajets") else {
             SyncLog.add("Trajets : envoi de \(file.count) arrêt(s) impossible, nouvel essai plus tard")
             return

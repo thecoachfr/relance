@@ -14,7 +14,7 @@ final class WatchStore: NSObject, WCSessionDelegate {
     static let snapshotKey = "watchTasks"
     private static let updatedKey = "watchTasksUpdated"
     /// Partagé avec la complication (même identifiant d'App Group que sur l'iPhone, conteneur propre à la montre).
-    static let defaults = UserDefaults(suiteName: "group.fr.alexandrefau.relance") ?? .standard
+    static let defaults = Groupes.defaults
 
     private(set) var tasks: [WatchTask] = WatchStore.loadSnapshot()
     private(set) var lastUpdate: Date? = WatchStore.defaults.object(forKey: WatchStore.updatedKey) as? Date
@@ -259,7 +259,7 @@ nonisolated private struct Payload: Sendable {
 nonisolated enum WatchHA {
     private static let urlKey = "haURL"
     private static let service = "fr.alexandrefau.relance.ha"
-    private static var defaults: UserDefaults { UserDefaults(suiteName: "group.fr.alexandrefau.relance") ?? .standard }
+    private static var defaults: UserDefaults { Groupes.defaults }
 
     static var memo: MemoHA? {
         guard let texte = defaults.string(forKey: urlKey), let url = URL(string: texte),

@@ -31,3 +31,22 @@ struct ReseauTests {
         #expect(Reseau.attente(tentative: 1, statut: nil, erreur: .networkConnectionLost, rejouable: true) == .seconds(1))
     }
 }
+
+/// Home Assistant (23/10) : quels appels du mémo peuvent être renvoyés si la réponse s'est perdue.
+struct ReseauHATests {
+    @Test func ajoutAuMemoNonRejouable() {
+        #expect(!MemoHA.rejouable("add_item"))
+        #expect(MemoHA.rejouable("get_items") && MemoHA.rejouable("update_item"))
+    }
+
+    @Test func demandeDeTriPasRenvoyeeSiElleAPuPartir() {
+        // Tri, lien sur la TV : `rejouable: false`. Réponse perdue ou 5xx : pas de second envoi ; 429 : rien n'a été fait.
+        #expect(Reseau.attente(tentative: 1, statut: nil, erreur: .timedOut, rejouable: false) == nil)
+        #expect(Reseau.attente(tentative: 1, statut: 502, erreur: nil, rejouable: false) == nil)
+        #expect(Reseau.attente(tentative: 1, statut: nil, erreur: .timedOut, rejouable: true) == .seconds(1))
+    }
+
+    @Test func delaiCourt() {
+        #expect(Reseau.session.configuration.timeoutIntervalForRequest == 15)
+    }
+}

@@ -39,8 +39,9 @@ enum PushRegistration {
             "environment": environment,
             "device": UIDevice.current.name,
         ])
+        // Rejouable : la vigie range l'appareil sous son jeton (`on_register`), un second envoi écrase le premier.
         guard let (_, response) = await Journal.essayer(.reseau, "Inscription aux push", {
-                  try await URLSession.shared.data(for: request) }),
+                  try await Reseau.envoyer(request, rejouable: true) }),
               Journal.reponseOK(response, .reseau, "Inscription aux push") else { return }
         defaults.set(token, forKey: sentKey)
         defaults.set(Date.now, forKey: sentAtKey)

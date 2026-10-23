@@ -16,11 +16,11 @@ nonisolated enum PiecesJointes {
     static let tailleMax = 10 * 1024 * 1024
     private static let fileKey = "piecesEnAttente"
     /// Préférences de l'App Group (sans `AppGroup`, absent de l'extension de partage).
-    private static var defaults: UserDefaults { UserDefaults(suiteName: HAConfig.appGroup) ?? .standard }
+    private static var defaults: UserDefaults { Groupes.defaults }
 
     /// `<App Group>/Pieces` : cache des fichiers (par espace), lus ou en attente d'envoi.
     static var dossier: URL? {
-        FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: HAConfig.appGroup)?.appending(path: "Pieces")
+        FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: Groupes.app)?.appending(path: "Pieces")
     }
 
     static func client() -> ClientFichiers? {

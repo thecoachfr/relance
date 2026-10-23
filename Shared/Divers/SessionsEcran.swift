@@ -144,7 +144,7 @@ nonisolated struct CadenceEcriture: Sendable {
 /// Où est gardé le journal des sessions : l'App Group de l'appareil, un espace à part pour les tests.
 nonisolated struct RegistreSessions: Sendable {
     let suite: String
-    static let partage = RegistreSessions(suite: "group.fr.alexandrefau.relance")
+    static let partage = RegistreSessions(suite: Groupes.app)
     private static let cle = "sessionsEcran"
 
     private var defaults: UserDefaults { UserDefaults(suiteName: suite) ?? .standard }

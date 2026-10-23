@@ -1,7 +1,9 @@
 import Foundation
 
-/// Requêtes vers Google : délai court, nouvel essai avec attente croissante quand l'échec est passager.
+/// Requêtes vers Google et Home Assistant : délai court, nouvel essai avec attente croissante quand l'échec est passager.
 /// Avant : `URLSession.shared` (60 s d'attente avant d'abandonner) et aucun nouvel essai.
+/// Home Assistant (23/10) : webhook (inscription aux push, trajets, tri), mémo (`MemoHA`), « Sur la TV » (`TVRemote`).
+/// Le paquet DonneesHA (tâches) a sa propre session.
 nonisolated enum Reseau {
     /// 15 s sans réponse : on abandonne (au lieu de 60 s) ; 60 s au plus pour une requête entière.
     static let session: URLSession = {
@@ -16,7 +18,7 @@ nonisolated enum Reseau {
     /// Attente avant le nouvel essai n° `tentative` (1 = après le premier échec), ou nil s'il ne faut pas réessayer.
     /// - `rejouable` : la requête peut être renvoyée sans risque (GET, PATCH, DELETE, jeton). Un ajout (POST) ne l'est pas :
     ///   s'il a été reçu mais que la réponse s'est perdue, le renvoyer créerait un doublon ; il n'est réessayé que sur 429,
-    ///   où Google dit explicitement n'avoir rien fait.
+    ///   où le serveur dit explicitement n'avoir rien fait.
     static func attente(tentative: Int, statut: Int?, erreur: URLError.Code?, rejouable: Bool,
                         retryAfter: String? = nil) -> Duration? {
         guard tentative < essaisMax else { return nil }

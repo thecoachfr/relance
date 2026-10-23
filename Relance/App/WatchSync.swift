@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import WatchConnectivity
 
@@ -15,7 +16,11 @@ final class WatchSync: NSObject, WCSessionDelegate {
     }
 
     /// Envoie l'état courant. `applicationContext` ne garde que le dernier envoi : pas d'empilement.
-    func send(_ tasks: [TaskItem]) {
+    /// Il remplace tout le contexte d'un coup (impossible de n'envoyer que ce qui a changé) : on ne l'envoie donc que
+    /// si le contexte complet diffère du dernier envoyé (B6, 23/10). Avant : renvoyé à chaque synchro, avec la connexion
+    /// Google et le jeton HA, et un transfert de complication (budget quotidien) à chaque fois.
+    /// `force` : activation de la session ou changement de montre (nouvelle montre, app montre réinstallée).
+    func send(_ tasks: [TaskItem], force: Bool = false) {
         let session = WCSession.default
         guard WCSession.isSupported(), session.activationState == .activated,
               session.isPaired, session.isWatchAppInstalled else { return }
@@ -36,7 +41,11 @@ final class WatchSync: NSObject, WCSessionDelegate {
         let ha = store.isHAActive ? MemoHA.current : nil
         context[WatchLink.haURLKey] = ha?.url.absoluteString ?? ""
         context[WatchLink.haTokenKey] = ha?.token ?? ""
-        Journal.essayer(.montre, "Envoi de l'état à la montre") { try session.updateApplicationContext(context) }
+        // Référence : le dernier contexte envoyé, gardé par WatchConnectivity (survit au relancement de l'app, propre à
+        // chaque montre) ; rien de secret n'est recopié ailleurs. Un envoi qui échoue ne le change pas : réessayé ensuite.
+        guard force || WatchContexte.empreinte(context) != WatchContexte.empreinte(session.applicationContext) else { return }
+        guard Journal.essayer(.montre, "Envoi de l'état à la montre", { try session.updateApplicationContext(context) })
+                != nil else { return }
         // La complication suit l'état en retard : on la prévient, dans la limite du budget quotidien d'Apple.
         if session.isComplicationEnabled, session.remainingComplicationUserInfoTransfers > 0 {
             session.transferCurrentComplicationUserInfo([WatchLink.tasksKey: WatchLink.encode(payload)])
@@ -119,7 +128,7 @@ final class WatchSync: NSObject, WCSessionDelegate {
 
     nonisolated func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState,
                              error: Error?) {
-        Task { @MainActor in send(store.activeTasks()) }
+        Task { @MainActor in send(store.activeTasks(), force: true) }
     }
 
     nonisolated func sessionDidBecomeInactive(_ session: WCSession) {}
@@ -130,7 +139,31 @@ final class WatchSync: NSObject, WCSessionDelegate {
     }
 
     nonisolated func sessionWatchStateDidChange(_ session: WCSession) {
-        Task { @MainActor in send(store.activeTasks()) }
+        Task { @MainActor in send(store.activeTasks(), force: true) }
+    }
+}
+
+/// Empreinte d'un contexte envoyé à la montre : la même pour le même contenu, quel que soit l'ordre des clés.
+/// Code pur, testé (`WatchContexteTests`). Valeurs attendues : données, texte, booléens et nombres (types plist).
+nonisolated enum WatchContexte {
+    static func empreinte(_ contexte: [String: Any]) -> String {
+        var hachage = SHA256()
+        for cle in contexte.keys.sorted() {
+            let valeur: Data
+            switch contexte[cle] {
+            case let donnees as Data: valeur = Data("d".utf8) + donnees
+            case let texte as String: valeur = Data("s".utf8) + Data(texte.utf8)
+            case let nombre as NSNumber: valeur = Data("n".utf8) + Data(nombre.stringValue.utf8)   // Bool compris
+            case let autre?: valeur = Data("?".utf8) + Data(String(describing: autre).utf8)
+            case nil: valeur = Data()
+            }
+            // Longueurs écrites avant chaque morceau : « ab » + « c » ne se confond pas avec « a » + « bc ».
+            for morceau in [Data(cle.utf8), valeur] {
+                withUnsafeBytes(of: UInt64(morceau.count).littleEndian) { hachage.update(bufferPointer: $0) }
+                hachage.update(data: morceau)
+            }
+        }
+        return hachage.finalize().map { String(format: "%02x", $0) }.joined()
     }
 }
 

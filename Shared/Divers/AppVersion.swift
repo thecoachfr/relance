@@ -9,10 +9,9 @@ nonisolated enum AppVersion {
         return "\(version) (\(build))"
     }
 
-    /// Commit compilé (7 caractères), écrit par Xcode Cloud (`ci_post_clone.sh`) ; « local » pour un build de Xcode.
-    static var commit: String {
-        Bundle.main.infoDictionary?["AiguillageCommit"] as? String ?? "local"
-    }
+    /// Commit compilé (7 caractères), écrit ici par Xcode Cloud (`ci_post_clone.sh`, `sed` sur cette ligne exacte) ;
+    /// « local » pour un build de Xcode. Avant le 23/10 : clé `AiguillageCommit` ajoutée aux Info.plist par PlistBuddy.
+    static let commit = "local"
 
     /// « 0.3 (19) · 96ebc91 »
     static var full: String { "\(text) · \(commit)" }

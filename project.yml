@@ -20,6 +20,10 @@ settings:
     SWIFT_VERSION: "6.0"
     SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
     SWIFT_APPROACHABLE_CONCURRENCY: YES
+    # Numéro de build, le même pour l'app et toutes ses extensions (TestFlight refuse une extension dont le numéro
+    # diffère) : Xcode Cloud le remplace par CI_BUILD_NUMBER (ci_scripts/ci_post_clone.sh). En installation directe
+    # (Xcode, devicectl), l'augmenter ici pour que l'iPhone transmette la nouvelle app à la montre.
+    CURRENT_PROJECT_VERSION: "16"
 targets:
   Relance:
     type: application
@@ -56,7 +60,7 @@ targets:
         CFBundleDisplayName: Aiguillage
         ITSAppUsesNonExemptEncryption: false
         CFBundleShortVersionString: "0.3"
-        CFBundleVersion: "16"
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         UILaunchScreen: {}
         UISupportedInterfaceOrientations~iphone: [UIInterfaceOrientationPortrait]
         UISupportedInterfaceOrientations~ipad:
@@ -158,7 +162,7 @@ targets:
         CFBundleDisplayName: Aiguillage
         ITSAppUsesNonExemptEncryption: false
         CFBundleShortVersionString: "0.3"
-        CFBundleVersion: "16"
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSApplicationCategoryType: public.app-category.productivity
         NSCalendarsFullAccessUsageDescription: Aiguillage ajoute à ton agenda les tâches que tu choisis, et met l'événement à jour quand l'heure de la tâche change.
         GIDClientID: $(GOOGLE_CLIENT_ID)
@@ -181,6 +185,7 @@ targets:
       - Shared/Share
       - Shared/Divers/Journal.swift
       - Shared/Divers/Reseau.swift
+      - Shared/Divers/Groupes.swift
       - Shared/Google
       - Shared/Model/MemoMerge.swift
       - Shared/Model/DateDetection.swift
@@ -208,7 +213,7 @@ targets:
       properties:
         CFBundleDisplayName: Aiguillage
         CFBundleShortVersionString: "0.3"
-        CFBundleVersion: "16"
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         NSExtension:
           NSExtensionPointIdentifier: com.apple.share-services
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ShareViewController
@@ -238,7 +243,7 @@ targets:
       properties:
         CFBundleDisplayName: Aiguillage
         CFBundleShortVersionString: "0.3"
-        CFBundleVersion: "16"
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:
@@ -282,7 +287,7 @@ targets:
       properties:
         CFBundleDisplayName: Aiguillage
         CFBundleShortVersionString: "0.3"
-        CFBundleVersion: "16"
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         WKApplication: true
         CFBundleURLTypes:
           - CFBundleURLName: fr.alexandrefau.relance.watch
@@ -304,6 +309,7 @@ targets:
       - RelanceWatchWidgets
       - Shared/Watch
       - Shared/WatchApp
+      - Shared/Divers/Groupes.swift
       - Shared/Model/DueText.swift
       - Shared/Model/TaskPriority.swift
       - Shared/Reminders/ReminderPlanner.swift
@@ -320,7 +326,7 @@ targets:
       properties:
         CFBundleDisplayName: Aiguillage
         CFBundleShortVersionString: "0.3"
-        CFBundleVersion: "16"
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:

@@ -63,7 +63,10 @@ nonisolated enum WatchLink {
     static let outcomeKey = "outcome"
 
     static func encode(_ tasks: [WatchTask]) -> Data {
-        (try? JSONEncoder().encode(tasks)) ?? Data()
+        // Clés triées : la même liste donne toujours les mêmes octets (l'iPhone compare l'état avant de l'envoyer).
+        let encodeur = JSONEncoder()
+        encodeur.outputFormatting = .sortedKeys
+        return (try? encodeur.encode(tasks)) ?? Data()
     }
 
     static func decode(_ data: Data?) -> [WatchTask] {

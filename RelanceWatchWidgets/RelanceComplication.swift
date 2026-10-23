@@ -72,7 +72,7 @@ struct ComplicationProvider: TimelineProvider {
     }
 
     private func load() -> [WatchTask] {
-        let defaults = UserDefaults(suiteName: "group.fr.alexandrefau.relance") ?? .standard
+        let defaults = Groupes.defaults
         return WatchLink.decode(defaults.data(forKey: "watchTasks"))
     }
 }

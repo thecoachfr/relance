@@ -44,7 +44,7 @@ nonisolated final class EnergyMetrics: NSObject, MXMetricManagerSubscriber, @unc
     // MARK: - Rapports
 
     private static var folder: URL? {
-        FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: AppGroup.id)?
+        FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: Groupes.app)?
             .appendingPathComponent("Metrics", isDirectory: true)
     }
 

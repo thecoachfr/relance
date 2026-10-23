@@ -22,7 +22,7 @@ nonisolated enum Journal {
     /// Où sont gardées les erreurs récentes : l'App Group pour l'app et ses extensions, un espace à part pour les tests.
     struct Registre: Sendable {
         let suite: String
-        static let partage = Registre(suite: "group.fr.alexandrefau.relance")
+        static let partage = Registre(suite: Groupes.app)
         static let maxEntrees = 30
         private static let cle = "journalErreurs"
         private static let verrou = OSAllocatedUnfairLock()
@@ -80,7 +80,7 @@ nonisolated enum Journal {
     }
 
     /// Réponse HTTP 2xx ; sinon note « quoi : HTTP 401 » et renvoie false.
-    static func reponseOK(_ reponse: URLResponse, _ domaine: Domaine, _ quoi: String,
+    static func reponseOK(_ reponse: URLResponse?, _ domaine: Domaine, _ quoi: String,
                           dans registre: Registre = .partage) -> Bool {
         let code = (reponse as? HTTPURLResponse)?.statusCode ?? 0
         guard (200..<300).contains(code) else { echec(domaine, "\(quoi) : HTTP \(code)", dans: registre); return false }

@@ -9,9 +9,7 @@ nonisolated enum WatchQuickAdd {
     static let pendingKey = "watchPendingAdd"
     static let notification = Notification.Name("WatchQuickAdd")
 
-    static var defaults: UserDefaults {
-        UserDefaults(suiteName: "group.fr.alexandrefau.relance") ?? .standard
-    }
+    static var defaults: UserDefaults { Groupes.defaults }
 }
 
 struct WatchNewTaskIntent: AppIntent {

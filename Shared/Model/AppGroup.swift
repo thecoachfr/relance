@@ -3,9 +3,7 @@ import SwiftData
 
 /// Espace partagé entre l'app, les widgets et l'activité en direct.
 nonisolated enum AppGroup {
-    static let id = "group.fr.alexandrefau.relance"
-
-    static var defaults: UserDefaults { UserDefaults(suiteName: id) ?? .standard }
+    static var defaults: UserDefaults { Groupes.defaults }
 
     /// Widgets et extensions : jamais de réparation (l'app s'en charge) ; base vide en mémoire si elle est illisible.
     static func modelContainer(inMemory: Bool = false) -> ModelContainer {
@@ -22,7 +20,7 @@ nonisolated enum AppGroup {
         // Sans `cloudKitDatabase: .none`, SwiftData active seul la synchro CloudKit dès que l'app a la
         // capacité iCloud (fallback de DonneesHA), et refuse alors le modèle : plantage au lancement.
         let enMemoire = ModelConfiguration(isStoredInMemoryOnly: true, cloudKitDatabase: .none)
-        let configuration = inMemory ? enMemoire : ModelConfiguration(groupContainer: .identifier(id), cloudKitDatabase: .none)
+        let configuration = inMemory ? enMemoire : ModelConfiguration(groupContainer: .identifier(Groupes.app), cloudKitDatabase: .none)
         do {
             return (try ModelContainer(for: TaskItem.self, configurations: configuration), false)
         } catch {

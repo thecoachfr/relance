@@ -33,7 +33,7 @@ nonisolated enum TVRemote {
         // La nuit, le Player est injoignable : on le dit tout de suite plutôt qu'après une erreur du script.
         var state = URLRequest(url: base.appending(path: "api/states/remote.freebox_player_pop"), timeoutInterval: 10)
         state.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        if let (data, _) = try? await URLSession.shared.data(for: state),
+        if let (data, _) = try? await Reseau.envoyer(state, rejouable: true),
            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
            json["state"] as? String == "unavailable" {
             return .unreachable
@@ -44,8 +44,9 @@ nonisolated enum TVRemote {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try? JSONSerialization.data(withJSONObject: ["lien": link(for: url)])
         do {
-            let (data, response) = try await URLSession.shared.data(for: request)
-            let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+            // Pas rejouable : le lien s'ouvrirait deux fois sur la TV. 30 s : le script attend que le Player l'ouvre.
+            let (data, response) = try await Reseau.envoyer(request, rejouable: false)
+            let status = response?.statusCode ?? 0
             if (200..<300).contains(status) { return .sent }
             let text = String(decoding: data, as: UTF8.self)
             if text.localizedCaseInsensitiveContains("injoignable") { return .unreachable }

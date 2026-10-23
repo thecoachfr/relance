@@ -69,9 +69,10 @@ La montre passe alors par l'iPhone pour les tâches ; l'extension de partage éc
 Chaque push sur `main` compile l'app dans le cloud d'Apple et l'envoie sur TestFlight :
 iPhone, iPad, montre (incluse dans l'app iPhone) et Mac se mettent à jour depuis l'app TestFlight.
 
-- `ci_scripts/ci_post_clone.sh` recrée `Secrets.xcconfig` (absent du dépôt public) et donne
-  le numéro de build de Xcode Cloud à l'app et à toutes ses extensions, et le commit compilé (clé `AiguillageCommit`,
-  affichée dans Réglages › À propos, sur le Mac et sur la montre).
+- `ci_scripts/ci_post_clone.sh` recrée `Secrets.xcconfig` (absent du dépôt public), écrit le numéro de build de Xcode Cloud
+  dans `CURRENT_PROJECT_VERSION` du projet (`sed`, vérifié par `grep`) : l'app et toutes ses extensions le reprennent
+  (`CFBundleVersion = $(CURRENT_PROJECT_VERSION)`). Il écrit aussi le commit compilé dans `Shared/Divers/AppVersion.swift`
+  (affiché dans Réglages › À propos, sur le Mac et sur la montre).
 - `ci_scripts/signaler_build.sh` (appelé au début du build et par `ci_post_xcodebuild.sh` après chaque archive) signale
   « build N = commit X, étape » au webhook de l'app (`action: build`) ; la vigie garde la correspondance dans
   `relance_builds.json` (add-on AppDaemon), pour savoir quel build TestFlight contient quelle modification.
@@ -100,7 +101,7 @@ iPhone, iPad, montre (incluse dans l'app iPhone) et Mac se mettent à jour depui
 | `RelanceMac/` | App Mac native : fenêtre en trois colonnes, barre des menus, menus et raccourcis (reprend `Shared/` et les vues de tâche de `Relance/Views/`) |
 | `RelanceWidgets/` | Widgets, activité en direct, commande « Nouvelle tâche » |
 | `RelanceShare/` | Extension de partage (WhatsApp, Mail, Safari…) |
-| `Shared/Divers/` | Version, journal des erreurs (`Journal`), réseau Google (`Reseau`), mémoire et arrêts à l'écran de la montre (`SessionsEcran`) |
+| `Shared/Divers/` | Version, identifiants d'App Group et de trousseau (`Groupes`, compilé par toutes les cibles), journal des erreurs (`Journal`), réseau Google et Home Assistant (`Reseau`), mémoire et arrêts à l'écran de la montre (`SessionsEcran`) |
 | `RelanceWatch/`, `RelanceWatchWidgets/` | App et complications Apple Watch | ; écran Diagnostic de la montre (`WatchDiagnostic.swift`) |
 | `homeassistant/` | Vigie AppDaemon (phase 3) : push, tri, boîte d'entrée Google → Home Assistant |
 | `RelanceTests/` | Tests (Swift Testing) |

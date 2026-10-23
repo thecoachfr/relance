@@ -16,13 +16,11 @@ nonisolated enum HAConfig {
     /// Sur Mac, le premier groupe de trousseau de l'app (pas d'extension de partage).
     static let keychainGroup: String? = nil
     #else
-    /// Groupe partagé avec l'extension de partage (le même que `GoogleRefreshSession.sharedAccessGroup`).
-    static let keychainGroup: String? = "GD6W292ZXP.fr.alexandrefau.relance.shared"
+    /// Groupe partagé avec l'extension de partage (le même que la connexion Google).
+    static let keychainGroup: String? = Groupes.trousseauPartage
     #endif
 
-    /// Même App Group que `AppGroup` (non repris ici : l'extension de partage n'a pas SwiftData).
-    static let appGroup = "group.fr.alexandrefau.relance"
-    private static var defaults: UserDefaults { UserDefaults(suiteName: appGroup) ?? .standard }
+    private static var defaults: UserDefaults { Groupes.defaults }
 
     private static let urlKey = "ha.url"
     private static let activeKey = "ha.active"
@@ -104,7 +102,7 @@ nonisolated enum HAConfig {
 
     /// Base locale de l'espace, dans l'App Group (partagée par l'app et ses extensions).
     static func databaseURL() -> URL? {
-        FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroup)?
+        FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: Groupes.app)?
             .appending(path: "DonneesHA/\(espace).sqlite")
     }
 

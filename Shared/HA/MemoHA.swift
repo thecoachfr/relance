@@ -59,6 +59,9 @@ nonisolated struct MemoHA: Sendable {
         return .added
     }
 
+    /// Un appel peut-il être renvoyé sans risque si la réponse s'est perdue ?
+    static func rejouable(_ service: String) -> Bool { service != "add_item" }
+
     private func call(_ service: String, _ data: [String: Any], response: Bool = false) async throws -> [String: Any]? {
         var components = URLComponents(url: url.appending(path: "api/services/todo/\(service)"), resolvingAgainstBaseURL: false)!
         if response { components.queryItems = [URLQueryItem(name: "return_response", value: nil)] }
@@ -67,8 +70,9 @@ nonisolated struct MemoHA: Sendable {
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONSerialization.data(withJSONObject: data)
-        let (body, reponse) = try await URLSession.shared.data(for: request)
-        let status = (reponse as? HTTPURLResponse)?.statusCode ?? 0
+        // Lire, renommer, cocher : rejouables ; ajouter (`add_item`) non, une fiche ajoutée deux fois serait en double.
+        let (body, reponse) = try await Reseau.envoyer(request, rejouable: Self.rejouable(service))
+        let status = reponse?.statusCode ?? 0
         guard (200..<300).contains(status) else {
             throw Erreur(status: status, message: String(decoding: body, as: UTF8.self))
         }

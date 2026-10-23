@@ -15,8 +15,9 @@ enum TriageRequest {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try? JSONSerialization.data(withJSONObject: ["action": "triage"])
+        // Pas rejouable : une demande peut-être partie (réponse perdue) n'est pas renvoyée ; seulement sur 429.
         guard let (_, response) = await Journal.essayer(.reseau, "Demande de tri", {
-            try await URLSession.shared.data(for: request) }) else { return false }
+            try await Reseau.envoyer(request, rejouable: false) }) else { return false }
         return Journal.reponseOK(response, .reseau, "Demande de tri")
     }
 }
