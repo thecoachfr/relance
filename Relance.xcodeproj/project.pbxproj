@@ -198,6 +198,7 @@
 		7ED30D56BA9A59F34424F270 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8F3BB32731EC54B8BE3C9178 /* Assets.xcassets */; };
 		7F05CB0A103D3E6AFB9D2C3B /* Journal.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB7B1C9078E359F88724ACDF /* Journal.swift */; };
 		7F86D58B0EDB2CF5DB187562 /* TasksWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5468914DD0794A1803AA561 /* TasksWidget.swift */; };
+		7FF955DF275B8C22DFB3F045 /* Reseau.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65817F3183341A8C7C9D9383 /* Reseau.swift */; };
 		8120CC84668E396ECEF899AA /* RecurrenceViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AC4D232F9F0F91D89576CCA /* RecurrenceViews.swift */; };
 		81E219AB9CB3C261F4FEA193 /* RelanceShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01BFACD05E33901EC0A7A084 /* RelanceShortcuts.swift */; };
 		8379B6ABB391ABCE301C61FE /* ReminderPlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E48E67DBEFD62C7E6118390 /* ReminderPlanner.swift */; };
@@ -288,6 +289,7 @@
 		BF3AEFB81EE342F831AAD925 /* HAConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FADF69313D958AAEDF4ED3 /* HAConfig.swift */; };
 		BFFE554EE27060EC4A0E1671 /* Recurrence.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57E018902DF086E23048C8AE /* Recurrence.swift */; };
 		C00AC755247DC8A1AD49583A /* ToSee.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A3B053B5BF69150A21C6DA2 /* ToSee.swift */; };
+		C02518197010D9F59634E764 /* Reseau.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65817F3183341A8C7C9D9383 /* Reseau.swift */; };
 		C281C4319DC1D8B48972AF47 /* PushRegistration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C1E3FCC309390331F7A6DDF /* PushRegistration.swift */; };
 		C38E9F276262E68B0C4FB011 /* TacheHA+Liste.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E11A76CCDBFE02F27DDC707 /* TacheHA+Liste.swift */; };
 		C3FBCB9EE6DB4E5B9B4E527D /* DateDetection.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFB0E54140635703273C5FC6 /* DateDetection.swift */; };
@@ -316,6 +318,7 @@
 		D156AAA722C8F7A57043FCA6 /* CalendarLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41BF8369B5A6A593F0D8D600 /* CalendarLink.swift */; };
 		D17484C92A8768EEDC373C27 /* MapClusterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7849697AF3E02FD8CEAA126B /* MapClusterTests.swift */; };
 		D1F27F2D01E56E2A8DD14586 /* TaskContact.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB47AF80FF2840FC777CCEC2 /* TaskContact.swift */; };
+		D288108966F0C109908BA988 /* Reseau.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65817F3183341A8C7C9D9383 /* Reseau.swift */; };
 		D364D0AE0703F901816860E8 /* TaskStore+HA.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAC867B66467D5B63EC30FDD /* TaskStore+HA.swift */; };
 		D51C6FDA1B60603EDDF4FF0E /* TVRemote.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5115FA3B8E348E91F0DCFEF /* TVRemote.swift */; };
 		D59C52AE4BD1B63ACA82308F /* MemoViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3BA2CD7259FBD2501089EDD /* MemoViews.swift */; };
@@ -327,6 +330,7 @@
 		D8C74744B044072BFD47FA55 /* TaskStore+HA.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAC867B66467D5B63EC30FDD /* TaskStore+HA.swift */; };
 		D9678F91680CE624DF564526 /* MacRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 745CB36B5E1C4CC59E0B3317 /* MacRootView.swift */; };
 		DA070F9C3B53340436E9AA5C /* Recettes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59E6DFE31CE62707FB0EB4F9 /* Recettes.swift */; };
+		DAC0C65A7F2F4A1716FD3B7E /* Reseau.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65817F3183341A8C7C9D9383 /* Reseau.swift */; };
 		DAFE51031166321EF4C59D66 /* SharedPhoto.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31B339A2445E0E4BF2299831 /* SharedPhoto.swift */; };
 		DBF1B9E934FCD0505429FFEF /* TaskStore+Liste.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE0CBB1753FF6D341BE553EB /* TaskStore+Liste.swift */; };
 		DC1B15409C41F6A7EB9FFA5C /* DoneView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2085B3617089E328A5BF3F30 /* DoneView.swift */; };
@@ -352,6 +356,7 @@
 		EC26EB9632D040AFA3D8EB56 /* TaskContact.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB47AF80FF2840FC777CCEC2 /* TaskContact.swift */; };
 		ECA85BC6436AB7AB5DB0CC6E /* DonneesHA in Frameworks */ = {isa = PBXBuildFile; productRef = 911B9E4578738458BAD085AF /* DonneesHA */; };
 		ECFC4DEA1A7252278DE7122A /* SharedPhoto.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31B339A2445E0E4BF2299831 /* SharedPhoto.swift */; };
+		EDB5F27D6769756E65EA3640 /* Reseau.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65817F3183341A8C7C9D9383 /* Reseau.swift */; };
 		EDD93DB9E52E0D23FC770AA2 /* MemoShareView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F79F1BB3DA9597815EB03EE /* MemoShareView.swift */; };
 		EE47D478A96EAE13255BA8B2 /* MacAppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = E47CCC36B68A9F7B2C997022 /* MacAppDelegate.swift */; };
 		EFC83DD6A67E0F2993AC4368 /* NoteLines.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6203FE3484BB9AB47B0C2D83 /* NoteLines.swift */; };
@@ -365,6 +370,7 @@
 		F4C5EFBEC247872881CCA2E0 /* MenuBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DC34D75C86A2CDF47FB58F3 /* MenuBarView.swift */; };
 		F7D41FB95DF069E041518459 /* Journal.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB7B1C9078E359F88724ACDF /* Journal.swift */; };
 		F847DEC2C0528F3C8224E30E /* TaskTag.swift in Sources */ = {isa = PBXBuildFile; fileRef = B863B8DA8A7D1FFAE24BE87C /* TaskTag.swift */; };
+		F85AF2919E3FB14750E7FAAE /* ReseauTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 308DD52AA5828E289963E4D4 /* ReseauTests.swift */; };
 		F943FD7BDC4BD07D3207600E /* SharedMessageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DCCE35813EA2892D8D3C8B7 /* SharedMessageTests.swift */; };
 		F99122E816391BB02ECD729E /* TaskStore+Liste.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE0CBB1753FF6D341BE553EB /* TaskStore+Liste.swift */; };
 		FA2B6044BDAC65C92DEC372D /* DueText.swift in Sources */ = {isa = PBXBuildFile; fileRef = 666C8CA69B643438FA2EC7C2 /* DueText.swift */; };
@@ -492,6 +498,7 @@
 		2FD7A3A536C16BA93AFF03B6 /* RelanceWidgetsBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelanceWidgetsBundle.swift; sourceTree = "<group>"; };
 		2FE0AB94C1F8EF86B799B335 /* TaskRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskRow.swift; sourceTree = "<group>"; };
 		308AC798B0C5F67DE15CB0A5 /* DriveCopie.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DriveCopie.swift; sourceTree = "<group>"; };
+		308DD52AA5828E289963E4D4 /* ReseauTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReseauTests.swift; sourceTree = "<group>"; };
 		30CC842C8E9E1937E48E46CF /* DureeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DureeTests.swift; sourceTree = "<group>"; };
 		31B339A2445E0E4BF2299831 /* SharedPhoto.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedPhoto.swift; sourceTree = "<group>"; };
 		356BC2CE21D14CF0CBA3C9B6 /* TasksProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksProvider.swift; sourceTree = "<group>"; };
@@ -536,6 +543,7 @@
 		61778EC8217DA0E828BF65E1 /* DureeRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DureeRow.swift; sourceTree = "<group>"; };
 		61A994C34CC736F16CBEE82E /* SharedPlaceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedPlaceTests.swift; sourceTree = "<group>"; };
 		6203FE3484BB9AB47B0C2D83 /* NoteLines.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteLines.swift; sourceTree = "<group>"; };
+		65817F3183341A8C7C9D9383 /* Reseau.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Reseau.swift; sourceTree = "<group>"; };
 		666C8CA69B643438FA2EC7C2 /* DueText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DueText.swift; sourceTree = "<group>"; };
 		68136F1B49698436DD4A0A31 /* ProximityPlannerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProximityPlannerTests.swift; sourceTree = "<group>"; };
 		69CF78204F9215F7576BF46B /* ListeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListeTests.swift; sourceTree = "<group>"; };
@@ -733,6 +741,7 @@
 				7F89DCCE514D91C28F92BEC5 /* RecetteTests.swift */,
 				3D82D35DFB589C1E996F8CBC /* ReminderPlannerTests.swift */,
 				4C1A6DFA58B95CA60075943E /* RendezVousTests.swift */,
+				308DD52AA5828E289963E4D4 /* ReseauTests.swift */,
 				4DCCE35813EA2892D8D3C8B7 /* SharedMessageTests.swift */,
 				61A994C34CC736F16CBEE82E /* SharedPlaceTests.swift */,
 				5CD9D6E8A5C0731F41756F44 /* SiriCaptureTests.swift */,
@@ -764,6 +773,7 @@
 			children = (
 				1F3DFFD161CF172B8EA484A9 /* AppVersion.swift */,
 				AB7B1C9078E359F88724ACDF /* Journal.swift */,
+				65817F3183341A8C7C9D9383 /* Reseau.swift */,
 			);
 			path = Divers;
 			sourceTree = "<group>";
@@ -1360,6 +1370,7 @@
 				B1AC57AB8B6F4554CD35A8E2 /* ReminderProfile.swift in Sources */,
 				E337F58207F59D61C12F17B9 /* ReminderScheduler.swift in Sources */,
 				583A3DA69F84352B8BA39E85 /* ReminderSettingsView.swift in Sources */,
+				7FF955DF275B8C22DFB3F045 /* Reseau.swift in Sources */,
 				BC8E1D24312B29365D78F691 /* RootView.swift in Sources */,
 				30B420CBEF3DC2A1CB0FE161 /* SettingsView.swift in Sources */,
 				2F74B1BEAEF2D2423BAF65F5 /* SharedAppointment.swift in Sources */,
@@ -1473,6 +1484,7 @@
 				A4B3BDAD0534826FFFAC7AFE /* ReminderProfile.swift in Sources */,
 				BD23A3EBFE23CFFB26111FED /* ReminderScheduler.swift in Sources */,
 				5718D57DDE6C4FB43D513F31 /* ReminderSettingsView.swift in Sources */,
+				D288108966F0C109908BA988 /* Reseau.swift in Sources */,
 				66CB592304F359B4865BFCB8 /* SharedAppointment.swift in Sources */,
 				C79EB0F3703A561BF58D7F3E /* SharedLink.swift in Sources */,
 				DED92B856FA78FAE4B00D64F /* SharedMessage.swift in Sources */,
@@ -1531,6 +1543,7 @@
 				9C2174CF87EF7ADE28F9103B /* PiecesJointes.swift in Sources */,
 				E8EC0CE2B79974BD2003D4FB /* PlaceCategory.swift in Sources */,
 				CEB0661B20E19E4D74AF8B84 /* ReminderOverride.swift in Sources */,
+				C02518197010D9F59634E764 /* Reseau.swift in Sources */,
 				03042DD444E64B5E71EE600E /* ShareComposeView.swift in Sources */,
 				67B127B18E5CC48E3A37338B /* ShareRootView.swift in Sources */,
 				5E211E65AE023F62D9DE7DAD /* ShareViewController.swift in Sources */,
@@ -1573,6 +1586,7 @@
 				16C9047F27D17CB8F563FEB8 /* RecetteTests.swift in Sources */,
 				33B7402C2D9B8978CA0931CD /* ReminderPlannerTests.swift in Sources */,
 				CF32123898E150E7D3B22BFE /* RendezVousTests.swift in Sources */,
+				F85AF2919E3FB14750E7FAAE /* ReseauTests.swift in Sources */,
 				F943FD7BDC4BD07D3207600E /* SharedMessageTests.swift in Sources */,
 				7133AAFEED4BE920E2634CED /* SharedPlaceTests.swift in Sources */,
 				7798AF9EF9D14E9ABC93128C /* SiriCaptureTests.swift in Sources */,
@@ -1619,6 +1633,7 @@
 				DC4A5763DF0968D579111986 /* ReminderOverride.swift in Sources */,
 				EA68B655AD96AC1346A4F39C /* ReminderPlanner.swift in Sources */,
 				786D8AA653E9D9DA42DF01F6 /* ReminderProfile.swift in Sources */,
+				EDB5F27D6769756E65EA3640 /* Reseau.swift in Sources */,
 				767CC71D6A133DF412183BED /* SiriCapture.swift in Sources */,
 				BD466D85F1E88D48BD93B04C /* TaskCategory.swift in Sources */,
 				53CC6591A755483FCD8A01EE /* TaskPriority.swift in Sources */,
@@ -1664,6 +1679,7 @@
 				02D12DB891B37A57CB157A49 /* ReminderPlanner.swift in Sources */,
 				4106F764A65EB2E06BE8BCEA /* ReminderProfile.swift in Sources */,
 				412BC7568FCDEC431BEBB542 /* ReminderScheduler.swift in Sources */,
+				DAC0C65A7F2F4A1716FD3B7E /* Reseau.swift in Sources */,
 				AFF559A2206C7F28289C6CFF /* SharedAppointment.swift in Sources */,
 				6AA5932FC7F3E572A6671008 /* SharedLink.swift in Sources */,
 				A9D25158884B43503A37002A /* SharedMessage.swift in Sources */,

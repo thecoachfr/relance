@@ -180,6 +180,7 @@ targets:
       - RelanceShare
       - Shared/Share
       - Shared/Divers/Journal.swift
+      - Shared/Divers/Reseau.swift
       - Shared/Google
       - Shared/Model/MemoMerge.swift
       - Shared/Model/DateDetection.swift

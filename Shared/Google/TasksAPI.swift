@@ -151,8 +151,9 @@ nonisolated struct TasksAPI: Sendable {
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         }
 
-        let (data, response) = try await URLSession.shared.data(for: request)
-        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        // Un ajout (POST) n'est pas rejouable : renvoyé après une réponse perdue, il créerait un doublon.
+        let (data, response) = try await Reseau.envoyer(request, rejouable: method != "POST")
+        let status = response?.statusCode ?? 0
         guard (200..<300).contains(status) else {
             throw TasksAPIError.http(status, String(decoding: data, as: UTF8.self))
         }
