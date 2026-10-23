@@ -10,6 +10,8 @@ struct RelanceWatchApp: App {
         WindowGroup {
             WatchTaskList()
                 .environment(store)
+                // Mémoire et arrêts inattendus, seulement pendant que l'app est à l'écran (Diagnostic).
+                .suiviEcran()
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { Task { await store.refreshFromGoogle() } }

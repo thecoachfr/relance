@@ -100,7 +100,8 @@ iPhone, iPad, montre (incluse dans l'app iPhone) et Mac se mettent à jour depui
 | `RelanceMac/` | App Mac native : fenêtre en trois colonnes, barre des menus, menus et raccourcis (reprend `Shared/` et les vues de tâche de `Relance/Views/`) |
 | `RelanceWidgets/` | Widgets, activité en direct, commande « Nouvelle tâche » |
 | `RelanceShare/` | Extension de partage (WhatsApp, Mail, Safari…) |
-| `RelanceWatch/`, `RelanceWatchWidgets/` | App et complications Apple Watch |
+| `Shared/Divers/` | Version, journal des erreurs (`Journal`), réseau Google (`Reseau`), mémoire et arrêts à l'écran de la montre (`SessionsEcran`) |
+| `RelanceWatch/`, `RelanceWatchWidgets/` | App et complications Apple Watch | ; écran Diagnostic de la montre (`WatchDiagnostic.swift`) |
 | `homeassistant/` | Vigie AppDaemon (phase 3) : push, tri, boîte d'entrée Google → Home Assistant |
 | `RelanceTests/` | Tests (Swift Testing) |
 

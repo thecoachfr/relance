@@ -9,6 +9,7 @@
   - réveils en arrière-plan comptés par l'app, par jour : pushs de la vigie reçus, entrées dans une zone de rappel à l'approche ;
   - « Exporter les mesures » : un fichier JSON (résumés, réveils, rapports bruts de MetricKit).
   - Tout reste dans l'App Group (dossier `Metrics/`), sans réseau. iOS livre au plus un rapport par jour, le premier environ 24 h après l'installation du build.
+- **App montre, Diagnostic** (en bas de la liste, depuis le 23/10) : empreinte mémoire (`phys_footprint`) actuelle, pic du jour et sur 7 jours, temps à l'écran sur 7 jours, arrêts inattendus à l'écran, erreurs récentes de la montre. Coût pour la batterie : une lecture de `task_info` toutes les 10 s, seulement app à l'écran (rien en arrière-plan), et une écriture de quelques Ko dans l'App Group au plus toutes les 30 s (ou si le pic monte de 1 Mo). Détail dans SUIVI.md, « Mémoire de la montre ».
 - **Vigie** : `/config/relance_push_stats.json` dans l'add-on AppDaemon (partage `addon_configs/a0d7b954_appdaemon/`), avec par jour les **salves** par cause (`modification_ha`, `liste_google`, `apres_tri`, `test`) et les **envois** (une salve = un push à chaque appareil enregistré). Gardé 31 jours ; le total de la veille est écrit dans le journal d'AppDaemon à 0 h 00 min 30 s.
 - **Réglages › Batterie de l'iPhone** : part d'Aiguillage sur 24 h et sur 10 jours, à l'écran et en arrière-plan. Relevé à la main par Alexandre, avec une capture datée.
 

@@ -27,6 +27,9 @@ struct WatchTaskList: View {
                             .listRowBackground(Color.clear)
                     }
                     if !store.tasks.isEmpty {
+                        NavigationLink { WatchDiagnosticView() } label: {
+                            Label("Diagnostic", systemImage: "stethoscope")
+                        }
                         Text("Version \(AppVersion.full)")
                             .font(.footnote).foregroundStyle(.tertiary)
                             .listRowBackground(Color.clear)
@@ -35,11 +38,18 @@ struct WatchTaskList: View {
                 .refreshable { await store.refreshFromGoogle() }
                 .overlay {
                     if store.tasks.isEmpty {
-                        ContentUnavailableView("Rien d'urgent", systemImage: "checkmark.circle",
-                                               description: Text(store.google.isAvailable
-                                                                 ? "Aucune tâche à faire."
-                                                                 : "Ouvre Aiguillage sur l'iPhone une fois pour connecter la montre.")
-                                               + Text("\nVersion \(AppVersion.full)").foregroundStyle(.tertiary))
+                        ContentUnavailableView {
+                            Label("Rien d'urgent", systemImage: "checkmark.circle")
+                        } description: {
+                            Text(store.google.isAvailable
+                                 ? "Aucune tâche à faire."
+                                 : "Ouvre Aiguillage sur l'iPhone une fois pour connecter la montre.")
+                            + Text("\nVersion \(AppVersion.full)").foregroundStyle(.tertiary)
+                        } actions: {
+                            NavigationLink { WatchDiagnosticView() } label: {
+                                Label("Diagnostic", systemImage: "stethoscope")
+                            }
+                        }
                     }
                 }
             }
