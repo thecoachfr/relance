@@ -36,4 +36,18 @@
 
 ## E2 — Après A4 et D3
 
-À faire : même protocole et comparaison avec E1. Le seuil d'acceptation sera fixé avec Alexandre après E1.
+À faire : même protocole et comparaison avec E1.
+
+## Seuils d'acceptation (validés par Alexandre le 23/10/2026)
+
+| Mesure | Seuil |
+|---|---|
+| Part d'Aiguillage, 10 jours (Réglages › Batterie) | ≤ 3 % |
+| Temps en arrière-plan | < 15 min par jour |
+| Position en arrière-plan | < 30 min par jour |
+| Pushs de la vigie reçus | ≤ 30 par jour |
+| Jetons push enregistrés par la vigie | = nombre d'appareils réels (9 le 16/10) |
+| Montre : pic mémoire à l'écran | < 60 Mo (rien de mesuré encore) |
+| Arrêts inattendus à l'écran (montre) | 0 par semaine |
+
+Pour les quatre apps : **0 arrêt inattendu à l'écran par semaine** (un seul suffit pour regarder) ; une mémoire qui monte de jour en jour à usage égal = fuite probable, à regarder. Seuils **provisoires**, à revoir avec Alexandre après la première semaine de relevés.
