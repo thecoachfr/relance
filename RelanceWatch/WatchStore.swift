@@ -40,7 +40,8 @@ final class WatchStore: NSObject, WCSessionDelegate {
         guard google.isAvailable, !tasksInHA, !isRefreshing else { return }
         isRefreshing = true
         defer { isRefreshing = false }
-        guard let remote = try? await api.fetch(updatedMin: nil) else { return }
+        guard let remote = await Journal.essayer(.reseau, "Lecture de Google Tasks (montre)", {
+            try await api.fetch(updatedMin: nil) }) else { return }
         receive(remote.compactMap(Self.watchTask))
     }
 
@@ -70,8 +71,9 @@ final class WatchStore: NSObject, WCSessionDelegate {
         send([WatchLink.actionKey: WatchLink.Action.complete.rawValue, WatchLink.idKey: task.id])
         guard google.isAvailable, !tasksInHA, UUID(uuidString: task.id) == nil else { return }
         Task {
-            _ = try? await api.patch(id: task.id, ["status": "completed",
-                                                    "completed": TasksAPI.timestamp(.now)])
+            await Journal.essayer(.reseau, "Tâche cochée sur Google (montre)") {
+                try await api.patch(id: task.id, ["status": "completed", "completed": TasksAPI.timestamp(.now)])
+            }
         }
     }
 
@@ -157,7 +159,7 @@ final class WatchStore: NSObject, WCSessionDelegate {
             "notes": NotesTimeCodec.encode(minutes: minutes, priority: priority, notes: ""),
             "due": TasksAPI.due(fromDay: due) ?? NSNull(),
         ]
-        if (try? await api.insert(fields)) != nil {
+        if await Journal.essayer(.reseau, "Ajout sur Google (montre)", { try await api.insert(fields) }) != nil {
             await refreshFromGoogle()
         } else {
             sendAdd(title: title, due: due, hasTime: hasTime, priority: priority)

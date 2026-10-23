@@ -15,7 +15,8 @@ enum TriageRequest {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try? JSONSerialization.data(withJSONObject: ["action": "triage"])
-        guard let (_, response) = try? await URLSession.shared.data(for: request) else { return false }
-        return (200..<300).contains((response as? HTTPURLResponse)?.statusCode ?? 0)
+        guard let (_, response) = await Journal.essayer(.reseau, "Demande de tri", {
+            try await URLSession.shared.data(for: request) }) else { return false }
+        return Journal.reponseOK(response, .reseau, "Demande de tri")
     }
 }

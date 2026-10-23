@@ -30,6 +30,7 @@ struct SettingsView: View {
                     if HAConfig.isActive { NavigationLink("Mes lieux") { MesLieuxView() } }
                     if PushRegistration.webhookURL != nil { NavigationLink("Mes trajets") { TrajetsView() } }
                     NavigationLink("Diagnostic batterie") { DiagnosticView() }
+                    NavigationLink("Erreurs récentes") { ErreursView() }
                 }
                 Section {
                     let entries = SyncLog.all().prefix(12)

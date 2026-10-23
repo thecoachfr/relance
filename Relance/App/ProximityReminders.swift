@@ -174,8 +174,10 @@ final class ProximityReminders: NSObject, CLLocationManagerDelegate {
             content.threadIdentifier = taskID
             content.categoryIdentifier = ReminderScheduler.Category.nearby
             content.userInfo = ["taskID": taskID]
-            try? await UNUserNotificationCenter.current().add(
-                UNNotificationRequest(identifier: "\(taskID)|groupe", content: content, trigger: nil))
+            await Journal.essayer(.notifications, "Rappel de proximité groupé") {
+                try await UNUserNotificationCenter.current().add(
+                    UNNotificationRequest(identifier: "\(taskID)|groupe", content: content, trigger: nil))
+            }
         }
         AppGroup.defaults.set(notified, forKey: Self.groupNotifiedKey)
     }
@@ -206,7 +208,9 @@ final class ProximityReminders: NSObject, CLLocationManagerDelegate {
         content.threadIdentifier = taskID
         content.categoryIdentifier = ReminderScheduler.Category.nearby
         content.userInfo = ["taskID": taskID]
-        try? await UNUserNotificationCenter.current().add(
-            UNNotificationRequest(identifier: "\(taskID)|nearby|\(Int(today))", content: content, trigger: nil))
+        await Journal.essayer(.notifications, "Rappel de proximité") {
+            try await UNUserNotificationCenter.current().add(
+                UNNotificationRequest(identifier: "\(taskID)|nearby|\(Int(today))", content: content, trigger: nil))
+        }
     }
 }

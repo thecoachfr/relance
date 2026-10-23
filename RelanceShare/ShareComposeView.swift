@@ -405,7 +405,9 @@ struct ShareComposeView: View {
         let sent: Bool
         if session.isAvailable {
             let api = TasksAPI(token: { try await session.validAccessToken() })
-            sent = await Self.within(seconds: 8) { (try? await api.insert(fields)) != nil }
+            sent = await Self.within(seconds: 8) {
+                await Journal.essayer(.reseau, "Envoi du partage à Google Tasks", { try await api.insert(fields) }) != nil
+            }
         } else {
             sent = false
         }
@@ -438,7 +440,8 @@ struct ShareComposeView: View {
             tache.liste = liste
         }
         guard let valeur = try? tache.valeur(),
-              (try? synchro.ecrire(UUID().uuidString.lowercased(), valeur)) != nil else { return false }
+              Journal.essayer(.synchro, "Écriture du partage", { try synchro.ecrire(UUID().uuidString.lowercased(), valeur) }) != nil
+        else { return false }
         _ = await Self.within(seconds: 8) { @MainActor in
             await synchro.synchroniser()
             await PiecesJointes.envoyerEnAttente()
@@ -461,7 +464,9 @@ struct ShareComposeView: View {
             tache.pieces.append(piece)
         }
         tache.notes = TacheHA.Piece.notes(tache.notes, setting: tache.pieces)
-        guard let nouvelle = try? tache.valeur(), (try? synchro.ecrire(cle, nouvelle)) != nil else { return false }
+        guard let nouvelle = try? tache.valeur(),
+              Journal.essayer(.synchro, "Ajout de la pièce jointe", { try synchro.ecrire(cle, nouvelle) }) != nil
+        else { return false }
         _ = await Self.within(seconds: 8) { @MainActor in
             await synchro.synchroniser()
             await PiecesJointes.envoyerEnAttente()

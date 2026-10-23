@@ -26,6 +26,11 @@ struct MacSettingsView: View {
             Tab("Synchro", systemImage: "arrow.triangle.2.circlepath") {
                 SyncLogSettings()
             }
+            Tab("Erreurs", systemImage: "exclamationmark.triangle") {
+                NavigationStack { ErreursView() }
+                    .formStyle(.grouped)
+                    .frame(width: 520, height: 520)
+            }
         }
         .scenePadding(.top)
     }

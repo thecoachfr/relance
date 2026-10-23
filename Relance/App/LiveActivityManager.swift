@@ -58,7 +58,9 @@ final class LiveActivityManager {
             for extra in current.dropFirst() { await extra.end(nil, dismissalPolicy: .immediate) }
         } else if ActivityAuthorizationInfo().areActivitiesEnabled {
             // Ne fonctionne qu'avec l'app au premier plan : on réessaie à chaque ouverture.
-            _ = try? Activity.request(attributes: TaskActivityAttributes(), content: content)
+            Journal.essayer(.systeme, "Démarrage de l'activité en direct") {
+                try Activity.request(attributes: TaskActivityAttributes(), content: content)
+            }
         }
     }
 }

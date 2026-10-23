@@ -61,7 +61,9 @@ final class CalendarLink {
 
     /// Retire l'événement de l'agenda et le lien de la tâche.
     func remove(_ item: TaskItem, taskStore: TaskStore, keepTask: Bool = true) {
-        if let event = event(for: item) { try? store.remove(event, span: .thisEvent) }
+        if let event = event(for: item) {
+            Journal.essayer(.stockage, "Suppression de l'événement d'agenda") { try store.remove(event, span: .thisEvent) }
+        }
         item.calendarEventID = nil
         guard keepTask else { return }
         let notes = item.notes.components(separatedBy: .newlines).filter { !$0.hasPrefix(Self.marker) }.joined(separator: "\n")
@@ -76,7 +78,7 @@ final class CalendarLink {
             let end = start.addingTimeInterval(Self.duration(of: item))
             guard event.startDate != start || event.endDate != end || event.title != item.title else { continue }
             fill(event, from: item, start: start)
-            try? store.save(event, span: .thisEvent)
+            Journal.essayer(.stockage, "Mise à jour de l'événement d'agenda") { try store.save(event, span: .thisEvent) }
         }
     }
 

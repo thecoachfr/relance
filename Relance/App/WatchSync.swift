@@ -36,7 +36,7 @@ final class WatchSync: NSObject, WCSessionDelegate {
         let ha = store.isHAActive ? MemoHA.current : nil
         context[WatchLink.haURLKey] = ha?.url.absoluteString ?? ""
         context[WatchLink.haTokenKey] = ha?.token ?? ""
-        try? session.updateApplicationContext(context)
+        Journal.essayer(.montre, "Envoi de l'état à la montre") { try session.updateApplicationContext(context) }
         // La complication suit l'état en retard : on la prévient, dans la limite du budget quotidien d'Apple.
         if session.isComplicationEnabled, session.remainingComplicationUserInfoTransfers > 0 {
             session.transferCurrentComplicationUserInfo([WatchLink.tasksKey: WatchLink.encode(payload)])

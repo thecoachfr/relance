@@ -58,7 +58,7 @@ struct TasksProvider: TimelineProvider {
         let context = ModelContext(AppGroup.modelContainer())
         let descriptor = FetchDescriptor<TaskItem>(
             predicate: #Predicate { !$0.isCompleted && !$0.isTrashed && $0.dueDay != nil })
-        let items = (try? context.fetch(descriptor)) ?? []
+        let items = Journal.essayer(.stockage, "Lecture des tâches (widget)") { try context.fetch(descriptor) } ?? []
         // Les tâches Basses restent dans l'app : le widget montre ce qui presse.
         return items.filter { $0.priority != .low }.compactMap { item in
             item.dueInstant().map {

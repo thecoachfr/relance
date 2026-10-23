@@ -50,6 +50,6 @@ struct RelanceApp: App {
     nonisolated static func scheduleRefresh() {
         let request = BGAppRefreshTaskRequest(identifier: refreshTaskID)
         request.earliestBeginDate = .now.addingTimeInterval(30 * 60)
-        try? BGTaskScheduler.shared.submit(request)
+        Journal.essayer(.systeme, "Programmation du réveil en arrière-plan") { try BGTaskScheduler.shared.submit(request) }
     }
 }

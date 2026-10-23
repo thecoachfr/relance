@@ -144,8 +144,9 @@ final class TrajetsRecorder: NSObject, CLLocationManagerDelegate {
         request.httpBody = try? JSONSerialization.data(withJSONObject: [
             "action": "trajets", "device": UIDevice.current.name, "visites": visites,
         ])
-        guard let (_, response) = try? await URLSession.shared.data(for: request),
-              (200..<300).contains((response as? HTTPURLResponse)?.statusCode ?? 0) else {
+        guard let (_, response) = await Journal.essayer(.reseau, "Envoi des trajets", {
+                  try await URLSession.shared.data(for: request) }),
+              Journal.reponseOK(response, .reseau, "Envoi des trajets") else {
             SyncLog.add("Trajets : envoi de \(file.count) arrêt(s) impossible, nouvel essai plus tard")
             return
         }

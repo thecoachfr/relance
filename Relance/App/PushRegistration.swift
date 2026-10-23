@@ -39,8 +39,9 @@ enum PushRegistration {
             "environment": environment,
             "device": UIDevice.current.name,
         ])
-        guard let (_, response) = try? await URLSession.shared.data(for: request),
-              (200..<300).contains((response as? HTTPURLResponse)?.statusCode ?? 0) else { return }
+        guard let (_, response) = await Journal.essayer(.reseau, "Inscription aux push", {
+                  try await URLSession.shared.data(for: request) }),
+              Journal.reponseOK(response, .reseau, "Inscription aux push") else { return }
         defaults.set(token, forKey: sentKey)
         defaults.set(Date.now, forKey: sentAtKey)
     }

@@ -69,7 +69,7 @@ final class TaskStore {
 
     func activeTasks() -> [TaskItem] {
         let descriptor = FetchDescriptor<TaskItem>(predicate: #Predicate { !$0.isCompleted && !$0.isTrashed })
-        return (try? context.fetch(descriptor)) ?? []
+        return Journal.essayer(.stockage, "Lecture des tâches") { try context.fetch(descriptor) } ?? []
     }
 
     func task(googleID: String) -> TaskItem? {
@@ -148,7 +148,7 @@ final class TaskStore {
     /// Reporte les relances sans toucher à l'échéance.
     func snooze(_ item: TaskItem, until date: Date) {
         item.snoozedUntil = date
-        try? context.save()
+        Journal.essayer(.stockage, "Enregistrement des tâches") { try context.save() }
         Task { await reschedule() }
     }
 
@@ -292,7 +292,7 @@ final class TaskStore {
     }
 
     func commit() {
-        try? context.save()
+        Journal.essayer(.stockage, "Enregistrement des tâches") { try context.save() }
         Task {
             await reschedule()
             await sync()
@@ -363,8 +363,9 @@ final class TaskStore {
             lastError = nil
         } catch {
             lastError = error.localizedDescription
+            Journal.echec(.synchro, "Synchro Google Tasks", error)
         }
-        try? context.save()
+        Journal.essayer(.stockage, "Enregistrement des tâches") { try context.save() }
         await afterSync()
     }
 
@@ -492,8 +493,8 @@ final class TaskStore {
         auth.signOut()
         // Les tâches sont dans HA : la connexion Google ne sert plus qu'au mémo.
         guard !isHAActive else { return }
-        try? context.delete(model: TaskItem.self)
-        try? context.save()
+        Journal.essayer(.stockage, "Suppression des tâches locales") { try context.delete(model: TaskItem.self) }
+        Journal.essayer(.stockage, "Enregistrement des tâches") { try context.save() }
         lastSync = nil
         Task { await reschedule() }
     }

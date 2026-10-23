@@ -80,8 +80,12 @@ enum TaskIndex {
         let entities = items.map { TaskEntity($0) }
         Task {
             let index = CSSearchableIndex.default()
-            try? await index.deleteAppEntities(ofType: TaskEntity.self)
-            try? await index.indexAppEntities(entities)
+            do {
+                try await index.deleteAppEntities(ofType: TaskEntity.self)
+                try await index.indexAppEntities(entities)
+            } catch {
+                Journal.echec(.systeme, "Index Spotlight des tâches", error)
+            }
         }
     }
 }

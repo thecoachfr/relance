@@ -90,7 +90,9 @@ final class ReminderScheduler {
 
     /// Demandée une fois l'utilité expliquée (écran d'accueil), jamais au lancement à froid.
     func requestAuthorization() async -> Bool {
-        (try? await center.requestAuthorization(options: [.alert, .sound, .badge])) ?? false
+        await Journal.essayer(.notifications, "Autorisation des notifications") {
+            try await center.requestAuthorization(options: [.alert, .sound, .badge])
+        } ?? false
     }
 
     func authorizationStatus() async -> UNAuthorizationStatus {
@@ -110,14 +112,18 @@ final class ReminderScheduler {
         history.save(to: AppGroup.defaults)
 
         center.removeAllPendingNotificationRequests()
+        // Une seule ligne au journal pour toute la série (notifications refusées : toutes échouent de la même façon).
+        var refusees = 0
+        var derniere: (any Error)?
         for reminder in plan {
-            try? await center.add(request(for: reminder))
+            do { try await center.add(request(for: reminder)) } catch { refusees += 1; derniere = error }
         }
+        if let derniere { Journal.echec(.notifications, "Pose des relances : \(refusees) sur \(plan.count) refusées", derniere) }
         // iOS ne répond parfois jamais à ces deux appels (observé en test) : on ne bloque pas la synchro pour du ménage.
         await Self.withTimeout(seconds: 3) {
             let center = UNUserNotificationCenter.current()
             await Self.tidyDelivered(center: center, finishedTaskIDs: finishedTaskIDs)
-            try? await center.setBadgeCount(overdueNow)
+            await Journal.essayer(.notifications, "Pastille de l'icône") { try await center.setBadgeCount(overdueNow) }
         }
     }
 
@@ -140,7 +146,9 @@ final class ReminderScheduler {
             content.threadIdentifier = task.id
             content.categoryIdentifier = Category.askTime
             content.userInfo = ["taskID": task.id]
-            try? await center.add(UNNotificationRequest(identifier: "\(task.id)|askTimeNow", content: content, trigger: nil))
+            await Journal.essayer(.notifications, "Demande d'heure") {
+                try await center.add(UNNotificationRequest(identifier: "\(task.id)|askTimeNow", content: content, trigger: nil))
+            }
         }
     }
 

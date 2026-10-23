@@ -18,7 +18,9 @@ final class GoogleAuth: AccountProvider {
     func restore() async {
         defer { isRestoring = false }
         guard GIDSignIn.sharedInstance.hasPreviousSignIn() else { return }
-        let user = try? await GIDSignIn.sharedInstance.restorePreviousSignIn()
+        let user = await Journal.essayer(.synchro, "Reprise de la connexion Google") {
+            try await GIDSignIn.sharedInstance.restorePreviousSignIn()
+        }
         if let user, user.grantedScopes?.contains(Self.tasksScope) == true {
             email = user.profile?.email
         }

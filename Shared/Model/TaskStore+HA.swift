@@ -73,13 +73,15 @@ extension TaskStore {
             }
             if case .erreur(let message) = synchro.etat {
                 lastError = "Home Assistant : \(message)"
+                Journal.echec(.synchro, "Home Assistant : \(message)")
             } else {
                 lastError = nil
             }
         } catch {
             lastError = error.localizedDescription
+            Journal.echec(.synchro, "Synchro Home Assistant", error)
         }
-        try? context.save()
+        Journal.essayer(.stockage, "Enregistrement des tâches") { try context.save() }
     }
 
     /// Mes abonnements : sur l'appareil tout de suite, puis dans HA (partagés avec les autres appareils et la vigie).
@@ -87,7 +89,7 @@ extension TaskStore {
         subscriptions = codes
         Subscriptions.cache(codes)
         guard let synchro else { return }
-        try? synchro.ecrire(Subscriptions.haKey, .objet(["plateformes": .liste(codes.map { .texte($0) })]))
+        Journal.essayer(.synchro, "Écriture des abonnements") { try synchro.ecrire(Subscriptions.haKey, .objet(["plateformes": .liste(codes.map { .texte($0) })])) }
         Task { await sync() }
     }
 
@@ -96,7 +98,7 @@ extension TaskStore {
         guard lieux != mesLieux else { return }
         mesLieux = lieux
         MesLieux.cache(lieux)
-        if let synchro { try? synchro.ecrire(MesLieux.haKey, lieux.valeur) }
+        if let synchro { Journal.essayer(.synchro, "Écriture de Mes lieux") { try synchro.ecrire(MesLieux.haKey, lieux.valeur) } }
         Task {
             await reschedule()
             await sync()
@@ -108,7 +110,7 @@ extension TaskStore {
         guard let i = recettes.firstIndex(where: { $0.id == id }), recettes[i].active != active else { return }
         recettes[i].active = active
         guard let synchro else { return }
-        try? synchro.ecrire(Recette.haKey, Recette.config(recettes))
+        Journal.essayer(.synchro, "Écriture des actions automatiques") { try synchro.ecrire(Recette.haKey, Recette.config(recettes)) }
         Task { await sync() }
     }
 
@@ -236,7 +238,7 @@ extension TaskStore {
                 item.isDirty = true
             }
         }
-        try? context.save()
+        Journal.essayer(.stockage, "Enregistrement des tâches") { try context.save() }
         setHAActive(true)
         SyncLog.add("Tâches passées dans Home Assistant (\(items.count - adopted) envoyées, \(adopted) déjà présentes)")
         await sync()
@@ -259,7 +261,7 @@ extension TaskStore {
             if let id = item.googleID, !remoteIDs.contains(id) { item.googleID = nil }
             item.isDirty = true
         }
-        try? context.save()
+        Journal.essayer(.stockage, "Enregistrement des tâches") { try context.save() }
         setHAActive(false)
         resetHA()
         lastSync = nil

@@ -169,8 +169,9 @@ nonisolated enum PiecesJointes {
                 retirerDeLaFile(id)  // fichier local perdu : rien à envoyer
                 continue
             }
-            if (try? await client.envoyer(contenu, nom: info["nom"] ?? "fichier",
-                                          type: info["type"] ?? "application/octet-stream")) != nil {
+            if await Journal.essayer(.reseau, "Envoi d'une pièce jointe", {
+                try await client.envoyer(contenu, nom: info["nom"] ?? "fichier", type: info["type"] ?? "application/octet-stream")
+            }) != nil {
                 retirerDeLaFile(id)
                 envoyees += 1
             }

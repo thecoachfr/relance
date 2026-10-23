@@ -132,6 +132,7 @@ targets:
       - Relance/Views/DureeRow.swift
       - Relance/Views/PiecesSection.swift
       - Relance/Views/RecettesView.swift
+      - Relance/Views/ErreursView.swift
     configFiles:
       Debug: Relance/Resources/Secrets.xcconfig
       Release: Relance/Resources/Secrets.xcconfig
@@ -178,6 +179,7 @@ targets:
     sources:
       - RelanceShare
       - Shared/Share
+      - Shared/Divers/Journal.swift
       - Shared/Google
       - Shared/Model/MemoMerge.swift
       - Shared/Model/DateDetection.swift

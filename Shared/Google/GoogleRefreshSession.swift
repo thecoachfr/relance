@@ -81,7 +81,8 @@ final class GoogleRefreshSession: @unchecked Sendable {
         var item = query
         item[kSecValueData as String] = Data(value.utf8)
         item[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
-        SecItemAdd(item as CFDictionary, nil)
+        let statut = SecItemAdd(item as CFDictionary, nil)
+        if statut != errSecSuccess { Journal.echec(.stockage, "Trousseau : jeton Google non enregistré (OSStatus \(statut))") }
     }
 
     private func load() -> String? {
