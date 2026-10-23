@@ -26,6 +26,7 @@ from appdaemon.plugins.hass import Hass
 
 import aiguillage_actions
 import aiguillage_agenda
+import aiguillage_lecteur
 import aiguillage_radio
 import aiguillage_spotify
 import aiguillage_tmdb
@@ -189,6 +190,19 @@ class RelanceVigie(Hass):
         self.listen_event(self.on_spotify_lire, "aiguillage_spotify_lire")
         self.listen_event(self.on_spotify_ecoute, "aiguillage_spotify_ecoute")
         self.listen_event(self.on_spotify_aime, "aiguillage_spotify_aime")
+        # Activité en direct « En lecture sur les LS50 » du Hub iPad (23/10/2026) : jetons envoyés par l'app
+        # (script.hub_ipad_activite → événement hub_ipad_activite), lecteur surveillé, push APNs `liveactivity`.
+        self._lecteur_path = Path(self.args.get("hub_ipad_activite_file", "/config/hub_ipad_activite.json"))
+        self._ha_url = self.args.get("ha_url", "")
+        self._lecteur_lock = threading.Lock()
+        self._lecteur_handle = None
+        self._lecteur_arret = None
+        self._lecteur_sans_jeton_logged = False
+        self.listen_event(self.on_hub_ipad_activite, "hub_ipad_activite")
+        for entite in (aiguillage_lecteur.ENTITE_MA, aiguillage_lecteur.ENTITE_KEF):
+            self.listen_state(self.on_lecteur, entite, attribute="all")
+        # Relecture chaque minute : la fin arrive 5 min après l'arrêt, sans changement d'état entre-temps.
+        self.run_every(self._lecteur_passage, "now+20", 60)
         self._refreshes = 0
         self._triage_handle = None
         self._triage_day = None
@@ -1193,6 +1207,108 @@ class RelanceVigie(Hass):
 
     def _save_tokens(self, tokens):
         self._tokens_path.write_text(json.dumps(tokens, indent=2))
+
+    # MARK: - Activité en direct du Hub iPad
+
+    def on_hub_ipad_activite(self, event_name, data, **kwargs):
+        """Jeton de l'app Hub iPad : `push_to_start` (démarrer à distance) ou `activite` (une activité en cours)."""
+        with self._lecteur_lock:
+            etat = self._lecteur_charger()
+            genre = aiguillage_lecteur.ranger_jeton(etat, data, time.time())
+            if genre == "activite":
+                etat["envoye"] = None  # la nouvelle activité reçoit tout de suite l'état complet
+            if genre:
+                self._lecteur_sauver(etat)
+        if not genre:
+            self.log(f"Hub iPad : jeton d'activité refusé ({data.get('type')})", level="WARNING")
+            return
+        self._lecteur_sans_jeton_logged = False
+        self.log(f"Hub iPad : jeton {genre} reçu ({data.get('environnement', 'production')})")
+        if genre == "activite":
+            self.run_in(self._lecteur_passage, 1)
+
+    def on_lecteur(self, entity, attribute, old, new, **kwargs):
+        # Anti-rafale : un seul passage 2 s après le premier changement ; les suivants y sont fondus.
+        if self._lecteur_handle is None:
+            self._lecteur_handle = self.run_in(self._lecteur_passage, aiguillage_lecteur.RAFALE)
+
+    def _lecteur_passage(self, **kwargs):
+        self._lecteur_handle = None
+        etats = {e: self.get_state(e, attribute="all") for e in (aiguillage_lecteur.ENTITE_MA, aiguillage_lecteur.ENTITE_KEF)}
+        actuel = aiguillage_lecteur.contenu(aiguillage_lecteur.choisir_entite(etats), self._ha_url)
+        maintenant = time.time()
+        if actuel is None:
+            self._lecteur_arret = self._lecteur_arret or maintenant
+        else:
+            self._lecteur_arret = None
+        with self._lecteur_lock:
+            etat = self._lecteur_charger()
+            action, priorite = aiguillage_lecteur.decider(actuel, etat.get("envoye"), etat.get("en_cours"),
+                                                          self._lecteur_arret, maintenant)
+            if action is None:
+                return
+            if action == "start":
+                cibles = [(j, i.get("environnement", "production")) for j, i in etat.get("push_to_start", {}).items()]
+                payload = aiguillage_lecteur.payload_start(actuel, maintenant)
+            else:
+                cibles = [(i["jeton"], i.get("environnement", "production")) for i in etat.get("activites", {}).values()]
+                payload = (aiguillage_lecteur.payload_update(actuel, maintenant) if action == "update" else
+                           aiguillage_lecteur.payload_end({**(etat.get("envoye") or aiguillage_lecteur.REPOS), "etat": "pause"}, maintenant))
+            if not cibles:
+                if action == "end":
+                    etat.update(en_cours=False, envoye=None)
+                    self._lecteur_sauver(etat)
+                elif action == "start" and not self._lecteur_sans_jeton_logged:
+                    self._lecteur_sans_jeton_logged = True
+                    self.log("Hub iPad : lecture sur les LS50, mais aucun jeton push-to-start (ouvrir l'app une fois)")
+                # update sans jeton d'activité : on attend le jeton (l'état complet partira à son arrivée).
+                return
+            reussis, perimes = 0, []
+            with httpx.Client(http2=True, timeout=10) as client:
+                for jeton, env in cibles:
+                    statut, raison = self._lecteur_envoyer(client, jeton, env, payload, priorite)
+                    if statut == 200:
+                        reussis += 1
+                    elif statut == 410 or raison in ("BadDeviceToken", "Unregistered", "ExpiredToken"):
+                        perimes.append(jeton)
+                    else:
+                        self.log(f"Hub iPad : APNs {statut} {raison} ({action})", level="WARNING")
+            for jeton in perimes:
+                aiguillage_lecteur.retirer_jeton(etat, jeton)
+            if action == "end":
+                etat.update(en_cours=False, envoye=None, activites={})
+            elif reussis:
+                etat.update(en_cours=True, envoye=actuel)
+            self._lecteur_sauver(etat)
+        self._count_push(f"hub_ipad_{action}", len(cibles))
+        if action != "update":
+            titre = (actuel or {}).get("titre", "")
+            self.log(f"Hub iPad : activité {action} ({reussis}/{len(cibles)}){' : ' + titre if titre else ''}")
+
+    def _lecteur_envoyer(self, client, jeton, environnement, payload, priorite):
+        try:
+            response = client.post(
+                f"{APNS_HOSTS.get(environnement, APNS_HOSTS['production'])}/3/device/{jeton}",
+                headers={"authorization": f"bearer {self._provider_token()}", **aiguillage_lecteur.entetes(priorite)},
+                json=payload,
+            )
+        except httpx.HTTPError as error:
+            return 0, str(error)
+        if response.status_code == 200:
+            return 200, ""
+        try:
+            return response.status_code, response.json().get("reason", "")
+        except ValueError:
+            return response.status_code, response.text[:80]
+
+    def _lecteur_charger(self):
+        try:
+            return {**aiguillage_lecteur.etat_vide(), **json.loads(self._lecteur_path.read_text())}
+        except (FileNotFoundError, json.JSONDecodeError):
+            return aiguillage_lecteur.etat_vide()
+
+    def _lecteur_sauver(self, etat):
+        self._lecteur_path.write_text(json.dumps(etat, indent=2, ensure_ascii=False))
 
     # MARK: - APNs
 

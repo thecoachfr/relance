@@ -132,6 +132,16 @@ TuneIn par Music Assistant (`aiguillage_radio.py`, réglage `music_assistant_ent
 tâche cochée ; la liste est publiée dans `sensor.aiguillage_radios` pour le Hub, qui la lance par `script.nest_hub_radio`
 (`station` = id, `uri`). Essai à la main : événement `aiguillage_radio_pass`.
 
+Activité en direct du Hub iPad (23/10) : « En lecture sur les LS50 » sur l'écran verrouillé de l'iPad
+(`../hub-ipad`). Module `aiguillage_lecteur.py` (choix de l'entité : Music Assistant `media_player.salon_ls50_5` s'il
+joue ou est en pause, sinon l'enceinte KEF ; `content-state`, décision start / update / end, jetons ; tests
+`tests/test_aiguillage_lecteur.py`). L'app envoie ses jetons par `script.hub_ipad_activite` (événement
+`hub_ipad_activite` ; un utilisateur non administrateur ne peut pas émettre d'événement par REST), rangés dans
+`/config/hub_ipad_activite.json`. Lecture qui démarre sans activité : push-to-start (APNs `liveactivity`, sujet
+`fr.alexandrefau.hubipad.push-type.liveactivity`, même clé `.p8` et même JWT que pour Aiguillage) ; changement de
+titre, d'état ou de volume : `update` (2 s d'anti-rafale, priorité 10 si le titre change, sinon 5) ; plus rien ne joue
+depuis 5 min : `end`. Réglage `ha_url` (adresse locale de HA, pour les pochettes relatives).
+
 Tri par l'API Messages (plan P9-I, [plans/P9-I-tri-par-api.md](plans/P9-I-tri-par-api.md)) : réglage `tri_mode`
 (`routine` par défaut, `ombre`, `api`). Module `aiguillage_tri.py` : la vigie choisit les tâches à trier, fait **un**
 appel à sortie structurée (Sonnet 5.5, sans outil), puis applique elle-même les changements avec les règles absolues
