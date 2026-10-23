@@ -1,0 +1,48 @@
+#!/bin/bash
+# Avant chaque envoi (git push) : les tests tournent sur le Mac et l'envoi est refusé si l'un d'eux échoue.
+# Choix d'Alexandre (23/10/2026) : les tests sur le Mac plutôt que dans Xcode Cloud (forfait de 25 h/mois, ~67 builds
+# par semaine sur les quatre apps). Rien n'est lancé si l'envoi ne touche que la doc.
+# Passer outre (urgence) : SANS_TESTS=1 git push   ou   git push --no-verify
+# Installation, une fois par copie du dépôt : git config core.hooksPath .githooks
+
+# --- Propre à Aiguillage : les tests Swift (iPhone simulé, signature normale : sans elle, pas d'App Group et l'app
+# hôte plante), puis la compilation de l'app Mac. La vigie (homeassistant/) et les cartes .js ne sont pas concernées.
+HORS_TESTS="^homeassistant/|\.js$"
+lancer_tests() {
+    xcodebuild -project Relance.xcodeproj -scheme Relance -derivedDataPath "$derive" \
+        -destination 'platform=iOS Simulator,name=iPhone 17 Pro Max' test &&
+    xcodebuild -project Relance.xcodeproj -scheme RelanceMac -derivedDataPath "$derive" \
+        -destination 'platform=macOS' build CODE_SIGNING_ALLOWED=NO
+}
+
+set -u
+[ "${SANS_TESTS:-0}" = 1 ] && { echo "Tests sautés (SANS_TESTS=1)."; exit 0; }
+racine=$(git rev-parse --show-toplevel)
+cd "$racine" || exit 1
+zero=0000000000000000000000000000000000000000
+fichiers=""
+while read -r _ local_sha _ distant_sha; do
+    [ "$local_sha" = "$zero" ] && continue   # suppression d'une branche distante
+    if [ "$distant_sha" = "$zero" ]; then
+        base=$(git merge-base "$local_sha" origin/main 2>/dev/null || git rev-list --max-parents=0 "$local_sha" | tail -1)
+    else
+        base=$distant_sha
+    fi
+    fichiers+="$(git diff --name-only "$base" "$local_sha")"$'\n'
+done
+code=$(printf '%s\n' "$fichiers" | grep -vE "^$|\.md$|^docs/|^design/|^plans/|^\.githooks/${HORS_TESTS:+|$HORS_TESTS}" || true)
+if [ -z "$code" ]; then echo "Envoi sans code (doc seulement) : pas de tests."; exit 0; fi
+
+journal=$(mktemp -t tests-avant-envoi)
+derive="$HOME/Library/Caches/tests-avant-envoi/$(basename "$racine")"
+debut=$(date +%s)
+echo "Tests avant envoi ($(printf '%s\n' "$code" | wc -l | tr -d ' ') fichier(s) de code modifié(s))…"
+if lancer_tests >"$journal" 2>&1; then
+    echo "Tests OK en $(( $(date +%s) - debut )) s : envoi."
+    rm -f "$journal"
+    exit 0
+fi
+echo "❌ Tests en échec : envoi refusé. Détail : $journal"
+grep -E "error:|✘|failed|FAILED|XCTAssert|Expectation failed" "$journal" | sort -u | head -25
+echo "Corriger, ou en urgence : SANS_TESTS=1 git push"
+exit 1
