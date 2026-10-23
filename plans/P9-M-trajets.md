@@ -107,7 +107,7 @@ reçu et rangé (une visite réelle, gardée).
 - Lien avec l'existant : les arrêts peuvent servir de source au lieu d'une tâche (« Ma position » à l'heure d'un arrêt).
 - Plus tard, au choix : vue sur le Hub (les trois vues : Hub TV, Nest Hub, Hub iPad, voir la règle commune).
 
-*Fait le 22–23/10, à essayer sur l'iPhone* : `Relance/Views/TrajetsCarteView.swift`, ouvert depuis l'onglet Carte (bouton
+*Fait le 22–23/10, validé par Alexandre sur l'iPhone le 23/10* : `Relance/Views/TrajetsCarteView.swift`, ouvert depuis l'onglet Carte (bouton
 sous le « + », si Home Assistant est réglé) ou Réglages › Mes trajets › Voir mes trajets (iPhone et iPad ; pas sur Mac).
 Tracé bleu coupé aux trous de plus de 10 min ou aux sauts de plus de 2 km, arrêts numérotés et nommés par Plans (10 au
 plus), « 17,3 km · 1 arrêt », heures et durée de chaque arrêt ; jour précédent ou suivant **avec des données** (sinon
