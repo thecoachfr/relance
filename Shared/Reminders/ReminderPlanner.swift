@@ -80,7 +80,7 @@ nonisolated struct ReminderSettings: Sendable, Equatable {
     }
 }
 
-nonisolated enum ReminderKind: String, Sendable, Equatable {
+nonisolated enum ReminderKind: String, Sendable, Equatable, Codable {
     case departure, advance, due, followUp, evening, askTime, overdue, snoozed, digest
     /// « À voir » : ouverture, quelques semaines avant la fin, dernier week-end.
     case toSeeOpening, toSeeEnding, toSeeLastWeekend
@@ -116,7 +116,7 @@ nonisolated struct ToSeeSettings: Codable, Equatable, Sendable {
     }
 }
 
-nonisolated struct PlannedReminder: Sendable, Equatable {
+nonisolated struct PlannedReminder: Sendable, Equatable, Codable {
     var id: String
     /// `nil` pour le résumé du matin.
     var taskID: String?

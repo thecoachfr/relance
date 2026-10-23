@@ -216,17 +216,19 @@ final class WatchStore: NSObject, WCSessionDelegate {
     }
 
     private func receive(_ tasks: [WatchTask]) {
+        let change = tasks != self.tasks
         self.tasks = tasks
         lastUpdate = .now
-        save()
+        save(rechargerComplication: change)
     }
 
     // MARK: - Copie locale (partagée avec la complication)
 
-    private func save() {
+    /// La complication n'est rechargée que si les tâches ont changé : watchOS limite durement ses rechargements.
+    private func save(rechargerComplication: Bool = true) {
         Self.defaults.set(WatchLink.encode(tasks), forKey: Self.snapshotKey)
         Self.defaults.set(lastUpdate, forKey: Self.updatedKey)
-        WidgetCenter.shared.reloadAllTimelines()
+        if rechargerComplication { WidgetCenter.shared.reloadAllTimelines() }
     }
 
     static func loadSnapshot() -> [WatchTask] {

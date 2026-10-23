@@ -1,17 +1,6 @@
 import SwiftData
 import WidgetKit
 
-struct WidgetTask: Identifiable, Hashable {
-    var id: String
-    var title: String
-    var due: Date
-    var hasTime: Bool
-    var isUrgent = false
-    var category: String?
-    /// Liste d'articles (P9-G) : « 3/12 », `nil` sans liste.
-    var liste: String?
-}
-
 struct TasksEntry: TimelineEntry {
     var date: Date
     var tasks: [WidgetTask]
@@ -59,13 +48,6 @@ struct TasksProvider: TimelineProvider {
         let descriptor = FetchDescriptor<TaskItem>(
             predicate: #Predicate { !$0.isCompleted && !$0.isTrashed && $0.dueDay != nil })
         let items = Journal.essayer(.stockage, "Lecture des tâches (widget)") { try context.fetch(descriptor) } ?? []
-        // Les tâches Basses restent dans l'app : le widget montre ce qui presse.
-        return items.filter { $0.priority != .low }.compactMap { item in
-            item.dueInstant().map {
-                WidgetTask(id: item.localID.uuidString, title: item.title, due: $0, hasTime: item.dueMinutes != nil,
-                           isUrgent: item.priority == .urgent, category: item.category,
-                           liste: item.liste.flatMap { $0.articles.isEmpty ? nil : "\($0.cochés)/\($0.articles.count)" })
-            }
-        }
+        return WidgetTask.depuis(items)
     }
 }

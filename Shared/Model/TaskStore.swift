@@ -301,6 +301,9 @@ final class TaskStore {
 
     // MARK: - Relances
 
+    /// Ce que montraient les widgets au dernier rechargement (`nil` au lancement : le premier passage recharge).
+    private var dernierEtatWidgets: [WidgetTask]?
+
     func reschedule() async {
         guard schedulesReminders else { return }
         let tasks = activeTasks()
@@ -319,7 +322,12 @@ final class TaskStore {
         }
         await scheduler.apply(tasks: plannables, inboxCount: inbox,
                               finishedTaskIDs: completedIDs, overdueNow: overdue)
-        WidgetCenter.shared.reloadAllTimelines()
+        // Les widgets ne sont rechargés que si ce qu'ils montrent a changé (iOS limite les rechargements par jour).
+        let pourWidgets = WidgetTask.depuis(tasks)
+        if pourWidgets != dernierEtatWidgets {
+            dernierEtatWidgets = pourWidgets
+            WidgetCenter.shared.reloadAllTimelines()
+        }
         onTasksChanged?()
     }
 

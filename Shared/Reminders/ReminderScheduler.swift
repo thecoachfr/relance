@@ -111,14 +111,32 @@ final class ReminderScheduler {
                                      uniquingKeysWith: min)
         history.save(to: AppGroup.defaults)
 
-        center.removeAllPendingNotificationRequests()
+        // Seules les relances nouvelles ou modifiées sont posées, celles qui ne sont plus prévues retirées (avant : tout
+        // effacer puis tout reposer à chaque synchro, image jointe recopiée comprise). Si iOS ne donne pas la liste en
+        // attente en 3 s (il ne répond parfois jamais), on revient à l'ancienne façon.
+        let posees = DiffRelances.charger()
+        let aPoser: [PlannedReminder]
+        var dejaEnPlace: [String: PlannedReminder] = [:]
+        if let enAttente = await Self.identifiantsEnAttente() {
+            let diff = DiffRelances.calculer(voulues: plan, enAttente: enAttente, posees: posees)
+            if !diff.aRetirer.isEmpty { center.removePendingNotificationRequests(withIdentifiers: diff.aRetirer) }
+            aPoser = diff.aPoser
+            dejaEnPlace = diff.inchangees
+        } else {
+            center.removeAllPendingNotificationRequests()
+            aPoser = plan
+        }
         // Une seule ligne au journal pour toute la série (notifications refusées : toutes échouent de la même façon).
         var refusees = 0
         var derniere: (any Error)?
-        for reminder in plan {
-            do { try await center.add(request(for: reminder)) } catch { refusees += 1; derniere = error }
+        for reminder in aPoser {
+            do {
+                try await center.add(request(for: reminder))
+                dejaEnPlace[reminder.id] = reminder
+            } catch { refusees += 1; derniere = error }
         }
-        if let derniere { Journal.echec(.notifications, "Pose des relances : \(refusees) sur \(plan.count) refusées", derniere) }
+        DiffRelances.enregistrer(dejaEnPlace)
+        if let derniere { Journal.echec(.notifications, "Pose des relances : \(refusees) sur \(aPoser.count) refusées", derniere) }
         // iOS ne répond parfois jamais à ces deux appels (observé en test) : on ne bloque pas la synchro pour du ménage.
         await Self.withTimeout(seconds: 3) {
             let center = UNUserNotificationCenter.current()
@@ -166,6 +184,16 @@ final class ReminderScheduler {
             Task { await operation(); resumeOnce() }
             Task { try? await Task.sleep(for: .seconds(seconds)); resumeOnce() }
         }
+    }
+
+    /// Identifiants des relances en attente chez iOS, ou nil s'il ne répond pas dans le délai.
+    nonisolated static func identifiantsEnAttente(secondes: Double = 3) async -> Set<String>? {
+        let resultat = Mutex<Set<String>?>(nil)
+        await withTimeout(seconds: secondes) {
+            let ids = Set(await UNUserNotificationCenter.current().pendingNotificationRequests().map(\.identifier))
+            resultat.withLock { $0 = ids }
+        }
+        return resultat.withLock { $0 }
     }
 
     /// Retire les notifications des tâches terminées, et ne garde que la plus récente par tâche.
