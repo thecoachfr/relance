@@ -193,6 +193,22 @@ Code fait et fusionné dans `main` (désactivé tant qu'on ne bascule pas dans l
 9. **Suggestions d'envies, à essayer en vrai** : recevoir une suggestion (régler un créneau quelques minutes plus tard), « Ouvrir » ouvre bien YouTube / Spotify, « Pas maintenant » propose une autre envie au créneau suivant.
 8. **Envies (15/10), à essayer en vrai** : partager une vidéo YouTube, un album Spotify, un article Safari (type deviné, titre de la page) ; « Dis Siri, nouvelle Relance » → « Dune à regarder » ; même phrase à la montre (le tri doit ranger « Dune » dans À regarder et retirer « (à regarder) ») ; dictée Google Home « … à lire » ; vérifier qu'une envie n'apparaît pas sur le Nest Hub.
 
+- **Météo du Hub, `sensor.hub_meteo`** (24/10, déployée vers 8 h 55, retouchée à 9 h 03) : app AppDaemon `hub_meteo`
+  (`homeassistant/appdaemon/apps/hub_meteo.py`, 32 tests dans `tests/test_hub_meteo.py`), source unique de la Météo
+  des trois vues. Contrat et règles : [homeassistant/HUB-METEO.md](homeassistant/HUB-METEO.md). Mesure de la terrasse
+  (jardin ou quartier Netatmo si elle prend le soleil, est indisponible ou figée 2 h), prévisions Météo-France
+  recalées sur la mesure (décroissance 4 h, nulle à 8 h), 12 cases de pluie dans l'heure, pastille, phrase, 24 heures,
+  3 jours, vigilance ; rafraîchie toutes les 5 min et à chaque changement de `sensor.alfortville_next_rain`.
+  **Publiée par l'API REST de HA**, pas par `set_state` : AppDaemon 4.5.13 retirait les 0 et les null des attributs
+  (12 cases réduites à 2). Vérifiée dans HA à 9 h 03 : 8.4 (terrasse ; jardin 10.07, quartier 9.7, MF 9.3, écart
+  −0,9), ressenti 6, « Sec pour l'instant. La pluie arrive vers 17 h, forte en soirée ; rafales à 65 km/h vers
+  22 h. », jours « pluie le matin », « averses », « sec », 5 Ko. Phrase et résumés retouchés à la demande du
+  coordinateur (heure de reprise le jour même, traces < 0,2 mm ignorées, résumés de 22 caractères au plus).
+  **Apprentissage** : relevé horaire dans `/config/hub_meteo_releves.jsonl` (60 jours, premier à 9 h 02), pas encore
+  de correction appliquée. **À faire vers le 10/11** : calculer l'écart moyen par heure (commande dans HUB-METEO.md)
+  et décider de l'appliquer. **À surveiller** : le Sonoff de la terrasse ne publie qu'aux changements
+  (`last_reported` = `last_changed`, rien entre 7 h 13 et 9 h 03 ce matin) ; par temps stable il passera pour figé
+  après 2 h et la source basculera sur le jardin, ce que dit la règle, mais à revoir si ça arrive souvent.
 - **Nest Hub, onglet Météo (24/10, maquette validée par Alexandre)** : carte légère prête dans la copie locale
   `nest-hub-leger-card.js` (146 429 octets), **déployée vers 9 h 05 en `?v=9b56fee7`** dès que `sensor.hub_meteo` (app
   AppDaemon `hub_meteo`) a existé (cast relancé, copie poussée dans ha-config). Reste : photo du Hub. Onglets Accueil, Audio, Maison, Météo, À faire ; pastille de pluie avant

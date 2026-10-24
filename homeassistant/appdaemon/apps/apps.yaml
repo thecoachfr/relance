@@ -55,3 +55,9 @@ aiguillage_trajets:
   module: aiguillage_trajets
   class: AiguillageTrajets
   entite: device_tracker.iphone_17_lex
+
+# Météo du Hub (24/10/2026) : sensor.hub_meteo pour les trois vues (contrat : homeassistant/HUB-METEO.md).
+# Relevés d'apprentissage dans /config/hub_meteo_releves.jsonl (60 jours).
+hub_meteo:
+  module: hub_meteo
+  class: HubMeteo

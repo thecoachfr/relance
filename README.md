@@ -121,6 +121,8 @@ et à la demande de l'app (« Retrier avec Claude », champ `action: triage` du 
 Pour la mettre à jour : monter le partage `smb://homeassistant.local/addon_configs` dans le Finder et copier
 `relance_vigie.py` et les modules `aiguillage_*.py` dans `a0d7b954_appdaemon/apps/` (AppDaemon la recharge seul).
 Tests des modules : `python3 -m pytest homeassistant/appdaemon/tests`.
+Météo du Hub (24/10) : l'app `hub_meteo` (même dossier, bloc `hub_meteo` de `apps.yaml`) publie `sensor.hub_meteo`
+pour les trois vues du Hub ; contrat et règles dans [homeassistant/HUB-METEO.md](homeassistant/HUB-METEO.md).
 
 Actions des tâches (plan P9-D) : la vigie applique les recettes (`config:recettes`), exécute les actions
 `executant: ha` (playlist Spotify « À écouter »), lance la routine « Aiguillage · actions » pour les actions
