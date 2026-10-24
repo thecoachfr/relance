@@ -103,8 +103,9 @@ def test_nuit_terrasse_plus_froide():
 
 def test_capteurs_indisponibles_ou_figes():
     assert m.choisir_mesure(mesures(capteur("unavailable"), capteur(10.1), capteur(9.6)), MAINTENANT) == (10.1, "jardin")
-    # Terrasse figée depuis 2 h 01 → jardin.
-    assert m.choisir_mesure(mesures(capteur(8.4, 121), capteur(10.1), capteur(9.6)), MAINTENANT) == (10.1, "jardin")
+    # Le Sonoff n'envoie rien tant que la valeur ne change pas : 3 h sans message, ce n'est pas une panne.
+    assert m.choisir_mesure(mesures(capteur(8.4, 180), capteur(10.1), capteur(9.6)), MAINTENANT) == (8.4, "terrasse")
+    assert m.choisir_mesure(mesures(capteur(8.4, 600), capteur(10.1), capteur(9.6)), MAINTENANT) == (8.4, "terrasse")
     # Jardin au soleil le matin, terrasse absente → quartier.
     assert m.choisir_mesure(mesures(None, capteur(13.5), capteur(10)), MAINTENANT) == (10.0, "quartier")
     assert m.choisir_mesure(mesures(capteur("unknown"), capteur("unavailable"), capteur(9.6)), MAINTENANT) == (9.6, "quartier")

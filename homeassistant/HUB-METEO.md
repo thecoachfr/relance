@@ -59,8 +59,11 @@ bloc `hub_meteo` dans `apps.yaml` (sauvegarde d'avant : `apps.yaml.avant-meteo-2
   déploiement `niveaux` n'avait plus que 2 cases sur 12, et `rafales_kmh: 0`, `pluie_mm: 0`, `rafales_kmh: null`
   manquaient. Taille des attributs : environ 5 Ko (limite de l'enregistreur : 16 Ko).
 - **Rafraîchi** toutes les 5 min et 3 s après chaque changement de `sensor.alfortville_next_rain`.
-- **Mesure** : terrasse, jardin, quartier (dans cet ordre) ; capteur ignoré s'il n'est pas un nombre ou si son
-  `last_changed` a plus de 2 h ; le premier gardé est écarté s'il dépasse de plus de 2,5 °C l'un des autres (soleil) :
+- **Mesure** : terrasse, jardin, quartier (dans cet ordre) ; capteur ignoré seulement s'il n'est pas un nombre
+  (`unavailable` quand Zigbee2MQTT ne voit plus l'appareil, `unknown`). Pas de règle d'ancienneté (corrigé le 24/10 à
+  9 h 07) : le Sonoff de la terrasse n'envoie rien tant que la valeur ne change pas, `last_reported` reste à l'heure
+  du dernier changement (7 h 13 encore à 9 h 06 ce matin) et l'historique du 21 au 24/10 montre des trous de 2 à 3 h
+  sans message ; « figé depuis 2 h » (règle du premier déploiement) l'aurait fait basculer à tort. Le premier gardé est écarté s'il dépasse de plus de 2,5 °C l'un des autres (soleil) :
   le plus bas des autres. Aucun capteur : état `unavailable`, `temperature` et `source` null.
 - **Prévision MF à maintenant** : interpolée entre les points horaires ; avant le premier (MF commence à l'heure
   suivante), entre `temperature` de `weather.alfortville` (à son `last_updated`) et le premier point ; l'app garde

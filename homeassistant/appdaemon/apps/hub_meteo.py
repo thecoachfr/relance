@@ -3,8 +3,8 @@
 Les vues ne font qu'afficher ce capteur : tout le calcul est ici. Contrat : `homeassistant/HUB-METEO.md`.
 
 - **Maintenant** : la mesure de la terrasse (Sonoff, la référence), sauf si elle prend le soleil (plus de 2,5 °C
-  au-dessus du jardin ou du quartier : le plus bas des deux, le capteur à l'ombre). Capteur indisponible ou figé
-  (pas de changement depuis 2 h) : le suivant (terrasse, jardin, quartier Netatmo).
+  au-dessus du jardin ou du quartier : le plus bas des deux, le capteur à l'ombre). Capteur indisponible : le
+  suivant (terrasse, jardin, quartier Netatmo).
 - **Recalage** : écart = mesure − prévision Météo-France interpolée à maintenant, ajouté aux heures suivantes avec
   une décroissance exponentielle (constante 4 h, ramenée à zéro à 8 h).
 - **Dans l'heure** : `1_hour_forecast` de `sensor.alfortville_next_rain` ramené à 12 cases de 5 min.
@@ -33,7 +33,6 @@ PLUIE_HEURE = "sensor.alfortville_next_rain"
 VIGILANCE = "sensor.94_weather_alert"
 
 SOLEIL_ECART = 2.5            # °C : au-delà, le capteur prend le soleil
-FIGE = timedelta(hours=2)     # pas de changement depuis 2 h : capteur figé
 RECALAGE_CONSTANTE_H = 4.0
 RECALAGE_FIN_H = 8.0
 NB_HEURES = 24
@@ -150,16 +149,18 @@ def direction(degres):
 def choisir_mesure(etats, maintenant):
     """(température, source) d'après les trois capteurs ; (None, None) si aucun n'est utilisable.
 
-    `etats` : entity_id → état HA ({state, last_changed}). Un capteur est utilisable s'il donne un nombre qui a changé
-    depuis moins de 2 h. Le premier utilisable (terrasse, jardin, quartier) est retenu, sauf s'il dépasse de plus de
-    2,5 °C l'un des autres utilisables (il prend le soleil) : alors le plus bas des autres.
+    `etats` : entity_id → état HA. Un capteur est utilisable s'il donne un nombre : « unavailable » (Zigbee2MQTT ne le
+    voit plus) ou « unknown » le font sauter. Pas de règle d'ancienneté (24/10, 9 h 10) : le Sonoff de la terrasse
+    n'envoie rien tant que la valeur ne change pas (`last_reported` reste à l'heure du dernier changement, trous de
+    2 à 3 h vus dans l'historique du 21 au 24/10), une règle « figé depuis 2 h » le faisait basculer à tort.
+    Le premier utilisable (terrasse, jardin, quartier) est retenu, sauf s'il dépasse de plus de 2,5 °C l'un des autres
+    utilisables (il prend le soleil) : alors le plus bas des autres.
     """
     utilisables = []
     for nom, entite in MESURES:
         etat = etats.get(entite) or {}
         valeur = nombre(etat.get("state"))
-        change = instant(etat.get("last_changed") or etat.get("last_updated") or "")
-        if valeur is None or change is None or maintenant - change > FIGE:
+        if valeur is None:
             continue
         utilisables.append((nom, valeur))
     if not utilisables:

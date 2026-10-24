@@ -196,7 +196,7 @@ Code fait et fusionné dans `main` (désactivé tant qu'on ne bascule pas dans l
 - **Météo du Hub, `sensor.hub_meteo`** (24/10, déployée vers 8 h 55, retouchée à 9 h 03) : app AppDaemon `hub_meteo`
   (`homeassistant/appdaemon/apps/hub_meteo.py`, 32 tests dans `tests/test_hub_meteo.py`), source unique de la Météo
   des trois vues. Contrat et règles : [homeassistant/HUB-METEO.md](homeassistant/HUB-METEO.md). Mesure de la terrasse
-  (jardin ou quartier Netatmo si elle prend le soleil, est indisponible ou figée 2 h), prévisions Météo-France
+  (jardin ou quartier Netatmo si elle prend le soleil ou est indisponible), prévisions Météo-France
   recalées sur la mesure (décroissance 4 h, nulle à 8 h), 12 cases de pluie dans l'heure, pastille, phrase, 24 heures,
   3 jours, vigilance ; rafraîchie toutes les 5 min et à chaque changement de `sensor.alfortville_next_rain`.
   **Publiée par l'API REST de HA**, pas par `set_state` : AppDaemon 4.5.13 retirait les 0 et les null des attributs
@@ -206,9 +206,10 @@ Code fait et fusionné dans `main` (désactivé tant qu'on ne bascule pas dans l
   coordinateur (heure de reprise le jour même, traces < 0,2 mm ignorées, résumés de 22 caractères au plus).
   **Apprentissage** : relevé horaire dans `/config/hub_meteo_releves.jsonl` (60 jours, premier à 9 h 02), pas encore
   de correction appliquée. **À faire vers le 10/11** : calculer l'écart moyen par heure (commande dans HUB-METEO.md)
-  et décider de l'appliquer. **À surveiller** : le Sonoff de la terrasse ne publie qu'aux changements
-  (`last_reported` = `last_changed`, rien entre 7 h 13 et 9 h 03 ce matin) ; par temps stable il passera pour figé
-  après 2 h et la source basculera sur le jardin, ce que dit la règle, mais à revoir si ça arrive souvent.
+  et décider de l'appliquer. **Règle « figé » retirée à 9 h 07** (demande du coordinateur) : le Sonoff
+  de la terrasse ne publie qu'aux changements (`last_reported` = `last_changed`, rien entre 7 h 13 et 9 h 06 ce matin,
+  trous de 2 à 3 h dans l'historique du 21 au 24/10), il serait passé pour figé ; seul `unavailable` fait changer
+  de capteur.
 - **Nest Hub, onglet Météo (24/10, maquette validée par Alexandre)** : carte légère prête dans la copie locale
   `nest-hub-leger-card.js` (146 429 octets), **déployée vers 9 h 05 en `?v=9b56fee7`** dès que `sensor.hub_meteo` (app
   AppDaemon `hub_meteo`) a existé (cast relancé, copie poussée dans ha-config). Reste : photo du Hub. Onglets Accueil, Audio, Maison, Météo, À faire ; pastille de pluie avant
