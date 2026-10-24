@@ -402,7 +402,7 @@ def test_releve_historique_trop_vieux_et_budget():
     ia2 = FauxClaude(reponse={"categorie": "lettre", "resume": "x", "demande": None, "echeance": None,
                               "confiance": 0.7})
     http.historique_404 = False
-    c.releve(gmail, db, ia2, etat, 15, MAINTENANT + timedelta(days=8), journal=lambda t: None)
+    c.releve(gmail, db, ia2, etat, 15, MAINTENANT + timedelta(days=3), journal=lambda t: None)
     assert len(ia2.appels) == 0  # trop vieux (plus de 2 jours)
     c.releve(gmail, db, ia2, {"historyId": "900"}, 15, MAINTENANT + timedelta(hours=2), journal=lambda t: None)
     assert len(ia2.appels) == 1 and c.lignes(db)[0]["categorie"] == "lettre" and c.lignes(db)[0]["source"] == "ia"
@@ -447,3 +447,79 @@ def test_garde_fou_lecture_seule():
     client = inspect.getsource(c.ClientGmail)
     assert re.findall(r"self\._http\.(\w+)\(", client) == ["post", "get"]
     assert "self._http.post(JETON_URL" in client
+
+
+# MARK: - Ajustements du bilan du 24/10
+
+def test_recruteur_linkedin_passe_a_l_ia():
+    inmail = c.fiche(msg("r1", de="Alexandra Farrell <inmail-hit-reply@linkedin.com>", sujet="Senior AdTech Architect",
+                         libelles=("INBOX", "CATEGORY_UPDATES"), en_tetes=(("List-Unsubscribe", "<https://x>"),)))
+    assert c.recruteur(inmail["de"]) and c.regle_sure(inmail) is None
+    alerte = c.fiche(msg("r2", de="jobalerts-noreply@linkedin.com", sujet="Tech Lead chez Hermès",
+                         libelles=("INBOX", "CATEGORY_UPDATES"), en_tetes=(("List-Unsubscribe", "<https://x>"),)))
+    assert not c.recruteur(alerte["de"]) and c.regle_sure(alerte)[0] == "lettre"
+    assert "InMail" in c.CONSIGNE and "commande" in c.CONSIGNE
+
+
+def test_sujet_normalise():
+    assert c.sujet_normalise("RE: TR:  Chèques-Vacances") == "chèques-vacances"
+    assert c.sujet_normalise("Fwd: Re: Bonjour") == "bonjour"
+
+
+def _a_traiter(db, ident, quand, fil="fA", de="tom@messagerie.leboncoin.fr", sujet="Nouveau message Switch",
+               echeance=None):
+    f = c.fiche(msg(ident, de=de, sujet=sujet, fil=fil, quand=quand))
+    c.enregistrer(db, f, {"categorie": "a_traiter", "source": "ia", "raison": "IA", "echeance": echeance}, quand)
+
+
+def test_ranger_une_ligne_par_conversation_et_expiration():
+    db = _base()
+    for i in range(3):  # trois messages de Tom dans le même fil
+        _a_traiter(db, f"t{i}", MAINTENANT - timedelta(minutes=10 - i))
+    _a_traiter(db, "s1", MAINTENANT - timedelta(days=2), fil="fS1", de="seb@messagerie.leboncoin.fr")
+    _a_traiter(db, "s2", MAINTENANT - timedelta(hours=1), fil="fS2", de="seb@messagerie.leboncoin.fr")  # autre fil
+    _a_traiter(db, "v1", MAINTENANT - timedelta(days=9), fil="fV", de="vieux@x.fr", sujet="Vieux")
+    _a_traiter(db, "e1", MAINTENANT - timedelta(days=9), fil="fE", de="enedis@x.fr", sujet="Coupure",
+               echeance="2026-11-03")
+    assert c.ranger(db, MAINTENANT) == 4
+    ouverts = {r["id"] for r in c.lignes(db) if r["categorie"] == "a_traiter"}
+    assert ouverts == {"t2", "s2", "e1"}
+    raisons = {r["id"]: r["raison"] for r in c.lignes(db)}
+    assert raisons["t0"].startswith("remplacé") and raisons["v1"].startswith("expiré")
+    assert c.ranger(db, MAINTENANT) == 0
+
+
+def test_reclasser_ouverts():
+    db = _base()
+    _a_traiter(db, "a1", MAINTENANT)
+    etat = {}
+    claude = FauxClaude({"categorie": "bruit", "resume": "Annonce supprimée.", "demande": None, "echeance": None,
+                         "confiance": 0.9})
+    assert c.reclasser_ouverts(db, claude, etat, 15, MAINTENANT) == 1
+    assert {r["id"]: r["categorie"] for r in c.lignes(db)}["a1"] == "bruit"
+    assert etat["cout_mois"] > 0
+
+
+def test_apprentissage_ignore_les_grands_rangements_et_protege_les_vraies_personnes():
+    db = _base()
+    # 20 lettres d'un même expéditeur, ouvertes et archivées en 4 minutes (boîte vidée) : rien à apprendre
+    for i in range(20):
+        f = c.fiche(msg(f"m{i}", de="news@journal.fr", quand=MAINTENANT - timedelta(hours=i + 1)))
+        c.enregistrer(db, f, {"categorie": "lettre", "source": "gmail", "raison": "liste"}, MAINTENANT)
+    gestes = [(f"m{i}", f"fm{i}", g) for i in range(20) for g in ("ouvert", "archive")]
+    soir = MAINTENANT + timedelta(hours=4)
+    c.appliquer_gestes(db, gestes[:20], soir)
+    c.appliquer_gestes(db, gestes[20:], soir + timedelta(minutes=4))
+    assert c.apprendre(db, soir) == {}
+    # acheteur leboncoin : 4 messages triés à traiter, ouverts, jamais répondus dans Gmail : pas rétrogradé
+    for i in range(4):
+        _a_traiter(db, f"t{i}", MAINTENANT - timedelta(days=i), fil=f"ft{i}", sujet=f"Message {i}")
+        db.execute("UPDATE messages SET ouvert = 1 WHERE id = ?", (f"t{i}",))
+    assert "tom@messagerie.leboncoin.fr" not in c.apprendre(db, soir)
+    # gestes espacés (un par heure) : l'apprentissage reprend
+    db2 = _base()
+    for i in range(4):
+        f = c.fiche(msg(f"n{i}", de="promo@x.fr", quand=MAINTENANT - timedelta(days=i)))
+        c.enregistrer(db2, f, {"categorie": "lettre", "source": "gmail", "raison": "liste"}, MAINTENANT)
+        c.appliquer_gestes(db2, [(f"n{i}", f"fn{i}", "archive")], MAINTENANT + timedelta(hours=i))
+    assert c.apprendre(db2, MAINTENANT) == {"promo@x.fr": "bruit"}

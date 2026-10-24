@@ -140,3 +140,24 @@ la raison. À comparer avec la boîte pendant une semaine avant d'ouvrir (N4).
 Aucune ne fait planter l'app : journalisée, `derniere_erreur` dans le capteur, nouvel essai à la relève suivante.
 Fichier d'autorisation absent ou jeton refusé : l'app attend 10 minutes entre deux essais. Un message disparu entre
 l'historique et sa lecture est ignoré.
+
+
+## Ajustements du 24/10 au soir (premier bilan)
+
+Déployés vers 22 h 30 (sauvegardes `aiguillage_courrier.py.avant-bilan-20261024` et
+`aiguillage_courrier.sqlite.avant-bilan-20261024` à la racine du dossier AppDaemon) :
+
+- **Une ligne par conversation** (`ranger`, à chaque relève) : un `a_traiter` passe en `fait` (« remplacé ») dès
+  qu'un message plus récent arrive dans la même conversation, c'est-à-dire le même fil, ou le même expéditeur avec le
+  même sujet sans « RE: » (la messagerie leboncoin ouvre plusieurs fils pour une conversation).
+- **Expiration** : un `a_traiter` de plus de 7 jours passe en `fait` (« expiré »), sauf si son échéance est à venir.
+- **Recruteurs LinkedIn** (`inmail…@linkedin.com`) : passent par l'IA, plus par la règle « envoi de liste ».
+- **Consigne** : les confirmations de commande, d'expédition, de livraison ou de paiement vont en bruit, sauf action
+  demandée ; une affaire close (annonce supprimée, négociation annulée) n'est plus `a_traiter`.
+- **Événement `aiguillage_courrier_reclasser`** : repasse à l'IA les `a_traiter` ouverts, puis range (lancé le 24/10
+  à 22 h 27 : 4 reclassés, 2 rangés).
+- **Apprentissage** : les gestes d'un grand rangement (au moins 15 ouvertures ou archivages en 10 minutes, comme la
+  boîte vidée le 24/10 entre 22 h 03 et 22 h 07) ne comptent plus ; un expéditeur trié `a_traiter` au moins une fois
+  sur deux n'est jamais rétrogradé en lettre ou bruit (on lui répond ailleurs que dans Gmail, par exemple dans la
+  messagerie leboncoin). Avant la correction, ce grand rangement avait appris 7 règles fausses, dont les deux
+  acheteurs leboncoin rangés en « lettre » ; elles ont disparu à la relève suivante.

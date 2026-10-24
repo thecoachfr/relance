@@ -166,6 +166,12 @@ def automatique(de):
     return bool(_AUTOMATIQUE.match((de or "").split("@")[0]))
 
 
+def recruteur(de):
+    """Message LinkedIn écrit par une personne (InMail : `inmail-hit-reply@linkedin.com`…), pas une alerte."""
+    de = (de or "").lower()
+    return de.endswith("@linkedin.com") and de.split("@")[0].startswith("inmail")
+
+
 def mots_action(f):
     texte = _sans_accents(f"{f.get('sujet', '')}\n{(f.get('extrait') or '')[:500]}")
     return [m for m in MOTS_ACTION if m in texte]
@@ -174,6 +180,8 @@ def mots_action(f):
 def regle_sure(f):
     """Règles sûres (b) : (catégorie, raison), ou None quand le message doit passer à l'IA."""
     libelles = set(f.get("libelles") or [])
+    if recruteur(f.get("de")):
+        return None  # message LinkedIn d'un recruteur (InMail) : une vraie personne, l'IA décide (bilan du 24/10)
     if "CATEGORY_PROMOTIONS" in libelles:
         return "bruit", "onglet Promotions de Gmail"
     action = mots_action(f)
@@ -232,6 +240,14 @@ convocation, contrat à signer, devis). Dans le doute entre a_traiter et une aut
 - lettre : lettres d'info, abonnements, contenus qu'il lit sans rien avoir à faire.
 - bruit : marketing, promotions, envois de masse, notifications automatiques sans intérêt (confirmations banales, \
 réseaux sociaux).
+
+Précisions (bilan du 24/10) :
+- Confirmations de commande, d'expédition, de livraison ou de paiement : bruit, sauf si une action est demandée \
+(paiement refusé, colis à retirer avant une date, problème à régler).
+- Un mail qui annonce qu'une affaire est close (annonce supprimée, négociation annulée, commande annulée, déjà réglé) \
+n'est pas a_traiter : il n'y a plus rien à faire.
+- Un recruteur qui écrit personnellement à Alexandre (message LinkedIn « InMail », relance d'un chasseur de têtes) : \
+a_traiter, même s'il passe par LinkedIn.
 
 Réponds :
 - resume : une phrase en français, courte, qui dit de quoi il s'agit (qui, quoi) ;
@@ -452,24 +468,117 @@ def regles(db):
     return {r["expediteur"]: r["categorie"] for r in db.execute("SELECT expediteur, categorie FROM regles")}
 
 
+MASSE_NB, MASSE_MINUTES = 15, 10
+
+
+def gestes_en_masse(db, nb=MASSE_NB, minutes=MASSE_MINUTES):
+    """Messages dont l'ouverture ou l'archivage s'est fait pendant un grand rangement (au moins `nb` gestes du même
+    type en `minutes` minutes, comme la boîte vidée le 24/10 au soir) : {(message, geste)}. Ces gestes ne disent rien
+    de l'expéditeur et ne servent pas à l'apprentissage (le message passe quand même en `fait`)."""
+    masse = set()
+    for geste in ("ouvert", "archive"):
+        rangs = [(datetime.fromisoformat(r["quand"]), r["message"]) for r in
+                 db.execute("SELECT message, quand FROM gestes WHERE geste = ? ORDER BY quand", (geste,))]
+        debut = 0
+        for fin in range(len(rangs)):
+            while rangs[fin][0] - rangs[debut][0] > timedelta(minutes=minutes):
+                debut += 1
+            if fin - debut + 1 >= nb:
+                masse.update((m, geste) for _, m in rangs[debut:fin + 1])
+    return masse
+
+
 def apprendre(db, maintenant):
     """Recalcule les règles apprises (les règles `manuel`, posées plus tard par Alexandre, ne sont pas touchées).
-    Renvoie {expéditeur: catégorie} des règles apprises en place."""
+    Bilan du 24/10 : les gestes d'un grand rangement ne comptent pas, et un expéditeur surtout trié `a_traiter`
+    (une vraie personne, à qui Alexandre répond parfois ailleurs que dans Gmail : messagerie leboncoin) n'est jamais
+    rétrogradé en lettre ou bruit par l'apprentissage. Renvoie {expéditeur: catégorie} des règles apprises en place."""
     quand = maintenant.isoformat(timespec="seconds")
     manuelles = {r["expediteur"] for r in db.execute("SELECT expediteur FROM regles WHERE source = 'manuel'")}
-    apprises = {}
-    for r in db.execute("SELECT de, COUNT(*) n, SUM(ouvert) o, SUM(repondu) rep, SUM(archive) arc FROM messages "
-                        "WHERE de != '' GROUP BY de"):
+    masse = gestes_en_masse(db)
+    par_de = {}
+    for r in db.execute("SELECT id, de, ouvert, repondu, archive, categorie_tri FROM messages WHERE de != ''"):
         if r["de"] in manuelles:
             continue
-        cat = regle_apprise(r["n"], r["o"] or 0, r["rep"] or 0, r["arc"] or 0)
+        t = par_de.setdefault(r["de"], {"n": 0, "o": 0, "rep": 0, "arc": 0, "at": 0})
+        t["n"] += 1
+        t["o"] += int(bool(r["ouvert"]) and (r["id"], "ouvert") not in masse)
+        t["rep"] += int(bool(r["repondu"]))
+        t["arc"] += int(bool(r["archive"]) and (r["id"], "archive") not in masse)
+        t["at"] += int(r["categorie_tri"] == "a_traiter")
+    apprises = {}
+    for de, t in par_de.items():
+        cat = regle_apprise(t["n"], t["o"], t["rep"], t["arc"])
+        if cat and cat != "a_traiter" and t["at"] * 2 >= t["n"]:
+            continue
         if cat:
-            apprises[r["de"]] = (cat, r["n"])
+            apprises[de] = (cat, t["n"])
     db.execute("DELETE FROM regles WHERE source = 'appris'")
     db.executemany("INSERT INTO regles (expediteur, categorie, source, nb, maj) VALUES (?, ?, 'appris', ?, ?)",
                    [(de, cat, n, quand) for de, (cat, n) in apprises.items()])
     db.commit()
     return {de: cat for de, (cat, _) in apprises.items()}
+
+EXPIRATION_JOURS = 7
+_PREFIXES = re.compile(r"^\s*((re|tr|fwd?|aw)\s*:\s*)+", re.IGNORECASE)
+
+
+def sujet_normalise(sujet):
+    """Sujet sans « RE: », « TR: », « Fwd: », en minuscules : deux fils au même sujet du même expéditeur (messagerie
+    leboncoin) sont une seule conversation."""
+    return " ".join(_PREFIXES.sub("", sujet or "").lower().split())
+
+
+def ranger(db, maintenant, jours=EXPIRATION_JOURS):
+    """Une ligne par conversation et pas de vieux « à traiter » (bilan du 24/10) :
+    - un `a_traiter` pour lequel un message plus récent est arrivé dans la même conversation (même fil, ou même
+      expéditeur et même sujet) passe en `fait` (« remplacé ») : seul le dernier message dit où en est l'affaire ;
+    - un `a_traiter` de plus de `jours` jours passe en `fait` (« expiré »), sauf si son échéance est encore à venir.
+    Renvoie le nombre de messages rangés."""
+    quand = maintenant.isoformat(timespec="seconds")
+    tous = [dict(r) for r in db.execute("SELECT id, fil, de, sujet, date_ms, categorie, echeance FROM messages")]
+    plus_recent_fil, plus_recent_sujet = {}, {}
+    for r in tous:
+        plus_recent_fil[r["fil"]] = max(plus_recent_fil.get(r["fil"], 0), r["date_ms"])
+        cle = (r["de"], sujet_normalise(r["sujet"]))
+        plus_recent_sujet[cle] = max(plus_recent_sujet.get(cle, 0), r["date_ms"])
+    limite = int((maintenant - timedelta(days=jours)).timestamp() * 1000)
+    aujourdhui = maintenant.astimezone(PARIS).date().isoformat()
+    n = 0
+    for r in tous:
+        if r["categorie"] != "a_traiter":
+            continue
+        raison = None
+        if (plus_recent_fil[r["fil"]] > r["date_ms"]
+                or plus_recent_sujet[(r["de"], sujet_normalise(r["sujet"]))] > r["date_ms"]):
+            raison = "remplacé par un message plus récent de la conversation"
+        elif r["date_ms"] < limite and not (r["echeance"] and r["echeance"] >= aujourdhui):
+            raison = f"expiré ({jours} jours sans suite)"
+        if raison:
+            db.execute("UPDATE messages SET categorie = 'fait', raison = ?, fait_le = COALESCE(fait_le, ?) WHERE id = ?",
+                       (raison, quand, r["id"]))
+            n += 1
+    db.commit()
+    return n
+
+
+def reclasser_ouverts(db, ia_client, etat, budget, maintenant, journal=print):
+    """Repasse à l'IA les `a_traiter` encore ouverts (après un changement de consigne). Renvoie le nombre reclassé."""
+    n = 0
+    for r in [dict(x) for x in db.execute("SELECT * FROM messages WHERE categorie = 'a_traiter' ORDER BY date_ms DESC")]:
+        if not budget_ok(etat, budget, maintenant):
+            break
+        f = dict(r, libelles=json.loads(r["libelles"] or "[]"))
+        try:
+            ia, prix = classer_ia(ia_client, f, maintenant)
+        except Exception as exc:  # noqa: BLE001
+            journal(f"Courrier : reclassement impossible pour {r['id']} ({exc!r})")
+            break
+        compter(etat, prix, maintenant)
+        if ia:
+            reclasser(db, r["id"], finaliser({"categorie": None, "source": "ia", "raison": ""}, ia), prix)
+            n += 1
+    return n
 
 
 def purger(db, maintenant, jours=GARDE_JOURS):
@@ -748,6 +857,7 @@ def releve(gmail, db, ia_client, etat, budget, maintenant, journal=print, limite
                 reclasser(db, r["id"], finaliser({"categorie": None, "source": "ia", "raison": ""}, ia), prix)
     if dernier:
         etat["historyId"] = str(dernier)
+    resume["ranges"] = ranger(db, maintenant)
     resume["regles"] = len(apprendre(db, maintenant))
     etat["derniere_releve"] = maintenant.isoformat(timespec="seconds")
     return resume
@@ -790,6 +900,8 @@ if hass is not None:
             self.run_every(self._relever, "now+15", int(self.args.get("refresh_seconds", 120)))
             self.run_daily(self._bilan, "21:00:00")
             self.run_daily(self._purger, "03:40:00")
+            # Après un changement de consigne : repasse les « à traiter » ouverts à l'IA, puis range (bilan du 24/10).
+            self.listen_event(self._reclasser, "aiguillage_courrier_reclasser")
 
         # État : historyId, compteur du mois, dernière relève, dernière erreur.
         def _lire_etat(self):
@@ -904,3 +1016,20 @@ if hass is not None:
                     self.log(f"Courrier : {n} message(s) de plus de {GARDE_JOURS} jours retiré(s) de la base")
             except Exception as exc:  # noqa: BLE001
                 self.log(f"Courrier : purge impossible ({exc!r})", level="WARNING")
+
+        def _reclasser(self, event_name, data, **kwargs):
+            maintenant = datetime.now(PARIS)
+            etat = self._lire_etat()
+            try:
+                db = ouvrir_base(self._db_path)
+                try:
+                    n = reclasser_ouverts(db, self._client_ia(), etat, self._budget, maintenant,
+                                          journal=lambda t: self.log(t, level="WARNING"))
+                    r = ranger(db, maintenant)
+                finally:
+                    db.close()
+                self._ecrire_etat(etat)
+                self._publier(etat)
+                self.log(f"Courrier : {n} « à traiter » reclassé(s), {r} rangé(s), {etat['cout_mois']:.3f} $ ce mois")
+            except Exception as exc:  # noqa: BLE001
+                self.log(f"Courrier : reclassement impossible ({exc!r})", level="WARNING")
