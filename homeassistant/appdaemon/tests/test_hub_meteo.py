@@ -349,7 +349,10 @@ def test_calcul_complet_de_ce_matin():
              m.METEO: METEO, m.PLUIE_HEURE: PLUIE, m.VIGILANCE: ALERTE}
     etat, a = m.calculer(etats, HORAIRES, QUOTIDIENNES, MAINTENANT)
     assert etat == "8.4"
-    assert set(a) == {"maj", "maintenant", "dans_l_heure", "pastille", "phrase", "heures", "jours", "vigilance"}
+    assert set(a) == {"maj", "maintenant", "dans_l_heure", "pastille", "phrase", "heures", "jours", "vigilance",
+                      "apprentissage"}
+    assert a["apprentissage"] == {"jours_de_donnees": 0, "actif": False, "ecarts": [None] * 24,
+                                  "maj": "2026-10-24T08:47:00+02:00"}
     assert a["maj"] == "2026-10-24T08:47:00+02:00"
     assert a["pastille"] == "Pluie jusqu'à 9 h 30"
     assert a["maintenant"]["source"] == "terrasse" and a["maintenant"]["ressenti"] == 6
@@ -364,6 +367,7 @@ def test_calcul_complet_de_ce_matin():
     assert set(a["heures"][0]) == set(ex["heures"][0])
     assert set(a["jours"][0]) == set(ex["jours"][0])
     assert set(a["vigilance"]) == set(ex["vigilance"])
+    assert set(a["apprentissage"]) == set(ex["apprentissage"])
     # Taille raisonnable pour l'enregistreur de HA (limite 16 Ko).
     assert len(json.dumps(a, ensure_ascii=False).encode()) < 8000
 
@@ -426,3 +430,87 @@ def test_phrase_averse_qui_arrive_et_s_arrete_dans_l_heure():
         == "Pluie dans 20 min, jusqu'à 9 h 20, puis sec. La pluie revient vers 15 h."
     assert textes(m.phrase(cases, heures_simples([1.1, 0.1] + [0] * 22), t)) \
         == "Pluie dans 20 min, jusqu'à 9 h 20, puis sec pour les prochaines 24 h."
+
+
+
+# MARK: - Apprentissage automatique (24/10)
+
+def releves_fictifs(nb_jours, heure, ecarts, fin=datetime(2026, 11, 20, 3, 30, tzinfo=PARIS)):
+    """Un relevé par jour à `heure`, mesure − mf = ecarts[i % len(ecarts)]."""
+    r = []
+    for i in range(nb_jours):
+        t = (fin - timedelta(days=i + 1)).replace(hour=heure, minute=0)
+        r.append({"t": m.iso(t), "mesure": 10 + ecarts[i % len(ecarts)], "mf": 10.0, "source": "terrasse"})
+    return r
+
+
+FIN = datetime(2026, 11, 20, 3, 30, tzinfo=PARIS)
+
+
+def test_apprentissage_pas_assez_de_donnees():
+    assert m.apprendre([], FIN)["actif"] is False
+    a = m.apprendre(releves_fictifs(13, 14, [2.0, 2.2]), FIN)
+    assert a["jours_de_donnees"] == 13 and a["actif"] is False and a["ecarts"] == [None] * 24
+    # Aujourd'hui : un seul relevé.
+    a = m.apprendre([{"t": "2026-10-24T09:00:00+02:00", "mesure": 8.4, "mf": 9.3}], MAINTENANT + timedelta(hours=1))
+    assert a["jours_de_donnees"] == 1 and a["actif"] is False
+
+
+def test_apprentissage_stable():
+    a = m.apprendre(releves_fictifs(20, 14, [1.8, 2.2]), FIN)
+    assert a["actif"] is True and a["jours_de_donnees"] == 20
+    assert a["ecarts"][14] == 2.0 and a["ecarts"][13] is None and a["ecarts"][15] is None
+    assert m.correction_apprise(a, datetime(2026, 11, 20, 14, 30, tzinfo=PARIS)) == 2.0
+    assert m.correction_apprise(a, datetime(2026, 11, 20, 9, 0, tzinfo=PARIS)) == 0.0
+    # Relevés de plus de 30 jours : ignorés.
+    vieux = releves_fictifs(20, 14, [2.0], fin=FIN - timedelta(days=31))
+    assert m.apprendre(vieux, FIN)["actif"] is False
+
+
+def test_apprentissage_instable():
+    a = m.apprendre(releves_fictifs(20, 14, [-1.0, 3.0]), FIN)  # écart-type 2
+    assert a["actif"] is False and a["ecarts"][14] is None
+    assert a["detail"][14]["ecart_type"] == 2.0
+
+
+def test_apprentissage_plafond_et_lissage():
+    assert m.apprendre(releves_fictifs(20, 14, [5.0]), FIN)["ecarts"][14] == 3.0
+    r = releves_fictifs(20, 13, [1.0]) + releves_fictifs(20, 14, [2.0]) + releves_fictifs(20, 15, [3.0])
+    a = m.apprendre(r, FIN)
+    assert a["ecarts"][14] == 2.0                    # (1 + 2×2 + 3) / 4
+    assert a["ecarts"][13] == 1.3                    # (2×1 + 2) / 3, l'heure de 12 h n'est pas corrigée
+    assert a["ecarts"][15] == 2.7                    # (2 + 2×3) / 3
+    assert a["ecarts"][12] is None
+
+
+def test_correction_inactive():
+    a = {"actif": False, "ecarts": [2.0] * 24}
+    assert m.correction_apprise(a, MAINTENANT) == 0.0
+    assert m.correction_apprise(None, MAINTENANT) == 0.0
+
+
+def test_pas_de_double_comptage():
+    appris = {"jours_de_donnees": 20, "actif": True, "ecarts": [2.0] * 24, "maj": "x"}
+    mf = m.mf_maintenant(m.points_mf(HORAIRES), METEO, MAINTENANT)
+    # La mesure vaut exactement la prévision corrigée (+2) : rien à recaler, les heures = MF + 2, pas + 4.
+    etats = {**mesures(capteur(round(mf + 2, 6)), capteur(20), capteur(20)), m.METEO: METEO,
+             m.PLUIE_HEURE: PLUIE, m.VIGILANCE: ALERTE}
+    _, a = m.calculer(etats, HORAIRES, QUOTIDIENNES, MAINTENANT, appris=appris)
+    for x in a["heures"]:
+        assert x["temperature"] == m.un_dec(x["temperature_mf"] + 2)
+    assert a["apprentissage"] == appris
+    # Mesure 1 °C sous la prévision corrigée : le recalage ne porte que sur ce −1.
+    etats[m.TERRASSE] = capteur(round(mf + 1, 6))
+    _, a = m.calculer(etats, HORAIRES, QUOTIDIENNES, MAINTENANT, appris=appris)
+    premiere = a["heures"][0]
+    assert premiere["temperature"] == m.un_dec(premiere["temperature_mf"] + 2 - m.poids_recalage(13 / 60))
+    # Le ressenti suit la mesure (écart total + 1 avec MF), pas la correction en plus.
+    assert a["maintenant"]["ressenti"] == m.entier(6.6 + 1)
+
+
+def test_jours_avec_correction():
+    appris = {"actif": True, "ecarts": [1.0] * 12 + [3.0] * 12}
+    j = m.jours(HORAIRES, QUOTIDIENNES, MAINTENANT, nb=1, correction=lambda t: m.correction_apprise(appris, t))
+    # Dimanche : heures de MF entre 12,7 et 16,1 (16,1 à 6 h, 14,5 l'après-midi). Corrigées : min +1, max 17,5
+    # (14,5 + 3) au lieu de 16,1, soit +1,4. Min de MF 11,4 + 1 → 12 ; max 15,9 + 1,4 → 17.
+    assert j[0]["min"] == 12 and j[0]["max"] == 17

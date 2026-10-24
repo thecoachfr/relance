@@ -28,6 +28,11 @@ Attributs :
   (entiers), `resume` (« pluie le matin », « sec ») }.
 - `vigilance` : { `couleur` : "Vert" | "Jaune" | "Orange" | "Rouge", `risques` : liste des risques non verts
   (« Vent violent »…) }.
+- `apprentissage` (ajouté le 24/10/2026, validé par Alexandre ; les vues ne l'affichent pas pour l'instant) :
+  { `jours_de_donnees` (entier : jours ayant des relevés sur les 30 derniers), `actif` (bool : au moins une heure
+  corrigée), `ecarts` : 24 valeurs (heure locale 0 à 23, °C arrondis à 0,1, ou null si l'heure n'est pas corrigée),
+  `maj` (ISO, dernier calcul) }. Avec l'apprentissage actif, `heures[].temperature` et `jours[].min/max` incluent
+  la correction ; `temperature_mf` reste la valeur brute de Météo-France.
 
 Règles d'affichage communes (« Mêmes boutons, même ordre ») :
 - Section « Météo » entre Maison et À faire (ordre : Accueil, Vidéo, Audio, Maison, Météo, À faire). iPad/iPhone :
@@ -90,20 +95,37 @@ bloc `hub_meteo` dans `apps.yaml` (sauvegarde d'avant : `apps.yaml.avant-meteo-2
   midi 12-14 h, après-midi 14-18 h, soir 18-24 h ; une prévision de 3 ou 6 h couvre toutes ses heures.
 - **Vigilance** : état de `sensor.94_weather_alert` (Vert s'il est inconnu), risques = attributs non verts.
 
-### Apprentissage (préparé, pas encore appliqué)
+### Apprentissage automatique (24/10/2026, validé par Alexandre)
 
-Chaque heure (minute 2), une ligne dans `/config/hub_meteo_releves.jsonl` (côté Mac :
+**Relevés** : chaque heure (minute 2), une ligne dans `/config/hub_meteo_releves.jsonl` (côté Mac :
 `/Volumes/addon_configs/a0d7b954_appdaemon/hub_meteo_releves.jsonl`, à côté de `hub_ipad_activite.json`), 60 jours
 gardés, et une ligne « Météo : relevé … » dans `logs/appdaemon.log`. Premier relevé : 24/10 à 9 h 02.
 
 ```json
-{"t": "2026-10-24T09:00:00+02:00", "mesure": 8.4, "source": "terrasse", "mf": 9.3,
+{"t": "2026-10-24T09:00:00+02:00", "mesure": 8.4, "source": "terrasse", "mf": 9.3, "condition": "rainy",
  "prev": {"1": 9.9, "3": 11.2, "6": 13.1, "12": 11.6, "24": 13.0}}
 ```
 
-`mesure` = température retenue à l'heure `t`, `mf` = MF interpolée à `t`, `prev[k]` = ce que MF prévoit, à `t`,
-pour `t + k` heures. **Dans 2-3 semaines** (au moins 14 jours, soit une quinzaine de valeurs par heure et par
-horizon), calculer l'écart moyen par heure de la journée :
+`mesure` = température retenue à l'heure `t`, `mf` = MF interpolée à `t`, `condition` = condition MF (relevée depuis
+le 24/10 vers 9 h 20, pour séparer plus tard ciel clair et couvert), `prev[k]` = ce que MF prévoit, à `t`, pour
+`t + k` heures.
+
+**Calcul, chaque nuit à 3 h 30** (et au démarrage s'il n'y a pas encore de fichier) : `apprendre` lit les relevés des
+30 derniers jours et calcule, pour chaque heure locale de la journée (24 cases), l'écart moyen `mesure − mf`. Une
+case n'est retenue que si elle a des relevés sur **au moins 14 jours** et un **écart-type < 1,5 °C** (sinon pas de
+correction) ; moyenne **plafonnée à ±3 °C**, puis **lissée** avec les cases voisines retenues (poids 1-2-1, en
+boucle sur 24 h). Résultat dans `/config/hub_meteo_apprentissage.json` (relu au démarrage ; champ `detail` en plus :
+jours, moyenne et écart-type de chaque heure, même non retenue), publié dans l'attribut `apprentissage`. Pas encore
+par horizon ni par ciel clair / couvert (trop peu de données) : à ajouter quand il y aura plusieurs semaines de
+relevés, d'abord en comparant `detail` des deux découpages.
+
+**Application** : `heures[].temperature` = MF + correction de son heure + recalage, où le recalage porte sur l'écart
+entre la mesure et la prévision **déjà corrigée** à maintenant (pas de double comptage). Le ressenti suit l'écart
+total mesure − MF. `jours[].min/max` : les heures du jour sont corrigées et le min / max de MF décalés d'autant que le
+min / max de ces heures. Le 24/10 : 1 jour de données, `actif` false, aucune correction ; première correction
+possible vers le 7/11 (14 jours).
+
+Diagnostic à la main, par horizon (même fonction que dans les tests) :
 
 ```sh
 cd "Rappels/homeassistant/appdaemon/apps" && python3 -c "
@@ -112,9 +134,3 @@ r = [json.loads(l) for l in open('/Volumes/addon_configs/a0d7b954_appdaemon/hub_
 for k in (1, 3, 6, 12, 24):
     print(k, m.ecart_moyen_par_heure(r, k))"
 ```
-
-`ecart_moyen_par_heure(releves, k)` rapproche chaque relevé de celui fait `k` heures plus tôt et renvoie
-`{heure: (moyenne de mesure − prev[k], nombre)}`. Ne garder que les relevés de la terrasse (`source`) si l'on veut un
-biais propre à ce capteur. Si l'écart est stable (même signe d'un jour à l'autre, écart-type nettement plus petit que
-la moyenne), l'appliquer aux heures au-delà de 8 h (là où le recalage par la mesure est nul) : `temperature` =
-MF + biais[heure][horizon le plus proche], et le noter ici.

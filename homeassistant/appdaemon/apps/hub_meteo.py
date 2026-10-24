@@ -10,7 +10,9 @@ Les vues ne font qu'afficher ce capteur : tout le calcul est ici. Contrat : `hom
 - **Dans l'heure** : `1_hour_forecast` de `sensor.alfortville_next_rain` ramené à 12 cases de 5 min.
 - **Pastille, phrase, jours, vigilance** : règles simples ci-dessous.
 - **Apprentissage** : chaque heure, une ligne dans `/config/hub_meteo_releves.jsonl` (prévisions MF à +1, +3, +6,
-  +12, +24 h et mesure retenue, 60 jours). Pas encore de correction appliquée.
+  +12, +24 h et mesure retenue, 60 jours). Chaque nuit à 3 h 30, l'écart moyen mesure − MF par heure de la journée
+  (30 derniers jours) est recalculé dans `/config/hub_meteo_apprentissage.json` ; une heure n'est corrigée qu'avec
+  14 jours de relevés et un écart stable (écart-type < 1,5 °C), plafonnée à ±3 °C, lissée avec ses voisines.
 
 Fonctions pures, testées hors Home Assistant par `tests/test_hub_meteo.py` ; l'app AppDaemon est en fin de fichier.
 """
@@ -18,6 +20,7 @@ Fonctions pures, testées hors Home Assistant par `tests/test_hub_meteo.py` ; l'
 from datetime import datetime, timedelta
 import json
 import math
+import statistics
 from zoneinfo import ZoneInfo
 
 PARIS = ZoneInfo("Europe/Paris")
@@ -45,6 +48,10 @@ AVERSES_MM = 2.0              # mm/jour : en dessous, une journée pluvieuse en 
 RAFALES_ALERTE = 50           # km/h
 HORIZONS_H = (1, 3, 6, 12, 24)
 GARDE_JOURS = 60
+APPRIS_JOURS = 30             # relevés pris en compte pour apprendre
+APPRIS_MIN_JOURS = 14         # jours de relevés au moins pour corriger une heure
+APPRIS_ECART_TYPE_MAX = 1.5   # °C : au-delà, l'écart n'est pas stable, on ne corrige pas
+APPRIS_PLAFOND = 3.0          # °C
 
 NIVEAUX = {"temps sec": 0, "pluie faible": 1, "pluie modérée": 2, "pluie moderee": 2, "pluie forte": 3}
 LIBELLES_NIVEAU = {1: "Pluie faible", 2: "Pluie modérée", 3: "Pluie forte"}
@@ -214,17 +221,19 @@ def pluvieux(entree):
     return entree.get("condition") in CONDITIONS_PLUIE
 
 
-def heures(previsions, maintenant, ecart):
-    """Les 24 heures suivantes, températures recalées sur la mesure (écart décroissant)."""
+def heures(previsions, maintenant, ecart, correction=None):
+    """Les 24 heures suivantes : prévision MF + correction apprise de l'heure (`correction(t)`, °C), puis recalage
+    sur la mesure (`ecart` = mesure − prévision déjà corrigée, décroissant)."""
+    correction = correction or (lambda t: 0.0)
     resultat = []
     for p in sorted(previsions or [], key=lambda p: str(p.get("datetime"))):
         t = instant(p.get("datetime"))
         mf = nombre(p.get("temperature"))
         if t is None or t <= maintenant:
             continue
-        recalee = mf
-        if mf is not None and ecart is not None:
-            recalee = mf + ecart * poids_recalage((t - maintenant).total_seconds() / 3600)
+        recalee = None if mf is None else mf + correction(t)
+        if recalee is not None and ecart is not None:
+            recalee += ecart * poids_recalage((t - maintenant).total_seconds() / 3600)
         resultat.append({
             "heure": iso(t),
             "condition": p.get("condition"),
@@ -486,9 +495,13 @@ def _cumul_jour(quotidienne, horaires, jour):
     return sum(valeurs) if du_jour and None not in valeurs else None
 
 
-def jours(horaires, quotidiennes, maintenant, nb=NB_JOURS):
+def jours(horaires, quotidiennes, maintenant, nb=NB_JOURS, correction=None):
     """Demain et les jours suivants : min et max entiers (prévision du jour de MF, sinon les heures), condition
-    dominante (celle du jour de MF, sinon la plus fréquente de 6 h à 21 h), résumé de la pluie."""
+    dominante (celle du jour de MF, sinon la plus fréquente de 6 h à 21 h), résumé de la pluie.
+
+    Correction apprise (`correction(t)`) : les heures du jour sont corrigées, et le min et le max de MF décalés
+    d'autant que le min et le max de ces heures."""
+    correction = correction or (lambda t: 0.0)
     par_jour = {}
     for p in quotidiennes or []:
         t = instant(p.get("datetime"))
@@ -500,11 +513,15 @@ def jours(horaires, quotidiennes, maintenant, nb=NB_JOURS):
         jour = aujourd_hui + timedelta(days=k)
         q = par_jour.get(jour, {})
         du_jour = [p for p in horaires or [] if (t := instant(p.get("datetime"))) and t.date() == jour]
-        temps = [x for p in du_jour if (x := nombre(p.get("temperature"))) is not None]
+        temps = [(x, x + correction(instant(p.get("datetime")))) for p in du_jour
+                 if (x := nombre(p.get("temperature"))) is not None]
         bas = nombre(q.get("templow"))
         haut = nombre(q.get("temperature"))
-        bas = bas if bas is not None else (min(temps) if temps else None)
-        haut = haut if haut is not None else (max(temps) if temps else None)
+        if temps:
+            decale_bas = min(c for _, c in temps) - min(x for x, _ in temps)
+            decale_haut = max(c for _, c in temps) - max(x for x, _ in temps)
+            bas = bas + decale_bas if bas is not None else min(c for _, c in temps)
+            haut = haut + decale_haut if haut is not None else max(c for _, c in temps)
         condition = q.get("condition")
         if not condition:
             jour_ = [p.get("condition") for p in du_jour if 6 <= instant(p.get("datetime")).hour <= 21]
@@ -582,42 +599,49 @@ def mf_maintenant(points, meteo, instant_):
 
 # MARK: - Calcul complet
 
-def calculer(etats, horaires, quotidiennes, instant_, passe=()):
+def calculer(etats, horaires, quotidiennes, instant_, passe=(), appris=None):
     """(état, attributs) de `sensor.hub_meteo`, d'après les états HA (`etats`, entity_id → état), les prévisions
     horaires et quotidiennes de `weather.get_forecasts` et l'instant du calcul. `passe` : points horaires déjà
-    passés gardés du calcul précédent (pour interpoler à maintenant)."""
+    passés gardés du calcul précédent (pour interpoler à maintenant). `appris` : résultat d'`apprendre` (ou None).
+
+    Pas de double comptage : l'écart du recalage est pris entre la mesure et la prévision DÉJÀ corrigée."""
     temperature, source = choisir_mesure(etats, instant_)
     meteo = etats.get(METEO)
+    appris = appris or apprentissage_vide(instant_)
+    corr = lambda t: correction_apprise(appris, t)  # noqa: E731
     points = sorted(set(points_mf(horaires)) | set(passe))
     mf = mf_maintenant(points, meteo, instant_)
-    ecart = temperature - mf if temperature is not None and mf is not None else None
+    ecart_brut = temperature - mf if temperature is not None and mf is not None else None
+    ecart = ecart_brut - corr(instant_) if ecart_brut is not None else None
     heure = dans_l_heure((etats.get(PLUIE_HEURE) or {}).get("attributes"))
-    liste = heures(horaires, instant_, ecart)
+    liste = heures(horaires, instant_, ecart, corr)
     attributs = {
         "maj": iso(instant_),
-        "maintenant": bloc_maintenant(meteo, temperature, source, ecart, heure, instant_),
+        "maintenant": bloc_maintenant(meteo, temperature, source, ecart_brut, heure, instant_),
         "dans_l_heure": heure,
         "pastille": pastille(heure, instant_),
         "phrase": phrase(heure, liste, instant_),
         "heures": liste,
-        "jours": jours(horaires, quotidiennes, instant_),
+        "jours": jours(horaires, quotidiennes, instant_, correction=corr),
         "vigilance": vigilance(etats.get(VIGILANCE)),
+        "apprentissage": {k: appris.get(k) for k in ("jours_de_donnees", "actif", "ecarts", "maj")},
     }
     etat = f"{un_dec(temperature):.1f}" if temperature is not None else "unavailable"
     return etat, attributs
 
 
-# MARK: - Apprentissage (préparé le 24/10, pas encore appliqué)
+# MARK: - Apprentissage (relevés depuis le 24/10, correction automatique depuis le 24/10)
 
-def releve(points, temperature, source, mf, instant_):
-    """Ligne du journal d'apprentissage : mesure retenue, prévision MF à maintenant, et prévisions MF faites
-    maintenant pour +1, +3, +6, +12 et +24 h (clés « 1 », « 3 »…)."""
+def releve(points, temperature, source, mf, instant_, condition=None):
+    """Ligne du journal d'apprentissage : mesure retenue, prévision MF à maintenant, condition MF (pour séparer un
+    jour ciel clair et couvert plus tard), et prévisions MF faites maintenant pour +1, +3, +6, +12 et +24 h."""
     t = instant_.replace(minute=0, second=0, microsecond=0)
     return {
         "t": iso(t),
         "mesure": un_dec(temperature),
         "source": source,
         "mf": un_dec(mf),
+        "condition": condition,
         "prev": {str(h): un_dec(prevision_a(points, t + timedelta(hours=h))) for h in HORIZONS_H},
     }
 
@@ -655,6 +679,62 @@ def ecart_moyen_par_heure(releves, horizon):
     return {h: (round(s / n, 2), n) for h, (s, n) in sorted(sommes.items())}
 
 
+def apprentissage_vide(instant_):
+    return {"jours_de_donnees": 0, "actif": False, "ecarts": [None] * 24, "maj": iso(instant_), "detail": []}
+
+
+def apprendre(releves, instant_, jours_pris=APPRIS_JOURS):
+    """Correction apprise par heure locale de la journée, d'après les relevés des `jours_pris` derniers jours :
+    écart = mesure − `mf` (MF interpolée à l'heure du relevé).
+
+    Une heure est corrigée si elle a des relevés sur au moins 14 jours ET un écart stable (écart-type < 1,5 °C) ;
+    moyenne plafonnée à ±3 °C, puis lissée avec les heures voisines corrigées (poids 1-2-1, sur 24 h en boucle).
+    Par horizon et par ciel clair / couvert : pas encore (trop peu de données ; `condition` est relevée pour plus tard).
+    """
+    limite = instant_ - timedelta(days=jours_pris)
+    par_heure = {h: [] for h in range(24)}
+    dates = set()
+    for r in releves:
+        t = instant(r.get("t") or "")
+        mesure, mf = nombre(r.get("mesure")), nombre(r.get("mf"))
+        if t is None or t < limite or t > instant_ or mesure is None or mf is None:
+            continue
+        par_heure[t.hour].append((t.date(), mesure - mf))
+        dates.add(t.date())
+    brut, detail = [None] * 24, []
+    for h in range(24):
+        valeurs = [e for _, e in par_heure[h]]
+        nb_jours = len({d for d, _ in par_heure[h]})
+        moyenne = statistics.fmean(valeurs) if valeurs else None
+        ecart_type = statistics.pstdev(valeurs) if len(valeurs) >= 2 else None
+        if nb_jours >= APPRIS_MIN_JOURS and ecart_type is not None and ecart_type < APPRIS_ECART_TYPE_MAX:
+            brut[h] = max(-APPRIS_PLAFOND, min(APPRIS_PLAFOND, moyenne))
+        detail.append({"heure": h, "jours": nb_jours, "moyenne": None if moyenne is None else round(moyenne, 2),
+                       "ecart_type": None if ecart_type is None else round(ecart_type, 2)})
+    ecarts = [None] * 24
+    for h in range(24):
+        if brut[h] is None:
+            continue
+        somme = poids = 0.0
+        for dh, w in ((-1, 1), (0, 2), (1, 1)):
+            v = brut[(h + dh) % 24]
+            if v is not None:
+                somme, poids = somme + w * v, poids + w
+        ecarts[h] = un_dec(max(-APPRIS_PLAFOND, min(APPRIS_PLAFOND, somme / poids)))
+    return {"jours_de_donnees": len(dates), "actif": any(e is not None for e in ecarts), "ecarts": ecarts,
+            "maj": iso(instant_), "detail": detail}
+
+
+def correction_apprise(appris, t):
+    """Correction (°C) de l'heure locale de `t`, 0 si l'apprentissage n'est pas actif ou l'heure pas corrigée."""
+    if not appris or not appris.get("actif"):
+        return 0.0
+    ecarts = appris.get("ecarts") or []
+    h = t.astimezone(PARIS).hour
+    v = nombre(ecarts[h]) if h < len(ecarts) else None
+    return v or 0.0
+
+
 # MARK: - App AppDaemon
 
 try:
@@ -675,6 +755,13 @@ if hass is not None:
 
         def initialize(self):
             self._releves_path = Path(self.args.get("releves_file", "/config/hub_meteo_releves.jsonl"))
+            self._appris_path = Path(self.args.get("apprentissage_file", "/config/hub_meteo_apprentissage.json"))
+            self._appris = None
+            try:
+                self._appris = json.loads(self._appris_path.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                self._apprendre()  # pas encore de fichier : on le calcule tout de suite
+            self.run_daily(self._apprendre, heure_du_jour(3, 30, 0))
             self._passe = []      # points horaires MF déjà passés (dernières heures), pour interpoler à maintenant
             self._dernier = None  # (points, température, source, mf) du dernier calcul, pour le relevé horaire
             self._attente = None
@@ -720,10 +807,11 @@ if hass is not None:
                 limite = maintenant - timedelta(hours=3)
                 self._passe = sorted({p for p in self._passe + [p for p in points if p[0] <= maintenant]
                                       if p[0] >= limite})
-                etat, attributs = calculer(etats, horaires, quotidiennes, maintenant, self._passe)
+                etat, attributs = calculer(etats, horaires, quotidiennes, maintenant, self._passe, self._appris)
                 tous = sorted(set(points) | set(self._passe))
                 self._dernier = (tous, attributs["maintenant"]["temperature"], attributs["maintenant"]["source"],
-                                 mf_maintenant(tous, etats.get(METEO), maintenant))
+                                 mf_maintenant(tous, etats.get(METEO), maintenant),
+                                 (etats.get(METEO) or {}).get("state"))
                 self._publier(etat, dict(
                     attributs, friendly_name="Météo du Hub", unit_of_measurement="°C", device_class="temperature",
                     icon="mdi:weather-partly-rainy"))
@@ -734,8 +822,8 @@ if hass is not None:
             if self._dernier is None:
                 return
             maintenant = datetime.now(PARIS)
-            points, temperature, source, mf = self._dernier
-            ligne = releve(points, temperature, source, mf, maintenant)
+            points, temperature, source, mf, condition = self._dernier
+            ligne = releve(points, temperature, source, mf, maintenant, condition)
             try:
                 anciennes = self._releves_path.read_text(encoding="utf-8").splitlines() \
                     if self._releves_path.exists() else []
@@ -747,3 +835,18 @@ if hass is not None:
                          f"{len(gardees)} relevé(s) gardé(s)")
             except OSError as exc:
                 self.log(f"Météo : relevé impossible ({exc!r})", level="WARNING")
+
+        def _apprendre(self, **kwargs):
+            maintenant = datetime.now(PARIS)
+            try:
+                lignes = self._releves_path.read_text(encoding="utf-8").splitlines() \
+                    if self._releves_path.exists() else []
+                appris = apprendre(elaguer(lignes, maintenant), maintenant)
+                tmp = self._appris_path.with_suffix(".tmp")
+                tmp.write_text(json.dumps(appris, ensure_ascii=False, indent=1), encoding="utf-8")
+                tmp.replace(self._appris_path)
+                self._appris = appris
+                self.log(f"Météo : apprentissage, {appris['jours_de_donnees']} jour(s) de relevés, "
+                         f"{'actif' if appris['actif'] else 'inactif'} ({sum(e is not None for e in appris['ecarts'])} h corrigée(s))")
+            except (OSError, ValueError) as exc:
+                self.log(f"Météo : apprentissage impossible ({exc!r})", level="WARNING")

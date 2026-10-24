@@ -194,7 +194,7 @@ Code fait et fusionné dans `main` (désactivé tant qu'on ne bascule pas dans l
 8. **Envies (15/10), à essayer en vrai** : partager une vidéo YouTube, un album Spotify, un article Safari (type deviné, titre de la page) ; « Dis Siri, nouvelle Relance » → « Dune à regarder » ; même phrase à la montre (le tri doit ranger « Dune » dans À regarder et retirer « (à regarder) ») ; dictée Google Home « … à lire » ; vérifier qu'une envie n'apparaît pas sur le Nest Hub.
 
 - **Météo du Hub, `sensor.hub_meteo`** (24/10, déployée vers 8 h 55, retouchée à 9 h 03) : app AppDaemon `hub_meteo`
-  (`homeassistant/appdaemon/apps/hub_meteo.py`, 32 tests dans `tests/test_hub_meteo.py`), source unique de la Météo
+  (`homeassistant/appdaemon/apps/hub_meteo.py`, 39 tests dans `tests/test_hub_meteo.py`), source unique de la Météo
   des trois vues. Contrat et règles : [homeassistant/HUB-METEO.md](homeassistant/HUB-METEO.md). Mesure de la terrasse
   (jardin ou quartier Netatmo si elle prend le soleil ou est indisponible), prévisions Météo-France
   recalées sur la mesure (décroissance 4 h, nulle à 8 h), 12 cases de pluie dans l'heure, pastille, phrase, 24 heures,
@@ -204,9 +204,13 @@ Code fait et fusionné dans `main` (désactivé tant qu'on ne bascule pas dans l
   −0,9), ressenti 6, « Sec pour l'instant. La pluie arrive vers 17 h, forte en soirée ; rafales à 65 km/h vers
   22 h. », jours « pluie le matin », « averses », « sec », 5 Ko. Phrase et résumés retouchés à la demande du
   coordinateur (heure de reprise le jour même, traces < 0,2 mm ignorées, résumés de 22 caractères au plus).
-  **Apprentissage** : relevé horaire dans `/config/hub_meteo_releves.jsonl` (60 jours, premier à 9 h 02), pas encore
-  de correction appliquée. **À faire vers le 10/11** : calculer l'écart moyen par heure (commande dans HUB-METEO.md)
-  et décider de l'appliquer. **Règle « figé » retirée à 9 h 07** (demande du coordinateur) : le Sonoff
+  **Apprentissage automatique** (24/10 vers 9 h 20, validé par Alexandre) : relevé horaire dans
+  `/config/hub_meteo_releves.jsonl` (60 jours, premier à 9 h 02) ; chaque nuit à 3 h 30, écart moyen mesure − MF par
+  heure de la journée sur 30 jours dans `/config/hub_meteo_apprentissage.json` ; une heure n'est corrigée qu'avec
+  14 jours de relevés et un écart-type < 1,5 °C, plafond ±3 °C, lissage 1-2-1 ; correction appliquée aux heures et
+  au min / max des jours, recalage sur l'écart restant ; nouvel attribut `apprentissage` (contrat mis à jour, pas
+  affiché par les vues). Vérifié à 9 h 20 : `jours_de_donnees` 1, `actif` false. **À voir vers le 7/11** : premières
+  heures corrigées (`detail` du fichier), puis découpage par horizon et ciel clair / couvert. **Règle « figé » retirée à 9 h 07** (demande du coordinateur) : le Sonoff
   de la terrasse ne publie qu'aux changements (`last_reported` = `last_changed`, rien entre 7 h 13 et 9 h 06 ce matin,
   trous de 2 à 3 h dans l'historique du 21 au 24/10), il serait passé pour figé ; seul `unavailable` fait changer
   de capteur.
