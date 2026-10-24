@@ -304,3 +304,55 @@ def test_jetons_d_avant_retires_par_l_ipad():
     assert set(etat["push_to_start"]) == {P1, P2}
     _pts(etat, P3, IPAD, "iPad")
     assert set(etat["push_to_start"]) == {P2, P3}
+
+
+def test_activites_fermees_par_ios_apres_une_mise_a_jour():
+    """24/10/2026 : la mise à jour de l'app ferme l'activité de l'iPhone ; il renvoie son jeton avec `activites` = 0,
+    la vigie oublie son activité et le redémarre ; celle de l'iPad continue de recevoir les mises à jour."""
+    etat = l.etat_vide()
+    c = l.contenu(MA, HA)
+    _pts(etat, P1, IPAD, "iPad")
+    _pts(etat, P2, IPHONE, "iPhone")
+    l.apres_envois(etat, "start", c, [IPAD, IPHONE], 2, [], 100)
+    l.ranger_jeton(etat, {"type": "activite", "jeton": A1, "activite_id": "X", "appareil": IPAD}, 101)
+    l.ranger_jeton(etat, {"type": "activite", "jeton": A2, "activite_id": "Y", "appareil": IPHONE}, 101)
+    etat["envoye"] = c
+    assert l.envois(etat, c, None, 500) == (None, [])
+    # Valeur rendue par le modèle du script : texte « 0 ».
+    l.ranger_jeton(etat, {"type": "push_to_start", "jeton": P3, "appareil": IPHONE, "modele": "iPhone",
+                          "activites": "0"}, 1000)
+    assert set(etat["activites"]) == {"X"} and set(etat["demarres"]) == {IPAD}
+    action, liste = l.envois(etat, c, None, 1001)
+    assert action is None and [(g, j, a) for g, j, _, a, _, _ in liste] == [("start", P3, IPHONE)]
+    action, liste = l.envois(etat, {**c, "volume": 50}, None, 1002)
+    assert action == "update" and sorted((g, j) for g, j, *_ in liste) == [("activite", A1), ("start", P3)]
+
+
+def test_activites_absent_vide_ou_non_nul_ne_change_rien():
+    etat = l.etat_vide()
+    l.apres_envois(etat, "start", l.contenu(MA, HA), [IPHONE], 1, [], 100)
+    l.ranger_jeton(etat, {"type": "activite", "jeton": A2, "activite_id": "Y", "appareil": IPHONE}, 101)
+    for valeur in (None, "", "1", 2, "abc", True, -1):
+        data = {"type": "push_to_start", "jeton": P2, "appareil": IPHONE, "modele": "iPhone"}
+        if valeur is not None:
+            data["activites"] = valeur
+        l.ranger_jeton(etat, data, 1000)
+        assert set(etat["activites"]) == {"Y"} and set(etat["demarres"]) == {IPHONE}, valeur
+    # Sans appareil (app d'avant) : rien n'est oublié.
+    l.ranger_jeton(etat, {"type": "push_to_start", "jeton": P1, "activites": 0}, 1000)
+    assert set(etat["activites"]) == {"Y"}
+
+
+def test_activites_zero_garde_un_demarrage_recent():
+    """Démarrage de moins d'une minute : l'activité n'est peut-être pas encore créée, pas de second démarrage."""
+    etat = l.etat_vide()
+    c = l.contenu(MA, HA)
+    _pts(etat, P2, IPHONE, "iPhone")
+    l.apres_envois(etat, "start", c, [IPHONE], 1, [], 100)
+    l.ranger_jeton(etat, {"type": "push_to_start", "jeton": P2, "appareil": IPHONE, "activites": 0}, 100 + 30)
+    assert set(etat["demarres"]) == {IPHONE}
+    assert l.envois(etat, c, None, 131) == (None, [])
+    l.ranger_jeton(etat, {"type": "push_to_start", "jeton": P2, "appareil": IPHONE, "activites": 0},
+                   100 + l.GARDE_DEMARRAGE)
+    assert etat["demarres"] == {}
+    assert [g for g, *_ in l.envois(etat, c, None, 161)[1]] == ["start"]

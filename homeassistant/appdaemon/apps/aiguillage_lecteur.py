@@ -164,6 +164,13 @@ def entetes(priorite):
 # « Masquer l'activité quand Spotify pilote » (réglage de chaque appareil dans le Hub, activé par défaut) : envoyé avec
 # chaque jeton (`masquer_spotify`), rangé dans `reglages[appareil]`. Pendant une lecture Spotify Connect, la vigie ne
 # démarre pas l'activité sur ces appareils et termine celle qui y tourne (Spotify affiche déjà son propre lecteur).
+#
+# Activités fermées par iOS (24/10/2026) : une mise à jour de l'app ferme les activités de l'ancienne version, mais APNs
+# accepte encore (200) les mises à jour vers leurs jetons morts, et la vigie croyait l'appareil occupé pour toujours.
+# L'app envoie donc avec son jeton push-to-start (à chaque nouveau jeton et à chaque passage au premier plan) le nombre
+# d'activités en cours sur l'appareil (`activites`) : 0 → la vigie oublie les activités de cet appareil et son entrée
+# `demarres`, il redémarre au prochain passage s'il y a lecture. Absent ou vide (app d'avant) : rien ne change. Un
+# démarrage de moins de `GARDE_DEMARRAGE` s secondes est gardé (l'activité peut ne pas être encore créée sur l'appareil).
 
 def etat_vide():
     return {"push_to_start": {}, "activites": {}, "demarres": {}, "reglages": {}, "en_cours": False, "envoye": None}
@@ -179,6 +186,35 @@ def _oui_non(valeur):
     if texte in ("false", "0", "off", "non", "no"):
         return False
     return None
+
+
+GARDE_DEMARRAGE = 60
+
+
+def _nombre(valeur):
+    """Entier envoyé par le script (nombre, ou texte « 0 » rendu par le modèle) ; None si absent, vide ou invalide."""
+    if isinstance(valeur, bool):
+        return None
+    if isinstance(valeur, (int, float)):
+        return int(valeur) if valeur >= 0 else None
+    try:
+        n = int(float(str(valeur if valeur is not None else "").strip()))
+    except ValueError:
+        return None
+    return n if n >= 0 else None
+
+
+def oublier_activites(etat, appareil, maintenant):
+    """L'appareil n'a plus d'activité (iOS les a fermées) : ses activités et son démarrage (sauf récent) sont oubliés.
+    Renvoie le nombre d'activités oubliées."""
+    activites = etat.get("activites", {})
+    idents = [k for k, v in activites.items() if v.get("appareil") == appareil]
+    for ident in idents:
+        activites.pop(ident)
+    demarres = etat.get("demarres") or {}
+    if appareil in demarres and maintenant - demarres[appareil] >= GARDE_DEMARRAGE:
+        demarres.pop(appareil)
+    return len(idents)
 
 
 def masque_spotify(etat, appareil):
@@ -199,8 +235,8 @@ def cle_appareil(info, jeton):
 def ranger_jeton(etat, data, maintenant):
     """Range un jeton reçu par l'événement `hub_ipad_activite`. Renvoie le type rangé, ou None si refusé.
 
-    `push_to_start` : un par appareil (le dernier reçu) ; `activite` : le jeton d'une activité (son identifiant),
-    avec son appareil.
+    `push_to_start` : un par appareil (le dernier reçu), avec le nombre d'activités en cours sur l'appareil
+    (`activites`, 0 → `oublier_activites`) ; `activite` : le jeton d'une activité (son identifiant), avec son appareil.
     """
     jeton = str(data.get("jeton", "")).strip().lower()
     if len(jeton) < 32 or not all(ch in "0123456789abcdef" for ch in jeton):
@@ -228,6 +264,8 @@ def ranger_jeton(etat, data, maintenant):
                     i.get("appareil") == appareil or (not i.get("appareil") and modele == "iPad"))]:
                 jetons.pop(autre)
         jetons[jeton] = info
+        if _nombre(data.get("activites")) == 0:
+            oublier_activites(etat, appareil, maintenant)
         return genre
     if genre == "activite":
         ident = str(data.get("activite_id") or jeton[:16])
