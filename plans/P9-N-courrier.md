@@ -133,6 +133,20 @@ Le 24/10 vers 12 h 15, à la demande d'Alexandre : plus de phrase les jours non 
 
 ### N3 — Le cerveau du courrier (boîte perso) (2 à 3 soirées)
 
+**Codé le 24/10, à déployer après l'autorisation Google** (contrat `homeassistant/COURRIER.md`) : app
+`aiguillage_courrier` (client Gmail REST en **lecture seule**, garde-fou testé : aucune méthode d'envoi, de
+suppression, de corbeille ni de changement de libellés), relève toutes les 2 min par `history.list` (amorçage sur 2
+jours), base SQLite 90 jours (extrait de 1 500 caractères, pas le corps), ordre de décision règle apprise → règles
+sûres (onglets Gmail, en-têtes de liste, adresses noreply, mots d'action renvoyés à l'IA) → Haiku 5.5 (effort `low`,
+json_schema), apprentissage par expéditeur à partir de 4 messages, budget 15 $/mois, **mode ombre**
+(`sensor.aiguillage_courrier`, bilan à 21 h dans `/config/aiguillage_courrier_bilan.md`), 23 tests. Script
+d'autorisation à lancer une fois sur le Mac : `uv run homeassistant/scripts/courrier_autoriser.py <JSON client>`
+(portée `gmail.modify`, demandée par Alexandre ; le code n'en utilise que la lecture). **Reste** : client OAuth
+« Application de bureau » dans le projet Google Cloud « Relance » (API Gmail activée, app passée « En production »
+pour que le jeton n'expire pas au bout de 7 jours), autorisation, déploiement sur le NUC, une semaine d'ombre.
+
+Cadrage d'origine :
+
 - **App AppDaemon `aiguillage_courrier.py`** : OAuth Gmail sur le compte perso (`gmail.readonly` pour commencer ;
   `gmail.compose` pour les brouillons en N5 ; `gmail.modify` seulement si Alexandre veut que l'agent archive).
   Relève toutes les 2 minutes par l'historique Gmail (`history.list`) ; la notification immédiate de Google (Pub/Sub

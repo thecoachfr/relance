@@ -70,3 +70,19 @@ aiguillage_lieu_travail:
   module: aiguillage_lieu_travail
   class: AiguillageLieuTravail
   entite: device_tracker.iphone_17_lex
+
+# Courrier (P9-N, N3, 24/10/2026) : tri de la boîte perso alexandre.fau@gmail.com façon Dove → sensor.aiguillage_courrier
+# (contrat : homeassistant/COURRIER.md). Lecture seule de Gmail (aucun envoi, aucune suppression, aucun archivage).
+# Autorisation Google dans /config/aiguillage_courrier_google.json (écrite par homeassistant/scripts/courrier_autoriser.py,
+# jamais dans ce fichier ; sans elle, l'app attend et réessaie toutes les 10 min). Base : /config/aiguillage_courrier.sqlite
+# (90 jours) ; état (historyId, coût du mois) : /config/aiguillage_courrier_etat.json ; bilan du soir (21 h) :
+# /config/aiguillage_courrier_bilan.md. Tri IA par Claude Haiku 5.5, même clé que le tri (/config/anthropic_api_key).
+aiguillage_courrier:
+  module: aiguillage_courrier
+  class: AiguillageCourrier
+  # ombre : tout est calculé et gardé, aucune notification, rien écrit dans Gmail ni dans donnees_apps (seul mode de N3).
+  mode: ombre
+  courrier_budget_mensuel: 15
+  refresh_seconds: 120
+  # autorisation_file: /config/aiguillage_courrier_google.json
+  # workspace_id: wrkspc_…
