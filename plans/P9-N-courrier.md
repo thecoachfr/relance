@@ -90,6 +90,10 @@ Source selon N0 :
 
 ### N2 — Bureau / télétravail dans Aiguillage et les trois vues (1 à 2 soirées)
 
+- **Réglage facile (demande d'Alexandre, 24/10)** : écran « Lieu de travail » (Réglages, et toucher le bandeau) :
+  la semaine type jour par jour (Bureau / Le Lab / Télétravail / Pas Barrière, « probable » en option) et les 14
+  prochains jours, chacun changé d'un toucher (exception écrite dans `config:lieu_travail`, version attendue).
+  Le Lab (Saint-Ouen, moins d'une fois par mois, irrégulier) : un toucher sur le jour, ou Signal « jeudi au Lab ».
 - **Aiguillage (iPhone, iPad, Mac)** : bandeau en tête de « À faire » : « 🏢 Bureau aujourd'hui · demain télétravail ».
   Dans la vue par jours, la pastille du lieu à côté de chaque date.
 - **Tâches « au bureau » / « à la maison »** : nouveau champ facultatif `contexte` (`bureau` | `maison`), ligne

@@ -12,32 +12,33 @@ compte pro ajouté au Calendrier d'iOS montre les événements mais pas le « li
 ## Sources, de la plus forte à la plus faible
 
 1. **Position** : l'iPhone (`device_tracker.iphone_17_lex`) à moins de 300 m (plus la précision GPS, plafonnée à
-   300 m) d'un lieu du groupe « Travail » de Mes lieux (`config:lieux`, aujourd'hui 33 rue d'Artois) → `bureau` pour la
-   journée. À 16 h : un jour travaillé où il était à la maison à 11 h et à 15 h, sans passer au bureau → `teletravail`.
-2. **Exception** (`config:lieu_travail` › `exceptions`, `{"AAAA-MM-JJ": "bureau" | "teletravail" | "off"}`), dite :
+   300 m) d'un lieu du groupe « Travail » de Mes lieux (`config:lieux`) → `bureau` (33 rue d'Artois) ou `lab` (lieu
+   dont le nom contient « Lab » : Le Lab, Saint-Ouen, moins d'une fois par mois, à ajouter dans Mes lieux) pour la
+   journée ; le Lab l'emporte si les deux sont vus. À 16 h : un jour travaillé où il était à la maison à 11 h et à 15 h, sans passer au bureau → `teletravail`.
+2. **Exception** (`config:lieu_travail` › `exceptions`, `{"AAAA-MM-JJ": "bureau" | "lab" | "teletravail" | "off"}`), dite :
    - sur Signal, « Note à moi-même », message fait seulement d'un jour et d'un lieu : « demain télétravail »,
      « mercredi je suis au bureau », « le 6/11 congé », « vendredi 7 bureau », « congé du 2/11 au 6/11 »,
-     « lundi normal » (annule). Réponse « ✅ Mardi 27/10 : 🏢 Bureau (au lieu de 🏠 Télétravail) ». Tout autre
+     « jeudi au Lab », « le 5/11 à Saint-Ouen », « lundi normal » (annule). Réponse « ✅ Mardi 27/10 : 🏢 Bureau (au lieu de 🏠 Télétravail) ». Tout autre
      message est ignoré ;
    - plus tard depuis Aiguillage (lot N2), en écrivant le même enregistrement (avec `version_attendue`).
 3. **Semaine type** (`config:lieu_travail` › `semaine`) : lundi bureau (sûr), mardi télétravail, mercredi bureau
-   (probable, 70 %), jeudi télétravail, vendredi `off` (4/5) ; `premier_vendredi` du mois : bureau (probable) ;
+   (probable, 70 %), jeudi télétravail, vendredi `off` (4/5) ; `premier_vendredi` du mois : bureau (sûr, confirmé le 24/10) ;
    samedi, dimanche, jours fériés de métropole : `off` / `ferie`.
 
 ## État et attributs
 
-- **État** : lieu du jour, `bureau` | `teletravail` | `off` (pas un jour Barrière) | `ferie`.
+- **État** : lieu du jour, `bureau` | `lab` | `teletravail` | `off` (pas un jour Barrière) | `ferie`.
 - `aujourdhui`, `demain`, `jours` (14 jours à partir d'aujourd'hui) : `{date, jour, lieu, certitude, source, libelle}`,
   plus `prevu` quand la position a contredit la prévision.
   - `certitude` : `sur`, `probable` (le libellé finit par « ? »), `constate` (position).
   - `source` : `semaine`, `premier_vendredi`, `exception`, `ferie`, `position`.
-  - `libelle` : « 🏢 Bureau », « 🏢 Bureau ? », « 🏠 Télétravail », « Pas Barrière », « Férié ».
+  - `libelle` : « 🏢 Bureau », « 🏢 Bureau ? », « 🧪 Le Lab », « 🏠 Télétravail », « Pas Barrière », « Férié ».
 - `phrase` : en-tête prêt à afficher, par exemple « 🏢 Bureau aujourd'hui · demain 🏠 Télétravail » ou « Pas de
   Barrière aujourd'hui · lundi 🏢 Bureau ».
 - `stats` : par jour ouvré, constats des 8 dernières semaines `{bureau, teletravail}`.
 - `suggestion` : une phrase quand la semaine type contredit au moins 75 % de 4 constats ou plus (« Le mercredi, tu
   étais en télétravail 4 fois sur 4 : passer le mercredi en Télétravail ? »), sinon `null`.
-- `bureau` : les points « Travail » utilisés ; `maj`.
+- `bureau` : les points « Travail » utilisés `{nom, lat, lon, lieu}` ; `maj`.
 
 Recalcul toutes les 15 min, à minuit, à chaque passage au bureau, à chaque consigne, et sur l'événement
 `aiguillage_lieu_travail_maj`. Publication par l'API REST de HA (comme `sensor.hub_meteo`).

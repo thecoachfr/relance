@@ -4,12 +4,13 @@ L'agenda pro (Google Workspace de Barrière) est fermé : partage des détails i
 travail absent du Calendrier d'iOS. Le lieu vient donc de trois sources, de la plus forte à la plus faible :
 
 1. **Position** (constaté) : l'iPhone (`device_tracker.iphone_17_lex`) passé à moins de 300 m d'un lieu du groupe
-   « Travail » de Mes lieux (`config:lieux`, 33 rue d'Artois) → bureau ; un jour travaillé où il est resté à la
+   « Travail » de Mes lieux (`config:lieux`) → bureau (33 rue d'Artois) ou lab (un lieu dont le nom contient « Lab » :
+   Le Lab, Saint-Ouen, moins d'une fois par mois) ; un jour travaillé où il est resté à la
    maison (vu à la maison à 11 h et à 15 h, jamais au bureau) → télétravail.
 2. **Exception** dite par Alexandre : « Note à moi-même » sur Signal (« demain télétravail », « mercredi bureau »,
    « congé du 3/11 au 7/11 », « demain normal » pour annuler) ou, plus tard, depuis Aiguillage (N2).
 3. **Semaine type** : lundi bureau (sûr), mercredi bureau (probable, 70 %), mardi et jeudi télétravail, vendredi
-   pas travaillé (4/5) sauf le premier du mois ; samedi, dimanche et jours fériés : pas travaillé.
+   pas travaillé (4/5) sauf le premier du mois (bureau) ; samedi, dimanche et jours fériés : pas travaillé.
 
 Réglages et exceptions dans `donnees_apps` (espace `aiguillage`, clé `config:lieu_travail`), créés avec les valeurs
 ci-dessus s'ils manquent ; constats dans `/config/aiguillage_lieu_travail.json` (120 jours), d'où les statistiques
@@ -35,9 +36,10 @@ GARDE_CONSTATS_JOURS = 120
 GARDE_EXCEPTIONS_JOURS = 30
 
 JOURS = ("lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche")
-LIEUX = ("bureau", "teletravail", "off")
-LIBELLES = {"bureau": "🏢 Bureau", "teletravail": "🏠 Télétravail", "off": "Pas Barrière", "ferie": "Férié"}
-COURTS = {"bureau": "Bureau", "teletravail": "Télétravail", "off": "Pas Barrière", "ferie": "Férié"}
+LIEUX = ("bureau", "lab", "teletravail", "off")
+TRAVAILLES = ("bureau", "lab", "teletravail")
+LIBELLES = {"bureau": "🏢 Bureau", "lab": "🧪 Le Lab", "teletravail": "🏠 Télétravail", "off": "Pas Barrière", "ferie": "Férié"}
+COURTS = {"bureau": "Bureau", "lab": "Le Lab", "teletravail": "Télétravail", "off": "Pas Barrière", "ferie": "Férié"}
 
 CONFIG_DEFAUT = {
     "v": 1,
@@ -50,8 +52,8 @@ CONFIG_DEFAUT = {
         "samedi": {"lieu": "off", "certitude": "sur"},
         "dimanche": {"lieu": "off", "certitude": "sur"},
     },
-    # Premier vendredi du mois : travaillé (lieu à confirmer avec Alexandre).
-    "premier_vendredi": {"lieu": "bureau", "certitude": "probable"},
+    # Premier vendredi du mois : au bureau (confirmé par Alexandre le 24/10).
+    "premier_vendredi": {"lieu": "bureau", "certitude": "sur"},
     "exceptions": {},
 }
 
@@ -139,7 +141,7 @@ def jour_info(jour, conf, constats):
     lieu, certitude, source = prevu(jour, conf)
     constat = constats.get(jour.isoformat())
     attendu = lieu
-    if constat in ("bureau", "teletravail"):
+    if constat in TRAVAILLES:
         lieu, certitude, source = constat, "constate", "position"
     libelle = LIBELLES[lieu] + (" ?" if certitude == "probable" else "")
     info = {"date": jour.isoformat(), "jour": JOURS[jour.weekday()], "lieu": lieu, "certitude": certitude,
@@ -162,7 +164,7 @@ def phrase(infos):
         tete = "Pas de Barrière aujourd'hui" if du_jour["lieu"] == "off" else "Férié aujourd'hui"
     else:
         tete = f"{du_jour['libelle']} aujourd'hui"
-    suivant = next((i for i in infos[1:] if i["lieu"] in ("bureau", "teletravail")), None)
+    suivant = next((i for i in infos[1:] if i["lieu"] in TRAVAILLES), None)
     if not suivant:
         return tete
     ecart = (date.fromisoformat(suivant["date"]) - date.fromisoformat(du_jour["date"])).days
@@ -182,32 +184,37 @@ def distance_m(lat1, lon1, lat2, lon2):
 
 
 def lieux_travail(config_lieux):
-    """Points du groupe « Travail » de Mes lieux : [(lat, lon, nom)]."""
+    """Points du groupe « Travail » de Mes lieux : [(lat, lon, nom, lieu)], `lieu` = « lab » si le nom contient
+    « Lab » (Le Lab, Saint-Ouen), sinon « bureau »."""
     points = []
     for groupe in (config_lieux or {}).get("groupes") or []:
         if sans_accents(groupe.get("nom") or "").strip() == GROUPE_TRAVAIL:
             for lieu in groupe.get("lieux") or []:
                 if isinstance(lieu.get("lat"), (int, float)) and isinstance(lieu.get("lon"), (int, float)):
-                    points.append((lieu["lat"], lieu["lon"], lieu.get("nom") or "Bureau"))
+                    nom = lieu.get("nom") or "Bureau"
+                    genre = "lab" if re.search(r"\blab\b", sans_accents(nom)) else "bureau"
+                    points.append((lieu["lat"], lieu["lon"], nom, genre))
     return points
 
 
-def au_bureau(attributs, points, rayon=RAYON_BUREAU_M):
-    """Position de l'app Compagnon dans un lieu « Travail » (précision déduite, plafonnée à 300 m de plus)."""
+def au_travail(attributs, points, rayon=RAYON_BUREAU_M):
+    """Lieu « Travail » où se trouve l'app Compagnon (« bureau » ou « lab »), ou None (rayon augmenté de la
+    précision GPS, plafonnée à 300 m)."""
     lat, lon = attributs.get("latitude"), attributs.get("longitude")
     if not isinstance(lat, (int, float)) or not isinstance(lon, (int, float)):
-        return False
+        return None
     precision = min(float(attributs.get("gps_accuracy") or 0), 300.0)
-    return any(distance_m(lat, lon, plat, plon) <= rayon + precision for plat, plon, _ in points)
+    proches = sorted((distance_m(lat, lon, plat, plon), genre) for plat, plon, _, genre in points)
+    return proches[0][1] if proches and proches[0][0] <= rayon + precision else None
 
 
-def constat_du_soir(jour, conf, vu_bureau, maison_11h, maison_15h):
-    """Constat de fin de journée (16 h) : bureau si l'iPhone y est passé ; télétravail si un jour travaillé il était
-    à la maison à 11 h et à 15 h ; sinon rien (journée hors des deux, ou pas travaillée)."""
-    if vu_bureau:
-        return "bureau"
+def constat_du_soir(jour, conf, vu, maison_11h, maison_15h):
+    """Constat de fin de journée (16 h) : `vu` (« bureau » ou « lab ») si l'iPhone y est passé ; télétravail si un
+    jour travaillé il était à la maison à 11 h et à 15 h ; sinon rien (journée ailleurs, ou pas travaillée)."""
+    if vu in ("bureau", "lab"):
+        return vu
     lieu, _, _ = prevu(jour, conf)
-    if lieu in ("bureau", "teletravail") and maison_11h and maison_15h:
+    if lieu in TRAVAILLES and maison_11h and maison_15h:
         return "teletravail"
     return None
 
@@ -254,6 +261,7 @@ def sans_accents(texte):
 MOTS_LIEU = (
     (r"pas barriere|pas travaille|ne travaille pas|conges?|off|repos|vacances|rtt|ferie", "off"),
     (r"teletravail|tele travail|tt|a la maison|maison|domicile", "teletravail"),
+    (r"au lab|le lab|lab|saint-ouen|saint ouen|st ouen|st-ouen", "lab"),
     (r"au bureau|bureau|sur site|artois", "bureau"),
     (r"normal|comme prevu|annule|annuler", "normal"),
 )
@@ -443,7 +451,7 @@ if hass is not None:
         def _du_jour(self):
             aujourdhui = datetime.now(PARIS).date().isoformat()
             if self._etat["jour"].get("date") != aujourdhui:
-                self._etat["jour"] = {"date": aujourdhui, "vu_bureau": False, "maison_11h": False, "maison_15h": False}
+                self._etat["jour"] = {"date": aujourdhui, "vu": None, "maison_11h": False, "maison_15h": False}
             return self._etat["jour"]
 
         def _service(self, domain, service, data):
@@ -488,11 +496,11 @@ if hass is not None:
                 self._points = lieux_travail(lieux)
                 du_jour = self._du_jour()
                 constats = dict(self._etat["constats"])
-                if du_jour.get("vu_bureau"):
-                    constats[du_jour["date"]] = "bureau"
+                if du_jour.get("vu"):
+                    constats[du_jour["date"]] = du_jour["vu"]
                 etat, attributs = calculer(maintenant.date(), conf, constats, maintenant)
                 attributs.update(friendly_name="Lieu de travail", icon=ICONES.get(etat, "mdi:briefcase"),
-                                 bureau=[{"nom": n, "lat": la, "lon": lo} for la, lo, n in self._points])
+                                 bureau=[{"nom": n, "lat": la, "lon": lo, "lieu": g} for la, lo, n, g in self._points])
                 self._publier(etat, attributs)
             except Exception as exc:  # noqa: BLE001 - le capteur garde sa dernière valeur
                 self.log(f"Lieu de travail : calcul impossible ({exc!r})", level="WARNING")
@@ -502,13 +510,14 @@ if hass is not None:
 
         def _position(self, entity, attribute, old, new, **kwargs):
             attributs = (new or {}).get("attributes") or {}
-            if not self._points or not au_bureau(attributs, self._points):
+            ou = au_travail(attributs, self._points) if self._points else None
+            if not ou:
                 return
             du_jour = self._du_jour()
-            if not du_jour["vu_bureau"]:
-                du_jour["vu_bureau"] = True
+            if du_jour.get("vu") != ou and not (du_jour.get("vu") == "lab" and ou == "bureau"):  # le Lab prime
+                du_jour["vu"] = ou
                 self._ecrire_etat()
-                self.log("Lieu de travail : iPhone au bureau, journée constatée « bureau »")
+                self.log(f"Lieu de travail : iPhone sur place, journée constatée « {ou} »")
                 self._maj()
 
         def _echantillon(self, **kwargs):
@@ -521,7 +530,7 @@ if hass is not None:
             try:
                 conf, _ = self._config()
                 du_jour = self._du_jour()
-                constat = constat_du_soir(maintenant.date(), conf, du_jour["vu_bureau"], du_jour["maison_11h"],
+                constat = constat_du_soir(maintenant.date(), conf, du_jour.get("vu"), du_jour["maison_11h"],
                                           du_jour["maison_15h"])
                 if constat:
                     self._etat["constats"][du_jour["date"]] = constat

@@ -13,7 +13,8 @@ SAMEDI = date(2026, 10, 24)
 # Mes lieux réel du 22/10 (extrait).
 LIEUX = {"groupes": [
     {"id": "supermarches", "nom": "Supermarchés", "lieux": [{"nom": "Monoprix", "lat": 48.8068, "lon": 2.4186}]},
-    {"id": "x", "nom": "Travail", "lieux": [{"nom": "33 Rue d'Artois, 75008 Paris", "lat": 48.8738262, "lon": 2.3059674}]},
+    {"id": "x", "nom": "Travail", "lieux": [{"nom": "33 Rue d'Artois, 75008 Paris", "lat": 48.8738262, "lon": 2.3059674},
+                                     {"nom": "Le Lab", "lat": 48.9120, "lon": 2.3340}]},
 ]}
 
 
@@ -37,7 +38,7 @@ def test_semaine_type():
     assert lieu(date(2026, 10, 27)) == ("teletravail", "sur", "semaine")     # mardi
     assert lieu(date(2026, 10, 28)) == ("bureau", "probable", "semaine")     # mercredi
     assert lieu(date(2026, 10, 30)) == ("off", "sur", "semaine")             # vendredi ordinaire
-    assert lieu(date(2026, 11, 6)) == ("bureau", "probable", "premier_vendredi")
+    assert lieu(date(2026, 11, 6)) == ("bureau", "sur", "premier_vendredi")
     assert lieu(SAMEDI) == ("off", "sur", "semaine")
     assert lieu(date(2026, 11, 11)) == ("ferie", "sur", "ferie")             # mercredi férié
 
@@ -65,10 +66,11 @@ def test_config_abimee_et_premier_vendredi_desactive():
 
 def test_lieux_travail_et_au_bureau():
     points = m.lieux_travail(LIEUX)
-    assert len(points) == 1
-    assert m.au_bureau({"latitude": 48.8740, "longitude": 2.3062, "gps_accuracy": 20}, points)
-    assert not m.au_bureau({"latitude": 48.8086, "longitude": 2.4177, "gps_accuracy": 10}, points)  # maison
-    assert not m.au_bureau({"latitude": 48.8738}, points)
+    assert [p[3] for p in points] == ["bureau", "lab"]
+    assert m.au_travail({"latitude": 48.8740, "longitude": 2.3062, "gps_accuracy": 20}, points) == "bureau"
+    assert m.au_travail({"latitude": 48.9121, "longitude": 2.3341, "gps_accuracy": 15}, points) == "lab"
+    assert m.au_travail({"latitude": 48.8086, "longitude": 2.4177, "gps_accuracy": 10}, points) is None  # maison
+    assert m.au_travail({"latitude": 48.8738}, points) is None
     assert m.lieux_travail(None) == []
 
 
@@ -80,11 +82,12 @@ def test_constat_l_emporte():
 
 def test_constat_du_soir():
     lundi, vendredi = date(2026, 10, 26), date(2026, 10, 30)
-    assert m.constat_du_soir(lundi, CONF, True, False, False) == "bureau"
-    assert m.constat_du_soir(lundi, CONF, False, True, True) == "teletravail"
-    assert m.constat_du_soir(lundi, CONF, False, True, False) is None       # parti l'après-midi : on ne sait pas
-    assert m.constat_du_soir(vendredi, CONF, False, True, True) is None     # pas travaillé
-    assert m.constat_du_soir(vendredi, CONF, True, False, False) == "bureau"
+    assert m.constat_du_soir(lundi, CONF, "bureau", False, False) == "bureau"
+    assert m.constat_du_soir(lundi, CONF, "lab", False, False) == "lab"
+    assert m.constat_du_soir(lundi, CONF, None, True, True) == "teletravail"
+    assert m.constat_du_soir(lundi, CONF, None, True, False) is None       # parti l'après-midi : on ne sait pas
+    assert m.constat_du_soir(vendredi, CONF, None, True, True) is None     # pas travaillé
+    assert m.constat_du_soir(vendredi, CONF, "bureau", False, False) == "bureau"
 
 
 def test_stats_et_suggestion():
@@ -109,6 +112,8 @@ def test_lire_exception():
     assert lire("vendredi 6 bureau") == [(date(2026, 11, 6), "bureau")]  # le 6/10 est passé : novembre
     assert lire("lundi normal") == [(date(2026, 10, 26), "normal")]
     assert lire("lundi TT") == [(date(2026, 10, 26), "teletravail")]
+    assert lire("jeudi au Lab") == [(date(2026, 10, 29), "lab")]
+    assert lire("le 5/11 à Saint-Ouen") == [(date(2026, 11, 5), "lab")]
     assert len(lire("congé du 2/11 au 6/11")) == 5
     assert lire("demain on va au resto au bureau de tabac") is None
     assert lire("bureau") is None
@@ -149,3 +154,13 @@ def test_calculer():
     assert attr["demain"]["lieu"] == "teletravail" and len(attr["jours"]) == 14
     assert attr["phrase"].startswith("🏢 Bureau aujourd'hui")
     assert attr["suggestion"] is None
+
+
+def test_lab():
+    jeudi = date(2026, 10, 29)
+    conf = m.appliquer(CONF, [(jeudi, "lab")])
+    info = m.jour_info(jeudi, conf, {})
+    assert (info["lieu"], info["libelle"]) == ("lab", "🧪 Le Lab")
+    assert m.phrase(m.jours(date(2026, 10, 28), conf, {})).endswith("demain 🧪 Le Lab")
+    assert m.reponse([(jeudi, "lab")], CONF, conf) == "✅ Jeudi 29/10 : 🧪 Le Lab (au lieu de 🏠 Télétravail)"
+    assert m.jour_info(date(2026, 10, 27), CONF, {"2026-10-27": "lab"})["lieu"] == "lab"
