@@ -16,8 +16,10 @@ Aiguillage et Signal (le chat Claude reste possible pour les gros travaux, sans 
 5. Plus tard, si le besoin reste : un client Mac léger (lecture, envoi, agent). Aiguillage **ne devient pas** le
    logiciel de mail : la lecture complète et l'écriture restent dans Gmail.
 
-Règle de l'agent sur tous les canaux : **il prépare, Alexandre valide**. Aucun envoi, aucune suppression, aucun
-archivage sans accord, au moins jusqu'à la fin de la période d'ombre.
+Règle de l'agent sur tous les canaux (**décision d'Alexandre du 24/10, permanente**) : **aucun envoi de mail sans
+son accord explicite, pour ce mail-là** ; créer des brouillons est permis. Pas de suppression ni d'archivage sans
+accord non plus. Le code doit l'imposer (pas seulement la consigne) : l'outil d'envoi n'existe que derrière une
+validation d'Alexandre (bouton dans Aiguillage ou « ok » sur Signal en réponse à ce brouillon).
 
 ## 2. Ce qui existe (constat du 24/10)
 
@@ -137,7 +139,7 @@ Source selon N0 :
   actuel : envies). Préfixe à trancher (section 5).
 - **Agent** : Sonnet 5.5, outils limités : chercher dans la base et dans Gmail, lire un fil, résumer, préparer un
   brouillon (dans les Brouillons Gmail), créer ou dater une tâche Aiguillage, lire `sensor.aiguillage_lieu_travail`.
-  **Envoi seulement après « ok » d'Alexandre** sur Signal ou dans Aiguillage.
+  **Envoi seulement après accord explicite d'Alexandre pour ce brouillon** (section 1) ; brouillons permis.
 - Le champ « Demander à l'agent » d'Aiguillage appelle le même agent, avec le mail de la carte comme contexte ; la
   réponse revient dans la fiche.
 
