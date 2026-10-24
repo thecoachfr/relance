@@ -193,6 +193,12 @@ Code fait et fusionné dans `main` (désactivé tant qu'on ne bascule pas dans l
 9. **Suggestions d'envies, à essayer en vrai** : recevoir une suggestion (régler un créneau quelques minutes plus tard), « Ouvrir » ouvre bien YouTube / Spotify, « Pas maintenant » propose une autre envie au créneau suivant.
 8. **Envies (15/10), à essayer en vrai** : partager une vidéo YouTube, un album Spotify, un article Safari (type deviné, titre de la page) ; « Dis Siri, nouvelle Relance » → « Dune à regarder » ; même phrase à la montre (le tri doit ranger « Dune » dans À regarder et retirer « (à regarder) ») ; dictée Google Home « … à lire » ; vérifier qu'une envie n'apparaît pas sur le Nest Hub.
 
+- **Nest Hub, onglet Météo (24/10, maquette validée par Alexandre)** : carte légère prête dans la copie locale
+  `nest-hub-leger-card.js` (146 429 octets, shasum `9b56fee7`), **non déployée** : `sensor.hub_meteo` (app AppDaemon
+  `hub_meteo`) n'existait pas encore dans HA. Onglets Accueil, Audio, Maison, Météo, À faire ; pastille de pluie avant
+  « N à faire » sur l'Accueil ; la météo de l'Accueil et du plein écran lit `sensor.hub_meteo`. Vérifié au banc
+  (`/tmp/banc-meteo`). Détail et déploiement : `CLAUDE-nest-hub-entree.md`, section « Onglet Météo ».
+
 ## 3. Idées et pistes (non faites)
 
 ### Assistance par Claude dans l'app (« option 1 »)
