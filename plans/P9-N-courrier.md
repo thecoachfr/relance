@@ -93,9 +93,10 @@ Source selon N0 :
 **Fait le 24/10 côté Aiguillage et HA** (le Hub reste) :
 - bandeau `phrase` en tête de « À faire » (iPhone, iPad, Mac), toucher → écran « Lieu de travail » ; aussi dans
   Réglages › Lieu de travail (iPhone, iPad) et Réglages › Lieu de travail (Mac). Les 14 jours (un toucher : Bureau /
-  Le Lab / Télétravail / Pas Barrière / « Comme prévu »), la semaine type (lieu + « probable ») et le premier vendredi.
+  Le Lab / Télétravail / Repos / « Comme prévu »), la semaine type (lieu + « probable ») et le premier vendredi.
   Écriture de `config:lieu_travail` par la synchro (version attendue, champs inconnus gardés, conflit réglé en
   réappliquant la modification sur la valeur de HA) ;
+  bandeau caché les jours non travaillés (`phrase` nulle, changement du capteur du 24/10) ; `off` s'appelle « Repos » ;
 - `aiguillage_lieu_travail` écoute `donnees_apps_modifie` (`config:lieu_travail`, `config:lieux`) : capteur recalculé
   en moins d'une seconde après une écriture (mesuré le 24/10 vers 12 h 06) ;
 - champ `contexte` (`bureau` | `maison`, ligne `🏢 Au bureau` / `🏠 À la maison`) : « Où la faire » dans la fiche, date

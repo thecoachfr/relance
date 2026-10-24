@@ -1,18 +1,19 @@
 import SwiftUI
 
 /// Bandeau en tête de « À faire » (P9-N2, 24/10/2026) : la `phrase` de `sensor.aiguillage_lieu_travail`, telle quelle
-/// (« 🏢 Bureau aujourd'hui · demain 🏠 Télétravail »). Caché en mode Google Tasks ou si le capteur manque.
+/// (« 🏢 Bureau aujourd'hui · demain 🏠 Télétravail »). Caché en mode Google Tasks, si le capteur manque, ou si
+/// `phrase` est nulle ou vide (jours non travaillés, depuis le 24/10).
 /// Le toucher ouvre l'écran « Lieu de travail ».
 struct LieuTravailBandeau: View {
     @Environment(TaskStore.self) private var store
     @State private var ouvert = false
 
     var body: some View {
-        if store.isHAActive, let lieu = store.lieuTravail {
+        if store.isHAActive, let phrase = store.lieuTravail?.bandeau {
             Section {
                 Button { ouvert = true } label: {
                     HStack(spacing: 8) {
-                        Text(lieu.phrase)
+                        Text(phrase)
                             .font(.subheadline.weight(.medium))
                             .foregroundStyle(.primary)
                             .multilineTextAlignment(.leading)
@@ -51,7 +52,7 @@ struct LieuTravailView: View {
     @State private var enAttente: [String: String?] = [:]
 
     private static let choix: [(lieu: String, nom: String)] =
-        [("bureau", "🏢 Bureau"), ("lab", "🧪 Le Lab"), ("teletravail", "🏠 Télétravail"), ("off", "Pas Barrière")]
+        [("bureau", "🏢 Bureau"), ("lab", "🧪 Le Lab"), ("teletravail", "🏠 Télétravail"), ("off", "Repos")]
 
     var body: some View {
         Form {
@@ -91,7 +92,7 @@ struct LieuTravailView: View {
         } header: {
             Text("Les 14 prochains jours")
         } footer: {
-            Text("Touche un jour pour le changer. « Comme prévu » retire le changement. Aussi par Signal, « Note à moi-même » : « jeudi au Lab », « demain télétravail ».")
+            Text("Touche un jour pour le changer (« Repos » : pas un jour de travail). « Comme prévu » retire le changement. Aussi par Signal, « Note à moi-même » : « jeudi au Lab », « demain télétravail ».")
         }
     }
 

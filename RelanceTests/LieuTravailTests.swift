@@ -12,7 +12,7 @@ struct LieuTravailTests {
     }()
 
     static func jour(_ date: String, _ lieu: String, certitude: String = "sur", source: String = "semaine") -> [String: Any] {
-        let libelles = ["bureau": "🏢 Bureau", "lab": "🧪 Le Lab", "teletravail": "🏠 Télétravail", "off": "Pas Barrière",
+        let libelles = ["bureau": "🏢 Bureau", "lab": "🧪 Le Lab", "teletravail": "🏠 Télétravail", "off": "Repos",
                         "ferie": "Férié"]
         return ["date": date, "jour": "x", "lieu": lieu, "certitude": certitude, "source": source,
                 "libelle": libelles[lieu]! + (certitude == "probable" ? " ?" : "")]
@@ -40,8 +40,16 @@ struct LieuTravailTests {
         #expect(lieu.jours.count == 7 && lieu.suggestion == nil && lieu.maj == "2026-10-24T11:57:29+02:00")
         #expect(lieu.jours[4].libelle == "🏢 Bureau ?" && lieu.jours[5].estTravaille && !lieu.jours[0].estTravaille)
         #expect(lieu.jour(Self.date("2026-10-27"), calendar: Self.paris)?.lieu == "teletravail")
-        // Indisponible, sans phrase ou illisible : pas de bandeau.
-        for brut in [#"{"state":"unavailable","attributes":{}}"#, #"{"state":"off","attributes":{"phrase":""}}"#, "x"] {
+        #expect(lieu.bandeau == lieu.phrase)
+        #expect(ConfigLieuTravail.libelle("off") == "Repos")
+        // Jour non travaillé : `phrase` nulle ou vide, bandeau caché, mais les jours restent lisibles (écran, fiche).
+        for phrase in ["null", #""""#, #"" ""#] {
+            let brut = #"{"state":"off","attributes":{"phrase":\#(phrase),"jours":[{"date":"2026-10-24","jour":"samedi","lieu":"off","certitude":"sur","source":"semaine","libelle":"Repos"}]}}"#
+            let repos = try #require(LieuTravail(etatHA: Data(brut.utf8)))
+            #expect(repos.bandeau == nil && repos.jours.count == 1)
+        }
+        // Indisponible, vide ou illisible : rien.
+        for brut in [#"{"state":"unavailable","attributes":{}}"#, #"{"state":"off","attributes":{"phrase":null}}"#, "x"] {
             #expect(LieuTravail(etatHA: Data(brut.utf8)) == nil)
         }
     }

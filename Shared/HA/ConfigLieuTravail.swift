@@ -137,7 +137,7 @@ nonisolated struct ConfigLieuTravail: Equatable, Sendable {
         case "lab": "🧪 Le Lab"
         case "teletravail": "🏠 Télétravail"
         case "ferie": "Férié"
-        default: "Pas Barrière"
+        default: "Repos"   // `off`, « Pas Barrière » avant le 24/10
         }
     }
 }

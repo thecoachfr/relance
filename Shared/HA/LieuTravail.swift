@@ -18,7 +18,8 @@ nonisolated struct LieuTravail: Codable, Equatable, Sendable {
         var certitude: String
         /// `semaine`, `premier_vendredi`, `exception`, `ferie` ou `position`.
         var source: String
-        /// « 🏢 Bureau », « 🏢 Bureau ? », « 🧪 Le Lab », « 🏠 Télétravail », « Pas Barrière », « Férié ».
+        /// « 🏢 Bureau », « 🏢 Bureau ? », « 🧪 Le Lab », « 🏠 Télétravail », « Repos » (ex-« Pas Barrière »,
+        /// renommé le 24/10), « Férié ».
         var libelle: String
         /// Lieu prévu quand la position l'a contredit.
         var prevu: String?
@@ -34,30 +35,36 @@ nonisolated struct LieuTravail: Codable, Equatable, Sendable {
     static let intervalle: TimeInterval = 15 * 60
 
     var etat: String
-    var phrase: String
+    /// En-tête prêt à afficher ; `nil` les jours non travaillés (repos, férié) : le bandeau se cache (24/10).
+    var phrase: String?
     var jours: [Jour]
     var suggestion: String?
     var maj: String?
 
     // MARK: - Lecture
 
+    /// Le texte du bandeau de « À faire » : `phrase` si elle est là et non vide, sinon `nil` (bandeau caché).
+    var bandeau: String? { phrase.flatMap { $0.trimmingCharacters(in: .whitespaces).isEmpty ? nil : $0 } }
+
     /// Le capteur d'après la réponse de `GET /api/states/<entité>` ; `nil` s'il est indisponible ou illisible.
+    /// `phrase` peut valoir null (jour non travaillé) : les 14 jours restent lisibles pour l'écran et la fiche.
     init?(etatHA data: Data) {
         guard let racine = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let etat = racine["state"] as? String, !["unavailable", "unknown", ""].contains(etat),
-              let attributs = racine["attributes"] as? [String: Any],
-              let phrase = attributs["phrase"] as? String, !phrase.isEmpty else { return nil }
+              let attributs = racine["attributes"] as? [String: Any] else { return nil }
+        let phrase = (attributs["phrase"] as? String).flatMap { $0.isEmpty ? nil : $0 }
         let jours = (attributs["jours"] as? [Any] ?? []).compactMap { brut -> Jour? in
             guard let objet = brut as? [String: Any],
                   let donnees = try? JSONSerialization.data(withJSONObject: objet) else { return nil }
             return try? JSONDecoder().decode(Jour.self, from: donnees)
         }
+        guard phrase != nil || !jours.isEmpty else { return nil }
         (self.etat, self.phrase, self.jours) = (etat, phrase, jours)
         suggestion = attributs["suggestion"] as? String
         maj = attributs["maj"] as? String
     }
 
-    init(etat: String, phrase: String, jours: [Jour], suggestion: String? = nil, maj: String? = nil) {
+    init(etat: String, phrase: String?, jours: [Jour], suggestion: String? = nil, maj: String? = nil) {
         (self.etat, self.phrase, self.jours, self.suggestion, self.maj) = (etat, phrase, jours, suggestion, maj)
     }
 
