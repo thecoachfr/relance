@@ -161,3 +161,19 @@ Déployés vers 22 h 30 (sauvegardes `aiguillage_courrier.py.avant-bilan-2026102
   sur deux n'est jamais rétrogradé en lettre ou bruit (on lui répond ailleurs que dans Gmail, par exemple dans la
   messagerie leboncoin). Avant la correction, ce grand rangement avait appris 7 règles fausses, dont les deux
   acheteurs leboncoin rangés en « lettre » ; elles ont disparu à la relève suivante.
+
+
+## Libellés du tri dans Gmail (24/10, vers 23 h 30, accord d'Alexandre)
+
+Pour voir le tri dans Gmail pendant l'ombre : libellés `Tri/À traiter` (rouge), `Tri/Lettre` (bleu), `Tri/Bruit`
+(gris), sous un parent `Tri`, créés par l'app au premier passage. Chaque message trié reçoit le libellé de sa catégorie
+(`synchroniser_libelles`, à chaque relève, 40 messages par passe) ; un « à traiter » devenu `fait` (répondu, archivé,
+remplacé, expiré) perd son libellé rouge ; les autres `fait` gardent celui de leur tri. Rattrapage sur les 2 jours
+précédant la mise en route (`etat.libelles_depuis`). Colonne `libelle` de la base : libellé posé.
+
+**Seule écriture dans Gmail** : `ClientGmail.poser_libelles` refuse tout libellé hors de ces trois (INBOX, UNREAD,
+TRASH, libellés d'Alexandre) avant tout appel ; `creer_libelle` ne crée que `Tri` et ses trois enfants. Rien n'est
+archivé, déplacé ni marqué lu. Toujours aucune méthode d'envoi, de brouillon, de suppression ni de corbeille (test
+`test_garde_fou_lecture_seule`). Pour couper : `libelles: false` dans le bloc `apps.yaml` ; pour effacer, supprimer les
+libellés dans Gmail. Premier passage vérifié : 4 libellés créés, 77 messages libellés en deux relèves (environ 27 s
+chacune, avertissement d'AppDaemon le temps du rattrapage seulement), Enedis en `Tri/À traiter`.

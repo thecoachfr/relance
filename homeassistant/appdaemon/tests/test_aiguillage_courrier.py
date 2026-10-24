@@ -437,15 +437,16 @@ def test_client_jeton_refuse_et_rafraichi():
 
 def test_garde_fou_lecture_seule():
     publiques = {n for n, _ in inspect.getmembers(c.ClientGmail, inspect.isfunction) if not n.startswith("_")}
-    assert publiques == {"profil", "historique", "lister", "message", "fil"}
+    assert publiques == {"profil", "historique", "lister", "message", "fil", "libelles", "creer_libelle",
+                         "poser_libelles"}
     source = Path(c.__file__).read_text(encoding="utf-8")
-    for interdit in ("/send", "/trash", "/untrash", "/modify", "batchModify", "batchDelete", "removeLabelIds",
-                     "addLabelIds", "/drafts", "/import", "/insert", "/delete", "http.delete", "http.put",
-                     "http.patch", "users.messages.send"):
+    for interdit in ("/send", "/trash", "/untrash", "batchModify", "batchDelete", "/drafts", "/import", "/insert",
+                     "/delete", "http.delete", "http.put", "http.patch", "users.messages.send"):
         assert interdit not in source, interdit
-    # Seul POST du client : le rafraîchissement du jeton OAuth.
+    # La seule écriture sur un message (libellés) est dans poser_libelles, qui filtre les libellés.
+    assert source.count("/modify") == 1 and "/modify" in inspect.getsource(c.ClientGmail.poser_libelles)
     client = inspect.getsource(c.ClientGmail)
-    assert re.findall(r"self\._http\.(\w+)\(", client) == ["post", "get"]
+    assert re.findall(r"self\._http\.(\w+)\(", client) == ["post", "get", "post"]
     assert "self._http.post(JETON_URL" in client
 
 
@@ -523,3 +524,59 @@ def test_apprentissage_ignore_les_grands_rangements_et_protege_les_vraies_person
         c.enregistrer(db2, f, {"categorie": "lettre", "source": "gmail", "raison": "liste"}, MAINTENANT)
         c.appliquer_gestes(db2, [(f"n{i}", f"fn{i}", "archive")], MAINTENANT + timedelta(hours=i))
     assert c.apprendre(db2, MAINTENANT) == {"promo@x.fr": "bruit"}
+
+
+class FauxLibelles:
+    def __init__(self, existants=None):
+        self.existants = dict(existants or {})
+        self.poses, self.crees = [], []
+
+    def libelles(self):
+        return dict(self.existants)
+
+    def creer_libelle(self, nom, couleur=None):
+        self.crees.append((nom, couleur))
+        self.existants[nom] = f"L_{nom}"
+        return self.existants[nom]
+
+    def poser_libelles(self, message_id, ajouter, retirer, autorises):
+        assert set(ajouter) | set(retirer) <= set(autorises)
+        self.poses.append((message_id, list(ajouter), list(retirer)))
+
+
+def test_poser_libelles_refuse_tout_autre_libelle():
+    http = FauxHttp({})
+    gmail = c.ClientGmail(AUTH, http=http)
+    for mauvais in (["INBOX"], ["UNREAD"], ["TRASH"], ["Label_9"]):
+        try:
+            gmail.poser_libelles("m1", [], mauvais, ["L_a", "L_b"])
+            raise AssertionError("aurait dû refuser")
+        except ValueError:
+            pass
+    try:
+        gmail.creer_libelle("Perso")
+        raise AssertionError("aurait dû refuser")
+    except ValueError:
+        pass
+    assert not [a for a in http.appels if a[0] == "POST" and a[1] != c.JETON_URL]
+
+
+def test_synchroniser_libelles():
+    db = _base()
+    _a_traiter(db, "t0", MAINTENANT - timedelta(minutes=10))
+    _a_traiter(db, "t1", MAINTENANT - timedelta(minutes=5))   # remplace t0
+    f = c.fiche(msg("b1", de="promo@x.fr", quand=MAINTENANT - timedelta(hours=1)))
+    c.enregistrer(db, f, {"categorie": "bruit", "source": "gmail", "raison": "promo"}, MAINTENANT)
+    f = c.fiche(msg("vieux", de="v@x.fr", quand=MAINTENANT - timedelta(days=5)))
+    c.enregistrer(db, f, {"categorie": "lettre", "source": "gmail", "raison": "liste"}, MAINTENANT)
+    g, etat = FauxLibelles(), {}
+    assert c.synchroniser_libelles(g, db, etat, MAINTENANT, journal=lambda t: None) == 3
+    assert [n for n, _ in g.crees] == ["Tri", "Tri/À traiter", "Tri/Lettre", "Tri/Bruit"]
+    assert sorted(g.poses) == [("b1", ["L_Tri/Bruit"], []), ("t0", ["L_Tri/À traiter"], []),
+                               ("t1", ["L_Tri/À traiter"], [])]  # « vieux » : avant les 2 derniers jours
+    # t0 remplacé par t1 : son libellé rouge est retiré ; rien d'autre ne bouge
+    c.ranger(db, MAINTENANT)
+    g.poses.clear()
+    assert c.synchroniser_libelles(g, db, etat, MAINTENANT, journal=lambda t: None) == 1
+    assert g.poses == [("t0", [], ["L_Tri/À traiter"])]
+    assert c.synchroniser_libelles(g, db, etat, MAINTENANT, journal=lambda t: None) == 0

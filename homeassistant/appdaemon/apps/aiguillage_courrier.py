@@ -419,6 +419,9 @@ def ouvrir_base(chemin):
     db = sqlite3.connect(chemin, timeout=30)
     db.row_factory = sqlite3.Row
     db.executescript(SCHEMA_SQL)
+    if "libelle" not in {r["name"] for r in db.execute("PRAGMA table_info(messages)")}:
+        db.execute("ALTER TABLE messages ADD COLUMN libelle TEXT")  # libellé du tri posé dans Gmail (24/10)
+        db.commit()
     return db
 
 
@@ -710,9 +713,10 @@ class HistoriqueTropVieux(ErreurGmail):
 
 
 class ClientGmail:
-    """Client REST minimal, en lecture seule. Méthodes publiques : `profil`, `historique`, `lister`, `message`,
-    `fil`. AUCUNE méthode d'écriture : ni envoi, ni suppression, ni corbeille, ni changement de libellés (règle
-    d'Alexandre du 24/10 ; brouillons et libellés viendront dans un lot à part, derrière son accord)."""
+    """Client REST minimal. Lecture : `profil`, `historique`, `lister`, `message`, `fil`. Seule écriture (accord
+    d'Alexandre du 24/10 au soir) : les libellés du tri, `Tri/À traiter`, `Tri/Lettre`, `Tri/Bruit` (`libelles`,
+    `creer_libelle`, `poser_libelles`). `poser_libelles` refuse tout autre libellé (INBOX, UNREAD, TRASH…) : rien
+    n'est archivé, déplacé ni marqué lu. AUCUNE méthode d'envoi, de suppression ni de corbeille (règle d'Alexandre)."""
 
     def __init__(self, autorisation, http=None, horloge=time.time):
         self._auth = autorisation
@@ -788,6 +792,100 @@ class ClientGmail:
 
     def fil(self, fil_id):
         return self._lire(f"threads/{fil_id}", {"format": "metadata"})
+
+    def _ecrire(self, chemin, corps):
+        for essai in range(2):
+            if not self._jeton or self._horloge() >= self._expire:
+                self._rafraichir()
+            r = self._http.post(f"{API_GMAIL}/{chemin}", json=corps, headers={"Authorization": f"Bearer {self._jeton}"})
+            if r.status_code == 401 and essai == 0:
+                self._jeton = None
+                continue
+            if r.status_code == 404:
+                raise Introuvable(chemin)
+            if r.status_code != 200:
+                raise ErreurGmail(f"{chemin} : HTTP {r.status_code}")
+            return r.json()
+        raise ErreurGmail(f"{chemin} : jeton refusé")
+
+    def libelles(self):
+        """{nom: id} des libellés de la boîte."""
+        return {x["name"]: x["id"] for x in self._lire("labels").get("labels") or []}
+
+    def creer_libelle(self, nom, couleur=None):
+        if nom not in NOMS_LIBELLES and nom != PARENT_LIBELLES:
+            raise ValueError(f"libellé hors du tri : {nom}")
+        corps = {"name": nom, "labelListVisibility": "labelShow", "messageListVisibility": "show"}
+        if couleur:
+            corps["color"] = {"backgroundColor": couleur[0], "textColor": couleur[1]}
+        return self._ecrire("labels", corps)["id"]
+
+    def poser_libelles(self, message_id, ajouter, retirer, autorises):
+        """Ajoute / retire des libellés du tri sur un message. `autorises` : ids des trois libellés du tri ; tout autre
+        id (INBOX, UNREAD, libellés d'Alexandre…) est refusé avant tout appel."""
+        ajouter, retirer, autorises = list(ajouter or []), list(retirer or []), set(autorises or [])
+        if not autorises or not set(ajouter + retirer) <= autorises:
+            raise ValueError("libellé hors du tri refusé")
+        if not ajouter and not retirer:
+            return None
+        return self._ecrire(f"messages/{message_id}/modify", {"addLabelIds": ajouter, "removeLabelIds": retirer})
+
+
+# MARK: - Libellés du tri dans Gmail (24/10 au soir)
+
+PARENT_LIBELLES = "Tri"
+LIBELLES_TRI = {"a_traiter": "Tri/À traiter", "lettre": "Tri/Lettre", "bruit": "Tri/Bruit"}
+NOMS_LIBELLES = tuple(LIBELLES_TRI.values())
+# Couleurs de la palette Gmail (fond, texte) : rouge, bleu, gris.
+COULEURS_LIBELLES = {"Tri/À traiter": ("#fb4c2f", "#ffffff"), "Tri/Lettre": ("#4a86e8", "#ffffff"),
+                     "Tri/Bruit": ("#cccccc", "#434343")}
+LIBELLES_PAR_PASSE = 40
+
+
+def libelle_voulu(r):
+    """Libellé du tri qu'un message doit porter : celui de sa catégorie ; un message `fait` garde celui de son tri,
+    sauf un ancien « à traiter » (répondu, archivé, remplacé ou expiré), qui n'en porte plus."""
+    cat = r["categorie"] if r["categorie"] != "fait" else r["categorie_tri"]
+    if r["categorie"] == "fait" and cat == "a_traiter":
+        return None
+    return LIBELLES_TRI.get(cat)
+
+
+def libelles_a_poser(db, depuis_ms, limite=LIBELLES_PAR_PASSE):
+    """Messages dont le libellé posé dans Gmail diffère du libellé voulu : [(id, libellé posé, libellé voulu)]."""
+    out = []
+    for r in db.execute("SELECT id, categorie, categorie_tri, libelle FROM messages WHERE date_ms >= ? "
+                        "ORDER BY date_ms DESC", (depuis_ms,)):
+        voulu = libelle_voulu(r)
+        if (r["libelle"] or None) != voulu:
+            out.append((r["id"], r["libelle"] or None, voulu))
+            if len(out) >= limite:
+                break
+    return out
+
+
+def synchroniser_libelles(gmail, db, etat, maintenant, journal=print):
+    """Crée les libellés au besoin, puis pose le libellé voulu sur les messages triés depuis `etat['libelles_depuis']`
+    (au premier lancement : les 2 derniers jours). Renvoie le nombre de messages mis à jour."""
+    if not etat.get("libelles_depuis"):
+        etat["libelles_depuis"] = int((maintenant - timedelta(days=2)).timestamp() * 1000)
+    existants = gmail.libelles()
+    for nom in (PARENT_LIBELLES, *NOMS_LIBELLES):
+        if nom not in existants:
+            existants[nom] = gmail.creer_libelle(nom, COULEURS_LIBELLES.get(nom))
+            journal(f"Courrier : libellé « {nom} » créé dans Gmail")
+    ids = {nom: existants[nom] for nom in NOMS_LIBELLES}
+    n = 0
+    for message_id, pose, voulu in libelles_a_poser(db, etat["libelles_depuis"]):
+        try:
+            gmail.poser_libelles(message_id, [ids[voulu]] if voulu else [], [ids[pose]] if pose in ids else [],
+                                 ids.values())
+        except Introuvable:
+            pass  # message supprimé entre-temps : on note quand même pour ne pas réessayer
+        db.execute("UPDATE messages SET libelle = ? WHERE id = ?", (voulu, message_id))
+        n += 1
+    db.commit()
+    return n
 
 
 # MARK: - Une relève (sans AppDaemon, testable avec des clients simulés)
@@ -888,6 +986,8 @@ if hass is not None:
             self._bilan_path = Path(self.args.get("bilan_file", "/config/aiguillage_courrier_bilan.md"))
             self._cle_path = Path(self.args.get("api_key_file", "/config/anthropic_api_key"))
             self._budget = float(self.args.get("courrier_budget_mensuel", 15))
+            # Libellés du tri dans Gmail (accord d'Alexandre du 24/10 au soir) : `libelles: false` pour les couper.
+            self._libelles = bool(self.args.get("libelles", True))
             self._mode = str(self.args.get("mode", "ombre"))
             if self._mode != "ombre":
                 self.log(f"Courrier : mode {self._mode!r} pas encore disponible (lot N4), on reste en ombre",
@@ -964,6 +1064,13 @@ if hass is not None:
                     try:
                         resume = releve(self._client_gmail(), db, self._client_ia(), etat, self._budget, maintenant,
                                         journal=lambda t: self.log(t, level="WARNING"))
+                        if self._libelles:
+                            try:
+                                n = synchroniser_libelles(self._client_gmail(), db, etat, maintenant, journal=self.log)
+                                if n:
+                                    self.log(f"Courrier : libellés du tri posés ou changés sur {n} message(s)")
+                            except ErreurGmail as exc:
+                                self.log(f"Courrier : libellés impossibles ({exc})", level="WARNING")
                     finally:
                         db.close()
                     self._erreur = None
