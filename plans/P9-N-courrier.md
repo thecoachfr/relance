@@ -44,6 +44,10 @@ archivage sans accord, au moins jusqu'à la fin de la période d'ombre.
    `alexandre.fau@gmail.com`, droit **« Voir tous les détails des événements »**. Option grisée ou limitée à
    « disponible / occupé » = partage externe bloqué par Barrière. *Disponible / occupé ne suffit pas : le lieu de
    travail n'y figure pas.*
+   **Résultat du 24/10 : bloqué** (« Voir tous les détails » interdit par l'administrateur). Cas A exclu. Pistes
+   suivantes, dans l'ordre : compte pro ajouté au Calendrier d'iOS (lecture sur l'iPhone par EventKit) ; script
+   Google Apps Script dans le compte pro qui n'envoie que « bureau / télétravail » par jour à un webhook HA ; repli
+   semaine type (cas C).
 3. **Test de l'accès direct** (seulement si 2 échoue, ou pour le mail pro plus tard) : se connecter avec le compte pro
    au client OAuth du projet Google Cloud « Relance ». « Accès bloqué : votre organisation doit approuver
    l'application » = applications extérieures interdites.
