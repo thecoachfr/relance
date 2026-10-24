@@ -48,6 +48,11 @@ archivage sans accord, au moins jusqu'à la fin de la période d'ombre.
    suivantes, dans l'ordre : compte pro ajouté au Calendrier d'iOS (lecture sur l'iPhone par EventKit) ; script
    Google Apps Script dans le compte pro qui n'envoie que « bureau / télétravail » par jour à un webhook HA ; repli
    semaine type (cas C).
+   **Suite du 24/10** : compte pro ajouté au Calendrier d'iOS : les événements passent, **pas le lieu de travail** ;
+   **Apps Script désactivé** par l'administrateur. Reste l'OAuth direct (cas B), très probablement bloqué lui aussi.
+   **Décision proposée : cas C**, semaine type + exceptions, vérifié par la position : zone HA « Bureau » (à créer,
+   seule `zone.home` existe), un jour noté télétravail où l'iPhone entre dans la zone devient « bureau » (et
+   inversement), et l'écart répété propose de corriger la semaine type.
 3. **Test de l'accès direct** (seulement si 2 échoue, ou pour le mail pro plus tard) : se connecter avec le compte pro
    au client OAuth du projet Google Cloud « Relance ». « Accès bloqué : votre organisation doit approuver
    l'application » = applications extérieures interdites.
