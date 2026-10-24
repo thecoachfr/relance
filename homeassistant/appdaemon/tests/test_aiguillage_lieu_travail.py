@@ -47,7 +47,9 @@ def test_libelles_et_phrase():
     infos = m.jours(date(2026, 10, 26), CONF, {})
     assert infos[0]["libelle"] == "🏢 Bureau" and infos[2]["libelle"] == "🏢 Bureau ?"
     assert m.phrase(infos) == "🏢 Bureau aujourd'hui · demain 🏠 Télétravail"
-    assert m.phrase(m.jours(SAMEDI, CONF, {})) == "Pas de Barrière aujourd'hui · lundi 🏢 Bureau"
+    assert m.phrase(m.jours(SAMEDI, CONF, {})) is None          # week-end : rien
+    assert m.phrase(m.jours(date(2026, 11, 11), CONF, {})) is None  # férié
+    assert m.jour_info(SAMEDI, CONF, {})["libelle"] == "Repos"
     assert m.phrase(m.jours(date(2026, 10, 29), CONF, {})) == "🏠 Télétravail aujourd'hui · lundi 🏢 Bureau"
 
 

@@ -38,8 +38,8 @@ GARDE_EXCEPTIONS_JOURS = 30
 JOURS = ("lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche")
 LIEUX = ("bureau", "lab", "teletravail", "off")
 TRAVAILLES = ("bureau", "lab", "teletravail")
-LIBELLES = {"bureau": "🏢 Bureau", "lab": "🧪 Le Lab", "teletravail": "🏠 Télétravail", "off": "Pas Barrière", "ferie": "Férié"}
-COURTS = {"bureau": "Bureau", "lab": "Le Lab", "teletravail": "Télétravail", "off": "Pas Barrière", "ferie": "Férié"}
+LIBELLES = {"bureau": "🏢 Bureau", "lab": "🧪 Le Lab", "teletravail": "🏠 Télétravail", "off": "Repos", "ferie": "Férié"}
+COURTS = {"bureau": "Bureau", "lab": "Le Lab", "teletravail": "Télétravail", "off": "Repos", "ferie": "Férié"}
 
 CONFIG_DEFAUT = {
     "v": 1,
@@ -171,14 +171,12 @@ def jours(aujourdhui, conf, constats, nb=NB_JOURS):
 
 
 def phrase(infos):
-    """« 🏢 Bureau aujourd'hui · demain 🏠 Télétravail » (aujourd'hui, puis le prochain jour travaillé)."""
-    if not infos:
-        return ""
+    """« 🏢 Bureau aujourd'hui · demain 🏠 Télétravail » (aujourd'hui, puis le prochain jour travaillé) ; None les
+    jours non travaillés (repos, férié, week-end) : rien à afficher (décision d'Alexandre du 24/10)."""
+    if not infos or infos[0]["lieu"] not in TRAVAILLES:
+        return None
     du_jour = infos[0]
-    if du_jour["lieu"] in ("off", "ferie"):
-        tete = "Pas de Barrière aujourd'hui" if du_jour["lieu"] == "off" else "Férié aujourd'hui"
-    else:
-        tete = f"{du_jour['libelle']} aujourd'hui"
+    tete = f"{du_jour['libelle']} aujourd'hui"
     suivant = next((i for i in infos[1:] if i["lieu"] in TRAVAILLES), None)
     if not suivant:
         return tete

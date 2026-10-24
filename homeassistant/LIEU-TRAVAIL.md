@@ -21,7 +21,7 @@ compte pro ajouté au Calendrier d'iOS montre les événements mais pas le « li
      « jeudi au Lab », « le 5/11 à Saint-Ouen », « lundi normal » (annule). Réponse « ✅ Mardi 27/10 : 🏢 Bureau (au lieu de 🏠 Télétravail) ». Tout autre
      message est ignoré ;
    - depuis Aiguillage (lot N2, 24/10) : écran « Lieu de travail » (Réglages, ou toucher le bandeau de « À faire »),
-     un toucher par jour (Bureau / Le Lab / Télétravail / Pas Barrière, ou « Comme prévu » qui retire l'exception) ;
+     un toucher par jour (Bureau / Le Lab / Télétravail / Repos, ou « Comme prévu » qui retire l'exception) ;
      la semaine type (`lieu`, `certitude` `sur` ou `probable`) et `premier_vendredi` (`null` = comme la semaine type)
      se règlent au même endroit. L'app écrit par la synchro de `donnees_apps` (version attendue) en partant de la
      valeur lue : elle garde les champs qu'elle ne connaît pas ; un conflit (consigne Signal au même moment) est
@@ -33,14 +33,14 @@ compte pro ajouté au Calendrier d'iOS montre les événements mais pas le « li
 
 ## État et attributs
 
-- **État** : lieu du jour, `bureau` | `lab` | `teletravail` | `off` (pas un jour Barrière) | `ferie`.
+- **État** : lieu du jour, `bureau` | `lab` | `teletravail` | `off` (repos : week-end, vendredi du 4/5) | `ferie`.
 - `aujourdhui`, `demain`, `jours` (14 jours à partir d'aujourd'hui) : `{date, jour, lieu, certitude, source, libelle}`,
   plus `prevu` quand la position a contredit la prévision.
   - `certitude` : `sur`, `probable` (le libellé finit par « ? »), `constate` (position).
   - `source` : `semaine`, `premier_vendredi`, `exception`, `ferie`, `position`.
-  - `libelle` : « 🏢 Bureau », « 🏢 Bureau ? », « 🧪 Le Lab », « 🏠 Télétravail », « Pas Barrière », « Férié ».
-- `phrase` : en-tête prêt à afficher, par exemple « 🏢 Bureau aujourd'hui · demain 🏠 Télétravail » ou « Pas de
-  Barrière aujourd'hui · lundi 🏢 Bureau ».
+  - `libelle` : « 🏢 Bureau », « 🏢 Bureau ? », « 🧪 Le Lab », « 🏠 Télétravail », « Repos », « Férié ».
+- `phrase` : en-tête prêt à afficher, par exemple « 🏢 Bureau aujourd'hui · demain 🏠 Télétravail » ; **`null` les jours non travaillés**
+  (repos, week-end, férié : rien à afficher, décision d'Alexandre du 24/10 ; les vues cachent alors la ligne).
 - `stats` : par jour ouvré, constats des 8 dernières semaines `{bureau, teletravail}`.
 - `suggestion` : une phrase quand la semaine type contredit au moins 75 % de 4 constats ou plus (« Le mercredi, tu
   étais en télétravail 4 fois sur 4 : passer le mercredi en Télétravail ? »), sinon `null`.
