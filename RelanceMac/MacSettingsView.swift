@@ -23,6 +23,11 @@ struct MacSettingsView: View {
                     .formStyle(.grouped)
                     .frame(width: 520, height: 420)
             }
+            Tab("Lieu de travail", systemImage: "building.2") {
+                NavigationStack { LieuTravailView() }
+                    .formStyle(.grouped)
+                    .frame(width: 520, height: 640)
+            }
             Tab("Synchro", systemImage: "arrow.triangle.2.circlepath") {
                 SyncLogSettings()
             }

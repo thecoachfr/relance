@@ -35,6 +35,14 @@ final class TaskStore {
     var pieces: [String] = []
     /// Mes lieux habituels en groupes (P9-H2), `config:lieux` dans HA.
     var mesLieux = MesLieux.cached()
+    /// Lieu de travail des 14 prochains jours (P9-N2), lu dans `sensor.aiguillage_lieu_travail` ; `nil` = bandeau caché.
+    var lieuTravail: LieuTravail? = LieuTravail.cached()
+    /// Réglages du lieu de travail (`config:lieu_travail`), recopiés de la base locale à chaque synchro.
+    var configLieuTravail: ConfigLieuTravail?
+    /// Dernière lecture réussie du capteur (au plus une par `LieuTravail.intervalle`).
+    @ObservationIgnored var lieuTravailLuLe: Date?
+    /// Modifications des réglages pas encore confirmées par HA : réappliquées sur la valeur de HA en cas de conflit.
+    @ObservationIgnored var modifsLieuTravail: [ConfigLieuTravail.Modification] = []
     /// Forcé par les tests, sans toucher au réglage partagé de l'appareil (que l'app hôte lit aussi).
     var haActiveOverride: Bool?
     /// Coupé par les tests de synchro : le centre de notifications du simulateur peut bloquer des dizaines de secondes.
@@ -356,6 +364,7 @@ final class TaskStore {
     private func performSync() async {
         if isHAActive, !isDemo {
             await performHASync()
+            await rafraichirLieuTravail()
             return await afterSync()
         }
         guard auth.isSignedIn, !isDemo else {

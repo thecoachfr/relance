@@ -22,6 +22,9 @@ final class WatchStore: NSObject, WCSessionDelegate {
     private static let tasksInHAKey = "watchTasksInHA"
     /// Tâches dans Home Assistant (dit par l'iPhone) : lecture, coche, ajout et mémo passent par l'iPhone.
     var tasksInHA: Bool { Self.defaults.bool(forKey: Self.tasksInHAKey) }
+    private static let lieuxKey = "watchLieuTravail"
+    /// Libellés des jours travaillés reçus de l'iPhone (P9-N2), par date.
+    private(set) var lieuxTravail: [String: String] = WatchLink.decodeLieux(WatchStore.defaults.data(forKey: WatchStore.lieuxKey))
 
     let google = GoogleRefreshSession()
     private var api: TasksAPI { TasksAPI(token: { [google] in try await google.validAccessToken() }) }
@@ -212,6 +215,11 @@ final class WatchStore: NSObject, WCSessionDelegate {
         }
         if let inHA = payload.tasksInHA { Self.defaults.set(inHA, forKey: Self.tasksInHAKey) }
         if let url = payload.haURL, let token = payload.haToken { WatchHA.store(url: url, token: token) }
+        if let lieux = payload.lieuxTravail {
+            Self.defaults.set(lieux, forKey: Self.lieuxKey)
+            let decodes = WatchLink.decodeLieux(lieux)
+            if decodes != lieuxTravail { lieuxTravail = decodes }
+        }
         if let tasks = payload.tasks { receive(tasks) }
     }
 
@@ -244,8 +252,10 @@ nonisolated private struct Payload: Sendable {
     var tasksInHA: Bool?
     var haURL: String?
     var haToken: String?
+    var lieuxTravail: Data?
 
     init(_ dictionary: [String: Any]) {
+        lieuxTravail = dictionary[WatchLink.lieuTravailKey] as? Data
         haURL = dictionary[WatchLink.haURLKey] as? String
         haToken = dictionary[WatchLink.haTokenKey] as? String
         tasksInHA = dictionary[WatchLink.tasksInHAKey] as? Bool

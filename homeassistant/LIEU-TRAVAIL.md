@@ -20,7 +20,13 @@ compte pro ajouté au Calendrier d'iOS montre les événements mais pas le « li
      « mercredi je suis au bureau », « le 6/11 congé », « vendredi 7 bureau », « congé du 2/11 au 6/11 »,
      « jeudi au Lab », « le 5/11 à Saint-Ouen », « lundi normal » (annule). Réponse « ✅ Mardi 27/10 : 🏢 Bureau (au lieu de 🏠 Télétravail) ». Tout autre
      message est ignoré ;
-   - plus tard depuis Aiguillage (lot N2), en écrivant le même enregistrement (avec `version_attendue`).
+   - depuis Aiguillage (lot N2, 24/10) : écran « Lieu de travail » (Réglages, ou toucher le bandeau de « À faire »),
+     un toucher par jour (Bureau / Le Lab / Télétravail / Pas Barrière, ou « Comme prévu » qui retire l'exception) ;
+     la semaine type (`lieu`, `certitude` `sur` ou `probable`) et `premier_vendredi` (`null` = comme la semaine type)
+     se règlent au même endroit. L'app écrit par la synchro de `donnees_apps` (version attendue) en partant de la
+     valeur lue : elle garde les champs qu'elle ne connaît pas ; un conflit (consigne Signal au même moment) est
+     réglé en réappliquant sa modification sur la valeur de HA. Une consigne Signal garde aussi les champs de premier
+     niveau inconnus.
 3. **Semaine type** (`config:lieu_travail` › `semaine`) : lundi bureau (sûr), mardi télétravail, mercredi bureau
    (probable, 70 %), jeudi télétravail, vendredi `off` (4/5) ; `premier_vendredi` du mois : bureau (sûr, confirmé le 24/10) ;
    samedi, dimanche, jours fériés de métropole : `off` / `ferie`.
@@ -40,8 +46,19 @@ compte pro ajouté au Calendrier d'iOS montre les événements mais pas le « li
   étais en télétravail 4 fois sur 4 : passer le mercredi en Télétravail ? »), sinon `null`.
 - `bureau` : les points « Travail » utilisés `{nom, lat, lon, lieu}` ; `maj`.
 
-Recalcul toutes les 15 min, à minuit, à chaque passage au bureau, à chaque consigne, et sur l'événement
+Recalcul toutes les 15 min, à minuit, à chaque passage au bureau, à chaque consigne, à chaque écriture de
+`config:lieu_travail` ou de `config:lieux` (événement `donnees_apps_modifie` de l'intégration, depuis le 24/10 :
+recalcul en moins d'une seconde, mesuré), et sur l'événement
 `aiguillage_lieu_travail_maj`. Publication par l'API REST de HA (comme `sensor.hub_meteo`).
+
+## Lecteurs (N2, 24/10)
+
+- **Aiguillage** (iPhone, iPad, Mac) : bandeau `phrase` en tête de « À faire » (caché en mode Google Tasks ou si le
+  capteur manque) ; lecture `GET /api/states/sensor.aiguillage_lieu_travail` (jeton `apps-perso`) à la fin d'une
+  synchro, au plus une fois par quart d'heure, et juste après un réglage ; copie dans l'App Group.
+- **Montre** : libellé du jour (`jours[].libelle`, jours travaillés seulement) en tête de la liste, reçu de l'iPhone
+  avec l'état (aucune requête de la montre).
+- **Tri et vigie** : `jours` sert à dater une tâche sans date qui reçoit un `contexte` (`aiguillage_tri.jour_pour_contexte`).
 
 ## Mise en œuvre (déployée le 24/10/2026 vers 11 h 47)
 

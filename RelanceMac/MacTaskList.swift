@@ -20,6 +20,8 @@ struct MacTaskList: View {
                 if section == .done {
                     ForEach(items.prefix(200)) { doneRow($0) }
                 } else {
+                    // Bureau ou télétravail (P9-N2), en tête de « À faire ».
+                    if section == .todo { LieuTravailBandeau() }
                     let groups = Self.group(items, now: now)
                     ForEach(groups, id: \.title) { group in
                         Section {

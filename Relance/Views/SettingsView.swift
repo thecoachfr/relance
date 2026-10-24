@@ -28,6 +28,7 @@ struct SettingsView: View {
                     NavigationLink("Mémo pour le tri") { MemoListView() }
                     NavigationLink("Actions automatiques") { RecettesView() }
                     if HAConfig.isActive { NavigationLink("Mes lieux") { MesLieuxView() } }
+                    if HAConfig.isActive { NavigationLink("Lieu de travail") { LieuTravailView() } }
                     if PushRegistration.webhookURL != nil { NavigationLink("Mes trajets") { TrajetsView() } }
                     NavigationLink("Diagnostic batterie") { DiagnosticView() }
                     NavigationLink("Erreurs récentes") { ErreursView() }

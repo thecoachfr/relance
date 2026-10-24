@@ -36,7 +36,7 @@
 
 ## 3. Modèle de données commun (TacheHA, `v: 2`)
 
-Les tâches sont dans l'espace `aiguillage` de `donnees_apps` (`Shared/HA/TacheHA.swift`). P9 ajoute **quatre champs facultatifs** (`lieu`, `envie`, `actions`, et `liste` pour le plan G). Les plans A, B, C et D utilisent les trois premiers : ne pas en créer d'autres sans mettre ce fichier à jour.
+Les tâches sont dans l'espace `aiguillage` de `donnees_apps` (`Shared/HA/TacheHA.swift`). P9 ajoute **des champs facultatifs** (`lieu`, `envie`, `actions`, `liste` pour le plan G, puis `pieces`, `duree` et `contexte`, détaillés ci-dessous). Les plans A, B, C et D utilisent les trois premiers : ne pas en créer d'autres sans mettre ce fichier à jour.
 
 ```json
 {
@@ -70,6 +70,12 @@ Les tâches sont dans l'espace `aiguillage` de `donnees_apps` (`Shared/HA/TacheH
 - `envie` (B1, 16/10) : l'app garde tels quels les champs qu'elle ne connaît pas (`tmdb`, `dispo_fr`, `dispo_maj`…), pour que la vigie puisse les écrire sans qu'une réécriture de l'app les efface.
 - `actions` : plan D (B ajoute seulement l'action `sur_tv` déclenchée au toucher).
 - `pieces` : plan K (18/10), facultatif : `[{id (SHA-256 du fichier rangé dans HA), nom, type, taille, ajoute_le, source, texte (1 500 caractères lus sur l'appareil), drive?}]` ; copie `📎 N pièces jointes` dans les notes.
+- `contexte` : plan N2 (24/10), facultatif : `bureau` | `maison` (tâche à faire au bureau, ou à la maison) ; copie
+  `🏢 Au bureau` / `🏠 À la maison` dans les notes (ligne cachée du champ Notes, réglée par « Où la faire » dans la
+  fiche, mode HA seulement). Une tâche sans date à qui l'on donne un contexte prend la date du prochain jour qui
+  correspond d'après `sensor.aiguillage_lieu_travail` (`jours` : bureau → `bureau` ; maison → `teletravail`, `off` ou
+  `ferie`, aujourd'hui compris), sinon reste sans date. Connu du tri avant sa mise en service (24/10) : règle U de la
+  consigne, champ recopié, déduit d'une phrase (« au bureau », « à la maison ») et daté par la vigie.
 - `duree` : plan H1 (17/10), facultatif : durée en minutes (entier), seulement avec `heure` ; l'événement d'agenda dure autant.
 - `liste` : plan G (16/10), facultatif : `{"articles": [{"id", "texte", "quantite", "rayon", "coche", "maj", "source"}], "parts", "recettes": [{"titre", "lien"}]}` ; quantités indicatives en texte libre ; copie lisible `🛒 Liste : 3/12 cochés` dans les notes ; fusion des coches article par article (détail et tests dans `P9-G-listes-courses.md`). La routine de tri doit connaître ce champ avant sa mise en service (section 4).
 - **Compatibilité, obligatoire pendant la transition** : continuer d'écrire les lignes techniques des notes (`📍 …`, `👀 À voir`, `🎬 À regarder`… et les nouvelles `🍽 À tester`, `🛍 Magasin`, `📷 Spot photo`), car la vigie, la routine de tri, la carte du Nest Hub (`nest-hub-entree-card`) et le mode Google Tasks les lisent. Le champ structuré fait foi ; la ligne en est une copie. Lecture : si le champ manque, le déduire de la ligne (anciennes tâches), sans réécrire toutes les tâches d'un coup.

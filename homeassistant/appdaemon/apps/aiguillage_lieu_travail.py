@@ -116,6 +116,21 @@ def config_valide(valeur):
     return conf
 
 
+def avec_inconnus(brut, conf):
+    """`conf` (champs connus, validés) complétée par les champs inconnus de la valeur lue `brut` (ajoutés par une
+    version plus récente d'Aiguillage, par exemple) : une consigne Signal ne les efface pas (N2, 24/10)."""
+    out = {k: v for k, v in (brut if isinstance(brut, dict) else {}).items() if k not in conf}
+    out.update(conf)
+    return out
+
+
+def doit_recalculer(data, espace):
+    """Événement `donnees_apps_modifie` : recalcul si les réglages du lieu de travail ou Mes lieux ont changé
+    (écrits par Aiguillage, N2), pour que le capteur suive en quelques secondes au lieu de 15 min."""
+    data = data or {}
+    return data.get("espace") == espace and data.get("cle") in (CLE_CONFIG, CLE_LIEUX)
+
+
 def elaguer_exceptions(conf, aujourdhui, garde=GARDE_EXCEPTIONS_JOURS):
     limite = aujourdhui - timedelta(days=garde)
     return dict(conf, exceptions={j: l for j, l in conf["exceptions"].items() if date.fromisoformat(j) >= limite})
@@ -427,6 +442,8 @@ if hass is not None:
             self.listen_state(self._position, self._tracker, attribute="all")
             self.listen_event(self._message, "aiguillage_lieu_travail_message")
             self.listen_event(self._maj_evenement, "aiguillage_lieu_travail_maj")
+            # Réglages changés depuis Aiguillage (N2) ou Mes lieux : recalcul tout de suite.
+            self.listen_event(self._donnees_modifiees, "donnees_apps_modifie", espace=self._espace)
             self.run_daily(self._echantillon, "11:00:00", moment="maison_11h")
             self.run_daily(self._echantillon, "15:00:00", moment="maison_15h")
             self.run_daily(self._soir, "16:00:00")
@@ -467,13 +484,14 @@ if hass is not None:
                 return None, 0
             return enr.get("valeur"), enr.get("version", 0)
 
-        def _config(self):
-            """Réglages (créés avec les défauts s'ils manquent) et version, pour écrire sans écraser."""
+        def _config(self, brut=False):
+            """Réglages (créés avec les défauts s'ils manquent) et version, pour écrire sans écraser ; avec
+            `brut`, la valeur lue telle quelle en plus (pour garder ses champs inconnus)."""
             valeur, version = self._lire(CLE_CONFIG)
             if valeur is None:
                 self._ecrire_config(CONFIG_DEFAUT, 0)
-                return config_valide(CONFIG_DEFAUT), 1
-            return config_valide(valeur), version
+                valeur, version = CONFIG_DEFAUT, 1
+            return (config_valide(valeur), version, valeur) if brut else (config_valide(valeur), version)
 
         def _ecrire_config(self, conf, version):
             rep = self._service("donnees_apps", "ecrire", {
@@ -507,6 +525,10 @@ if hass is not None:
 
         def _maj_evenement(self, event_name, data, **kwargs):
             self._maj()
+
+        def _donnees_modifiees(self, event_name, data, **kwargs):
+            if doit_recalculer(data, self._espace):
+                self._maj()
 
         def _position(self, entity, attribute, old, new, **kwargs):
             attributs = (new or {}).get("attributes") or {}
@@ -548,9 +570,9 @@ if hass is not None:
             if not consignes:
                 return
             for _ in range(3):  # conflit de version (l'app écrit en même temps) : on relit et on recommence
-                avant, version = self._config()
+                avant, version, brut = self._config(brut=True)
                 apres = elaguer_exceptions(appliquer(avant, consignes), aujourdhui)
-                statut = self._ecrire_config(apres, version)
+                statut = self._ecrire_config(avec_inconnus(brut, apres), version)
                 if statut == "ok":
                     break
             else:

@@ -164,3 +164,24 @@ def test_lab():
     assert m.phrase(m.jours(date(2026, 10, 28), conf, {})).endswith("demain 🧪 Le Lab")
     assert m.reponse([(jeudi, "lab")], CONF, conf) == "✅ Jeudi 29/10 : 🧪 Le Lab (au lieu de 🏠 Télétravail)"
     assert m.jour_info(date(2026, 10, 27), CONF, {"2026-10-27": "lab"})["lieu"] == "lab"
+
+
+def test_ecrit_par_aiguillage():
+    """Réglages écrits par l'écran « Lieu de travail » d'Aiguillage (N2) : champs inconnus gardés, recalcul sur
+    l'événement de `donnees_apps`."""
+    brut = {"v": 1, "futur": {"x": 1},
+            "semaine": dict(m.CONFIG_DEFAUT["semaine"], mardi={"lieu": "bureau", "certitude": "probable", "note": "n"}),
+            "premier_vendredi": None, "exceptions": {"2026-10-29": "lab", "2026-10-30": "teletravail"}}
+    conf = m.config_valide(brut)
+    assert conf["semaine"]["mardi"] == {"lieu": "bureau", "certitude": "probable"}
+    assert conf["premier_vendredi"] is None
+    assert m.jour_info(date(2026, 11, 6), conf, {})["lieu"] == "off"  # premier vendredi désactivé
+    assert m.jour_info(date(2026, 10, 27), conf, {})["libelle"] == "🏢 Bureau ?"
+    ecrit = m.avec_inconnus(brut, m.appliquer(conf, [(date(2026, 10, 29), "normal")]))
+    assert ecrit["futur"] == {"x": 1} and ecrit["exceptions"] == {"2026-10-30": "teletravail"}
+    assert m.avec_inconnus(None, conf) == conf
+    assert m.doit_recalculer({"espace": "aiguillage", "cle": "config:lieu_travail", "seq": 3}, "aiguillage")
+    assert m.doit_recalculer({"espace": "aiguillage", "cle": "config:lieux"}, "aiguillage")
+    assert not m.doit_recalculer({"espace": "aiguillage", "cle": "6f1c2a3e-1d8b-4e5f-9a7c-2b4d6e8f0a1c"}, "aiguillage")
+    assert not m.doit_recalculer({"espace": "autre", "cle": "config:lieu_travail"}, "aiguillage")
+    assert not m.doit_recalculer(None, "aiguillage")

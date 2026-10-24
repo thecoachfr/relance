@@ -69,6 +69,7 @@ struct TaskDetailView: View {
                         if hasTime { DureeRow(item: item) }
                         RecurrenceRow(notes: $notes, day: day)
                     }
+                    ContexteRow(notes: $notes, hasDay: $hasDay, day: $day)
                     #else
                     Toggle("Date", isOn: $hasDay)
                     if hasDay {
@@ -80,6 +81,7 @@ struct TaskDetailView: View {
                         }
                         RecurrenceRow(notes: $notes, day: day)
                     }
+                    ContexteRow(notes: $notes, hasDay: $hasDay, day: $day)
                     #endif
                 }
             }
@@ -172,6 +174,7 @@ struct TaskDetailView: View {
         .onChange(of: ToSee(notes: notes)?.kind) { _, kind in if let kind, !kind.isDated { hasDay = false } }
         .onChange(of: ToSee(notes: notes)) { save() }
         .onChange(of: Recurrence(notes: notes)) { save() }
+        .onChange(of: ContexteTache(notes: notes)) { save() }
         // Texte : enregistré à la sortie du champ ou de la tâche, pas à chaque frappe (chaque enregistrement synchronise).
         .onSubmit { save() }
         .onDisappear { save() }

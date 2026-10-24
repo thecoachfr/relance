@@ -168,6 +168,11 @@ Historique des trajets (plan P9-M) : app AppDaemon `aiguillage_trajets` (`aiguil
 `/config/aiguillage_trajets.sqlite` : points GPS de l'app Compagnon (gardés au-delà des 10 jours du recorder) et arrêts
 relevés par l'app (Réglages › Mes trajets), envoyés au webhook avec `action: trajets`. Détail : [plans/P9-M-trajets.md](plans/P9-M-trajets.md).
 
+Lieu de travail (plan P9-N, lots N1 et N2) : app AppDaemon `aiguillage_lieu_travail` → `sensor.aiguillage_lieu_travail`
+(contrat [homeassistant/LIEU-TRAVAIL.md](homeassistant/LIEU-TRAVAIL.md)) ; dans l'app, bandeau en tête de « À faire »,
+écran « Lieu de travail » (Réglages, ou toucher le bandeau) qui écrit `config:lieu_travail`, champ de tâche `contexte`
+(« Où la faire » : au bureau, à la maison) et libellé du jour sur la montre.
+
 Pièces jointes (plan P9-K) : les fichiers d'une tâche (photo, PDF, scan) sont rangés dans Home Assistant par
 l'API `fichiers` de `ha-donnees-apps` 0.3.0 (`/api/donnees_apps/fichiers/aiguillage`, même jeton) ; la tâche garde leurs
 métadonnées et le début du texte lu sur l'appareil (champ `pieces`), que la routine de tri utilise.

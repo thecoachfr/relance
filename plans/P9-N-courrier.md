@@ -90,6 +90,23 @@ Source selon N0 :
 
 ### N2 — Bureau / télétravail dans Aiguillage et les trois vues (1 à 2 soirées)
 
+**Fait le 24/10 côté Aiguillage et HA** (le Hub reste) :
+- bandeau `phrase` en tête de « À faire » (iPhone, iPad, Mac), toucher → écran « Lieu de travail » ; aussi dans
+  Réglages › Lieu de travail (iPhone, iPad) et Réglages › Lieu de travail (Mac). Les 14 jours (un toucher : Bureau /
+  Le Lab / Télétravail / Pas Barrière / « Comme prévu »), la semaine type (lieu + « probable ») et le premier vendredi.
+  Écriture de `config:lieu_travail` par la synchro (version attendue, champs inconnus gardés, conflit réglé en
+  réappliquant la modification sur la valeur de HA) ;
+- `aiguillage_lieu_travail` écoute `donnees_apps_modifie` (`config:lieu_travail`, `config:lieux`) : capteur recalculé
+  en moins d'une seconde après une écriture (mesuré le 24/10 vers 12 h 06) ;
+- champ `contexte` (`bureau` | `maison`, ligne `🏢 Au bureau` / `🏠 À la maison`) : « Où la faire » dans la fiche, date
+  du prochain jour qui correspond pour une tâche sans date ; connu du tri (règle U de la consigne, `aiguillage_tri`,
+  vigie qui date d'après `jours`) et de l'index (section 3), déployés avant le build ;
+- montre : libellé du jour (jours travaillés) en tête de la liste, envoyé par l'iPhone avec l'état.
+
+**Reste** : pastille du lieu à côté de chaque date dans la vue par jours ; relance du matin qui pousse en tête les
+tâches du contexte du jour ; complication / Smart Stack de la montre (🏢 / 🏠) ; les trois vues du Hub (Hub TV,
+Nest Hub, Hub iPad) ; essais réels sur les appareils.
+
 - **Réglage facile (demande d'Alexandre, 24/10)** : écran « Lieu de travail » (Réglages, et toucher le bandeau) :
   la semaine type jour par jour (Bureau / Le Lab / Télétravail / Pas Barrière, « probable » en option) et les 14
   prochains jours, chacun changé d'un toucher (exception écrite dans `config:lieu_travail`, version attendue).

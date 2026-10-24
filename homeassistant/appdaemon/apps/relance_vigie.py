@@ -1082,6 +1082,8 @@ class RelanceVigie(Hass):
             return False
 
         aujourdhui = datetime.now(PARIS).date()
+        # Jours de bureau / télétravail (P9-N2) : une tâche sans date à qui le tri donne un contexte est datée.
+        jours_lieu = self.get_state("sensor.aiguillage_lieu_travail", attribute="jours")
         par_cle = {r["cle"]: r for r in choisies}
         traces, ecrites, conflits = [], 0, 0
         for changement in reponse.get("taches", []):
@@ -1090,7 +1092,8 @@ class RelanceVigie(Hass):
                 traces.append({"cle": changement.get("cle"), "refus": ["clé inconnue ou non envoyée"]})
                 continue
             nouvelle, refus = aiguillage_tri.appliquer(record["valeur"], changement, aujourdhui,
-                                                       datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"), tags)
+                                                       datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"), tags,
+                                                       jours_lieu)
             trace = {"cle": record["cle"], "titre": record["valeur"].get("titre"), "raison": changement.get("raison"),
                      "changements": self._tri_diff(record["valeur"], nouvelle), "refus": refus}
             if ecrire and nouvelle is not None:
@@ -1106,7 +1109,8 @@ class RelanceVigie(Hass):
                         ch2 = next((c for c in (rep2 or {}).get("taches", []) if c.get("cle") == relu["cle"]), None)
                         if ch2:
                             nouvelle, refus2 = aiguillage_tri.appliquer(
-                                relu["valeur"], ch2, aujourdhui, datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"), tags)
+                                relu["valeur"], ch2, aujourdhui, datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"), tags,
+                                jours_lieu)
                             trace["refus"] += refus2
                             statut = self._tri_ecrire(relu, nouvelle) if nouvelle is not None else "rien"
                         self._tri_etat(etat)

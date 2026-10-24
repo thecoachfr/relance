@@ -17,6 +17,13 @@ struct WatchTaskList: View {
                 let inbox = store.tasks.filter { $0.due == nil }
 
                 List {
+                    // Lieu de travail du jour (P9-N2), seulement les jours travaillés : en tête, sans rien demander à HA.
+                    if let lieu = WatchLink.libelleDuJour(store.lieuxTravail, date: now) {
+                        Text(lieu)
+                            .font(.headline)
+                            .listRowBackground(Color.clear)
+                            .accessibilityLabel("Aujourd'hui : \(lieu)")
+                    }
                     section("En retard", late, now: now)
                     section("Aujourd'hui", today, now: now)
                     section("Bientôt", later, now: now)

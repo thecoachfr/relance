@@ -169,15 +169,21 @@ nonisolated struct TacheHA: Codable, Equatable, Sendable {
     var pieces: [Piece] = []
     /// Durée en minutes (P9-H1), seulement avec une heure : l'événement d'agenda dure autant.
     var duree: Int?
+    /// Contexte (P9-N2) : `bureau` ou `maison`. Il fait foi ; la ligne `🏢 Au bureau` / `🏠 À la maison` des notes
+    /// en est la copie (`ContexteTache`).
+    var contexte: String?
     /// Champs de premier niveau que l'app ne connaît pas (ajoutés par la vigie, la routine ou une version plus
     /// récente) : recopiés tels quels, pour qu'une modification sur l'iPhone ne les efface pas.
     var autres: [String: JSONValeur] = [:]
 
     enum CodingKeys: String, CodingKey, CaseIterable {
-        case v, titre, notes, jour, heure, categorie, priorite, tags, relances, fait, lieu, envie, actions, liste, duree, pieces
+        case v, titre, notes, jour, heure, categorie, priorite, tags, relances, fait, lieu, envie, actions, liste, duree, pieces, contexte
         case faitLe = "fait_le"
         case googleID = "google_id"
     }
+
+    /// Valeurs permises de `contexte` (une autre valeur est ignorée à la lecture).
+    static let contextes: Set<String> = ["bureau", "maison"]
 
     init(titre: String) {
         self.titre = titre
@@ -210,6 +216,8 @@ nonisolated struct TacheHA: Codable, Equatable, Sendable {
             (try? JSONEncoder().encode(valeur)).flatMap { try? JSONDecoder().decode(Piece.self, from: $0) }
         }
         duree = (try? c.decodeIfPresent(Int.self, forKey: .duree)).flatMap { $0 }.flatMap { $0 > 0 ? $0 : nil }
+        contexte = (try? c.decodeIfPresent(String.self, forKey: .contexte)).flatMap { $0 }
+            .flatMap { Self.contextes.contains($0) ? $0 : nil }
         let connus = Set(CodingKeys.allCases.map(\.rawValue))
         let tout = try decoder.container(keyedBy: AnyKey.self)
         for key in tout.allKeys where !connus.contains(key.stringValue) {
@@ -220,7 +228,7 @@ nonisolated struct TacheHA: Codable, Equatable, Sendable {
     /// Les champs absents ne sont pas écrits (JSON plus lisible pour la routine et la vigie).
     func encode(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(lieu == nil && envie == nil && actions.isEmpty && liste == nil && duree == nil && pieces.isEmpty ? v : max(v, 2), forKey: .v)
+        try c.encode(lieu == nil && envie == nil && actions.isEmpty && liste == nil && duree == nil && pieces.isEmpty && contexte == nil ? v : max(v, 2), forKey: .v)
         try c.encode(titre, forKey: .titre)
         if !notes.isEmpty { try c.encode(notes, forKey: .notes) }
         try c.encodeIfPresent(jour, forKey: .jour)
@@ -238,6 +246,7 @@ nonisolated struct TacheHA: Codable, Equatable, Sendable {
         try c.encodeIfPresent(liste, forKey: .liste)
         try c.encodeIfPresent(duree, forKey: .duree)
         if !pieces.isEmpty { try c.encode(pieces, forKey: .pieces) }
+        try c.encodeIfPresent(contexte, forKey: .contexte)
         let connus = Set(CodingKeys.allCases.map(\.rawValue))
         var tout = encoder.container(keyedBy: AnyKey.self)
         for (key, value) in autres where !connus.contains(key) { try tout.encode(value, forKey: AnyKey(key)) }

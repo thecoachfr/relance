@@ -137,6 +137,8 @@ targets:
       - Relance/Views/PiecesSection.swift
       - Relance/Views/RecettesView.swift
       - Relance/Views/ErreursView.swift
+      - Relance/Views/LieuTravailView.swift
+      - Relance/Views/ContexteRow.swift
     configFiles:
       Debug: Relance/Resources/Secrets.xcconfig
       Release: Relance/Resources/Secrets.xcconfig

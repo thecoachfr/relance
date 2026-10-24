@@ -272,3 +272,43 @@ if __name__ == "__main__":
         if nom.startswith("test_"):
             f()
     print("ok")
+
+
+# MARK: - Contexte (P9-N2)
+
+JOURS_LIEU = [{"date": "2026-10-17", "lieu": "off"}, {"date": "2026-10-18", "lieu": "off"},
+              {"date": "2026-10-19", "lieu": "bureau"}, {"date": "2026-10-20", "lieu": "teletravail"}]
+
+
+def test_contexte_bureau_date_au_prochain_jour():
+    v = {"titre": "Rendre le badge au bureau", "fait": False}
+    nv, refus = t.appliquer(v, ch(contexte="bureau", categorie="Travail"), AUJ, NOW, TAGS, JOURS_LIEU)
+    assert refus == [] and nv["contexte"] == "bureau" and nv["v"] == 2
+    assert nv["jour"] == "2026-10-19" and nv["notes"] == "🏢 Au bureau"
+    assert "contexte" in t.vue(nv)
+
+
+def test_contexte_maison_aujourd_hui_compris_et_sans_capteur():
+    v = {"titre": "Arroser les plantes", "fait": False, "notes": "Celles du balcon"}
+    nv, _ = t.appliquer(v, ch(contexte="maison"), AUJ, NOW, TAGS, JOURS_LIEU)
+    assert nv["jour"] == "2026-10-17" and nv["notes"] == "Celles du balcon\n🏠 À la maison"
+    # Capteur absent, ou aucun jour qui convient : la tâche reste sans date.
+    nv2, _ = t.appliquer(v, ch(contexte="maison"), AUJ, NOW, TAGS)
+    assert "jour" not in nv2 and nv2["contexte"] == "maison"
+    nv3, _ = t.appliquer(v, ch(contexte="bureau"), AUJ, NOW, TAGS, JOURS_LIEU[:2])
+    assert "jour" not in nv3
+
+
+def test_contexte_garde_l_existant():
+    datee = {"titre": "Imprimer", "fait": False, "jour": "2026-10-25"}
+    nv, refus = t.appliquer(datee, ch(contexte="bureau"), AUJ, NOW, TAGS, JOURS_LIEU)
+    assert nv["jour"] == "2026-10-25" and refus == []
+    for deja in ({"contexte": "maison"}, {"notes": "🏠 À la maison"}):
+        nv2, refus2 = t.appliquer({"titre": "X", "fait": False, **deja}, ch(contexte="bureau"), AUJ, NOW, TAGS, JOURS_LIEU)
+        assert nv2 is None and refus2 == ["contexte (déjà fixé)"]
+    # Un contexte inconnu est refusé ; une envie ne reçoit pas de date.
+    assert t.appliquer({"titre": "X", "fait": False}, ch(contexte="lab"), AUJ, NOW, TAGS)[1] == ["contexte inconnu 'lab'"]
+    nv4, _ = t.appliquer({"titre": "Expo", "fait": False, "envie": {"type": "voir"}, "notes": "👀 À voir"},
+                         ch(contexte="maison"), AUJ, NOW, TAGS, JOURS_LIEU)
+    assert "jour" not in nv4
+    assert t.jour_pour_contexte("bureau", [{"date": "abc", "lieu": "bureau"}, None], AUJ) is None

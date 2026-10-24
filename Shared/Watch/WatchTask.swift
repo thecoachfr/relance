@@ -48,6 +48,19 @@ nonisolated enum WatchLink {
     /// Les tâches sont dans Home Assistant : la montre ne lit et n'écrit plus les tâches chez Google
     /// (elle n'y verrait que la boîte d'entrée des dictées) et passe par l'iPhone ; le mémo reste chez Google.
     static let tasksInHAKey = "tasksInHA"
+    /// Lieu de travail (P9-N2) : libellés des jours travaillés des 14 prochains jours, `{"AAAA-MM-JJ": "🏢 Bureau"}`
+    /// (JSON, clés triées). Données vides = rien à afficher. La montre montre celui du jour sans rien demander à HA.
+    static let lieuTravailKey = "lieuTravail"
+
+    static func decodeLieux(_ data: Data?) -> [String: String] {
+        data.flatMap { try? JSONDecoder().decode([String: String].self, from: $0) } ?? [:]
+    }
+
+    /// Le libellé du jour de `date` (« 🏢 Bureau », « 🏠 Télétravail »…), ou `nil` pour un jour non travaillé.
+    static func libelleDuJour(_ lieux: [String: String], date: Date, calendar: Calendar = .current) -> String? {
+        let c = calendar.dateComponents([.year, .month, .day], from: date)
+        return lieux[String(format: "%04d-%02d-%02d", c.year!, c.month!, c.day!)]
+    }
 
     enum Action: String {
         case complete, snooze, add

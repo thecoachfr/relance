@@ -196,6 +196,13 @@ actor FakeHA: ServeurDonnees {
     func setOnline(_ value: Bool) { online = value }
     func record(_ key: String) -> Enregistrement? { records[key] }
     func liveKeys() -> [String] { records.values.filter { !$0.supprime }.map(\.cle) }
+    /// Écriture faite par un autre que l'app (AppDaemon, consigne Signal…).
+    func serverWrite(_ key: String, _ valeur: JSONValeur, by author: String = "lieu-travail") {
+        seq += 1
+        let version = (records[key]?.version ?? 0) + 1
+        records[key] = Enregistrement(cle: key, valeur: valeur, version: version, seq: seq,
+                                      modifieLe: "2026-10-24T10:00:00Z", modifiePar: author, supprime: false)
+    }
 
     func changements(espace: String, depuisSeq: Int) async throws -> ReponseChangements {
         guard online else { throw ErreurHA.injoignable("coupé") }

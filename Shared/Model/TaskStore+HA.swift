@@ -41,6 +41,11 @@ extension TaskStore {
     /// Fusion d'un conflit sur une tâche (voir `TacheHA.Liste.fusion`) ; l'ancêtre commun est la dernière liste
     /// reçue de HA par cet appareil.
     func fusionner(_ cle: String, _ locale: JSONValeur, _ serveur: JSONValeur) -> JSONValeur? {
+        // Réglages du lieu de travail (P9-N2) modifiés en même temps ailleurs (consigne Signal) : la valeur de HA,
+        // relue, reçoit les modifications de cet appareil pas encore confirmées.
+        if cle == ConfigLieuTravail.haKey {
+            return modifsLieuTravail.isEmpty ? nil : ConfigLieuTravail.appliquer(modifsLieuTravail, a: serveur)
+        }
         guard let id = UUID(uuidString: cle), let l = try? TacheHA(valeur: locale), let s = try? TacheHA(valeur: serveur)
         else { return nil }
         let item = try? context.fetch(FetchDescriptor<TaskItem>(predicate: #Predicate { $0.localID == id })).first
@@ -151,6 +156,10 @@ extension TaskStore {
             mesLieux = lieux
             MesLieux.cache(lieux)
         }
+        // Réglages du lieu de travail (P9-N2) : pour l'écran « Lieu de travail » (le capteur reste la source de l'affichage).
+        let configLieu = records.first(where: { $0.cle == ConfigLieuTravail.haKey && !$0.supprime })
+            .map { ConfigLieuTravail(valeur: $0.valeur) }
+        if configLieu != configLieuTravail { configLieuTravail = configLieu }
         if let config = records.first(where: { $0.cle == Recette.haKey && !$0.supprime }) {
             let liste = Recette.liste(config.valeur)
             if liste != recettes { recettes = liste }

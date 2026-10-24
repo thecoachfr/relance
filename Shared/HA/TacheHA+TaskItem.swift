@@ -15,6 +15,8 @@ extension TacheHA {
         duree = item.dueMinutes == nil ? nil : item.dureeMinutes
         pieces = item.pieces
         notes = Piece.notes(notes, setting: pieces)
+        // Contexte (P9-N2) : la ligne 🏢 / 🏠 des notes, modifiable dans la fiche.
+        contexte = item.contexte?.rawValue
         jour = Self.jour(item.dueDay)
         heure = item.dueDay == nil ? nil : Self.heure(item.dueMinutes)
         categorie = item.category
@@ -44,6 +46,11 @@ extension TacheHA {
             toSee.kind = kind
             toSee.note = envie.note
             if ToSee(notes: item.notes) != toSee { item.notes = ToSee.notes(item.notes, setting: toSee) }
+        }
+        // Le contexte fait foi : sa ligne est réécrite d'après lui ; sans champ (ancienne tâche, mode Google), la ligne
+        // des notes reste la seule source.
+        if let contexte = contexte.flatMap(ContexteTache.init(rawValue:)) {
+            item.notes = ContexteTache.notes(item.notes, setting: contexte)
         }
         item.envieRaw = envie.flatMap { try? JSONEncoder().encode($0) }.map { String(decoding: $0, as: UTF8.self) }
         item.dueDay = day

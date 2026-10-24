@@ -33,7 +33,9 @@ final class WatchSync: NSObject, WCSessionDelegate {
                              articles: $0.liste.map { $0.articles.map {
                                  WatchArticle(id: $0.id, texte: $0.texte, quantite: $0.quantite, coche: $0.coche) } }) }
         var context: [String: Any] = [WatchLink.tasksKey: WatchLink.encode(payload),
-                                      WatchLink.tasksInHAKey: store.isHAActive]
+                                      WatchLink.tasksInHAKey: store.isHAActive,
+                                      // Libellé du jour (P9-N2), seulement en mode HA : données vides sinon.
+                                      WatchLink.lieuTravailKey: store.isHAActive ? (store.lieuTravail?.pourLaMontre ?? Data()) : Data()]
         // Passe par le lien chiffré iPhone ↔ montre ; une chaîne vide dit à la montre d'oublier la connexion.
         let credentials = store.auth.watchCredentials
         context[WatchLink.refreshTokenKey] = credentials?.refreshToken ?? ""

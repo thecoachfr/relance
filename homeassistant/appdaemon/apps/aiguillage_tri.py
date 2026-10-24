@@ -33,6 +33,10 @@ LIGNES_ENVIE = {"👀": "voir", "🎟": "sortie", "🍽": "resto", "🛍": "maga
                 "🎬": "regarder"}
 ORDRE_FIN = [LIGNE_LIEU, LIGNE_A_PRENDRE, *LIGNES_ENVIE, "🗓", "🔄", "💡", "➕"]
 DICTE = "🎙 Dicté : "
+# Contexte d'une tâche (P9-N2, 24/10) : le champ `contexte` fait foi, la ligne des notes en est la copie.
+LIGNES_CONTEXTE = {"bureau": "🏢 Au bureau", "maison": "🏠 À la maison"}
+# Lieux du jour (`sensor.aiguillage_lieu_travail`, attribut `jours`) qui conviennent à chaque contexte.
+LIEUX_CONTEXTE = {"bureau": ("bureau",), "maison": ("teletravail", "off", "ferie")}
 PARTAGE, PARTAGE_A_REVOIR = "📩 Message partagé", "📩 Message partagé — titre à revoir"
 _JOUR = re.compile(r"\d{4}-\d{2}-\d{2}")
 _HEURE = re.compile(r"([01]\d|2[0-3]):[0-5]\d")
@@ -101,7 +105,7 @@ def selection(enregistrements, dernier_tri=None, complet=False):
 def vue(valeur):
     """Ce que le modèle voit d'une tâche : les champs utiles au tri (les autres restent intacts, Python repart de
     l'objet lu)."""
-    garder = ("titre", "notes", "jour", "heure", "duree", "categorie", "tags", "priorite", "lieu", "envie")
+    garder = ("titre", "notes", "jour", "heure", "duree", "categorie", "tags", "priorite", "lieu", "envie", "contexte")
     out = {k: valeur[k] for k in garder if valeur.get(k) not in (None, "", [])}
     # Pièces jointes (P9-K) : nom et texte lu sur l'appareil (billet, facture, convocation).
     pieces = [{k: p[k] for k in ("nom", "texte") if p.get(k)} for p in valeur.get("pieces") or [] if isinstance(p, dict)]
@@ -158,6 +162,7 @@ SCHEMA = _objet({
         "heure": {"type": "string"},
         "priorite": {"type": "string", "enum": ["", "Urgente", "Basse"]},
         "duree": {"type": "integer"},
+        "contexte": {"type": "string", "enum": ["", *LIGNES_CONTEXTE]},
         "lieu": _ou_null(_objet({"nom": {"type": "string"}, "adresse": {"type": "string"},
                                  "telephone": {"type": "string"}, "lien": {"type": "string"}})),
         "envie": _ou_null(_objet({"type": {"type": "string", "enum": list(TYPES_ENVIE)},
@@ -206,11 +211,32 @@ def _article(a, source, maintenant):
     return out
 
 
-def appliquer(valeur, ch, aujourdhui, maintenant, tags_ok):
+def contexte_des_notes(lignes):
+    """Contexte lu dans les lignes des notes (anciennes tâches, mode Google Tasks), ou None."""
+    for ligne in lignes:
+        for contexte, texte in LIGNES_CONTEXTE.items():
+            if _sans_variante(ligne).strip() == texte:
+                return contexte
+    return None
+
+
+def jour_pour_contexte(contexte, jours_lieu, aujourdhui):
+    """Prochain jour (aujourd'hui compris) qui convient au contexte d'après les 14 jours du capteur du lieu de
+    travail : bureau → jour de bureau ; maison → télétravail, ou jour sans Barrière (repos, férié). None sinon."""
+    for j in jours_lieu or []:
+        if not isinstance(j, dict) or not _JOUR.fullmatch(str(j.get("date") or "")):
+            continue
+        if j["date"] >= aujourdhui.isoformat() and j.get("lieu") in LIEUX_CONTEXTE.get(contexte, ()):
+            return j["date"]
+    return None
+
+
+def appliquer(valeur, ch, aujourdhui, maintenant, tags_ok, jours_lieu=None):
     """Applique les changements `ch` (une entrée de `taches`) à la tâche lue `valeur`.
 
     Renvoie (nouvelle valeur, ou None si rien ne change ; liste des changements refusés). `aujourdhui` : date
-    (Europe/Paris) ; `maintenant` : ISO 8601 UTC (« maj » des articles)."""
+    (Europe/Paris) ; `maintenant` : ISO 8601 UTC (« maj » des articles) ; `jours_lieu` : attribut `jours` de
+    `sensor.aiguillage_lieu_travail`, pour dater une tâche sans date à qui le tri donne un contexte."""
     t = json.loads(json.dumps(valeur))  # copie profonde : tous les champs lus, même inconnus
     refus = []
     lignes = (t.get("notes") or "").split("\n") if t.get("notes") else []
@@ -373,6 +399,22 @@ def appliquer(valeur, ch, aujourdhui, maintenant, tags_ok):
             liste.setdefault("articles", []).extend(
                 _article(a, "recette", maintenant) for a in rp.get("articles") or [] if a.get("texte"))
             cible["a_preparer"] = False
+
+    # Contexte (P9-N2) : seulement s'il manque (ni champ, ni ligne) ; ligne ajoutée à la fin ; une tâche restée sans
+    # date (et qui n'est pas une envie) prend le prochain jour qui convient.
+    if ch.get("contexte"):
+        c = ch["contexte"]
+        if c not in LIGNES_CONTEXTE:
+            refus.append(f"contexte inconnu {c!r}")
+        elif t.get("contexte") or contexte_des_notes(lignes):
+            refus.append("contexte (déjà fixé)")
+        else:
+            t["contexte"], v2 = c, True
+            lignes.append(LIGNES_CONTEXTE[c])
+            if absent("jour") and not t.get("envie"):
+                jour = jour_pour_contexte(c, jours_lieu, aujourdhui)
+                if jour:
+                    t["jour"] = jour
 
     notes = "\n".join(lignes)
     if notes != (valeur.get("notes") or ""):

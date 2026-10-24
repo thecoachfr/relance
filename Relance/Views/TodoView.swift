@@ -56,6 +56,8 @@ struct TodoView: View {
             let groups = group(now: now)
             // Sélection native sur grand écran : flèches ↑ ↓ au clavier, surlignage système.
             List(selection: sizeClass == .regular ? $selectedID : .constant(nil)) {
+                // Bureau ou télétravail (P9-N2) : la phrase du capteur, en tête.
+                LieuTravailBandeau()
                 section("En retard", groups.overdue, now: now)
                 section("Aujourd'hui", groups.today, now: now)
                 section("Bientôt", groups.later, now: now)
