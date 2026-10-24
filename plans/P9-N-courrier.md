@@ -105,8 +105,14 @@ Source selon N0 :
 - montre : libellé du jour (jours travaillés) en tête de la liste, envoyé par l'iPhone avec l'état.
 
 **Reste** : pastille du lieu à côté de chaque date dans la vue par jours ; relance du matin qui pousse en tête les
-tâches du contexte du jour ; complication / Smart Stack de la montre (🏢 / 🏠) ; les trois vues du Hub (Hub TV,
-Nest Hub, Hub iPad) ; essais réels sur les appareils.
+tâches du contexte du jour ; complication / Smart Stack de la montre (🏢 / 🏠) ; essais réels sur les appareils.
+
+**Trois vues du Hub, faites le 24/10** (pastille `aujourdhui.libelle` à côté de la météo de l'en-tête les jours
+travaillés seulement ; `phrase` en tête d'À faire, cachée quand elle est nulle, c'est-à-dire les jours de repos) :
+Hub TV (`hub-tv`, étape H33, `9d99339`, installé sur le Player), Hub iPad / iPhone (`hub-ipad`, `aa38877`, par
+TestFlight), Nest Hub (`nest-hub-leger-card.js` `?v=452f80a1` ; émojis dessinés en SVG, la police n'en a pas).
+Le 24/10 vers 12 h 15, à la demande d'Alexandre : plus de phrase les jours non travaillés, « Pas Barrière » devient
+« Repos » (double sens).
 
 - **Réglage facile (demande d'Alexandre, 24/10)** : écran « Lieu de travail » (Réglages, et toucher le bandeau) :
   la semaine type jour par jour (Bureau / Le Lab / Télétravail / Pas Barrière, « probable » en option) et les 14
