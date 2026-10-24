@@ -257,6 +257,7 @@ Code fait et fusionné dans `main` (désactivé tant qu'on ne bascule pas dans l
 
 | Élément | Valeur |
 |---|---|
+| **Notifications vers les écrans du Hub (24/10/2026, disponible)** | Mécanisme en place et utilisable, **aucune notification d'Aiguillage n'y passe encore** (à choisir plus tard avec Alexandre). Pour notifier les trois vues du Hub (TV par-dessus l'appli en cours, Nest Hub, Hub iPad) : appeler `script.hub_notifier` avec `texte` (obligatoire), `titre` (la source, « Aiguillage » par défaut) et `niveau` (`info` ou `alerte`, en rouge). Depuis la vigie AppDaemon : `self.call_service("script/hub_notifier", texte=…, titre="Aiguillage")`. Une seule à l'écran (la dernière gagne) ; TV 10 s, Nest Hub et iPad jusqu'à « Vu » ou 10 min. Ne jamais viser un seul écran. Détails : H35-H36 de `hub-tv/docs/STATUT.md` |
 | Dépôt | github.com/thecoachfr/relance (public ; `Secrets.xcconfig` non versionné) |
 | Bundle | `fr.alexandrefau.relance` (+ `.widgets`, `.share`, `.watchkitapp`, `.watchkitapp.widgets`), équipe GD6W292ZXP ; l'app Mac reprend `fr.alexandrefau.relance` (même client OAuth Google) |
 | Projet Xcode | généré par XcodeGen (`xcodegen generate`) ; schémas `Relance`, `RelanceWatch` et `RelanceMac` (macOS 15) |
