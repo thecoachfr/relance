@@ -171,6 +171,8 @@ def entetes(priorite):
 # d'activités en cours sur l'appareil (`activites`) : 0 → la vigie oublie les activités de cet appareil et son entrée
 # `demarres`, il redémarre au prochain passage s'il y a lecture. Absent ou vide (app d'avant) : rien ne change. Un
 # démarrage de moins de `GARDE_DEMARRAGE` s secondes est gardé (l'activité peut ne pas être encore créée sur l'appareil).
+# Le même jeton push-to-start annoncé sous un autre identifiant d'appareil (`identifierForVendor` change, cas de
+# l'iPhone le 24/10/2026) : c'est le même appareil, l'ancien identifiant est oublié (activités, démarrage, réglages).
 
 def etat_vide():
     return {"push_to_start": {}, "activites": {}, "demarres": {}, "reglages": {}, "en_cours": False, "envoye": None}
@@ -263,6 +265,10 @@ def ranger_jeton(etat, data, maintenant):
             for autre in [j for j, i in jetons.items() if j != jeton and (
                     i.get("appareil") == appareil or (not i.get("appareil") and modele == "iPad"))]:
                 jetons.pop(autre)
+        ancien = (jetons.get(jeton) or {}).get("appareil")
+        if appareil and ancien and ancien != appareil:
+            oublier_activites(etat, ancien, maintenant + GARDE_DEMARRAGE)
+            (etat.get("reglages") or {}).pop(ancien, None)
         jetons[jeton] = info
         if _nombre(data.get("activites")) == 0:
             oublier_activites(etat, appareil, maintenant)

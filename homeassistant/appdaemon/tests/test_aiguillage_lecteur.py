@@ -356,3 +356,16 @@ def test_activites_zero_garde_un_demarrage_recent():
                    100 + l.GARDE_DEMARRAGE)
     assert etat["demarres"] == {}
     assert [g for g, *_ in l.envois(etat, c, None, 161)[1]] == ["start"]
+
+
+def test_meme_jeton_sous_un_autre_identifiant_oublie_l_ancien():
+    """24/10/2026 : l'iPhone a changé d'`identifierForVendor` en gardant son jeton push-to-start ; l'activité morte de
+    l'ancien identifiant, son démarrage et ses réglages partent."""
+    etat = l.etat_vide()
+    _pts(etat, P2, "ANCIEN", "iPhone")
+    l.apres_envois(etat, "start", l.contenu(MA, HA), ["ANCIEN", IPAD], 2, [], 100)
+    l.ranger_jeton(etat, {"type": "activite", "jeton": A2, "activite_id": "Y", "appareil": "ANCIEN",
+                          "masquer_spotify": False}, 101)
+    l.ranger_jeton(etat, {"type": "push_to_start", "jeton": P2, "appareil": IPHONE, "modele": "iPhone"}, 102)
+    assert etat["activites"] == {} and set(etat["demarres"]) == {IPAD} and "ANCIEN" not in etat["reglages"]
+    assert etat["push_to_start"][P2]["appareil"] == IPHONE
