@@ -61,6 +61,11 @@ archivage sans accord, au moins jusqu'à la fin de la période d'ombre.
 
 ### N1 — Le calendrier pro dans HA (1 soirée)
 
+**Fait le 24/10 (cas C)** : `sensor.aiguillage_lieu_travail`, contrat `homeassistant/LIEU-TRAVAIL.md` ; semaine type
+d'Alexandre (lundi bureau 100 %, mercredi 70 %, 4/5 : vendredi pas Barrière sauf le premier du mois), jours fériés,
+consignes par la « Note à moi-même » de Signal, constat par la position (groupe « Travail » de Mes lieux, 33 rue
+d'Artois), statistiques et suggestion. Le tableau ci-dessous reste pour mémoire.
+
 Source selon N0 :
 
 | Cas | Source | Comment |

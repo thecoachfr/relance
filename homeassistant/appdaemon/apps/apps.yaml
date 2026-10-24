@@ -61,3 +61,12 @@ aiguillage_trajets:
 hub_meteo:
   module: hub_meteo
   class: HubMeteo
+
+# Lieu de travail (P9-N, N1, 24/10/2026) : sensor.aiguillage_lieu_travail (bureau / télétravail), contrat :
+# homeassistant/LIEU-TRAVAIL.md. Semaine type et exceptions dans donnees_apps (config:lieu_travail), bureau = groupe
+# « Travail » de Mes lieux ; constats de position dans /config/aiguillage_lieu_travail.json. Consignes par la
+# « Note à moi-même » de Signal (transmises par aiguillage_signal).
+aiguillage_lieu_travail:
+  module: aiguillage_lieu_travail
+  class: AiguillageLieuTravail
+  entite: device_tracker.iphone_17_lex

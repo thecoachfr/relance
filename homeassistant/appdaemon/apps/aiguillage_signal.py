@@ -252,6 +252,10 @@ if hass is not None:
             texte, expediteur = retenu
             liens = refs(texte)
             if not liens:
+                if expediteur is None and texte.strip():
+                    # Note à moi-même sans lien : peut-être une consigne de lieu de travail (P9-N, « demain
+                    # télétravail ») ; `aiguillage_lieu_travail` décide et répond, sinon rien.
+                    await self.fire_event("aiguillage_lieu_travail_message", texte=texte)
                 return
             self._etat["dernier_message"] = f"{datetime.now():%d/%m %H:%M} {len(liens)} lien(s)"
             for ref in liens:
