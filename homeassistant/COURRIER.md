@@ -191,3 +191,18 @@ l'app Compagnon (`notify.mobile_app_iphone_17_lex` et, depuis le 25/10 vers 18 h
   puis un seul regroupement le matin de ce qui reste à traiter (un mail réglé entre-temps n'est plus notifié) ;
 - pas de rattrapage : seuls les mails triés après la mise en route (`etat.notif_depuis`) ; colonne `notifie` en base.
 Pour couper : `notifications: false` dans le bloc `apps.yaml`. Notification d'essai envoyée le 25/10 à 18 h 25.
+
+
+### Boutons et lien d'ouverture (25/10 vers 18 h 35)
+
+- **Une notification par mail** (5 au plus d'un coup, sinon un seul résumé « 📧 N mails à traiter »), regroupées à
+  l'écran (`thread-id: courrier`). Chacune a trois boutons (appui long, ou sur la montre) :
+  **Fait** (arrière-plan : le mail et sa conversation passent en `fait`, le libellé rouge disparaît ; n'apprend
+  rien), **En faire une tâche** (arrière-plan : tâche Aiguillage dans `donnees_apps`, clé tirée du mail, titre = la
+  demande, datée de l'échéance ou d'aujourd'hui, notes = lien Gmail, résumé, ligne `📧 Mail de X` ; puis `fait`),
+  **Ouvrir**. Boutons reçus par l'événement `mobile_app_notification_action` (`COURRIER_FAIT_<id>`,
+  `COURRIER_TACHE_<id>`).
+- **Ouvrir un mail** : iOS n'a pas d'« app de mail par défaut » pour lire un mail précis (`mailto:` ne sert qu'à
+  écrire). Réglage `ouvrir_avec` : `gmail` (défaut, `googlegmail:///cv=<fil>/accountId=1`) ou `mail` (Mail d'Apple,
+  `message://<Message-ID>`, d'où la colonne `message_id` gardée depuis le 25/10). Toucher passe d'abord par l'app
+  Home Assistant (limite d'iOS : une notification ouvre l'app qui l'a envoyée).

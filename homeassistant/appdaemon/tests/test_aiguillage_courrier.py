@@ -587,34 +587,58 @@ def test_synchroniser_libelles():
 def test_silence_et_notification():
     assert c.en_silence(MAINTENANT.replace(hour=23)) and c.en_silence(MAINTENANT.replace(hour=7, minute=29))
     assert not c.en_silence(MAINTENANT.replace(hour=7, minute=30)) and not c.en_silence(MAINTENANT.replace(hour=21))
-    un = {"fil": "f1", "nom": "Tom CHICHA via leboncoin", "de": "x@y", "resume": "Veut venir chercher la Switch.",
-          "demande": "Lui répondre", "sujet": "s"}
-    n = c.notification([un])
+    un = {"id": "a1b2", "fil": "f1", "nom": "Tom CHICHA via leboncoin", "de": "x@y", "resume": "Veut la Switch.",
+          "demande": "Lui répondre", "sujet": "s", "message_id": "<abc@leboncoin.fr>"}
+    n = c.notification(un)
     assert n["title"] == "📧 Tom CHICHA (leboncoin)" and "→ Lui répondre" in n["message"]
-    assert n["data"]["url"].endswith("#inbox/f1") and n["data"]["group"] == "courrier"
-    n = c.notification([un] * 7)
-    assert n["title"] == "📧 7 mails à traiter" and "… et 2 autre(s)" in n["message"]
+    assert n["data"]["url"] == "googlegmail:///cv=f1/accountId=1&create-new-tab"
+    assert [a["title"] for a in n["data"]["actions"]] == ["Fait", "En faire une tâche", "Ouvrir"]
+    assert n["data"]["actions"][0]["action"] == "COURRIER_FAIT_a1b2"
+    assert c.notification(un, "mail")["data"]["url"] == "message://%3Cabc%40leboncoin.fr%3E"
+    assert c.lien_mail(dict(un, message_id=""), "mail").startswith("googlegmail:")  # repli sans Message-ID
+    r = c.resume_notifications([un] * 9)
+    assert r["title"] == "📧 9 mails à traiter" and "… et 1 autre(s)" in r["message"]
 
 
 def test_notifications_a_envoyer():
     db = _base()
     etat = {}
     midi = MAINTENANT.replace(hour=12)
-    assert c.notifications_a_envoyer(db, etat, midi) == (None, [])
+    assert c.notifications_a_envoyer(db, etat, midi) == ([], [])
     assert etat["notif_depuis"] == midi.isoformat(timespec="seconds")  # rien d'avant la mise en route
     _a_traiter(db, "a1", midi + timedelta(minutes=1))
     _a_traiter(db, "a2", midi + timedelta(minutes=2), fil="f2", de="b@x.fr", sujet="Autre")
-    notif, ids = c.notifications_a_envoyer(db, etat, midi + timedelta(minutes=3))
-    assert notif["title"] == "📧 2 mails à traiter" and sorted(ids) == ["a1", "a2"]
+    notifs, ids = c.notifications_a_envoyer(db, etat, midi + timedelta(minutes=3))
+    assert len(notifs) == 2 and sorted(ids) == ["a1", "a2"]  # une par mail
     c.noter_notifies(db, ids, etat, midi + timedelta(minutes=3))
     _a_traiter(db, "a3", midi + timedelta(minutes=5), fil="f3", de="c@x.fr", sujet="Trois")
-    assert c.notifications_a_envoyer(db, etat, midi + timedelta(minutes=8)) == (None, [])  # moins de 10 min
-    notif, ids = c.notifications_a_envoyer(db, etat, midi + timedelta(minutes=14))
+    assert c.notifications_a_envoyer(db, etat, midi + timedelta(minutes=8)) == ([], [])  # moins de 10 min
+    notifs, ids = c.notifications_a_envoyer(db, etat, midi + timedelta(minutes=14))
     assert ids == ["a3"]
-    # la nuit : rien ; le matin : ce qui reste
     c.noter_notifies(db, ids, etat, midi + timedelta(minutes=14))
     nuit = MAINTENANT.replace(hour=23)
-    _a_traiter(db, "a4", nuit, fil="f4", de="d@x.fr", sujet="Nuit")
-    assert c.notifications_a_envoyer(db, etat, nuit + timedelta(minutes=30)) == (None, [])
-    notif, ids = c.notifications_a_envoyer(db, etat, MAINTENANT.replace(hour=7, minute=32) + timedelta(days=1))
-    assert ids == ["a4"]
+    for i in range(6):
+        _a_traiter(db, f"n{i}", nuit, fil=f"fn{i}", de=f"d{i}@x.fr", sujet=f"Nuit {i}")
+    assert c.notifications_a_envoyer(db, etat, nuit + timedelta(minutes=30)) == ([], [])
+    notifs, ids = c.notifications_a_envoyer(db, etat, MAINTENANT.replace(hour=7, minute=32) + timedelta(days=1))
+    assert len(ids) == 6 and len(notifs) == 1 and notifs[0]["title"] == "📧 6 mails à traiter"  # résumé du matin
+
+
+def test_actions_de_notification():
+    assert c.lire_action("COURRIER_FAIT_1a16cd") == ("fait", "1a16cd")
+    assert c.lire_action("COURRIER_TACHE_1a16cd") == ("tache", "1a16cd")
+    assert c.lire_action("URI") is None and c.lire_action("COURRIER_FAIT_x;drop") is None
+    db = _base()
+    _a_traiter(db, "aa1", MAINTENANT - timedelta(minutes=5))
+    _a_traiter(db, "aa2", MAINTENANT, sujet="Suite")  # même fil fA
+    assert c.marquer_fait(db, "aa2", "fait depuis la notification", MAINTENANT) == 2
+    assert {r["categorie"] for r in c.lignes(db)} == {"fait"}
+    assert c.marquer_fait(db, "inconnu", "x", MAINTENANT) == 0
+    r = {"id": "aa1", "fil": "fA", "nom": "Enedis", "de": "noreply@enedis.fr", "sujet": "Coupure",
+         "resume": "Coupure le 3/11.", "demande": "Prévoir la coupure du 3/11", "echeance": "2026-11-03"}
+    cle, t = c.tache_du_mail(r, MAINTENANT)
+    assert t == {"v": 2, "titre": "Prévoir la coupure du 3/11", "fait": False, "jour": "2026-11-03",
+                 "notes": "https://mail.google.com/mail/u/0/#inbox/fA\nCoupure le 3/11.\n📧 Mail de Enedis"}
+    assert cle == c.tache_du_mail(r, MAINTENANT)[0]  # même mail, même tâche (pas de doublon)
+    t2 = c.tache_du_mail(dict(r, demande=None, echeance=None), MAINTENANT)[1]
+    assert t2["titre"] == "Répondre à Enedis : Coupure" and t2["jour"] == "2026-10-24"
