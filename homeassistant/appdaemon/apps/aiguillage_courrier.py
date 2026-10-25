@@ -422,6 +422,9 @@ def ouvrir_base(chemin):
     if "libelle" not in {r["name"] for r in db.execute("PRAGMA table_info(messages)")}:
         db.execute("ALTER TABLE messages ADD COLUMN libelle TEXT")  # libellé du tri posé dans Gmail (24/10)
         db.commit()
+    if "notifie" not in {r["name"] for r in db.execute("PRAGMA table_info(messages)")}:
+        db.execute("ALTER TABLE messages ADD COLUMN notifie TEXT")  # notification envoyée (25/10)
+        db.commit()
     return db
 
 
@@ -888,6 +891,73 @@ def synchroniser_libelles(gmail, db, etat, maintenant, journal=print):
     return n
 
 
+# MARK: - Notifications des « à traiter » (25/10, demande d'Alexandre)
+
+SILENCE_DEBUT, SILENCE_FIN = (22, 0), (7, 30)   # comme les relances d'Aiguillage
+ECART_NOTIFICATIONS_MIN = 10                    # au plus une notification toutes les 10 minutes (regroupement)
+
+
+def en_silence(maintenant):
+    h = maintenant.astimezone(PARIS)
+    m = (h.hour, h.minute)
+    return m >= SILENCE_DEBUT or m < SILENCE_FIN
+
+
+def a_notifier(db, depuis_iso):
+    """« À traiter » encore ouverts, triés depuis `depuis_iso` (mise en route des notifications), jamais notifiés."""
+    return [dict(r) for r in db.execute(
+        "SELECT * FROM messages WHERE categorie = 'a_traiter' AND notifie IS NULL AND recu_le >= ? "
+        "ORDER BY date_ms DESC", (depuis_iso,))]
+
+
+def _qui(r):
+    nom = (r.get("nom") or r.get("de") or "").strip()
+    return nom.replace(" via leboncoin", " (leboncoin)")
+
+
+def notification(rangs):
+    """Une notification pour un ou plusieurs « à traiter » : {title, message, data}. Toucher ouvre le mail (un seul)
+    ou la boîte (plusieurs) dans Gmail."""
+    if len(rangs) == 1:
+        r = rangs[0]
+        corps = r.get("resume") or r.get("sujet") or ""
+        if r.get("demande"):
+            corps += f"\n→ {r['demande']}"
+        lien = LIEN_GMAIL.format(r["fil"])
+        titre = f"📧 {_qui(r)}"
+    else:
+        titre = f"📧 {len(rangs)} mails à traiter"
+        corps = "\n".join(f"• {_qui(r)} : {r.get('resume') or r.get('sujet') or ''}" for r in rangs[:5])
+        if len(rangs) > 5:
+            corps += f"\n… et {len(rangs) - 5} autre(s)"
+        lien = "https://mail.google.com/mail/u/0/#label/Tri%2F%C3%80+traiter"
+    return {"title": titre[:120], "message": corps[:900],
+            "data": {"url": lien, "group": "courrier", "tag": "courrier", "push": {"thread-id": "courrier"}}}
+
+
+def notifications_a_envoyer(db, etat, maintenant):
+    """(notification ou None, ids concernés) : rien la nuit (22 h - 7 h 30 ; le matin, un seul regroupement de ce qui
+    reste à traiter), ni moins de 10 minutes après la précédente."""
+    if not etat.get("notif_depuis"):
+        etat["notif_depuis"] = maintenant.isoformat(timespec="seconds")  # pas de rattrapage du passé
+    if en_silence(maintenant):
+        return None, []
+    derniere = etat.get("notif_derniere")
+    if derniere and maintenant - datetime.fromisoformat(derniere) < timedelta(minutes=ECART_NOTIFICATIONS_MIN):
+        return None, []
+    rangs = a_notifier(db, etat["notif_depuis"])
+    if not rangs:
+        return None, []
+    return notification(rangs), [r["id"] for r in rangs]
+
+
+def noter_notifies(db, ids, etat, maintenant):
+    quand = maintenant.isoformat(timespec="seconds")
+    db.executemany("UPDATE messages SET notifie = ? WHERE id = ?", [(quand, i) for i in ids])
+    db.commit()
+    etat["notif_derniere"] = quand
+
+
 # MARK: - Une relève (sans AppDaemon, testable avec des clients simulés)
 
 def trier(gmail, db, ia_client, ids, etat, budget, maintenant, regles_en_place, journal=print, verifier_fil=True):
@@ -988,6 +1058,9 @@ if hass is not None:
             self._budget = float(self.args.get("courrier_budget_mensuel", 15))
             # Libellés du tri dans Gmail (accord d'Alexandre du 24/10 au soir) : `libelles: false` pour les couper.
             self._libelles = bool(self.args.get("libelles", True))
+            # Notifications des « à traiter » sur l'iPhone et la montre (25/10) : `notifications: false` pour couper.
+            self._notifier = bool(self.args.get("notifications", True))
+            self._service_notif = self.args.get("notify_service", "mobile_app_iphone_17_lex")
             self._mode = str(self.args.get("mode", "ombre"))
             if self._mode != "ombre":
                 self.log(f"Courrier : mode {self._mode!r} pas encore disponible (lot N4), on reste en ombre",
@@ -1071,6 +1144,18 @@ if hass is not None:
                                     self.log(f"Courrier : libellés du tri posés ou changés sur {n} message(s)")
                             except ErreurGmail as exc:
                                 self.log(f"Courrier : libellés impossibles ({exc})", level="WARNING")
+                        if self._notifier:
+                            notif, ids = notifications_a_envoyer(db, etat, maintenant)
+                            if notif:
+                                try:
+                                    r = httpx.post(f"{CORE_API}/services/notify/{self._service_notif}", json=notif,
+                                                   timeout=15,
+                                                   headers={"Authorization": f"Bearer {os.environ['SUPERVISOR_TOKEN']}"})
+                                    r.raise_for_status()
+                                    noter_notifies(db, ids, etat, maintenant)
+                                    self.log(f"Courrier : notification « {notif['title']} » ({len(ids)} mail(s))")
+                                except Exception as exc:  # noqa: BLE001 - nouvel essai à la relève suivante
+                                    self.log(f"Courrier : notification impossible ({exc!r})", level="WARNING")
                     finally:
                         db.close()
                     self._erreur = None

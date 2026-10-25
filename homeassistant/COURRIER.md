@@ -177,3 +177,17 @@ archivé, déplacé ni marqué lu. Toujours aucune méthode d'envoi, de brouillo
 `test_garde_fou_lecture_seule`). Pour couper : `libelles: false` dans le bloc `apps.yaml` ; pour effacer, supprimer les
 libellés dans Gmail. Premier passage vérifié : 4 libellés créés, 77 messages libellés en deux relèves (environ 27 s
 chacune, avertissement d'AppDaemon le temps du rattrapage seulement), Enedis en `Tri/À traiter`.
+
+
+## Notifications des « à traiter » (25/10 vers 18 h 25, demande d'Alexandre)
+
+Pour couper les notifications de Gmail et de Mail : l'app notifie elle-même l'iPhone (et la montre, par l'iPhone) par
+l'app Compagnon (`notify.mobile_app_iphone_17_lex`, clé `notify_service`), **seulement pour les nouveaux
+`a_traiter`** :
+- un mail : titre « 📧 Expéditeur » (« X via leboncoin » devient « X (leboncoin) »), le résumé et « → la demande » ;
+  toucher ouvre le fil dans Gmail ;
+- plusieurs : « 📧 N mails à traiter », une ligne par mail (5 au plus), toucher ouvre le libellé `Tri/À traiter` ;
+- au plus une notification toutes les 10 minutes (les suivants attendent et sont regroupés) ; rien de 22 h à 7 h 30,
+  puis un seul regroupement le matin de ce qui reste à traiter (un mail réglé entre-temps n'est plus notifié) ;
+- pas de rattrapage : seuls les mails triés après la mise en route (`etat.notif_depuis`) ; colonne `notifie` en base.
+Pour couper : `notifications: false` dans le bloc `apps.yaml`. Notification d'essai envoyée le 25/10 à 18 h 25.

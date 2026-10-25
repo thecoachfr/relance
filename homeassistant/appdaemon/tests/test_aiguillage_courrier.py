@@ -580,3 +580,41 @@ def test_synchroniser_libelles():
     assert c.synchroniser_libelles(g, db, etat, MAINTENANT, journal=lambda t: None) == 1
     assert g.poses == [("t0", [], ["L_Tri/À traiter"])]
     assert c.synchroniser_libelles(g, db, etat, MAINTENANT, journal=lambda t: None) == 0
+
+
+# MARK: - Notifications (25/10)
+
+def test_silence_et_notification():
+    assert c.en_silence(MAINTENANT.replace(hour=23)) and c.en_silence(MAINTENANT.replace(hour=7, minute=29))
+    assert not c.en_silence(MAINTENANT.replace(hour=7, minute=30)) and not c.en_silence(MAINTENANT.replace(hour=21))
+    un = {"fil": "f1", "nom": "Tom CHICHA via leboncoin", "de": "x@y", "resume": "Veut venir chercher la Switch.",
+          "demande": "Lui répondre", "sujet": "s"}
+    n = c.notification([un])
+    assert n["title"] == "📧 Tom CHICHA (leboncoin)" and "→ Lui répondre" in n["message"]
+    assert n["data"]["url"].endswith("#inbox/f1") and n["data"]["group"] == "courrier"
+    n = c.notification([un] * 7)
+    assert n["title"] == "📧 7 mails à traiter" and "… et 2 autre(s)" in n["message"]
+
+
+def test_notifications_a_envoyer():
+    db = _base()
+    etat = {}
+    midi = MAINTENANT.replace(hour=12)
+    assert c.notifications_a_envoyer(db, etat, midi) == (None, [])
+    assert etat["notif_depuis"] == midi.isoformat(timespec="seconds")  # rien d'avant la mise en route
+    _a_traiter(db, "a1", midi + timedelta(minutes=1))
+    _a_traiter(db, "a2", midi + timedelta(minutes=2), fil="f2", de="b@x.fr", sujet="Autre")
+    notif, ids = c.notifications_a_envoyer(db, etat, midi + timedelta(minutes=3))
+    assert notif["title"] == "📧 2 mails à traiter" and sorted(ids) == ["a1", "a2"]
+    c.noter_notifies(db, ids, etat, midi + timedelta(minutes=3))
+    _a_traiter(db, "a3", midi + timedelta(minutes=5), fil="f3", de="c@x.fr", sujet="Trois")
+    assert c.notifications_a_envoyer(db, etat, midi + timedelta(minutes=8)) == (None, [])  # moins de 10 min
+    notif, ids = c.notifications_a_envoyer(db, etat, midi + timedelta(minutes=14))
+    assert ids == ["a3"]
+    # la nuit : rien ; le matin : ce qui reste
+    c.noter_notifies(db, ids, etat, midi + timedelta(minutes=14))
+    nuit = MAINTENANT.replace(hour=23)
+    _a_traiter(db, "a4", nuit, fil="f4", de="d@x.fr", sujet="Nuit")
+    assert c.notifications_a_envoyer(db, etat, nuit + timedelta(minutes=30)) == (None, [])
+    notif, ids = c.notifications_a_envoyer(db, etat, MAINTENANT.replace(hour=7, minute=32) + timedelta(days=1))
+    assert ids == ["a4"]
