@@ -206,3 +206,18 @@ Pour couper : `notifications: false` dans le bloc `apps.yaml`. Notification d'es
   écrire). Réglage `ouvrir_avec` : `gmail` (défaut, `googlegmail:///cv=<fil>/accountId=1`) ou `mail` (Mail d'Apple,
   `message://<Message-ID>`, d'où la colonne `message_id` gardée depuis le 25/10). Toucher passe d'abord par l'app
   Home Assistant (limite d'iOS : une notification ouvre l'app qui l'a envoyée).
+
+
+## Notifications, version retenue (25/10 vers 18 h 45, choix d'Alexandre)
+
+Les boutons marchent (bandeau tiré vers le bas), mais le geste ne lui plaisait pas, et Spark fait payer ses
+notifications intelligentes. Remplacé par :
+- **Urgent, tout de suite** : l'IA dit `urgent` (nouvelle sortie du schéma, colonne `urgent`) pour un `a_traiter` qui
+  ne peut pas attendre : échéance aujourd'hui ou demain, alerte de sécurité réelle, personne qui attend une réponse dans
+  la journée. Notification simple « ⚠️ Expéditeur » (résumé, « → demande »), au plus toutes les 10 minutes, rien de
+  22 h à 7 h 30 (l'urgent de la nuit part dans le résumé de 9 h).
+- **Le reste, en résumé à 9 h, 12 h et 18 h** (`heures_resume`) : « 📧 N mails à traiter », une ligne par mail
+  (8 au plus) ; seulement les `a_traiter` encore ouverts et pas encore annoncés ; rien s'il n'y en a pas.
+- **Pas de boutons** ; toucher ouvre **Spark** sur sa boîte de réception (`ouvrir_avec: spark`, `readdle-spark://` :
+  Spark n'a pas de lien public vers un mail précis ; ses liens « web-share » publient le mail sur ses serveurs). Autres
+  valeurs : `gmail`, `mail`. L'écoute de `mobile_app_notification_action` (Fait, Tâche) reste pour N4.

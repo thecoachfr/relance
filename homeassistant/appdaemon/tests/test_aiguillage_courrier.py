@@ -134,7 +134,8 @@ def test_nettoyer_ia():
     assert c.nettoyer_ia({"categorie": "fait"}) is None
     r = c.nettoyer_ia({"categorie": "a_traiter", "resume": " Facture EDF. ", "demande": "", "echeance": "2026-13-01",
                        "confiance": 1.7})
-    assert r == {"categorie": "a_traiter", "resume": "Facture EDF.", "demande": None, "echeance": None, "confiance": 1.0}
+    assert r == {"categorie": "a_traiter", "resume": "Facture EDF.", "demande": None, "echeance": None, "confiance": 1.0,
+                 "urgent": False}
     assert c.nettoyer_ia({"categorie": "lettre", "resume": "x", "demande": None, "echeance": "2026-11-05",
                           "confiance": 0.4})["echeance"] == "2026-11-05"
 
@@ -589,39 +590,55 @@ def test_silence_et_notification():
     assert not c.en_silence(MAINTENANT.replace(hour=7, minute=30)) and not c.en_silence(MAINTENANT.replace(hour=21))
     un = {"id": "a1b2", "fil": "f1", "nom": "Tom CHICHA via leboncoin", "de": "x@y", "resume": "Veut la Switch.",
           "demande": "Lui répondre", "sujet": "s", "message_id": "<abc@leboncoin.fr>"}
-    n = c.notification(un)
-    assert n["title"] == "📧 Tom CHICHA (leboncoin)" and "→ Lui répondre" in n["message"]
-    assert n["data"]["url"] == "googlegmail:///cv=f1/accountId=1&create-new-tab"
-    assert [a["title"] for a in n["data"]["actions"]] == ["Fait", "En faire une tâche", "Ouvrir"]
-    assert n["data"]["actions"][0]["action"] == "COURRIER_FAIT_a1b2"
-    assert c.notification(un, "mail")["data"]["url"] == "message://%3Cabc%40leboncoin.fr%3E"
-    assert c.lien_mail(dict(un, message_id=""), "mail").startswith("googlegmail:")  # repli sans Message-ID
-    r = c.resume_notifications([un] * 9)
+    n = c.notification_urgente([un])
+    assert n["title"] == "⚠️ Tom CHICHA (leboncoin)" and "→ Lui répondre" in n["message"]
+    assert n["data"]["url"] == "readdle-spark://" and "actions" not in n["data"]
+    assert c.notification_urgente([un], "gmail")["data"]["url"] == "googlegmail:///cv=f1/accountId=1&create-new-tab"
+    assert c.lien_mail(un, "mail") == "message://%3Cabc%40leboncoin.fr%3E"
+    assert c.notification_urgente([un, un])["title"] == "⚠️ 2 mails urgents"
+    r = c.notification_resume([un] * 9)
     assert r["title"] == "📧 9 mails à traiter" and "… et 1 autre(s)" in r["message"]
+    assert c.notification_resume([un])["title"] == "📧 1 mail à traiter"
 
 
-def test_notifications_a_envoyer():
+def test_urgent_vient_de_l_ia():
+    assert c.nettoyer_ia({"categorie": "a_traiter", "resume": "x", "demande": None, "echeance": None,
+                          "confiance": 0.9, "urgent": True})["urgent"] is True
+    assert c.nettoyer_ia({"categorie": "lettre", "resume": "x", "demande": None, "echeance": None,
+                          "confiance": 0.9, "urgent": True})["urgent"] is False
+    assert "urgent" in c.SCHEMA["required"] and "12 h" in c.CONSIGNE
+
+
+def _urgent(db, ident, quand, **kw):
+    _a_traiter(db, ident, quand, **kw)
+    db.execute("UPDATE messages SET urgent = 1 WHERE id = ?", (ident,))
+    db.commit()
+
+
+def test_notifications_a_envoyer_seulement_l_urgent():
     db = _base()
     etat = {}
     midi = MAINTENANT.replace(hour=12)
     assert c.notifications_a_envoyer(db, etat, midi) == ([], [])
-    assert etat["notif_depuis"] == midi.isoformat(timespec="seconds")  # rien d'avant la mise en route
-    _a_traiter(db, "a1", midi + timedelta(minutes=1))
-    _a_traiter(db, "a2", midi + timedelta(minutes=2), fil="f2", de="b@x.fr", sujet="Autre")
+    _a_traiter(db, "a1", midi + timedelta(minutes=1))                                   # pas urgent : attend
+    _urgent(db, "u1", midi + timedelta(minutes=2), fil="f2", de="b@x.fr", sujet="Autre")
     notifs, ids = c.notifications_a_envoyer(db, etat, midi + timedelta(minutes=3))
-    assert len(notifs) == 2 and sorted(ids) == ["a1", "a2"]  # une par mail
+    assert ids == ["u1"] and notifs[0]["title"].startswith("⚠️")
     c.noter_notifies(db, ids, etat, midi + timedelta(minutes=3))
-    _a_traiter(db, "a3", midi + timedelta(minutes=5), fil="f3", de="c@x.fr", sujet="Trois")
+    _urgent(db, "u2", midi + timedelta(minutes=5), fil="f3", de="c@x.fr", sujet="Trois")
     assert c.notifications_a_envoyer(db, etat, midi + timedelta(minutes=8)) == ([], [])  # moins de 10 min
-    notifs, ids = c.notifications_a_envoyer(db, etat, midi + timedelta(minutes=14))
-    assert ids == ["a3"]
-    c.noter_notifies(db, ids, etat, midi + timedelta(minutes=14))
+    assert c.notifications_a_envoyer(db, etat, midi + timedelta(minutes=14))[1] == ["u2"]
+    c.noter_notifies(db, ["u2"], etat, midi + timedelta(minutes=14))
+    # résumé de 18 h : le non-urgent resté en attente
+    notifs, ids = c.resume_a_envoyer(db, etat, MAINTENANT.replace(hour=18))
+    assert ids == ["a1"] and notifs[0]["title"] == "📧 1 mail à traiter"
+    c.noter_notifies(db, ids, etat, MAINTENANT.replace(hour=18), urgent=False)
+    assert c.resume_a_envoyer(db, etat, MAINTENANT.replace(hour=18, minute=1)) == ([], [])
+    # urgent de la nuit : pas de notification immédiate, il part dans le résumé de 9 h
     nuit = MAINTENANT.replace(hour=23)
-    for i in range(6):
-        _a_traiter(db, f"n{i}", nuit, fil=f"fn{i}", de=f"d{i}@x.fr", sujet=f"Nuit {i}")
+    _urgent(db, "n1", nuit, fil="fn", de="d@x.fr", sujet="Nuit")
     assert c.notifications_a_envoyer(db, etat, nuit + timedelta(minutes=30)) == ([], [])
-    notifs, ids = c.notifications_a_envoyer(db, etat, MAINTENANT.replace(hour=7, minute=32) + timedelta(days=1))
-    assert len(ids) == 6 and len(notifs) == 1 and notifs[0]["title"] == "📧 6 mails à traiter"  # résumé du matin
+    assert c.resume_a_envoyer(db, etat, MAINTENANT.replace(hour=9) + timedelta(days=1))[1] == ["n1"]
 
 
 def test_actions_de_notification():
