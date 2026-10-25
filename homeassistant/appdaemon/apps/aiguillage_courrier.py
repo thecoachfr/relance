@@ -1060,7 +1060,9 @@ if hass is not None:
             self._libelles = bool(self.args.get("libelles", True))
             # Notifications des « à traiter » sur l'iPhone et la montre (25/10) : `notifications: false` pour couper.
             self._notifier = bool(self.args.get("notifications", True))
-            self._service_notif = self.args.get("notify_service", "mobile_app_iphone_17_lex")
+            services = self.args.get("notify_services") or self.args.get("notify_service") or \
+                ["mobile_app_iphone_17_lex", "mobile_app_ipad_m4_alex"]  # iPhone (et montre) + iPad, 25/10
+            self._services_notif = [services] if isinstance(services, str) else list(services)
             self._mode = str(self.args.get("mode", "ombre"))
             if self._mode != "ombre":
                 self.log(f"Courrier : mode {self._mode!r} pas encore disponible (lot N4), on reste en ombre",
@@ -1148,10 +1150,19 @@ if hass is not None:
                             notif, ids = notifications_a_envoyer(db, etat, maintenant)
                             if notif:
                                 try:
-                                    r = httpx.post(f"{CORE_API}/services/notify/{self._service_notif}", json=notif,
-                                                   timeout=15,
-                                                   headers={"Authorization": f"Bearer {os.environ['SUPERVISOR_TOKEN']}"})
-                                    r.raise_for_status()
+                                    envoyes = 0
+                                    for service in self._services_notif:
+                                        try:
+                                            r = httpx.post(f"{CORE_API}/services/notify/{service}", json=notif,
+                                                           timeout=15, headers={
+                                                               "Authorization": f"Bearer {os.environ['SUPERVISOR_TOKEN']}"})
+                                            r.raise_for_status()
+                                            envoyes += 1
+                                        except Exception as exc:  # noqa: BLE001 - un appareil absent n'empêche rien
+                                            self.log(f"Courrier : notification vers {service} impossible ({exc!r})",
+                                                     level="WARNING")
+                                    if not envoyes:
+                                        raise ErreurGmail("aucun appareil joignable")
                                     noter_notifies(db, ids, etat, maintenant)
                                     self.log(f"Courrier : notification « {notif['title']} » ({len(ids)} mail(s))")
                                 except Exception as exc:  # noqa: BLE001 - nouvel essai à la relève suivante

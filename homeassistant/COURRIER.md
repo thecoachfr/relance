@@ -182,7 +182,7 @@ chacune, avertissement d'AppDaemon le temps du rattrapage seulement), Enedis en 
 ## Notifications des « à traiter » (25/10 vers 18 h 25, demande d'Alexandre)
 
 Pour couper les notifications de Gmail et de Mail : l'app notifie elle-même l'iPhone (et la montre, par l'iPhone) par
-l'app Compagnon (`notify.mobile_app_iphone_17_lex`, clé `notify_service`), **seulement pour les nouveaux
+l'app Compagnon (`notify.mobile_app_iphone_17_lex` et, depuis le 25/10 vers 18 h 40, `notify.mobile_app_ipad_m4_alex` ; clé `notify_services`), **seulement pour les nouveaux
 `a_traiter`** :
 - un mail : titre « 📧 Expéditeur » (« X via leboncoin » devient « X (leboncoin) »), le résumé et « → la demande » ;
   toucher ouvre le fil dans Gmail ;
