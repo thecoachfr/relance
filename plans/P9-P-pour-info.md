@@ -37,9 +37,12 @@ tout rappel d'Aiguillage est une tâche qui insiste jusqu'à « Fait ». Il faut
 | Lot | Contenu | Dépôt |
 |---|---|---|
 | **P1** | Modèle `PourInfo` (marqueur, « du jour », avancée), planificateur (aucune relance, résumé du matin), exclusion de « En retard » et « À trier », tests | relance |
-| **P2** | Saisie : interrupteur « Pour info, sans action » dans la saisie rapide et la fiche (avec « Répéter ») ; bloc « Pour info aujourd'hui » en tête d'À faire (iPhone, iPad, Mac) ; avancée à la synchro ; montre et widgets : exclues des listes, une ligne « Pour info » | relance |
+| **P2** | Saisie : interrupteur « Pour info, sans action » dans la saisie rapide et la fiche (avec « Répéter ») ; bloc « Pour info aujourd'hui » en tête d'À faire (iPhone, iPad, Mac) ; avancée à la synchro ; exclues des widgets, de la montre, de l'activité en direct et de Siri | relance |
 | **P3** | Hub : la vigie publie `sensor.aiguillage_pour_info` (infos du jour, port Python de la répétition) et envoie un `script.hub_notifier` (niveau info) à l'heure du résumé du matin ; les trois vues montrent les infos du jour toute la journée | HA + hub-tv + hub-ipad |
 
 ## 4. État
 
-- 26/10 : plan rédigé ; P1 en cours.
+- 26/10 : plan rédigé ; **P1 et P2 faits** (244 tests verts, app Mac compilée), à essayer sur l'iPhone. Choix en
+  codant : la montre ne reçoit pas les infos (seulement la notification du résumé) ; les infos à venir sont
+  repliées sous « À venir » dans À faire (iPhone, iPad), dans « Bientôt » sur Mac.
+- **P3 (Hub) à faire.**
