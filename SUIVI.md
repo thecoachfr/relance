@@ -81,6 +81,15 @@ Code fait et fusionné dans `main` (désactivé tant qu'on ne bascule pas dans l
 - **Écran du Nest Hub passé sur HA le 15/10** : la carte lit l'espace `aiguillage` (`tasks: aiguillage`) et coche par `donnees_apps.ecrire` ; elle est maintenant servie depuis `/config/www/nest-hub/` (fiche `CLAUDE-nest-hub-entree.md`, hors Git). Vérifié par une capture 1024 × 600.
 - **Routine de tri passée sur HA le 15/10 vers 16 h** (accord d'Alexandre) : elle lit `donnees_apps.lire` et écrit `donnees_apps.ecrire` (espace `aiguillage`, `version_attendue`, `modifie_par: routine-tri`, une relance si conflit), mêmes règles A à M, champs JSON au lieu des lignes `⏰ 🏷 🔖 ❗`. Consigne hors dépôt (elle contient la copie du mémo). Vigie déployée en même temps : dictées Google reprises tout de suite, tri lancé à chaque nouvelle clé de l'espace. **Essai de bout en bout réussi** : tâche « [test] rappeler le dentiste demain à 10 h » créée dans HA → vigie « nouvelle tâche, tri demandé » → tri 90 s plus tard → jour du lendemain, 10:00, Santé, contact du dentiste, titre nettoyé avec la ligne 🎙 (tâche d'essai supprimée ensuite) ; le même passage a trié les deux tâches créées sur l'iPad (Administratif, Micro). **Première vraie dictée Google Home (15/10, 16 h 08)** : « Aller faire les courses » reprise dans HA 5 s après son arrivée dans Google, retirée de Google, triée 2 min plus tard (Achats, jour du jour, suggestion 18:00). Constat : la routine n'a pas d'horloge et datait ses écritures au jugé (16 h 15 au lieu de 16 h 10), ce qui lui aurait fait gagner un conflit contre une modification d'Alexandre ; consigne corrigée : `modifie_le` = celui de la tâche lue + 1 s (une modification faite après sa lecture l'emporte toujours). « Retrier avec Claude » ne réveille plus la routine si la tâche n'est pas encore arrivée dans HA.
 
+- **Activité en direct : station reconnue (26/10/2026)** — la vigie (`aiguillage_lecteur.contenu`) envoyait
+  « franceculture-hifi.aac » sans image pour France Culture. Comme les trois vues du Hub (H37 du Hub TV, Hub iPad,
+  Nest Hub) : `station` reconnaît la station dans `media_content_id` (`franceinter`, `franceculture`, `s15474`, puis les
+  radios ajoutées de `sensor.aiguillage_radios`, lues par `relance_vigie`, par identifiant TuneIn ou uri, sans chiffre
+  derrière) ; `titre_fichier` → titre = nom de la station, artiste ou « En direct » ; pas de pochette → adresse du logo
+  TuneIn (l'app range les images sous le SHA-256 de l'adresse, `Pochettes`, et range déjà ce logo pour son lecteur).
+  Radio inconnue : « Radio ». 200 tests verts. **Pas encore déployé** : copie dans l'add-on AppDaemon (sauvegardes
+  `.avant-radio-20261026`) refusée à l'agent, à faire.
+
 ## 2. Reste à faire / à vérifier
 
 ### P9 : ce qui reste (16/10 au soir, dernier build : 46, a7cb3d2)

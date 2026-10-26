@@ -8,6 +8,8 @@ envoyer à chaque appareil (Spotify Connect compris), range les jetons et compte
 Côté app : `hub-ipad/Partage/LecteurLS50.swift` (`LecteurLS50Attributes`, son `ContentState` a les mêmes champs).
 """
 
+import re
+
 ENTITE_MA = "media_player.salon_ls50_5"
 ENTITE_KEF = "media_player.kef_ls50_wireless_ii"
 NOM = "Salon LS50"
@@ -59,21 +61,71 @@ def _texte(valeur):
     return valeur.strip() if isinstance(valeur, str) else ""
 
 
-def contenu(etat, ha_url=""):
+# Radios fixes reconnues dans `media_content_id` (26/10/2026) : mêmes clés et mêmes logos que le Nest Hub
+# (`STATIONS_DEF`), le Hub TV (`Applis.reconnue`) et le Hub iPad (`Audio.reconnue`). Le logo est envoyé par son adresse :
+# l'app range les images sous le SHA-256 de l'adresse (`Pochettes`), et elle range déjà ce logo-là pour son lecteur.
+STATIONS = (
+    ("franceinter", "France Inter", "https://cdn-profiles.tunein.com/s24875/images/logog.png"),
+    ("franceculture", "France Culture", "https://cdn-profiles.tunein.com/s2442/images/logog.png"),
+    ("s15474", "Couleur 3", "https://cdn-profiles.tunein.com/s15474/images/logog.png"),
+)
+
+
+def station(ident, ajoutees=()):
+    """(nom, logo) de la station qui joue d'après `media_content_id`, ou None.
+
+    Radios fixes, puis radios ajoutées (`radios` de `sensor.aiguillage_radios`, {id, nom, uri, image}) par leur
+    identifiant TuneIn (`tunein_s257284` → `s257284`) ou leur uri, sans chiffre derrière (`library://radio/1` ne
+    reconnaît pas `library://radio/12`), comme `radioAjoutee` du Nest Hub.
+    """
+    if not ident:
+        return None
+    for cle, nom, logo in STATIONS:
+        if cle in ident:
+            return nom, logo
+    for r in ajoutees or ():
+        if not isinstance(r, dict) or not r.get("id") or not r.get("uri"):
+            continue
+        tid = re.fullmatch(r"tunein_(s\d+)", str(r["id"]))
+        cles = [c for c in ((tid.group(1) if tid else None), str(r["uri"])) if c]
+        if any(re.search(re.escape(c) + r"(?!\d)", ident) for c in cles):
+            return _texte(r.get("nom")) or str(r["id"]), _texte(r.get("image")) or None
+    return None
+
+
+def titre_fichier(titre, ident):
+    """Un titre qui n'en est pas un (« franceculture-hifi.aac ») : vide, finit par .aac, .mp3 ou .m3u8, contient
+    « -hifi », ou égale le dernier segment de l'adresse jouée (`Conseils.titreFichier` du Hub TV)."""
+    t = (titre or "").strip().lower()
+    if not t:
+        return True
+    if t.endswith((".aac", ".mp3", ".m3u8")) or "-hifi" in t:
+        return True
+    dernier = (ident or "").split("?", 1)[0].rstrip("/").rsplit("/", 1)[-1].lower()
+    return bool(dernier) and t == dernier
+
+
+def contenu(etat, ha_url="", ajoutees=()):
     """Le `content-state` de l'activité pour l'état d'une entité ; None si elle ne joue pas.
 
     Mêmes règles que le lecteur du Hub iPad (`PleinEcran.source`) : radio → nom de la station (album), sinon
     « Spotify », « Qobuz », l'album ; KEF hors Music Assistant → son entrée (« Optique »…) ou l'appli.
+    Station reconnue (26/10/2026, `station`) : son nom à la place d'un titre-fichier, l'artiste ou « En direct »,
+    son logo sans pochette. Radio inconnue avec un titre-fichier : « Radio ».
     """
     if not etat or etat.get("state") not in JOUE:
         return None
     a = etat.get("attributes") or {}
     entite = etat.get("entity_id", "")
     ident = _texte(a.get("media_content_id"))
-    radio = "/radio/" in ident or "://radio" in ident or "radiofrance" in ident
+    reconnue = station(ident, ajoutees)
+    radio = ("/radio/" in ident or "://radio" in ident or "radiofrance" in ident or "icecast" in ident
+             or ".aac" in ident or reconnue is not None)
     album = _texte(a.get("media_album_name"))
+    if album and radio and titre_fichier(album, ident):
+        album = ""
     if radio:
-        source = album or "Radio"
+        source = (reconnue[0] if reconnue else album) or "Radio"
     elif ident.startswith("spotify"):
         source = "Spotify"
     elif ident.startswith("qobuz"):
@@ -83,14 +135,22 @@ def contenu(etat, ha_url=""):
         source = _texte(a.get("app_name")) or SOURCES_KEF.get(entree, _texte(a.get("source")))
     else:
         source = album
-    titre = _texte(a.get("media_title")) or source or NOM
+    artiste = _texte(a.get("media_artist"))
+    brut = _texte(a.get("media_title"))
+    if radio and titre_fichier(brut, ident):
+        titre = source
+        artiste = artiste or "En direct"
+    else:
+        titre = brut or source or NOM
     image = _texte(a.get("entity_picture")) or None
     if image and image.startswith("/"):
         image = ha_url.rstrip("/") + image if ha_url else None
+    if not image and reconnue:
+        image = reconnue[1]
     volume = a.get("volume_level")
     return {
         "titre": titre,
-        "artiste": _texte(a.get("media_artist")),
+        "artiste": artiste,
         "source": source,
         "image": image,
         "etat": "lecture" if etat.get("state") == "playing" else "pause",

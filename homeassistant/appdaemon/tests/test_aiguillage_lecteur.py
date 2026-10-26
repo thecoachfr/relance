@@ -52,6 +52,49 @@ def test_contenu_kef_image_relative_et_optique():
     assert (o["titre"], o["artiste"], o["source"], o["volume"]) == ("Optique", "", "Optique", 20)
 
 
+# État réel du 26/10/2026 : France Culture lancée, titre-fichier, ni pochette ni artiste.
+CULTURE = {"entity_id": l.ENTITE_MA, "state": "playing", "attributes": {
+    "media_title": "franceculture-hifi.aac", "volume_level": 0.35,
+    "media_content_id": "builtin://radio/https://icecast.radiofrance.fr/franceculture-hifi.aac?id=radiofrance"}}
+AJOUTEES = [{"id": "tunein_s257284", "nom": "Tsugi Radio", "uri": "tunein--x://radio/s257284", "image": "https://logo/tsugi"},
+            {"id": "ma_12", "nom": "Biblio 12", "uri": "library://radio/12", "image": ""}]
+
+
+def test_contenu_station_reconnue_etat_reel():
+    assert l.contenu(CULTURE, HA) == {
+        "titre": "France Culture", "artiste": "En direct", "source": "France Culture",
+        "image": "https://cdn-profiles.tunein.com/s2442/images/logog.png",
+        "etat": "lecture", "volume": 35, "radio": True}
+
+
+def test_contenu_vrai_titre_garde_et_pochette_prioritaire():
+    etat = {**CULTURE, "attributes": {**CULTURE["attributes"], "media_title": "Les Matins",
+                                      "media_artist": "Guillaume Erner", "entity_picture": "https://ma/pochette"}}
+    c = l.contenu(etat, HA)
+    assert (c["titre"], c["artiste"], c["source"], c["image"]) == ("Les Matins", "Guillaume Erner", "France Culture", "https://ma/pochette")
+
+
+def test_station_radios_ajoutees():
+    assert l.station("tunein--x://radio/s257284--abc", AJOUTEES) == ("Tsugi Radio", "https://logo/tsugi")
+    assert l.station("tunein--x://radio/s2572841", AJOUTEES) is None
+    assert l.station("library://radio/12", AJOUTEES) == ("Biblio 12", None)
+    assert l.station("library://radio/123", AJOUTEES) is None
+    assert l.station("library://radio/1", AJOUTEES) is None
+    assert l.station("tunein://radio/s15474")[0] == "Couleur 3"
+    etat = {"entity_id": l.ENTITE_MA, "state": "playing", "attributes": {
+        "media_title": "s257284", "media_content_id": "tunein--x://radio/s257284"}}
+    c = l.contenu(etat, HA, AJOUTEES)
+    assert (c["titre"], c["artiste"], c["image"]) == ("Tsugi Radio", "En direct", "https://logo/tsugi")
+
+
+def test_contenu_radio_inconnue_titre_fichier():
+    etat = {"entity_id": l.ENTITE_MA, "state": "playing", "attributes": {
+        "media_title": "stream.mp3", "media_content_id": "https://x.icecast/stream.mp3"}}
+    c = l.contenu(etat, HA)
+    assert (c["titre"], c["artiste"], c["source"], c["image"]) == ("Radio", "En direct", "Radio", None)
+    assert l.titre_fichier("live", "https://x/live") and not l.titre_fichier("Les Matins", CULTURE["attributes"]["media_content_id"])
+
+
 def test_contenu_rien_si_arrete():
     assert l.contenu({**MA, "state": "idle"}) is None
     assert l.contenu(None) is None

@@ -1243,7 +1243,9 @@ class RelanceVigie(Hass):
         self._lecteur_handle = None
         etats = {e: self.get_state(e, attribute="all") for e in (aiguillage_lecteur.ENTITE_MA, aiguillage_lecteur.ENTITE_KEF)}
         choisi = aiguillage_lecteur.choisir_entite(etats)
-        actuel = aiguillage_lecteur.contenu(choisi, self._ha_url)
+        # Radios ajoutées : pour reconnaître la station qui joue (nom et logo), comme les trois vues du Hub.
+        ajoutees = self.get_state(aiguillage_radio.ENTITE, attribute="radios") or []
+        actuel = aiguillage_lecteur.contenu(choisi, self._ha_url, ajoutees)
         # Spotify Connect (KEF en Wi-Fi sans Music Assistant) : pas d'activité sur les appareils qui la masquent.
         spotify = aiguillage_lecteur.spotify_connect(choisi)
         maintenant = time.time()
