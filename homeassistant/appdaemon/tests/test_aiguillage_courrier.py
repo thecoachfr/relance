@@ -717,7 +717,8 @@ def test_synchroniser_courrier_differentiel():
     c.enregistrer(db, f, {"categorie": "bruit", "source": "gmail", "raison": "promo"}, MAINTENANT)
     ha, etat = FauxDonnees(), {}
     r = c.synchroniser_courrier(ha, db, etat, MAINTENANT)
-    assert r == {"plus_tard": 0, "corrections": 0, "reclasses": 0, "ecrits": 2, "supprimes": 0, "refuses": 0}
+    assert r == {"plus_tard": 0, "corrections": 0, "reclasses": 0, "ecrits": 2, "supprimes": 0, "refuses": 0,
+                 "appareils": 0, "essais": []}
     assert set(ha.espace) == {"a1", "a2"} and [o["cle"] for o in ha.lots()[0]] == ["a2", "a1"]  # récents d'abord
     assert etat["courrier_seq"] == 0
     # Rien n'a changé : aucune écriture.
@@ -872,3 +873,152 @@ def test_plus_tard_retire_par_l_app():
     c.appliquer_plus_tard(db, {"enregistrements": [_plus_tard("p1", "2026-10-25T07:00:00Z")],
                                "resynchro_complete": True}, midi)
     assert c.mis_de_cote(db, midi) == {"p1"}
+
+
+# MARK: - Notifications directes à l'app Courrier (lot C5, 26/10)
+
+JETON_A, JETON_B = "a1" * 32, "b2" * 32
+
+
+def _appareil(ident, jeton=JETON_A, env="sandbox", supprime=False):
+    return {"cle": f"appareil:{ident}", "supprime": supprime,
+            "valeur": None if supprime else {"jeton": jeton, "environnement": env, "app_version": "0.1 (1)",
+                                             "maj": "2026-10-26T20:00:00Z"}}
+
+
+def _essai(ident, quand="2026-10-24T15:58:00Z"):
+    return {"cle": f"essai_notification:{ident}", "valeur": {"appareil": ident, "quand": quand}, "supprime": False}
+
+
+def test_appareils_lus_dans_l_espace():
+    db = _base()
+    rep = {"enregistrements": [_appareil("iphone"), _appareil("ipad", JETON_B, "production"),
+                               _appareil("abime", "pas-hexa"), _appareil("autre", JETON_A, "beta"),
+                               {"cle": "a1", "valeur": {"v": 1}, "supprime": False}]}
+    assert c.appliquer_appareils(db, rep, MAINTENANT) == 2
+    assert [(a["cle"], a["environnement"]) for a in c.appareils(db)] == [("appareil:ipad", "production"),
+                                                                        ("appareil:iphone", "sandbox")]
+    assert c.appliquer_appareils(db, {"enregistrements": [_appareil("iphone")]}, MAINTENANT) == 0  # inchangé
+    assert c.appliquer_appareils(db, {"enregistrements": [_appareil("iphone", JETON_B)]}, MAINTENANT) == 1
+    assert c.appliquer_appareils(db, {"enregistrements": [_appareil("ipad", supprime=True)]}, MAINTENANT) == 1
+    assert [a["jeton"] for a in c.appareils(db)] == [JETON_B]
+    # Resynchro complète : un appareil absent du serveur est oublié.
+    c.appliquer_appareils(db, {"enregistrements": [], "resynchro_complete": True}, MAINTENANT)
+    assert c.appareils(db) == []
+
+
+def test_choix_du_canal():
+    assert c.par_ha("auto", 0, 0) is True             # pas d'appareil Courrier : app HA (comportement d'avant C5)
+    assert c.par_ha("auto", 1, 1) is False            # Courrier reçoit : plus d'app HA
+    assert c.par_ha("auto", 2, 0) is True             # tous les envois APNs ont échoué : repli
+    assert c.par_ha("toujours", 1, 1) is True and c.par_ha("jamais", 0, 0) is False
+
+
+def test_payloads():
+    un = {"title": "⚠️ Tom", "message": "Veut la Switch.\n→ Lui répondre", "data": {}}
+    charge, collapse = c.push_courrier(un, [{"id": "1a2b", "fil": "f9"}], MAINTENANT)
+    assert charge == {"aps": {"alert": {"title": "⚠️ Tom", "body": "Veut la Switch.\n→ Lui répondre"},
+                              "thread-id": "courrier", "sound": "default"},
+                      "courrier": {"type": "mail", "id": "1a2b", "fil": "f9"}}
+    assert collapse == "1a2b" and "actions" not in json.dumps(charge) and "category" not in charge["aps"]
+    plusieurs = [{"id": "x", "fil": "fx"}, {"id": "y", "fil": "fy"}]
+    charge, collapse = c.push_courrier(un, plusieurs, MAINTENANT.replace(hour=9, minute=0), resume=True)
+    assert charge["courrier"] == {"type": "resume"} and collapse == "resume-09"
+    assert c.push_courrier(un, plusieurs, MAINTENANT.replace(hour=14, minute=7))[1] == "urgent-1407"
+    essai, collapse = c.push_essai()
+    assert essai["courrier"] == {"type": "resume"} and collapse == "essai" and essai["aps"]["thread-id"] == "courrier"
+
+
+class FauxApple:
+    """APNs simulé : un statut par jeton (200 par défaut)."""
+
+    def __init__(self, statuts=None):
+        self.statuts, self.envois = statuts or {}, []
+
+    def __call__(self, appareil, charge, collapse_id):
+        self.envois.append((appareil["jeton"], appareil["environnement"], charge, collapse_id))
+        return self.statuts.get(appareil["jeton"], (200, ""))
+
+
+def test_diffusion_courrier_puis_repli_ha():
+    db = _base()
+    _urgent(db, "u1", MAINTENANT, fil="fu")
+    notif = c.notification_urgente([dict(db.execute("SELECT * FROM messages WHERE id = 'u1'").fetchone())])
+    ha_envois = []
+
+    def ha(notifs):
+        ha_envois.append(notifs)
+        return 1
+
+    # (1) Aucun appareil Courrier : l'app HA, comme avant.
+    apple, etat = FauxApple(), {}
+    assert c.diffuser(db, etat, [notif], ["u1"], MAINTENANT, apple, ha, journal=lambda t: None) == 1
+    assert apple.envois == [] and len(ha_envois) == 1
+    # (2) Un appareil : APNs seulement, payload « mail ».
+    c.appliquer_appareils(db, {"enregistrements": [_appareil("iphone")]}, MAINTENANT)
+    assert c.diffuser(db, etat, [notif], ["u1"], MAINTENANT, apple, ha, journal=lambda t: None) == 1
+    assert len(ha_envois) == 1 and apple.envois[0][1] == "sandbox" and apple.envois[0][3] == "u1"
+    assert apple.envois[0][2]["courrier"] == {"type": "mail", "id": "u1", "fil": "fu"}
+    # (3) `toujours` : les deux ; (4) sans Key ID : repli HA.
+    c.diffuser(db, etat, [notif], ["u1"], MAINTENANT, apple, ha, reglage="toujours", journal=lambda t: None)
+    assert len(ha_envois) == 2
+    c.diffuser(db, etat, [notif], ["u1"], MAINTENANT, apple, ha, apns_pret=False, journal=lambda t: None)
+    assert len(ha_envois) == 3
+    # (5) Apple injoignable : repli HA, l'appareil est gardé.
+    panne = FauxApple({JETON_A: (0, "ConnectError")})
+    assert c.diffuser(db, etat, [notif], ["u1"], MAINTENANT, panne, ha, journal=lambda t: None) == 1
+    assert len(ha_envois) == 4 and len(c.appareils(db)) == 1
+    # (6) `jamais` et Apple en panne : rien ne part (0), le mail sera repris.
+    assert c.diffuser(db, etat, [notif], ["u1"], MAINTENANT, panne, ha, reglage="jamais", journal=lambda t: None) == 0
+
+
+def test_jeton_refuse_retire_l_appareil_et_sa_cle():
+    db = _base()
+    _a_traiter(db, "a1", MAINTENANT, fil="f1")
+    c.appliquer_appareils(db, {"enregistrements": [_appareil("vieux", JETON_A), _appareil("bon", JETON_B, "production"),
+                                                   _appareil("autre", "c3" * 32)]}, MAINTENANT)
+    apple = FauxApple({JETON_A: (410, "Unregistered"), "c3" * 32: (400, "BadDeviceToken")})
+    etat, journal = {}, []
+    notif = c.notification_resume([{"nom": "Tom", "resume": "x"}])
+    assert c.diffuser(db, etat, [notif], ["a1"], MAINTENANT, apple, lambda n: 99, resume=True, journal=journal.append) == 1
+    assert [a["cle"] for a in c.appareils(db)] == ["appareil:bon"]
+    assert etat["corrections_a_retirer"] == ["appareil:autre", "appareil:vieux"]
+    assert any("APNs 410 Unregistered" in t for t in journal) and not any(JETON_A in t for t in journal)
+    # À la passe suivante, les clés sont effacées de l'espace (en premier dans le lot).
+    ha = FauxDonnees()
+    ha.espace.update({"appareil:vieux": {}, "appareil:autre": {}})
+    c.synchroniser_courrier(ha, db, etat, MAINTENANT)
+    assert [o["cle"] for o in ha.lots()[-1][:2]] == ["appareil:autre", "appareil:vieux"]
+    assert "appareil:vieux" not in ha.espace and etat["corrections_a_retirer"] == []
+
+
+def test_essai_de_notification():
+    db = _base()
+    ha, etat = FauxDonnees(), {}
+    ha.espace["essai_notification:iphone"] = {}
+    ha.changements = {"enregistrements": [_appareil("iphone"), _essai("iphone"),
+                                          _essai("ancien", "2026-10-24T15:00:00Z")], "seq_max": 4}
+    r = c.synchroniser_courrier(ha, db, etat, MAINTENANT)        # 18 h à Paris = 16 h UTC
+    assert r["appareils"] == 1 and r["essais"] == ["appareil:iphone"]   # l'essai d'il y a une heure est ignoré
+    assert {o["cle"] for o in ha.lots()[-1]} >= {"essai_notification:iphone", "essai_notification:ancien"}
+    assert "essai_notification:iphone" not in ha.espace
+    apple = FauxApple()
+    charge, collapse = c.push_essai()
+    assert c.pousser(db, etat, c.appareils(db), charge, collapse, apple) == 1 and apple.envois[0][3] == "essai"
+
+
+def test_espace_courrier_ignore_appareils_et_essais_dans_les_mails():
+    """Les clés de l'app (appareil, essai) ne sont ni des « Plus tard » ni des corrections, et le NUC ne les publie
+    jamais comme des mails."""
+    db = _base()
+    rep = {"enregistrements": [_appareil("iphone"), _essai("iphone")]}
+    assert c.appliquer_plus_tard(db, rep, MAINTENANT) == 0 and c.lire_corrections(rep) == ({}, set())
+    assert c.operations_courrier(db) == []
+
+
+def test_cle_apns_lue_dans_le_bloc_de_la_vigie():
+    texte = ("relance_vigie:\n  module: relance_vigie\n  team_id: GD6W292ZXP\n  key_id: ABCDE12345\n"
+             "  key_path: /config/apps/AuthKey_relance.p8\n\naiguillage_courrier:\n  module: aiguillage_courrier\n")
+    assert c.cle_apns_de_la_vigie(texte) == {"team_id": "GD6W292ZXP", "key_id": "ABCDE12345",
+                                             "key_path": "/config/apps/AuthKey_relance.p8"}
+    assert c.cle_apns_de_la_vigie("autre:\n  module: x\n") == {}

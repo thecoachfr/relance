@@ -43,6 +43,8 @@ import time
 import unicodedata
 from zoneinfo import ZoneInfo
 
+import aiguillage_apns as apns
+
 PARIS = ZoneInfo("Europe/Paris")
 ENTITE = "sensor.aiguillage_courrier"
 CATEGORIES = ("a_traiter", "lettre", "bruit", "fait")
@@ -427,6 +429,9 @@ CREATE TABLE IF NOT EXISTS publies (
 );
 CREATE TABLE IF NOT EXISTS plus_tard (
     id TEXT PRIMARY KEY, jusqua TEXT NOT NULL, rappele TEXT, maj TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS appareils (
+    cle TEXT PRIMARY KEY, jeton TEXT NOT NULL, environnement TEXT NOT NULL, app_version TEXT, maj TEXT NOT NULL
 );
 """
 
@@ -1247,16 +1252,186 @@ def appliquer_correction(db, adresse_, categorie, maintenant):
     return n
 
 
+# MARK: - Notifications envoyées directement à l'app Courrier (lot C5, 26/10)
+#
+# L'app écrit dans l'espace `courrier` la clé `appareil:<identifierForVendor>` = `{jeton, environnement: sandbox |
+# production, app_version, maj}` (réécrite seulement si elle change). Le NUC garde ces appareils dans la table
+# `appareils` (lus par `donnees_apps.changements`, comme les « Plus tard ») et leur envoie les notifications par APNs
+# (`aiguillage_apns`, même méthode que la vigie). Toucher une notification ouvre le mail dans Courrier (`type: mail`)
+# ou le Récap (`type: resume`). Mêmes règles qu'avant : urgent tout de suite (au plus toutes les 10 min, rien de 22 h
+# à 7 h 30), résumés à 9 h, 12 h et 18 h, « Plus tard » respecté ; seul le canal change.
+#
+# Repli (`notifications_ha` dans apps.yaml) : `auto` (défaut) = par l'app Home Assistant seulement s'il n'y a aucun
+# appareil Courrier, ou si aucun envoi APNs n'a réussi ; `toujours` = les deux ; `jamais` = Courrier seul.
+# `essai_notification:<id>` (bouton des Réglages de l'app) : le NUC envoie une notification d'essai à cet appareil,
+# tout de suite, même la nuit, puis efface la clé.
+
+PREFIXE_APPAREIL = "appareil:"
+PREFIXE_ESSAI = "essai_notification:"
+SUJET_APNS = "fr.alexandrefau.courrier"
+ENVIRONNEMENTS = ("sandbox", "production")
+REGLAGES_HA = ("auto", "toujours", "jamais")
+ESSAI_VALIDE_MIN = 15          # un essai plus ancien (NUC arrêté entre-temps) est effacé sans être envoyé
+_JETON_APNS = re.compile(r"^[0-9a-f]{64,200}$")
+
+
+def cle_apns_de_la_vigie(texte_yaml):
+    """{team_id, key_id, key_path} du bloc `relance_vigie` d'apps.yaml (la clé .p8 d'Aiguillage sert aussi à
+    Courrier) ; {} si le bloc manque. Le Key ID n'est ainsi écrit qu'à un endroit sur le NUC."""
+    import yaml
+
+    bloc = (yaml.safe_load(texte_yaml) or {}).get("relance_vigie") or {}
+    return {k: str(bloc[k]) for k in ("team_id", "key_id", "key_path") if bloc.get(k)}
+
+
+def appliquer_appareils(db, reponse, maintenant):
+    """Applique les clés `appareil:*` des changements de l'espace `courrier` à la table `appareils`. Une valeur mal
+    formée (jeton qui n'est pas de l'hexadécimal, environnement inconnu) retire l'appareil. Resynchro complète : les
+    appareils absents du serveur sont oubliés. Renvoie le nombre d'appareils ajoutés, changés ou retirés."""
+    quand, n, vus = maintenant.isoformat(timespec="seconds"), 0, set()
+    for e in (reponse or {}).get("enregistrements") or []:
+        cle = str(e.get("cle") or "")
+        if not cle.startswith(PREFIXE_APPAREIL):
+            continue
+        v = e.get("valeur") or {}
+        jeton = str(v.get("jeton") or "").strip().lower()
+        env = v.get("environnement")
+        if e.get("supprime") or not _JETON_APNS.match(jeton) or env not in ENVIRONNEMENTS:
+            n += db.execute("DELETE FROM appareils WHERE cle = ?", (cle,)).rowcount
+            continue
+        vus.add(cle)
+        avant = db.execute("SELECT jeton, environnement, app_version FROM appareils WHERE cle = ?", (cle,)).fetchone()
+        apres = (jeton, env, str(v.get("app_version") or "") or None)
+        if not avant or tuple(avant) != apres:
+            db.execute("INSERT OR REPLACE INTO appareils (cle, jeton, environnement, app_version, maj) "
+                       "VALUES (?, ?, ?, ?, ?)", (cle, *apres, quand))
+            n += 1
+    if (reponse or {}).get("resynchro_complete"):
+        for r in [dict(x) for x in db.execute("SELECT cle FROM appareils")]:
+            if r["cle"] not in vus:
+                n += db.execute("DELETE FROM appareils WHERE cle = ?", (r["cle"],)).rowcount
+    db.commit()
+    return n
+
+
+def appareils(db):
+    return [dict(r) for r in db.execute("SELECT * FROM appareils ORDER BY cle")]
+
+
+def retirer_appareil(db, cle, etat):
+    """Jeton refusé par Apple (410, `BadDeviceToken`) : l'appareil est oublié, sa clé effacée de l'espace à la
+    passe suivante (l'app la réécrit à son prochain lancement si elle a un jeton valide)."""
+    db.execute("DELETE FROM appareils WHERE cle = ?", (cle,))
+    db.commit()
+    a_retirer = set(etat.get("corrections_a_retirer") or [])
+    a_retirer.add(cle)
+    etat["corrections_a_retirer"] = sorted(a_retirer)
+
+
+def lire_essais(reponse, maintenant):
+    """Essais demandés depuis les Réglages de l'app : ([clés d'appareil à essayer], {clés `essai_notification:*`
+    vues, à effacer}). Un essai de plus de 15 minutes est effacé sans être envoyé."""
+    a_essayer, cles = [], set()
+    limite = maintenant.astimezone(timezone.utc) - timedelta(minutes=ESSAI_VALIDE_MIN)
+    for e in (reponse or {}).get("enregistrements") or []:
+        cle = str(e.get("cle") or "")
+        if not cle.startswith(PREFIXE_ESSAI) or e.get("supprime"):
+            continue
+        cles.add(cle)
+        quand = _instant((e.get("valeur") or {}).get("quand"))
+        cible = PREFIXE_APPAREIL + cle[len(PREFIXE_ESSAI):]
+        if quand is not None and quand >= limite and cible not in a_essayer:
+            a_essayer.append(cible)
+    return a_essayer, cles
+
+
+def par_ha(reglage, nb_appareils, nb_envoyes_apns):
+    """Faut-il aussi passer par l'app Home Assistant ? `toujours` : oui ; `jamais` : non ; `auto` : seulement sans
+    appareil Courrier, ou si aucun envoi APNs n'a réussi (rien ne se perd si Apple ou la clé fait défaut)."""
+    if reglage == "toujours":
+        return True
+    if reglage == "jamais":
+        return False
+    return nb_appareils == 0 or nb_envoyes_apns == 0
+
+
+def push_courrier(notif, rangs, maintenant, resume=False):
+    """(charge APNs, apns-collapse-id) d'une notification composée pour l'app HA (`notification_urgente` ou
+    `notification_resume`) : mêmes titre et texte. Un seul mail : `type: mail` (toucher ouvre sa lecture) ; plusieurs :
+    `type: resume` (toucher ouvre le Récap). Pas de boutons d'action."""
+    charge = {"aps": {"alert": {"title": notif["title"], "body": notif["message"]}, "thread-id": "courrier",
+                      "sound": "default"}}
+    h = maintenant.astimezone(PARIS)
+    if len(rangs) == 1:
+        r = rangs[0]
+        charge["courrier"] = {"type": "mail", "id": r["id"], "fil": r.get("fil")}
+        return charge, r["id"]
+    charge["courrier"] = {"type": "resume"}
+    return charge, (f"resume-{h:%H}" if resume else f"urgent-{h:%H%M}")
+
+
+def push_essai():
+    """Notification d'essai (bouton des Réglages) : toucher ouvre le Récap."""
+    return ({"aps": {"alert": {"title": "Courrier", "body": "Notification d'essai reçue. Touchez-la pour ouvrir le Récap."},
+                     "thread-id": "courrier", "sound": "default"},
+             "courrier": {"type": "resume"}}, "essai")
+
+
+def pousser(db, etat, cibles, charge, collapse_id, envoyer, journal=print):
+    """APNs vers chaque appareil de `cibles` ; `envoyer(appareil, charge, collapse_id)` → (statut, raison)
+    (`aiguillage_apns.envoyer` dans l'app, simulé dans les tests). Un jeton refusé pour de bon (410, `BadDeviceToken`)
+    retire l'appareil. Renvoie le nombre d'envois acceptés par Apple. Le jeton n'est jamais journalisé."""
+    ok = 0
+    for a in cibles:
+        statut, raison = envoyer(a, charge, collapse_id)
+        if statut == 200:
+            ok += 1
+            continue
+        nom = a["cle"][len(PREFIXE_APPAREIL):][:8]
+        journal(f"Courrier : APNs {statut} {raison} ({a['environnement']}, appareil {nom}…)")
+        if apns.refus_definitif(statut, raison):
+            retirer_appareil(db, a["cle"], etat)
+            journal(f"Courrier : appareil {nom}… retiré (jeton refusé par Apple)")
+    return ok
+
+
+def diffuser(db, etat, notifs, ids, maintenant, envoyer, envoyer_ha, reglage="auto", apns_pret=True, resume=False,
+             journal=print):
+    """Une notification (urgente ou résumé) : par APNs à chaque appareil Courrier, puis par l'app HA
+    (`envoyer_ha(notifs)` → nombre d'envois) si `par_ha` le veut. `apns_pret` : faux sans Key ID (repli HA).
+    Renvoie le nombre d'envois réussis (0 = rien n'est parti : le mail sera repris au passage suivant)."""
+    cibles = appareils(db) if apns_pret else []
+    ok = 0
+    if cibles:
+        rangs = [dict(r) for r in db.execute(
+            f"SELECT id, fil FROM messages WHERE id IN ({','.join('?' * len(ids))})", list(ids))] if ids else []
+        rangs.sort(key=lambda r: list(ids).index(r["id"]))
+        for notif in notifs:
+            charge, collapse_id = push_courrier(notif, rangs, maintenant, resume)
+            ok += pousser(db, etat, cibles, charge, collapse_id, envoyer, journal)
+    if par_ha(reglage, len(cibles), ok):
+        if cibles:
+            journal("Courrier : aucun envoi APNs réussi, repli sur l'app Home Assistant")
+        ok += envoyer_ha(notifs)
+    return ok
+
+
 def synchroniser_courrier(service, db, etat, maintenant, limite=ECRITURES_PAR_PASSE):
     """Une passe : lit les changements de l'espace `courrier` (« Plus tard » et corrections de l'app), applique les
     corrections (règles `manuel`, mails reclassés), puis publie la différence et efface les corrections traitées.
     `service(domaine, action, données)` renvoie la réponse de l'action (`_service` de l'app, simulé dans les tests).
-    Renvoie {plus_tard, corrections, reclasses, ecrits, supprimes, refuses}."""
+    Depuis C5, lit aussi les appareils de l'app (`appareil:*`) et les essais de notification (`essai_notification:*`).
+    Renvoie {plus_tard, corrections, reclasses, ecrits, supprimes, refuses, appareils, essais}."""
     rep = service("donnees_apps", "changements",
                   {"espace": ESPACE_COURRIER, "depuis_seq": int(etat.get("courrier_seq") or 0)}) or {}
     resume = {"plus_tard": appliquer_plus_tard(db, rep, maintenant), "corrections": 0, "reclasses": 0,
-              "ecrits": 0, "supprimes": 0, "refuses": 0}
+              "ecrits": 0, "supprimes": 0, "refuses": 0, "appareils": appliquer_appareils(db, rep, maintenant),
+              "essais": []}
     voulues, cles = lire_corrections(rep)
+    # Essais de notification (C5) : envoyés par l'app AppDaemon juste après cette passe ; leurs clés partent avec
+    # les corrections traitées (même liste, même nouvel essai si HA refuse l'effacement).
+    resume["essais"], cles_essais = lire_essais(rep, maintenant)
+    cles = cles | cles_essais
     for adresse_, categorie in voulues.items():
         resume["reclasses"] += appliquer_correction(db, adresse_, categorie, maintenant)
         resume["corrections"] += 1
@@ -1397,6 +1572,31 @@ if hass is not None:
             self._espace = self.args.get("ha_espace", "aiguillage")
             # Espace `courrier` de donnees_apps pour l'app Courrier (lot C2, 26/10) : `donnees_courrier: false` coupe.
             self._donnees_courrier = bool(self.args.get("donnees_courrier", True))
+            # Notifications directes à l'app Courrier par APNs (lot C5, 26/10). Même clé .p8 que la vigie (une clé
+            # « auth key » vaut pour toutes les apps de l'équipe) ; le Key ID est lu dans le bloc de la vigie s'il
+            # n'est pas dans celui-ci. `notifications_ha` : auto (défaut) | toujours | jamais.
+            self._reglage_ha = str(self.args.get("notifications_ha", "auto"))
+            if self._reglage_ha not in REGLAGES_HA:
+                self.log(f"Courrier : notifications_ha {self._reglage_ha!r} inconnu, auto", level="WARNING")
+                self._reglage_ha = "auto"
+            vigie = {}
+            if not self.args.get("key_id"):
+                try:
+                    vigie = cle_apns_de_la_vigie(
+                        Path(self.args.get("apps_yaml", "/config/apps/apps.yaml")).read_text(encoding="utf-8"))
+                except Exception as exc:  # noqa: BLE001 - sans la vigie, key_id doit être dans ce bloc
+                    self.log(f"Courrier : bloc de la vigie illisible ({type(exc).__name__})", level="WARNING")
+            self._sujet_apns = self.args.get("apns_topic", SUJET_APNS)
+            self._apns = apns.JetonFournisseur(
+                self.args.get("team_id") or vigie.get("team_id") or "GD6W292ZXP",
+                self.args.get("key_id") or vigie.get("key_id"),
+                self.args.get("key_path") or vigie.get("key_path") or "/config/apps/AuthKey_relance.p8")
+            if not self._apns.cle_id:
+                self.log("Courrier : Key ID APNs introuvable (key_id), notifications par l'app HA seulement",
+                         level="WARNING")
+            # Essai demandé depuis les Réglages de l'app : traité tout de suite, sans attendre la relève.
+            self._essai_handle = None
+            self.listen_event(self._modifie, "donnees_apps_modifie", espace=ESPACE_COURRIER)
             self.listen_event(self._action_notif, "mobile_app_notification_action")
             self._mode = str(self.args.get("mode", "ombre"))
             if self._mode != "ombre":
@@ -1486,7 +1686,7 @@ if hass is not None:
                         if self._notifier:
                             notifs, ids = notifications_a_envoyer(db, etat, maintenant, self._app_mail)
                             if notifs:
-                                envoyes = self._envoyer(notifs)
+                                envoyes = self._diffuser(db, etat, notifs, ids, maintenant)
                                 if envoyes:
                                     noter_notifies(db, ids, etat, maintenant)
                                     noter_rappeles(db, ids, maintenant)
@@ -1579,6 +1779,11 @@ if hass is not None:
                 self.log(f"Courrier : espace courrier de donnees_apps injoignable ({type(exc).__name__})",
                          level="WARNING")
                 return
+            if r["appareils"]:
+                self.log(f"Courrier : appareils de l'app Courrier changés ({r['appareils']}), "
+                         f"{len(appareils(db))} enregistré(s)")
+            for cle in r["essais"]:
+                self._essai(db, etat, cle, maintenant)
             if r["corrections"]:
                 self.log(f"Courrier : {r['corrections']} correction(s) de l'app devenue(s) règle(s) manuelle(s), "
                          f"{r['reclasses']} mail(s) reclassé(s)")
@@ -1622,6 +1827,7 @@ if hass is not None:
                 self.log(f"Courrier : action de notification impossible ({exc!r})", level="WARNING")
 
         def _envoyer(self, notifs):
+            """Par l'app Home Assistant (notify.mobile_app_*), comme avant C5 : le repli."""
             envoyes = 0
             for notif in notifs:
                 for service in self._services_notif:
@@ -1631,6 +1837,53 @@ if hass is not None:
                     except Exception as exc:  # noqa: BLE001 - un appareil absent n'empêche rien
                         self.log(f"Courrier : notification vers {service} impossible ({exc!r})", level="WARNING")
             return envoyes
+
+        def _envoi_apns(self, client):
+            return lambda a, charge, collapse_id: apns.envoyer(client, self._apns, a["jeton"], a["environnement"],
+                                                               charge, self._sujet_apns, collapse_id)
+
+        def _diffuser(self, db, etat, notifs, ids, maintenant, resume=False):
+            with httpx.Client(http2=True, timeout=10) as client:
+                return diffuser(db, etat, notifs, ids, maintenant, self._envoi_apns(client), self._envoyer,
+                                reglage=self._reglage_ha, apns_pret=bool(self._apns.cle_id), resume=resume,
+                                journal=lambda t: self.log(t, level="WARNING"))
+
+        def _essai(self, db, etat, cle, maintenant):
+            """Notification d'essai demandée depuis les Réglages de l'app (même la nuit : c'est un geste d'Alexandre)."""
+            cible = [a for a in appareils(db) if a["cle"] == cle]
+            if not cible:
+                self.log("Courrier : essai de notification pour un appareil inconnu (jeton pas encore reçu)",
+                         level="WARNING")
+                return
+            charge, collapse_id = push_essai()
+            with httpx.Client(http2=True, timeout=10) as client:
+                ok = pousser(db, etat, cible, charge, collapse_id, self._envoi_apns(client),
+                             journal=lambda t: self.log(t, level="WARNING"))
+            self.log(f"Courrier : notification d'essai {'envoyée' if ok else 'refusée'} "
+                     f"({cible[0]['environnement']}, app {cible[0].get('app_version') or '?'})")
+
+        def _modifie(self, event_name, data, **kwargs):
+            """Écriture dans l'espace `courrier` : seul un essai de notification est traité tout de suite (les
+            « Plus tard », corrections et appareils attendent la relève de 2 minutes)."""
+            if not str((data or {}).get("cle") or "").startswith(PREFIXE_ESSAI):
+                return
+            if self._essai_handle:
+                self.cancel_timer(self._essai_handle)
+            self._essai_handle = self.run_in(self._passe_courrier, 1)
+
+        def _passe_courrier(self, **kwargs):
+            self._essai_handle = None
+            maintenant = datetime.now(PARIS)
+            try:
+                etat = self._lire_etat()
+                db = ouvrir_base(self._db_path)
+                try:
+                    self._synchroniser_courrier(db, etat, maintenant)
+                finally:
+                    db.close()
+                self._ecrire_etat(etat)
+            except Exception as exc:  # noqa: BLE001
+                self.log(f"Courrier : passe de l'espace courrier impossible ({exc!r})", level="WARNING")
 
         def _resume(self, **kwargs):
             """Résumé de 9 h, 12 h et 18 h (choix d'Alexandre du 25/10)."""
@@ -1644,7 +1897,7 @@ if hass is not None:
                     # « Plus tard » posés depuis la dernière relève (2 min) : lus avant de composer le résumé.
                     self._synchroniser_courrier(db, etat, maintenant)
                     notifs, ids = resume_a_envoyer(db, etat, maintenant, self._app_mail)
-                    if notifs and self._envoyer(notifs):
+                    if notifs and self._diffuser(db, etat, notifs, ids, maintenant, resume=True):
                         noter_notifies(db, ids, etat, maintenant, urgent=False)
                         noter_rappeles(db, ids, maintenant)
                         self.log(f"Courrier : résumé de {maintenant:%H} h, {len(ids)} mail(s)")

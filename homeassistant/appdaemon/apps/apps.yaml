@@ -87,3 +87,6 @@ aiguillage_courrier:
   refresh_seconds: 120
   # autorisation_file: /config/aiguillage_courrier_google.json
   # workspace_id: wrkspc_…
+  # Notifications directes à l'app Courrier par APNs (C5, 26/10) : même clé .p8 que la vigie, Key ID lu dans le bloc
+  # relance_vigie (sinon key_id / team_id / key_path ici). Repli par l'app Home Assistant :
+  # notifications_ha: auto (défaut : seulement sans appareil Courrier, ou si aucun envoi APNs n'a réussi) | toujours | jamais

@@ -294,3 +294,58 @@ relève suivante sans erreur.
 
 Tests : `test_correction_de_l_app_devient_regle_manuelle_et_reclasse`, `test_correction_effacement_refuse_repart`,
 `test_correction_vers_lettre_retire_de_l_espace` (208 tests Python verts le 26/10).
+
+
+## Notifications directes à l'app Courrier (26/10, lot C5 de l'app Courrier)
+
+Déployé le 26/10 à 21 h 19 (sauvegarde `aiguillage_courrier.py.avant-c5-20261026` à la racine du dossier AppDaemon,
+nouveau module `apps/aiguillage_apns.py`). **Seul le canal change** : mêmes règles que la « version retenue » du 25/10
+(urgent tout de suite, au plus toutes les 10 minutes, rien de 22 h à 7 h 30 ; résumés à 9 h, 12 h et 18 h de ce qui
+n'a pas été annoncé ; « Plus tard » respecté), mêmes titres et textes.
+
+### Enregistrement de l'appareil (écrit par l'app)
+
+- **Clé** `appareil:<identifierForVendor en minuscules>`, valeur `{jeton (hexadécimal), environnement: sandbox |
+  production, app_version, maj}`. L'app la réécrit seulement si le jeton, l'environnement ou la version changent, ou
+  si la clé a disparu de l'espace. `sandbox` = build Debug installé par `devicectl` (droit `aps-environment:
+  development`), `production` = TestFlight / App Store (réglé par configuration dans `project.yml` de l'app).
+- Le NUC lit ces clés par `donnees_apps.changements` (même passe que les « Plus tard ») et les garde dans la table
+  `appareils` (cle, jeton, environnement, app_version, maj). Une valeur mal formée retire l'appareil.
+
+### Envoi (APNs)
+
+- Module `aiguillage_apns.py` : **même méthode que la vigie** (`relance_vigie.py`, non modifiée) : `httpx` en HTTP/2,
+  jeton JWT ES256 signé par `pyjwt` avec la clé `/config/apps/AuthKey_relance.p8` (une clé « auth key » vaut pour
+  toutes les apps de l'équipe `GD6W292ZXP`), renouvelé toutes les 50 minutes. Key ID, équipe et chemin de la clé lus
+  dans le bloc `relance_vigie` d'`apps.yaml` (sinon `key_id`, `team_id`, `key_path` dans le bloc `aiguillage_courrier`).
+- Serveur `api.sandbox.push.apple.com` ou `api.push.apple.com` selon l'appareil ; `apns-topic:
+  fr.alexandrefau.courrier`, `apns-push-type: alert`, priorité 10, `apns-collapse-id` = id du mail, `resume-<HH>`
+  pour un résumé, `urgent-<HHMM>` pour plusieurs urgents d'un coup.
+- **Charge** : `{aps: {alert: {title, body}, thread-id: "courrier", sound: "default"}, courrier: {type, id, fil}}` ;
+  un seul mail → `type: mail` (toucher ouvre sa lecture dans Courrier, même un résumé d'un seul mail), plusieurs →
+  `type: resume` (toucher ouvre le Récap). Pas de boutons d'action.
+- Codes d'erreur journalisés (« Courrier : APNs 400 BadDeviceToken (sandbox, appareil 1a2b3c4d…) », jamais le
+  jeton). **410 `Unregistered` ou 400 `BadDeviceToken`** : l'appareil est retiré de la table et sa clé effacée de
+  l'espace à la passe suivante.
+
+### Repli sur l'app Home Assistant (`notifications_ha`, défaut `auto`)
+
+- `auto` : par l'app HA (`notify.mobile_app_*`, comme avant) **seulement s'il n'y a aucun appareil Courrier**, ou si
+  aucun envoi APNs n'a réussi pour cette notification (Apple injoignable, Key ID absent) ; dès qu'un appareil Courrier
+  reçoit, plus rien ne passe par l'app HA.
+- `toujours` : les deux ; `jamais` : Courrier seul (si tout échoue, le mail reste « pas annoncé » et repart au passage
+  suivant).
+
+### Notification d'essai
+
+Réglages › Notifications › « Envoyer une notification d'essai » dans l'app : clé `essai_notification:<id>` =
+`{appareil, quand}`. Le NUC écoute `donnees_apps_modifie` (espace `courrier`) et traite la clé dans la seconde (sans
+attendre la relève) : notification « Courrier — Notification d'essai reçue… » à cet appareil seulement, même la nuit,
+puis effacement de la clé. Un essai de plus de 15 minutes est effacé sans être envoyé.
+
+Tests : `tests/test_aiguillage_apns.py` (JWT simulé et vraie signature ES256 d'une clé de test, serveur, en-têtes,
+réponses d'Apple) et, dans `tests/test_aiguillage_courrier.py`, `test_appareils_lus_dans_l_espace`,
+`test_choix_du_canal`, `test_payloads`, `test_diffusion_courrier_puis_repli_ha`,
+`test_jeton_refuse_retire_l_appareil_et_sa_cle`, `test_essai_de_notification`,
+`test_espace_courrier_ignore_appareils_et_essais_dans_les_mails`, `test_cle_apns_lue_dans_le_bloc_de_la_vigie`
+(222 tests Python verts le 26/10).
