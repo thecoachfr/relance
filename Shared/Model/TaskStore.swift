@@ -156,6 +156,31 @@ final class TaskStore {
         return next
     }
 
+    // MARK: - Pour info (P9-P)
+
+    /// Une info passée (datée d'avant aujourd'hui) avance à sa prochaine occurrence si elle se répète, sinon elle
+    /// est rangée dans « Fait » sans « Suivante créée » (rien à recréer). Fait par l'appareil qui relance, comme
+    /// `spawnNext`. Renvoie `true` si une tâche a changé.
+    @discardableResult
+    func avancerInfosPassees(now: Date = .now) -> Bool {
+        var change = false
+        for item in activeTasks() where item.estPourInfo {
+            guard let due = item.dueDay else { continue }
+            switch PourInfo.suite(echeance: due, repetition: Recurrence(notes: item.notes), aujourdhui: now) {
+            case .inchangee:
+                continue
+            case .avancee(let jour):
+                item.dueDay = jour
+            case .rangee:
+                item.isCompleted = true
+                item.completedAt = now
+            }
+            item.markChanged()
+            change = true
+        }
+        return change
+    }
+
     /// Reporte les relances sans toucher à l'échéance.
     func snooze(_ item: TaskItem, until date: Date) {
         item.snoozedUntil = date
@@ -317,8 +342,13 @@ final class TaskStore {
 
     func reschedule() async {
         guard schedulesReminders else { return }
+        // Infos passées avancées ou rangées : `commit` relance ce calcul avec les nouvelles dates.
+        if avancerInfosPassees() {
+            commit()
+            return
+        }
         let tasks = activeTasks()
-        let inbox = tasks.filter { $0.dueDay == nil && $0.toSee == nil }.count
+        let inbox = tasks.filter { $0.dueDay == nil && $0.toSee == nil && !$0.estPourInfo }.count
         let completedIDs = Set(((try? context.fetch(FetchDescriptor<TaskItem>(
             predicate: #Predicate { $0.isCompleted || $0.isTrashed }))) ?? []).map(\.localID.uuidString))
         let overdue = tasks.filter { $0.isOverdue() }.count

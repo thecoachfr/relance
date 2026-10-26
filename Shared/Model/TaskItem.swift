@@ -73,7 +73,7 @@ final class TaskItem {
 
     /// Une sortie passée n'est pas en retard : elle attend « Vu » dans Envies (Passées).
     func isOverdue(now: Date = .now, calendar: Calendar = .current) -> Bool {
-        guard !isCompleted, toSee?.kind.isDated != true, let due = dueInstant(calendar: calendar) else { return false }
+        guard !isCompleted, toSee?.kind.isDated != true, !estPourInfo, let due = dueInstant(calendar: calendar) else { return false }
         return due < now
     }
 
@@ -102,7 +102,7 @@ final class TaskItem {
     var needsTriage: Bool { needsTriage() }
 
     func needsTriage(now: Date = .now, calendar: Calendar = .current) -> Bool {
-        guard toSee == nil else { return false }
+        guard toSee == nil, !estPourInfo else { return false }
         guard let dueDay else { return true }
         return dueMinutes == nil && calendar.startOfDay(for: dueDay) <= calendar.startOfDay(for: now) && groupesDeLieux.isEmpty
     }
@@ -112,7 +112,7 @@ final class TaskItem {
         updatedAt = .now
     }
 
-    func plannable(calendar: Calendar = .current) -> PlannableTask {
+    func plannable(calendar: Calendar = .current, now: Date = .now) -> PlannableTask {
         PlannableTask(
             id: localID.uuidString,
             title: title,
@@ -125,6 +125,9 @@ final class TaskItem {
             toSee: toSee,
             linkHost: toSee == nil ? nil : ToSee.link(in: notes)?.host()?.replacingOccurrences(of: "www.", with: ""),
             atMyPlaces: !groupesDeLieux.isEmpty,
-            imageID: pieces.first(where: \.estImage)?.id)
+            imageID: pieces.first(where: \.estImage)?.id,
+            pourInfo: estPourInfo ? dueDay.map {
+                PourInfo.jours(echeance: $0, repetition: Recurrence(notes: notes), debut: now, nombre: 9, calendar: calendar)
+            } ?? [] : nil)
     }
 }
