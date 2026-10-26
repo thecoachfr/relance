@@ -80,7 +80,8 @@ aiguillage_lieu_travail:
 aiguillage_courrier:
   module: aiguillage_courrier
   class: AiguillageCourrier
-  # ombre : tout est calculé et gardé, aucune notification, rien écrit dans Gmail ni dans donnees_apps (seul mode de N3).
+  # ombre : seul mode de N3 (libellés Tri/… depuis le 24/10, notifications depuis le 25/10).
+  # Espace « courrier » de donnees_apps pour l'app Courrier (C2, 26/10) : donnees_courrier: false pour le couper.
   mode: ombre
   courrier_budget_mensuel: 15
   refresh_seconds: 120

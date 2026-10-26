@@ -17,8 +17,9 @@ Apprentissage par les gestes d'Alexandre (ouvert = UNREAD retiré, répondu = me
 INBOX retiré) : une règle par expéditeur, prioritaire sur tout le reste.
 
 **Mode ombre** (seul mode de ce lot) : tout est calculé et gardé dans `/config/aiguillage_courrier.sqlite`, publié dans
-`sensor.aiguillage_courrier` et dans le bilan du soir (`/config/aiguillage_courrier_bilan.md`) ; aucune notification,
-rien écrit dans Gmail ni dans `donnees_apps`.
+`sensor.aiguillage_courrier` et dans le bilan du soir (`/config/aiguillage_courrier_bilan.md`). Depuis, les libellés
+`Tri/…` (24/10), les notifications (25/10) et, pour l'app Courrier (lot C2, 26/10), l'espace `courrier` de
+`donnees_apps` : un enregistrement par « à traiter » ouvert (sans corps ni extrait), et les « Plus tard » de l'app.
 
 **Règle absolue d'Alexandre (24/10, permanente)** : aucun envoi de mail sans son accord explicite pour ce mail ; pas de
 suppression, de corbeille ni d'archivage sans accord. Le client Gmail ci-dessous ne sait que LIRE (profil, historique,
@@ -32,6 +33,7 @@ Contrat : `homeassistant/COURRIER.md`. Fonctions pures et client Gmail testés h
 import base64
 from datetime import datetime, timedelta, timezone
 from email.utils import parseaddr
+import hashlib
 import html
 import json
 import uuid
@@ -419,6 +421,12 @@ CREATE TABLE IF NOT EXISTS gestes (
 CREATE INDEX IF NOT EXISTS gestes_message ON gestes(message);
 CREATE TABLE IF NOT EXISTS regles (
     expediteur TEXT PRIMARY KEY, categorie TEXT NOT NULL, source TEXT NOT NULL, nb INTEGER, maj TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS publies (
+    id TEXT PRIMARY KEY, empreinte TEXT NOT NULL, maj TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS plus_tard (
+    id TEXT PRIMARY KEY, jusqua TEXT NOT NULL, rappele TEXT, maj TEXT NOT NULL
 );
 """
 
@@ -920,11 +928,16 @@ def en_silence(maintenant):
     return m >= SILENCE_DEBUT or m < SILENCE_FIN
 
 
-def a_notifier(db, depuis_iso):
-    """« À traiter » encore ouverts, triés depuis `depuis_iso` (mise en route des notifications), jamais notifiés."""
-    return [dict(r) for r in db.execute(
+def a_notifier(db, depuis_iso, maintenant=None):
+    """« À traiter » encore ouverts, triés depuis `depuis_iso` (mise en route des notifications), jamais notifiés.
+    Avec `maintenant` : sans ceux qu'Alexandre a mis de côté (« Plus tard » encore en cours, lot C2)."""
+    rangs = [dict(r) for r in db.execute(
         "SELECT * FROM messages WHERE categorie = 'a_traiter' AND notifie IS NULL AND recu_le >= ? "
         "ORDER BY date_ms DESC", (depuis_iso,))]
+    if maintenant is None:
+        return rangs
+    caches = mis_de_cote(db, maintenant)
+    return [r for r in rangs if r["id"] not in caches]
 
 
 def _qui(r):
@@ -984,7 +997,7 @@ def notifications_a_envoyer(db, etat, maintenant, app="spark"):
     derniere = etat.get("notif_derniere")
     if derniere and maintenant - datetime.fromisoformat(derniere) < timedelta(minutes=ECART_NOTIFICATIONS_MIN):
         return [], []
-    rangs = [r for r in a_notifier(db, etat["notif_depuis"]) if r.get("urgent")]
+    rangs = [r for r in a_notifier(db, etat["notif_depuis"], maintenant) if r.get("urgent")]
     if not rangs:
         return [], []
     return [notification_urgente(rangs, app)], [r["id"] for r in rangs]
@@ -992,10 +1005,14 @@ def notifications_a_envoyer(db, etat, maintenant, app="spark"):
 
 def resume_a_envoyer(db, etat, maintenant, app="spark"):
     """Résumé de l'heure fixe : ([notification] ou [], ids). Tous les « à traiter » encore ouverts et pas encore
-    annoncés (urgents de la nuit compris)."""
+    annoncés (urgents de la nuit compris), sauf ceux mis de côté ; en tête, ceux dont le « Plus tard » est échu et
+    pas encore rappelé (lot C2 : le mail revient au résumé de l'heure choisie). Après l'envoi : `noter_notifies`
+    puis `noter_rappeles` avec les mêmes ids."""
     if not etat.get("notif_depuis"):
         etat["notif_depuis"] = maintenant.isoformat(timespec="seconds")
-    rangs = a_notifier(db, etat["notif_depuis"])
+    revenus = plus_tard_revenus(db, maintenant)
+    deja = {r["id"] for r in revenus}
+    rangs = revenus + [r for r in a_notifier(db, etat["notif_depuis"], maintenant) if r["id"] not in deja]
     if not rangs:
         return [], []
     return [notification_resume(rangs, app)], [r["id"] for r in rangs]
@@ -1039,6 +1056,180 @@ def noter_notifies(db, ids, etat, maintenant, urgent=True):
     db.commit()
     if urgent:
         etat["notif_derniere"] = quand
+
+
+# MARK: - Espace `courrier` de donnees_apps (lot C2 de l'app Courrier, 26/10/2026)
+#
+# Le NUC publie un enregistrement par « à traiter » encore ouvert (clé = id Gmail du message) pour que l'app Courrier
+# montre résumé, demande, échéance et urgence ; il le supprime quand le mail sort de `a_traiter` (fait, remplacé,
+# expiré, reclassé). Synchronisation différentielle : une empreinte par message publié (table `publies`), seules les
+# différences partent, au plus `ECRITURES_PAR_PASSE` opérations par relève, en un seul appel `donnees_apps.lot`.
+# **Jamais le corps ni l'extrait du mail** : ils restent dans la base SQLite du NUC.
+#
+# L'app y écrit aussi « Plus tard » : clé `plus_tard:<id>`, valeur `{jusqua: ISO}`. Le NUC le lit par
+# `donnees_apps.changements` (depuis le dernier `seq` vu) et le garde dans la table `plus_tard` : pas de notification
+# du mail avant `jusqua`, puis il revient dans le résumé suivant (18 h pour « Ce soir », 9 h pour « Demain matin »).
+
+ESPACE_COURRIER = "courrier"
+PREFIXE_PLUS_TARD = "plus_tard:"
+ECRITURES_PAR_PASSE = 40
+EMETTEUR = "nuc-courrier"
+
+
+def valeur_courrier(r):
+    """Ce que l'app Courrier reçoit d'un « à traiter » (contrat dans `homeassistant/COURRIER.md`)."""
+    return {"v": 1, "fil": r["fil"], "de": r.get("nom") or r.get("de"), "adresse": r.get("de"),
+            "sujet": r.get("sujet"), "date": r.get("date"), "resume": r.get("resume"), "demande": r.get("demande"),
+            "echeance": r.get("echeance"), "urgent": bool(r.get("urgent")), "raison": r.get("raison")}
+
+
+def empreinte(valeur):
+    texte = json.dumps(valeur, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(texte.encode("utf-8")).hexdigest()[:20]
+
+
+def operations_courrier(db, limite=ECRITURES_PAR_PASSE):
+    """Différence entre les « à traiter » ouverts et ce qui est déjà publié : [(type, id, valeur, empreinte)], au plus
+    `limite`. Suppressions d'abord (un mail traité doit vite disparaître de l'app), puis écritures du plus récent au
+    plus ancien. Valeur et empreinte valent None pour une suppression."""
+    publies = {r["id"]: r["empreinte"] for r in db.execute("SELECT id, empreinte FROM publies")}
+    ouverts = [dict(r) for r in db.execute(
+        "SELECT * FROM messages WHERE categorie = 'a_traiter' ORDER BY date_ms DESC")]
+    ids_ouverts = {r["id"] for r in ouverts}
+    ops = [("supprimer", i, None, None) for i in sorted(publies) if i not in ids_ouverts]
+    for r in ouverts:
+        v = valeur_courrier(r)
+        e = empreinte(v)
+        if publies.get(r["id"]) != e:
+            ops.append(("ecrire", r["id"], v, e))
+    return ops[:limite]
+
+
+def lot_courrier(ops, maintenant):
+    """Opérations de `donnees_apps.lot` (sans `version_attendue` : le NUC est le seul à écrire ces clés)."""
+    quand = maintenant.astimezone(timezone.utc).isoformat(timespec="seconds")
+    out = []
+    for type_, ident, valeur, _ in ops:
+        op = {"type": type_, "cle": ident, "modifie_le": quand, "modifie_par": EMETTEUR, "op_id": str(uuid.uuid4())}
+        if type_ == "ecrire":
+            op["valeur"] = valeur
+        out.append(op)
+    return out
+
+
+def noter_publication(db, ops, resultats, maintenant):
+    """Note dans `publies` les opérations acceptées (statut `ok`) ; les autres repartiront à la relève suivante.
+    Renvoie le nombre d'opérations acceptées."""
+    quand, n = maintenant.isoformat(timespec="seconds"), 0
+    for (type_, ident, _, emp), res in zip(ops, resultats or []):
+        if (res or {}).get("statut") != "ok":
+            continue
+        if type_ == "ecrire":
+            db.execute("INSERT OR REPLACE INTO publies (id, empreinte, maj) VALUES (?, ?, ?)", (ident, emp, quand))
+        else:
+            db.execute("DELETE FROM publies WHERE id = ?", (ident,))
+        n += 1
+    db.commit()
+    return n
+
+
+def _instant(texte):
+    """Horodatage ISO avec fuseau (« Z » accepté) → datetime UTC, ou None."""
+    try:
+        d = datetime.fromisoformat(str(texte).replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return None
+    return d.astimezone(timezone.utc) if d.tzinfo else None
+
+
+def _oublier_plus_tard(db, ident, maintenant):
+    """L'app a retiré son « Plus tard ». Un report encore à venir est annulé ; un report échu mais pas encore rappelé
+    reste jusqu'au résumé (l'app retire la clé quand le mail revient à l'écran, parfois juste avant 18 h ou 9 h)."""
+    r = db.execute("SELECT jusqua, rappele FROM plus_tard WHERE id = ?", (ident,)).fetchone()
+    if not r:
+        return
+    jusqua = _instant(r["jusqua"])
+    if r["rappele"] or jusqua is None or jusqua > maintenant.astimezone(timezone.utc):
+        db.execute("DELETE FROM plus_tard WHERE id = ?", (ident,))
+
+
+def appliquer_plus_tard(db, reponse, maintenant):
+    """Applique la réponse de `donnees_apps.changements` (espace `courrier`) aux « Plus tard » gardés par le NUC.
+    Les clés publiées par le NUC lui-même sont ignorées. Renvoie le nombre de « Plus tard » ajoutés ou changés."""
+    quand, n = maintenant.isoformat(timespec="seconds"), 0
+    enregistrements = (reponse or {}).get("enregistrements") or []
+    vus = set()
+    for e in enregistrements:
+        cle = str(e.get("cle") or "")
+        if not cle.startswith(PREFIXE_PLUS_TARD):
+            continue
+        ident = cle[len(PREFIXE_PLUS_TARD):]
+        jusqua = _instant((e.get("valeur") or {}).get("jusqua")) if not e.get("supprime") else None
+        if e.get("supprime") or jusqua is None:
+            _oublier_plus_tard(db, ident, maintenant)
+            continue
+        vus.add(ident)
+        texte = jusqua.isoformat(timespec="seconds")
+        avant = db.execute("SELECT jusqua FROM plus_tard WHERE id = ?", (ident,)).fetchone()
+        if not avant or avant["jusqua"] != texte:
+            # Nouveau report (ou heure changée) : il sera rappelé à sa nouvelle heure.
+            db.execute("INSERT OR REPLACE INTO plus_tard (id, jusqua, rappele, maj) VALUES (?, ?, NULL, ?)",
+                       (ident, texte, quand))
+            n += 1
+    if (reponse or {}).get("resynchro_complete"):
+        for r in [dict(x) for x in db.execute("SELECT id FROM plus_tard")]:
+            if r["id"] not in vus:
+                _oublier_plus_tard(db, r["id"], maintenant)
+    # Un mail qui n'est plus « à traiter » (fait, archivé, reclassé) n'a plus de « Plus tard ».
+    db.execute("DELETE FROM plus_tard WHERE id NOT IN (SELECT id FROM messages WHERE categorie = 'a_traiter')")
+    db.commit()
+    return n
+
+
+def mis_de_cote(db, maintenant):
+    """Ids des mails dont le « Plus tard » n'est pas encore échu : ni notification immédiate ni résumé."""
+    limite = maintenant.astimezone(timezone.utc)
+    return {r["id"] for r in db.execute("SELECT id, jusqua FROM plus_tard")
+            if (_instant(r["jusqua"]) or limite) > limite}
+
+
+def plus_tard_revenus(db, maintenant):
+    """« À traiter » dont le « Plus tard » est échu et pas encore rappelé, du plus ancien report au plus récent."""
+    limite = maintenant.astimezone(timezone.utc)
+    rangs = [dict(r) for r in db.execute(
+        "SELECT m.*, p.jusqua AS plus_tard_jusqua FROM messages m JOIN plus_tard p ON p.id = m.id "
+        "WHERE m.categorie = 'a_traiter' AND p.rappele IS NULL ORDER BY p.jusqua, m.date_ms DESC")]
+    return [r for r in rangs if (_instant(r["plus_tard_jusqua"]) or limite) <= limite]
+
+
+def noter_rappeles(db, ids, maintenant):
+    quand = maintenant.isoformat(timespec="seconds")
+    db.executemany("UPDATE plus_tard SET rappele = ? WHERE id = ? AND rappele IS NULL", [(quand, i) for i in ids])
+    db.commit()
+
+
+def synchroniser_courrier(service, db, etat, maintenant, limite=ECRITURES_PAR_PASSE):
+    """Une passe : lit les changements de l'espace `courrier` (« Plus tard » de l'app), puis publie la différence.
+    `service(domaine, action, données)` renvoie la réponse de l'action (`_service` de l'app, simulé dans les tests).
+    Renvoie {plus_tard, ecrits, supprimes, refuses}."""
+    rep = service("donnees_apps", "changements",
+                  {"espace": ESPACE_COURRIER, "depuis_seq": int(etat.get("courrier_seq") or 0)}) or {}
+    resume = {"plus_tard": appliquer_plus_tard(db, rep, maintenant), "ecrits": 0, "supprimes": 0, "refuses": 0}
+    if rep.get("seq_max") is not None:
+        # Pas le `seq_max` du lot ci-dessous : un « Plus tard » écrit par l'app entre les deux serait sauté.
+        etat["courrier_seq"] = int(rep["seq_max"])
+    ops = operations_courrier(db, limite)
+    if not ops:
+        return resume
+    rep_lot = service("donnees_apps", "lot", {"espace": ESPACE_COURRIER, "operations": lot_courrier(ops, maintenant)})
+    resultats = (rep_lot or {}).get("resultats") or []
+    noter_publication(db, ops, resultats, maintenant)
+    for (type_, _, _, _), res in zip(ops, resultats):
+        if (res or {}).get("statut") == "ok":
+            resume["ecrits" if type_ == "ecrire" else "supprimes"] += 1
+        else:
+            resume["refuses"] += 1
+    return resume
 
 
 # MARK: - Une relève (sans AppDaemon, testable avec des clients simulés)
@@ -1151,6 +1342,8 @@ if hass is not None:
             for heure in self.args.get("heures_resume", HEURES_RESUME):
                 self.run_daily(self._resume, heure)
             self._espace = self.args.get("ha_espace", "aiguillage")
+            # Espace `courrier` de donnees_apps pour l'app Courrier (lot C2, 26/10) : `donnees_courrier: false` coupe.
+            self._donnees_courrier = bool(self.args.get("donnees_courrier", True))
             self.listen_event(self._action_notif, "mobile_app_notification_action")
             self._mode = str(self.args.get("mode", "ombre"))
             if self._mode != "ombre":
@@ -1235,12 +1428,15 @@ if hass is not None:
                                     self.log(f"Courrier : libellés du tri posés ou changés sur {n} message(s)")
                             except ErreurGmail as exc:
                                 self.log(f"Courrier : libellés impossibles ({exc})", level="WARNING")
+                        # Avant les notifications : un « Plus tard » posé dans l'app retient l'urgent (lot C2).
+                        self._synchroniser_courrier(db, etat, maintenant)
                         if self._notifier:
                             notifs, ids = notifications_a_envoyer(db, etat, maintenant, self._app_mail)
                             if notifs:
                                 envoyes = self._envoyer(notifs)
                                 if envoyes:
                                     noter_notifies(db, ids, etat, maintenant)
+                                    noter_rappeles(db, ids, maintenant)
                                     self.log(f"Courrier : notification urgente pour {len(ids)} mail(s)")
                     finally:
                         db.close()
@@ -1319,6 +1515,21 @@ if hass is not None:
             r.raise_for_status()
             return r.json().get("service_response") if reponse else None
 
+        def _synchroniser_courrier(self, db, etat, maintenant):
+            """Espace `courrier` : « Plus tard » de l'app lus, « à traiter » publiés (différence seulement). Une panne
+            de HA n'empêche ni la relève ni les notifications : nouvel essai à la relève suivante."""
+            if not self._donnees_courrier:
+                return
+            try:
+                r = synchroniser_courrier(self._service, db, etat, maintenant)
+            except Exception as exc:  # noqa: BLE001
+                self.log(f"Courrier : espace courrier de donnees_apps injoignable ({type(exc).__name__})",
+                         level="WARNING")
+                return
+            if r["plus_tard"] or r["ecrits"] or r["supprimes"] or r["refuses"]:
+                self.log(f"Courrier : espace courrier, {r['ecrits']} publié(s), {r['supprimes']} retiré(s), "
+                         f"{r['refuses']} refusé(s), {r['plus_tard']} « Plus tard » reçu(s)")
+
         def _action_notif(self, event_name, data, **kwargs):
             """Bouton d'une notification (appui long ou montre) : « Fait » ou « En faire une tâche »."""
             lu = lire_action((data or {}).get("action"))
@@ -1374,9 +1585,12 @@ if hass is not None:
                 etat = self._lire_etat()
                 db = ouvrir_base(self._db_path)
                 try:
+                    # « Plus tard » posés depuis la dernière relève (2 min) : lus avant de composer le résumé.
+                    self._synchroniser_courrier(db, etat, maintenant)
                     notifs, ids = resume_a_envoyer(db, etat, maintenant, self._app_mail)
                     if notifs and self._envoyer(notifs):
                         noter_notifies(db, ids, etat, maintenant, urgent=False)
+                        noter_rappeles(db, ids, maintenant)
                         self.log(f"Courrier : résumé de {maintenant:%H} h, {len(ids)} mail(s)")
                 finally:
                     db.close()

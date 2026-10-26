@@ -221,3 +221,49 @@ notifications intelligentes. Remplacé par :
 - **Pas de boutons** ; toucher ouvre **Spark** sur sa boîte de réception (`ouvrir_avec: spark`, `readdle-spark://` :
   Spark n'a pas de lien public vers un mail précis ; ses liens « web-share » publient le mail sur ses serveurs). Autres
   valeurs : `gmail`, `mail`. L'écoute de `mobile_app_notification_action` (Fait, Tâche) reste pour N4.
+
+
+## Espace `courrier` de `donnees_apps` (26/10, lot C2 de l'app Courrier)
+
+Pour l'app iPhone **Courrier** (`../courrier`, cadrage `docs/CADRAGE.md`) : le NUC reste le cerveau, l'app affiche.
+Déployé le 26/10 à 20 h 14 (sauvegarde `aiguillage_courrier.py.avant-c2-20261026` à la racine du dossier AppDaemon) ;
+première passe : 3 « à traiter » publiés, vérifiés par `donnees_apps.lire` (Google, Doctolib, Enedis). Pour couper :
+`donnees_courrier: false` dans le bloc `apps.yaml`.
+
+### Écrit par le NUC : un enregistrement par « à traiter » encore ouvert
+
+- **Clé** : l'id Gmail du message (`1a1799bf96829a0a`).
+- **Valeur** : `{v: 1, fil, de (nom affiché, sinon adresse), adresse, sujet, date (ISO UTC), resume, demande,
+  echeance (AAAA-MM-JJ ou null), urgent (booléen), raison}`. **Jamais le corps ni l'extrait** : l'extrait de 1 500
+  caractères reste dans la base SQLite du NUC.
+- **Suppression** (`supprimer`, tombstone) dès que le mail sort de `a_traiter` : fait (répondu, archivé, bouton),
+  remplacé par un message plus récent de la conversation, expiré, reclassé.
+- **Différentiel** : table `publies` (id, empreinte SHA-256 de la valeur, maj) dans la base ; à chaque relève, seules
+  les différences partent, suppressions d'abord, au plus **40 opérations** par passe, en un seul appel
+  `donnees_apps.lot` (`modifie_par: nuc-courrier`, sans `version_attendue` : le NUC est seul à écrire ces clés). Une
+  opération refusée repart à la relève suivante. HA injoignable : la relève et les notifications continuent.
+
+### Écrit par l'app : « Plus tard »
+
+- **Clé** `plus_tard:<id Gmail>`, valeur `{jusqua: ISO avec fuseau}` (18 h pour « Ce soir », 9 h pour « Demain
+  matin », ou la date choisie). L'app retire la clé quand le mail revient (heure passée), quand le report est annulé
+  ou quand le mail est fait.
+- Le NUC lit l'espace par `donnees_apps.changements` depuis le dernier `seq` vu (`courrier_seq` dans le fichier
+  d'état) à chaque relève et juste avant chaque résumé, et garde les reports dans la table `plus_tard` (id, jusqua,
+  rappele, maj).
+- **Avant `jusqua`** : ni notification urgente ni place dans les résumés.
+- **Après `jusqua`** : le mail revient en tête du résumé suivant (9 h, 12 h ou 18 h), même s'il avait déjà été annoncé,
+  une seule fois (`rappele`). Une clé retirée par l'app alors que l'heure est passée mais pas encore rappelée ne
+  l'empêche pas (l'app peut la retirer à 18 h pile, juste avant le résumé). Un mail qui n'est plus « à traiter » perd
+  son report.
+
+### Tâche créée depuis l'app
+
+Appui long › **Tâche** dans Courrier : même enregistrement que le bouton de notification (`tache_du_mail`) dans
+l'espace `aiguillage`, même clé (uuid5 de l'espace de noms `6f1c2b7e-8a4d-4e3f-9b2a-1d5c7e9f0a3b`, nom
+`courrier:<id>`), `version_attendue: 0` (jamais d'écrasement : une tâche déjà créée depuis la notification est
+gardée), puis l'app archive le mail (geste d'Alexandre) : le NUC le voit dans l'historique et le passe en `fait`.
+
+Tests : `test_valeur_courrier_sans_corps_ni_extrait`, `test_synchroniser_courrier_differentiel`,
+`test_synchroniser_courrier_limite_et_refus`, `test_plus_tard_retient_la_notification_puis_revient_au_resume`,
+`test_plus_tard_retire_par_l_app` (205 tests Python verts le 26/10).

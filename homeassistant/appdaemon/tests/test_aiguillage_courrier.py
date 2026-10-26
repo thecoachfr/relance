@@ -659,3 +659,147 @@ def test_actions_de_notification():
     assert cle == c.tache_du_mail(r, MAINTENANT)[0]  # même mail, même tâche (pas de doublon)
     t2 = c.tache_du_mail(dict(r, demande=None, echeance=None), MAINTENANT)[1]
     assert t2["titre"] == "Répondre à Enedis : Coupure" and t2["jour"] == "2026-10-24"
+
+
+# MARK: - Espace `courrier` de donnees_apps (lot C2 de l'app Courrier, 26/10)
+
+class FauxDonnees:
+    """`donnees_apps` simulé : `changements` renvoie `self.changements`, `lot` applique et répond `ok` (ou `refuse`
+    pour les clés de `self.refuser`)."""
+
+    def __init__(self):
+        self.espace, self.seq, self.appels, self.refuser = {}, 0, [], set()
+        self.changements = {"enregistrements": [], "seq_max": 0}
+
+    def __call__(self, domaine, action, donnees):
+        assert domaine == "donnees_apps" and donnees["espace"] == "courrier"
+        self.appels.append((action, donnees))
+        if action == "changements":
+            return self.changements
+        resultats = []
+        for op in donnees["operations"]:
+            assert op["modifie_par"] == "nuc-courrier" and op["op_id"] and "version_attendue" not in op
+            if op["cle"] in self.refuser:
+                resultats.append({"statut": "refuse", "raison": "x"})
+                continue
+            self.seq += 1
+            if op["type"] == "ecrire":
+                self.espace[op["cle"]] = op["valeur"]
+            else:
+                self.espace.pop(op["cle"], None)
+            resultats.append({"statut": "ok", "cle": op["cle"], "seq": self.seq})
+        return {"resultats": resultats, "seq_max": self.seq}
+
+    def lots(self):
+        return [d["operations"] for a, d in self.appels if a == "lot"]
+
+
+def test_valeur_courrier_sans_corps_ni_extrait():
+    db = _base()
+    _urgent(db, "u1", MAINTENANT, fil="fU", de="Tom <tom@x.fr>")
+    db.execute("UPDATE messages SET resume = 'Veut la Switch.', demande = 'Lui répondre', echeance = '2026-10-25' "
+               "WHERE id = 'u1'")
+    r = c.lignes(db)[0]
+    v = c.valeur_courrier(r)
+    assert v == {"v": 1, "fil": "fU", "de": "Tom", "adresse": "tom@x.fr", "sujet": "Nouveau message Switch",
+                 "date": r["date"], "resume": "Veut la Switch.", "demande": "Lui répondre",
+                 "echeance": "2026-10-25", "urgent": True, "raison": "IA"}
+    assert "extrait" not in v and r["extrait"] not in json.dumps(v)
+    assert c.empreinte(v) == c.empreinte(dict(reversed(list(v.items()))))  # ordre des clés indifférent
+    assert c.empreinte(v) != c.empreinte(dict(v, urgent=False))
+
+
+def test_synchroniser_courrier_differentiel():
+    db = _base()
+    _a_traiter(db, "a1", MAINTENANT - timedelta(hours=2), fil="f1", de="a@x.fr", sujet="Un")
+    _a_traiter(db, "a2", MAINTENANT - timedelta(hours=1), fil="f2", de="b@x.fr", sujet="Deux")
+    f = c.fiche(msg("b1", de="promo@x.fr"))
+    c.enregistrer(db, f, {"categorie": "bruit", "source": "gmail", "raison": "promo"}, MAINTENANT)
+    ha, etat = FauxDonnees(), {}
+    r = c.synchroniser_courrier(ha, db, etat, MAINTENANT)
+    assert r == {"plus_tard": 0, "ecrits": 2, "supprimes": 0, "refuses": 0}
+    assert set(ha.espace) == {"a1", "a2"} and [o["cle"] for o in ha.lots()[0]] == ["a2", "a1"]  # récents d'abord
+    assert etat["courrier_seq"] == 0
+    # Rien n'a changé : aucune écriture.
+    assert c.synchroniser_courrier(ha, db, etat, MAINTENANT)["ecrits"] == 0 and len(ha.lots()) == 1
+    # Le résumé change : seul a1 est réécrit ; a2 devient fait : supprimé (suppressions d'abord).
+    db.execute("UPDATE messages SET resume = 'Nouveau résumé' WHERE id = 'a1'")
+    c.marquer_fait(db, "a2", "fait", MAINTENANT)
+    r = c.synchroniser_courrier(ha, db, etat, MAINTENANT)
+    assert (r["ecrits"], r["supprimes"]) == (1, 1)
+    assert [(o["type"], o["cle"]) for o in ha.lots()[-1]] == [("supprimer", "a2"), ("ecrire", "a1")]
+    assert set(ha.espace) == {"a1"} and ha.espace["a1"]["resume"] == "Nouveau résumé"
+
+
+def test_synchroniser_courrier_limite_et_refus():
+    db = _base()
+    for i in range(5):
+        _a_traiter(db, f"m{i}", MAINTENANT - timedelta(minutes=i), fil=f"f{i}", de=f"{i}@x.fr", sujet=f"S{i}")
+    ha, etat = FauxDonnees(), {}
+    ha.refuser = {"m1"}
+    r = c.synchroniser_courrier(ha, db, etat, MAINTENANT, limite=3)
+    assert (r["ecrits"], r["refuses"]) == (2, 1) and set(ha.espace) == {"m0", "m2"}
+    ha.refuser = set()
+    c.synchroniser_courrier(ha, db, etat, MAINTENANT, limite=3)
+    assert set(ha.espace) == {"m0", "m1", "m2", "m3", "m4"}  # le refusé repart à la passe suivante
+
+
+def _plus_tard(cle, jusqua=None, supprime=False):
+    return {"cle": f"plus_tard:{cle}", "valeur": None if supprime else {"jusqua": jusqua}, "supprime": supprime}
+
+
+def test_plus_tard_retient_la_notification_puis_revient_au_resume():
+    db = _base()
+    midi = MAINTENANT.replace(hour=12)
+    etat = {"notif_depuis": (midi - timedelta(hours=1)).isoformat(timespec="seconds")}
+    _urgent(db, "u1", midi, fil="fu", de="u@x.fr", sujet="Urgent")
+    _a_traiter(db, "a1", midi, fil="fa", de="a@x.fr", sujet="Normal")
+    ha = FauxDonnees()
+    ha.changements = {"enregistrements": [
+        _plus_tard("u1", "2026-10-24T16:00:00Z"),           # 18 h à Paris (« Ce soir »)
+        _plus_tard("a1", "2026-10-25T09:00:00+02:00"),      # demain 9 h
+        {"cle": "u1", "valeur": {"v": 1}, "supprime": False},  # clé du NUC : ignorée
+    ], "seq_max": 7}
+    assert c.synchroniser_courrier(ha, db, etat, midi)["plus_tard"] == 2 and etat["courrier_seq"] == 7
+    # (a) Pas de notification avant l'heure, ni immédiate ni dans le résumé de 12 h.
+    assert c.notifications_a_envoyer(db, etat, midi + timedelta(minutes=5)) == ([], [])
+    assert c.resume_a_envoyer(db, etat, midi.replace(hour=12, minute=1)) == ([], [])
+    # (b) Au résumé de 18 h : u1 revient (même déjà notifié), a1 reste de côté.
+    db.execute("UPDATE messages SET notifie = '2026-10-24T08:00:00+02:00' WHERE id = 'u1'")
+    db.commit()
+    soir = MAINTENANT.replace(hour=18)
+    notifs, ids = c.resume_a_envoyer(db, etat, soir)
+    assert ids == ["u1"] and notifs[0]["title"] == "📧 1 mail à traiter"
+    c.noter_notifies(db, ids, etat, soir, urgent=False)
+    c.noter_rappeles(db, ids, soir)
+    assert c.resume_a_envoyer(db, etat, soir + timedelta(minutes=1)) == ([], [])  # rappelé une seule fois
+    # Le lendemain 9 h : a1 revient.
+    assert c.resume_a_envoyer(db, etat, MAINTENANT.replace(hour=9) + timedelta(days=1))[1] == ["a1"]
+
+
+def test_plus_tard_retire_par_l_app():
+    db = _base()
+    midi = MAINTENANT.replace(hour=12)
+    for i in ("p1", "p2", "p3"):
+        _a_traiter(db, i, midi, fil=f"f{i}", de=f"{i}@x.fr", sujet=i)
+    ha, etat = FauxDonnees(), {}
+    ha.changements = {"enregistrements": [_plus_tard("p1", "2026-10-24T16:00:00Z"),
+                                          _plus_tard("p2", "2026-10-24T09:00:00Z"),
+                                          _plus_tard("p3", "pas une date")], "seq_max": 3}
+    c.synchroniser_courrier(ha, db, etat, midi)
+    assert c.mis_de_cote(db, midi) == {"p1"} and [r["id"] for r in c.plus_tard_revenus(db, midi)] == ["p2"]
+    # L'app retire les deux : p1 (à venir) est annulé ; p2 (échu, pas encore rappelé) attend son résumé.
+    ha.changements = {"enregistrements": [_plus_tard("p1", supprime=True), _plus_tard("p2", supprime=True)],
+                      "seq_max": 5}
+    c.synchroniser_courrier(ha, db, etat, midi)
+    assert c.mis_de_cote(db, midi) == set() and [r["id"] for r in c.plus_tard_revenus(db, midi)] == ["p2"]
+    assert [d for a, d in ha.appels if a == "changements"][-1] == {"espace": "courrier", "depuis_seq": 3}
+    # Le mail traité perd son « Plus tard ».
+    c.marquer_fait(db, "p2", "fait", midi)
+    c.appliquer_plus_tard(db, {"enregistrements": []}, midi)
+    assert c.plus_tard_revenus(db, midi) == []
+    # Resynchro complète : ce qui n'est plus sur le serveur est oublié.
+    c.appliquer_plus_tard(db, {"enregistrements": [_plus_tard("p3", "2026-10-25T07:00:00Z")]}, midi)
+    c.appliquer_plus_tard(db, {"enregistrements": [_plus_tard("p1", "2026-10-25T07:00:00Z")],
+                               "resynchro_complete": True}, midi)
+    assert c.mis_de_cote(db, midi) == {"p1"}
