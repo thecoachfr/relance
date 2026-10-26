@@ -87,7 +87,7 @@ Code fait et fusionné dans `main` (désactivé tant qu'on ne bascule pas dans l
   radios ajoutées de `sensor.aiguillage_radios`, lues par `relance_vigie`, par identifiant TuneIn ou uri, sans chiffre
   derrière) ; `titre_fichier` → titre = nom de la station, artiste ou « En direct » ; pas de pochette → adresse du logo
   TuneIn (l'app range les images sous le SHA-256 de l'adresse, `Pochettes`, et range déjà ce logo pour son lecteur).
-  Radio inconnue : « Radio ». 200 tests verts. **Pas encore déployé** : copie dans l'add-on AppDaemon (sauvegardes
+  Radio inconnue : « Radio ». 200 tests verts. **Déployé** : copie dans l'add-on AppDaemon (sauvegardes
   `.avant-radio-20261026`) faite le 26/10 à 20 h 48 avec l'accord d'Alexandre ; `relance_vigie` rechargée sans erreur.
 
 ## 2. Reste à faire / à vérifier
