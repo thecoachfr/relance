@@ -69,13 +69,19 @@ struct MacTaskList: View {
             if a.priority.rank != b.priority.rank { return a.priority.rank < b.priority.rank }
             return (a.dueInstant() ?? .distantFuture) < (b.dueInstant() ?? .distantFuture)
         }
-        let overdue = sorted.filter { $0.isOverdue(now: now) }
-        let dated = sorted.filter { $0.dueDay != nil && !$0.isOverdue(now: now) }
+        // Rappels « pour info » (P9-P) : ceux du jour à part, en tête ; ceux à venir dans « Bientôt » (pour les
+        // retrouver) ; une info passée pas encore avancée nulle part.
+        let infos = sorted.filter { $0.pourInfoDuJour(now: now) }
+        let today = calendar.startOfDay(for: now)
+        let taches = sorted.filter { !$0.estPourInfo || (!$0.pourInfoDuJour(now: now) && ($0.dueDay ?? today) > today) }
+        let overdue = taches.filter { $0.isOverdue(now: now) }
+        let dated = taches.filter { $0.dueDay != nil && !$0.isOverdue(now: now) }
         return [
+            ("Pour info", infos),
             ("En retard", overdue),
             ("Aujourd'hui", dated.filter { calendar.isDateInToday($0.dueDay!) }),
             ("Bientôt", dated.filter { !calendar.isDateInToday($0.dueDay!) }),
-            ("Sans date", sorted.filter { $0.dueDay == nil }),
+            ("Sans date", taches.filter { $0.dueDay == nil }),
         ].filter { !$0.1.isEmpty }
     }
 

@@ -88,6 +88,10 @@ struct TaskDetailView: View {
             ContactSection(notes: $notes, searching: $searchingPlace, memoSource: (category, tags), title: title)
             ListeSection(item: item)
             PiecesSection(item: item, apercu: $apercu)
+            // Une info (P9-P) montre son interrupteur en haut, comme une envie.
+            if PourInfo.est(notes) {
+                PourInfoSection(notes: $notes)
+            }
             // Une envie montre sa section en haut ; « ranger dans les envies » est un réglage rare (Plus d'options).
             if ToSee(notes: notes) != nil {
                 ToSeeSection(notes: $notes, availability: item.availability, pieces: item.pieces, apercu: $apercu) { hasDay = false }
@@ -129,7 +133,13 @@ struct TaskDetailView: View {
                     TagsRow(tags: $tags)
                 }
                 if ToSee(notes: notes)?.kind.isDated != false { CalendarSection(item: item) }
-                if ToSee(notes: notes) == nil {
+                if ToSee(notes: notes) == nil, !PourInfo.est(notes) {
+                    PourInfoSection(notes: $notes) {
+                        if !hasDay { day = Calendar.current.startOfDay(for: .now); hasDay = true }
+                        hasTime = false
+                    }
+                }
+                if ToSee(notes: notes) == nil, !PourInfo.est(notes) {
                     ToSeeSection(notes: $notes, availability: item.availability, pieces: item.pieces, apercu: $apercu) { hasDay = false }
                 }
                 RetriageSection(item: item)
@@ -175,6 +185,7 @@ struct TaskDetailView: View {
         .onChange(of: ToSee(notes: notes)) { save() }
         .onChange(of: Recurrence(notes: notes)) { save() }
         .onChange(of: ContexteTache(notes: notes)) { save() }
+        .onChange(of: PourInfo.est(notes)) { save() }
         // Texte : enregistré à la sortie du champ ou de la tâche, pas à chaque frappe (chaque enregistrement synchronise).
         .onSubmit { save() }
         .onDisappear { save() }

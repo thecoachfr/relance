@@ -98,6 +98,7 @@
 		3960553E64701F2B73DB89D8 /* TaskActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7D24B2FA7C99714EB6FC0BD /* TaskActions.swift */; };
 		39CE665B4156CE3572A9A060 /* TaskActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4710CF61EBFBFD1A1472103A /* TaskActivityAttributes.swift */; };
 		39F505037B3E41C6D41BF52F /* SharedPhoto.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31B339A2445E0E4BF2299831 /* SharedPhoto.swift */; };
+		3AF8D452831C55597249EDD0 /* PourInfoViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54BDD61864671C94B1F89897 /* PourInfoViews.swift */; };
 		3BE40C9DBDE64A6F5F2546B3 /* TaskMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 428A54223E0ADAC3553B38D1 /* TaskMapView.swift */; };
 		3BF62A937CF51886691DBBD9 /* ContexteTache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AB2FEFE59B34E343869478D /* ContexteTache.swift */; };
 		3C5894C10DB3D57440186753 /* SharedRecipe.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31F39EE343F9F1163673585 /* SharedRecipe.swift */; };
@@ -329,6 +330,7 @@
 		C1A1082B5D5B76493F38050E /* LieuTravail.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2B3A9EA92BEBF53F81BA1B1 /* LieuTravail.swift */; };
 		C281C4319DC1D8B48972AF47 /* PushRegistration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C1E3FCC309390331F7A6DDF /* PushRegistration.swift */; };
 		C38E9F276262E68B0C4FB011 /* TacheHA+Liste.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E11A76CCDBFE02F27DDC707 /* TacheHA+Liste.swift */; };
+		C3B8AB0B9C2FCC16D13EBAC8 /* PourInfoViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54BDD61864671C94B1F89897 /* PourInfoViews.swift */; };
 		C3FBCB9EE6DB4E5B9B4E527D /* DateDetection.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFB0E54140635703273C5FC6 /* DateDetection.swift */; };
 		C3FF5C7FBA7C3C77DC664A59 /* RelanceWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4536278168D673F91FE2BD29 /* RelanceWatchApp.swift */; };
 		C47762D7E07EA6871FFE6D32 /* WatchQuickAdd.swift in Sources */ = {isa = PBXBuildFile; fileRef = 967ED0E0B086490E32E03E0B /* WatchQuickAdd.swift */; };
@@ -574,6 +576,7 @@
 		4DCCE35813EA2892D8D3C8B7 /* SharedMessageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedMessageTests.swift; sourceTree = "<group>"; };
 		51E76C6EB4ADDD641DA38896 /* TacheHA+TaskItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TacheHA+TaskItem.swift"; sourceTree = "<group>"; };
 		5397683CF5FD3589B36E1F13 /* MemoStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoStore.swift; sourceTree = "<group>"; };
+		54BDD61864671C94B1F89897 /* PourInfoViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PourInfoViews.swift; sourceTree = "<group>"; };
 		56EA1E62136D1804E55FE844 /* TrajetsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrajetsTests.swift; sourceTree = "<group>"; };
 		57E018902DF086E23048C8AE /* Recurrence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Recurrence.swift; sourceTree = "<group>"; };
 		58450EAF33557E45B79243CC /* TaskCategory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskCategory.swift; sourceTree = "<group>"; };
@@ -959,6 +962,7 @@
 				43BE72AFC770E52F54C4C7E1 /* PiecesSection.swift */,
 				2E5A4192036752DBF4B79400 /* PlaceSearchView.swift */,
 				C7926432BD1ECAC69B112A06 /* PlatformCompat.swift */,
+				54BDD61864671C94B1F89897 /* PourInfoViews.swift */,
 				C668853F8DA6D5749B17B534 /* PriorityViews.swift */,
 				AD9D4E32E198251993005BCC /* QuickAddSheet.swift */,
 				73783B45CFACCC5BB0B10BB4 /* RecettesView.swift */,
@@ -1438,6 +1442,7 @@
 				8B68C11BB170C5719976C846 /* PlaceSearchView.swift in Sources */,
 				E2638191C4ADB72F15EB71FF /* PlatformCompat.swift in Sources */,
 				2C9069C0F7ABF8330C8AC145 /* PourInfo.swift in Sources */,
+				3AF8D452831C55597249EDD0 /* PourInfoViews.swift in Sources */,
 				8F2F0A6D92079980C1F53D2B /* PriorityViews.swift in Sources */,
 				E592CBB0902FDB11DB871F9D /* ProximityPlanner.swift in Sources */,
 				74395098ACC31C3E3C79A423 /* ProximityReminders.swift in Sources */,
@@ -1565,6 +1570,7 @@
 				51C09A1CE3157F29DDB697A4 /* PlaceSearchView.swift in Sources */,
 				222F32FBA6221F72C83CE3A4 /* PlatformCompat.swift in Sources */,
 				8C33F0093D196764E41A7A98 /* PourInfo.swift in Sources */,
+				C3B8AB0B9C2FCC16D13EBAC8 /* PourInfoViews.swift in Sources */,
 				247C32763E86A8C9B4EA4D2B /* PriorityViews.swift in Sources */,
 				83AA6D4826CBE298DE49FE42 /* ProximityPlanner.swift in Sources */,
 				C281C4319DC1D8B48972AF47 /* PushRegistration.swift in Sources */,

@@ -26,7 +26,8 @@ final class WatchSync: NSObject, WCSessionDelegate {
               session.isPaired, session.isWatchAppInstalled else { return }
 
         let payload = tasks
-            .filter { !$0.isCompleted && !$0.isTrashed }
+            // Les infos (P9-P) ne sont pas des tâches : la montre les voit dans le résumé du matin de l'iPhone.
+            .filter { !$0.isCompleted && !$0.isTrashed && !$0.estPourInfo }
             .map { WatchTask(id: store.isHAActive ? $0.localID.uuidString : ($0.googleID ?? $0.localID.uuidString), title: $0.title, due: $0.dueInstant(),
                              hasTime: $0.dueMinutes != nil, snoozedUntil: $0.snoozedUntil, priority: $0.priority,
                              category: $0.category, tags: $0.tags.isEmpty ? nil : $0.tags,

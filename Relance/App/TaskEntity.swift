@@ -154,7 +154,7 @@ struct TodayTasksIntent: AppIntent {
         let active = TaskEntityQuery.sorted(store.activeTasks())
         let late = active.filter { $0.isOverdue(now: now) }.count
         let today = active.filter { item in
-            guard let day = item.dueDay else { return false }
+            guard let day = item.dueDay, !item.estPourInfo else { return false }
             return calendar.isDateInToday(day) && !item.isOverdue(now: now)
         }
         let lateText = switch late {

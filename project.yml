@@ -128,6 +128,7 @@ targets:
       - Relance/Views/MemoViews.swift
       - Relance/Views/TaskMapView.swift
       - Relance/Views/ToSeeViews.swift
+      - Relance/Views/PourInfoViews.swift
       - Relance/Views/RecurrenceViews.swift
       - Relance/Views/TaskEditor.swift
       - Relance/Views/HASettingsSection.swift

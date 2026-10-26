@@ -57,6 +57,8 @@ struct QuickAddSheet: View {
     }
 
     private var isToSee: Bool { ToSee(notes: notes) != nil }
+    /// Rappel « pour info » (P9-P) : une date, ni heure, ni priorité, ni liste.
+    private var isPourInfo: Bool { PourInfo.est(notes) }
     /// Une envie sans échéance (toutes sauf la sortie réservée, P9-L1, qui garde sa date et son heure).
     private var isUndated: Bool { ToSee(notes: notes).map { !$0.kind.isDated } ?? false }
     /// Type de l'envie en cours, ou celui de l'onglet.
@@ -113,14 +115,21 @@ struct QuickAddSheet: View {
                         Text("Une période a été reconnue dans la phrase : c'est plutôt quelque chose à voir qu'une échéance.")
                     }
                 }
-                ToSeeSection(notes: $notes, kind: kind) { day = nil; manual = true }
+                if !isPourInfo { ToSeeSection(notes: $notes, kind: kind) { day = nil; manual = true } }
+                if !isToSee {
+                    PourInfoSection(notes: $notes) {
+                        if day == nil { day = Calendar.current.startOfDay(for: .now) }
+                        hasTime = false
+                        manual = true
+                    }
+                }
                 if !isUndated {
                 Section("Échéance") {
                     Picker("Jour", selection: dayChoice) {
                         Text("Aujourd'hui").tag(DayChoice.today)
                         Text("Demain").tag(DayChoice.tomorrow)
                         Text("Autre").tag(DayChoice.other)
-                        Text("Sans date").tag(DayChoice.none)
+                        if !isPourInfo { Text("Sans date").tag(DayChoice.none) }
                     }
                     .pickerStyle(.segmented)
 
@@ -129,8 +138,10 @@ struct QuickAddSheet: View {
                                    in: Calendar.current.startOfDay(for: .now)..., displayedComponents: .date)
                     }
                     if day != nil {
-                        Toggle("Heure", isOn: Binding(get: { hasTime }, set: { hasTime = $0; manual = true }))
-                        if hasTime {
+                        if !isPourInfo {
+                            Toggle("Heure", isOn: Binding(get: { hasTime }, set: { hasTime = $0; manual = true }))
+                        }
+                        if hasTime && !isPourInfo {
                             DatePicker("Heure", selection: Binding(get: { time }, set: { time = $0; manual = true }),
                                        displayedComponents: .hourAndMinute)
                         }
@@ -138,7 +149,7 @@ struct QuickAddSheet: View {
                     }
                 }
                 }
-                if HAConfig.isActive, !isToSee {
+                if HAConfig.isActive, !isToSee, !isPourInfo {
                     Section {
                         Toggle("Liste d'articles", systemImage: "checklist", isOn: $avecListe.animation())
                             .onChange(of: avecListe) { if avecListe { articleActif = true } }
@@ -163,12 +174,14 @@ struct QuickAddSheet: View {
                     }
                 }
                 if context != .map { ContactSection(notes: $notes, searching: $searchingPlace) }
-                Section {
-                    PriorityPicker(priority: Binding(get: { priority }, set: { priority = $0; manualPriority = true }))
-                } header: {
-                    Text("Priorité")
-                } footer: {
-                    PriorityFooter(priority: priority)
+                if !isPourInfo {
+                    Section {
+                        PriorityPicker(priority: Binding(get: { priority }, set: { priority = $0; manualPriority = true }))
+                    } header: {
+                        Text("Priorité")
+                    } footer: {
+                        PriorityFooter(priority: priority)
+                    }
                 }
                 Section {
                     CategoryPicker(category: $category)
@@ -281,10 +294,13 @@ struct QuickAddSheet: View {
         let c = Calendar.current.dateComponents([.hour, .minute], from: time)
         // Sans date, une répétition n'a pas de point de départ : on la retire.
         let kept = day == nil ? Recurrence.notes(notes, setting: nil) : notes
-        let item = store.add(title: cleanTitle, day: isUndated ? nil : day,
-                             minutes: hasTime && !isUndated && day != nil ? (c.hour! * 60 + c.minute!) : nil,
-                             category: category, priority: priority, notes: kept)
-        if avecListe, !isToSee {
+        // Une info a toujours une date (aujourd'hui par défaut), sans heure ni priorité.
+        let jour = isPourInfo ? (day ?? Calendar.current.startOfDay(for: .now)) : (isUndated ? nil : day)
+        let item = store.add(title: cleanTitle, day: jour,
+                             minutes: hasTime && !isUndated && !isPourInfo && day != nil ? (c.hour! * 60 + c.minute!) : nil,
+                             category: category, priority: isPourInfo ? .normal : priority,
+                             notes: isPourInfo ? notes : kept)
+        if avecListe, !isToSee, !isPourInfo {
             let maintenant = TacheHA.timestamp(.now)
             let liste = (articles + [article]).compactMap(TaskStore.article).map {
                 var article = $0

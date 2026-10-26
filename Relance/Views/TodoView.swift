@@ -58,6 +58,8 @@ struct TodoView: View {
             List(selection: sizeClass == .regular ? $selectedID : .constant(nil)) {
                 // Bureau ou télétravail (P9-N2) : la phrase du capteur, en tête.
                 LieuTravailBandeau()
+                // Rappels « pour info » (P9-P) : à part, sans « Fait ».
+                PourInfoAujourdhuiSection(infos: dated.filter(\.estPourInfo), now: now, onSelect: open)
                 section("En retard", groups.overdue, now: now)
                 section("Aujourd'hui", groups.today, now: now)
                 section("Bientôt", groups.later, now: now)
@@ -133,7 +135,7 @@ struct TodoView: View {
         let calendar = Calendar.current
         // Dans chaque section : les urgentes d'abord, puis par échéance.
         // Une sortie passée (P9-L1) quitte À faire : elle attend « Vu » dans Envies (Passées).
-        let sorted = dated.filter { $0.matches(categoryFilter: categoryFilter) }
+        let sorted = dated.filter { $0.matches(categoryFilter: categoryFilter) && !$0.estPourInfo }
             .filter { $0.toSee?.kind.isDated != true || ($0.dueInstant() ?? .distantFuture) >= now }
             .sorted { a, b in
             if a.priority.rank != b.priority.rank { return a.priority.rank < b.priority.rank }

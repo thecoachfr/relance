@@ -19,7 +19,7 @@ final class LiveActivityManager {
         let urgent = tasks
             .compactMap { item -> TaskActivityAttributes.ContentState.Item? in
                 let mode = settings[item.priority].liveActivity
-                guard mode != .never, let due = item.dueInstant(), let day = item.dueDay,
+                guard mode != .never, !item.estPourInfo, let due = item.dueInstant(), let day = item.dueDay,
                       ActivityHiding.hiddenUntil(item.localID.uuidString, now: now) == nil else { return nil }
                 let isUrgent = item.priority == .urgent
                 guard due.timeIntervalSince(now) <= upcomingWindow
