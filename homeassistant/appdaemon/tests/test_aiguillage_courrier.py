@@ -717,7 +717,7 @@ def test_synchroniser_courrier_differentiel():
     c.enregistrer(db, f, {"categorie": "bruit", "source": "gmail", "raison": "promo"}, MAINTENANT)
     ha, etat = FauxDonnees(), {}
     r = c.synchroniser_courrier(ha, db, etat, MAINTENANT)
-    assert r == {"plus_tard": 0, "ecrits": 2, "supprimes": 0, "refuses": 0}
+    assert r == {"plus_tard": 0, "corrections": 0, "reclasses": 0, "ecrits": 2, "supprimes": 0, "refuses": 0}
     assert set(ha.espace) == {"a1", "a2"} and [o["cle"] for o in ha.lots()[0]] == ["a2", "a1"]  # récents d'abord
     assert etat["courrier_seq"] == 0
     # Rien n'a changé : aucune écriture.
@@ -742,6 +742,75 @@ def test_synchroniser_courrier_limite_et_refus():
     ha.refuser = set()
     c.synchroniser_courrier(ha, db, etat, MAINTENANT, limite=3)
     assert set(ha.espace) == {"m0", "m1", "m2", "m3", "m4"}  # le refusé repart à la passe suivante
+
+
+def _correction(adresse, categorie, supprime=False):
+    return {"cle": f"correction:{adresse}", "valeur": None if supprime else {"categorie": categorie,
+                                                                            "quand": "2026-10-24T16:00:00Z"},
+            "supprime": supprime}
+
+
+def test_correction_de_l_app_devient_regle_manuelle_et_reclasse():
+    """Lot C4 : « Ce n'est pas du bruit » (→ à traiter) sur un expéditeur : règle `manuel`, mails ouverts reclassés
+    (pas les faits), publiés dans l'espace `courrier`, libellés à reposer, puis la clé `correction:` est effacée."""
+    db = _base()
+    for i in range(3):
+        f = c.fiche(msg(f"b{i}", de="Leboncoin <annonces@leboncoin.fr>", fil=f"fb{i}", sujet=f"Annonce {i}",
+                        quand=MAINTENANT - timedelta(hours=i + 1)))
+        c.enregistrer(db, f, {"categorie": "bruit", "source": "gmail", "raison": "promo"}, MAINTENANT)
+    db.execute("UPDATE messages SET libelle = 'Tri/Bruit'")
+    db.execute("UPDATE messages SET categorie = 'fait', archive = 1 WHERE id = 'b2'")   # déjà fait : pas reclassé
+    ha, etat = FauxDonnees(), {}
+    ha.espace["correction:Annonces@Leboncoin.fr"] = {"categorie": "a_traiter"}
+    ha.changements = {"enregistrements": [_correction("Annonces@Leboncoin.fr", "a_traiter")], "seq_max": 7}
+    r = c.synchroniser_courrier(ha, db, etat, MAINTENANT)
+    assert (r["corrections"], r["reclasses"], r["ecrits"]) == (1, 2, 2)
+    regle = dict(db.execute("SELECT * FROM regles WHERE expediteur = 'annonces@leboncoin.fr'").fetchone())
+    assert regle["categorie"] == "a_traiter" and regle["source"] == "manuel"
+    cats = {x["id"]: (x["categorie"], x["source"]) for x in db.execute("SELECT id, categorie, source FROM messages")}
+    assert cats["b0"] == ("a_traiter", "regle") and cats["b1"] == ("a_traiter", "regle") and cats["b2"][0] == "fait"
+    # La clé lue (telle quelle) est effacée dans le même lot, en premier ; les deux mails sont publiés.
+    lot = ha.lots()[-1]
+    assert (lot[0]["type"], lot[0]["cle"]) == ("supprimer", "correction:Annonces@Leboncoin.fr")
+    assert set(ha.espace) == {"b0", "b1"}
+    assert etat["corrections_a_retirer"] == [] and etat["courrier_seq"] == 7
+    # Libellés : Tri/Bruit → Tri/À traiter à la prochaine passe de synchroniser_libelles.
+    a_poser = {i: (pose, voulu) for i, pose, voulu in c.libelles_a_poser(db, 0)}
+    assert a_poser["b0"] == ("Tri/Bruit", "Tri/À traiter")
+    # Le prochain mail de l'expéditeur suit la règle manuelle ; l'apprentissage ne l'écrase pas.
+    assert c.decider(c.fiche(msg("b9", de="annonces@leboncoin.fr")), c.regles(db))["categorie"] == "a_traiter"
+    c.apprendre(db, MAINTENANT)
+    assert db.execute("SELECT source FROM regles WHERE expediteur = 'annonces@leboncoin.fr'").fetchone()[0] == "manuel"
+
+
+def test_correction_effacement_refuse_repart():
+    db = _base()
+    ha, etat = FauxDonnees(), {}
+    ha.refuser = {"correction:x@y.fr"}
+    ha.changements = {"enregistrements": [_correction("x@y.fr", "lettre"), _correction("z@y.fr", "inconnue")],
+                      "seq_max": 3}
+    r = c.synchroniser_courrier(ha, db, etat, MAINTENANT)
+    assert r["corrections"] == 1   # catégorie inconnue ignorée (mais sa clé est effacée)
+    assert etat["corrections_a_retirer"] == ["correction:x@y.fr"]
+    assert db.execute("SELECT categorie FROM regles WHERE expediteur = 'x@y.fr'").fetchone()[0] == "lettre"
+    # Passe suivante, sans nouveau changement : l'effacement refusé repart.
+    ha.refuser, ha.changements = set(), {"enregistrements": [], "seq_max": 3}
+    c.synchroniser_courrier(ha, db, etat, MAINTENANT)
+    assert [o["cle"] for o in ha.lots()[-1]] == ["correction:x@y.fr"] and etat["corrections_a_retirer"] == []
+    # Une suppression vue dans les changements (la nôtre) n'est pas une correction.
+    ha.changements = {"enregistrements": [_correction("x@y.fr", None, supprime=True)], "seq_max": 4}
+    assert c.synchroniser_courrier(ha, db, etat, MAINTENANT)["corrections"] == 0
+
+
+def test_correction_vers_lettre_retire_de_l_espace():
+    db = _base()
+    _a_traiter(db, "a1", MAINTENANT - timedelta(hours=1), fil="f1", de="news@journal.fr", sujet="Lettre")
+    ha, etat = FauxDonnees(), {}
+    c.synchroniser_courrier(ha, db, etat, MAINTENANT)
+    assert set(ha.espace) == {"a1"}
+    ha.changements = {"enregistrements": [_correction("news@journal.fr", "lettre")], "seq_max": 2}
+    r = c.synchroniser_courrier(ha, db, etat, MAINTENANT)
+    assert (r["reclasses"], r["supprimes"]) == (1, 1) and set(ha.espace) == set()
 
 
 def _plus_tard(cle, jusqua=None, supprime=False):

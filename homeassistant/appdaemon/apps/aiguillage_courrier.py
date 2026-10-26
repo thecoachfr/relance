@@ -1072,6 +1072,7 @@ def noter_notifies(db, ids, etat, maintenant, urgent=True):
 
 ESPACE_COURRIER = "courrier"
 PREFIXE_PLUS_TARD = "plus_tard:"
+PREFIXE_CORRECTION = "correction:"
 ECRITURES_PAR_PASSE = 40
 EMETTEUR = "nuc-courrier"
 
@@ -1208,23 +1209,75 @@ def noter_rappeles(db, ids, maintenant):
     db.commit()
 
 
+# MARK: - Corrections de classement de l'app Courrier (lot C4, 26/10)
+
+RAISON_CORRECTION = "correction d'Alexandre dans Courrier"
+
+
+def lire_corrections(reponse):
+    """Corrections écrites par l'app dans l'espace `courrier` : {adresse: catégorie} (la dernière par adresse, dans
+    l'ordre des changements), et l'ensemble des clés `correction:*` vues (à effacer une fois traitées). Une catégorie
+    inconnue est ignorée mais sa clé est quand même effacée."""
+    voulues, cles = {}, set()
+    for e in (reponse or {}).get("enregistrements") or []:
+        cle = str(e.get("cle") or "")
+        if not cle.startswith(PREFIXE_CORRECTION) or e.get("supprime"):
+            continue
+        cles.add(cle)
+        adresse_ = cle[len(PREFIXE_CORRECTION):].strip().lower()
+        categorie = str((e.get("valeur") or {}).get("categorie") or "")
+        if adresse_ and "@" in adresse_ and categorie in ("a_traiter", "lettre", "bruit"):
+            voulues[adresse_] = categorie
+    return voulues, cles
+
+
+def appliquer_correction(db, adresse_, categorie, maintenant):
+    """Une correction d'Alexandre : règle `manuel` pour l'expéditeur (prioritaire, jamais écrasée par l'apprentissage)
+    et reclassement de ses mails encore ouverts (pas les `fait`). Les libellés `Tri/…` suivent à la passe de
+    `synchroniser_libelles`, l'espace `courrier` à celle de `operations_courrier`. Renvoie le nombre de mails reclassés."""
+    quand = maintenant.isoformat(timespec="seconds")
+    n = db.execute(
+        "UPDATE messages SET categorie = ?, categorie_tri = ?, source = 'regle', raison = ? "
+        "WHERE de = ? AND categorie != 'fait' AND categorie != ?",
+        (categorie, categorie, RAISON_CORRECTION, adresse_, categorie)).rowcount
+    nb = db.execute("SELECT COUNT(*) FROM messages WHERE de = ?", (adresse_,)).fetchone()[0]
+    db.execute("INSERT OR REPLACE INTO regles (expediteur, categorie, source, nb, maj) VALUES (?, ?, 'manuel', ?, ?)",
+               (adresse_, categorie, nb, quand))
+    db.commit()
+    return n
+
+
 def synchroniser_courrier(service, db, etat, maintenant, limite=ECRITURES_PAR_PASSE):
-    """Une passe : lit les changements de l'espace `courrier` (« Plus tard » de l'app), puis publie la différence.
+    """Une passe : lit les changements de l'espace `courrier` (« Plus tard » et corrections de l'app), applique les
+    corrections (règles `manuel`, mails reclassés), puis publie la différence et efface les corrections traitées.
     `service(domaine, action, données)` renvoie la réponse de l'action (`_service` de l'app, simulé dans les tests).
-    Renvoie {plus_tard, ecrits, supprimes, refuses}."""
+    Renvoie {plus_tard, corrections, reclasses, ecrits, supprimes, refuses}."""
     rep = service("donnees_apps", "changements",
                   {"espace": ESPACE_COURRIER, "depuis_seq": int(etat.get("courrier_seq") or 0)}) or {}
-    resume = {"plus_tard": appliquer_plus_tard(db, rep, maintenant), "ecrits": 0, "supprimes": 0, "refuses": 0}
+    resume = {"plus_tard": appliquer_plus_tard(db, rep, maintenant), "corrections": 0, "reclasses": 0,
+              "ecrits": 0, "supprimes": 0, "refuses": 0}
+    voulues, cles = lire_corrections(rep)
+    for adresse_, categorie in voulues.items():
+        resume["reclasses"] += appliquer_correction(db, adresse_, categorie, maintenant)
+        resume["corrections"] += 1
+    # Clés à effacer : gardées dans l'état jusqu'à ce que HA confirme (le `seq` avance, on ne les relirait pas).
+    a_retirer = sorted(set(etat.get("corrections_a_retirer") or []) | cles)
     if rep.get("seq_max") is not None:
         # Pas le `seq_max` du lot ci-dessous : un « Plus tard » écrit par l'app entre les deux serait sauté.
         etat["courrier_seq"] = int(rep["seq_max"])
     ops = operations_courrier(db, limite)
-    if not ops:
+    retraits = [("supprimer", cle, None, None) for cle in a_retirer]
+    if not ops and not retraits:
+        etat["corrections_a_retirer"] = []
         return resume
-    rep_lot = service("donnees_apps", "lot", {"espace": ESPACE_COURRIER, "operations": lot_courrier(ops, maintenant)})
+    rep_lot = service("donnees_apps", "lot", {"espace": ESPACE_COURRIER,
+                                              "operations": lot_courrier(retraits + ops, maintenant)})
     resultats = (rep_lot or {}).get("resultats") or []
-    noter_publication(db, ops, resultats, maintenant)
-    for (type_, _, _, _), res in zip(ops, resultats):
+    res_retraits, res_ops = resultats[:len(retraits)], resultats[len(retraits):]
+    etat["corrections_a_retirer"] = [cle for (_, cle, _, _), res in zip(retraits, res_retraits + [None] * len(retraits))
+                                     if (res or {}).get("statut") != "ok"]
+    noter_publication(db, ops, res_ops, maintenant)
+    for (type_, _, _, _), res in zip(ops, res_ops):
         if (res or {}).get("statut") == "ok":
             resume["ecrits" if type_ == "ecrire" else "supprimes"] += 1
         else:
@@ -1526,6 +1579,9 @@ if hass is not None:
                 self.log(f"Courrier : espace courrier de donnees_apps injoignable ({type(exc).__name__})",
                          level="WARNING")
                 return
+            if r["corrections"]:
+                self.log(f"Courrier : {r['corrections']} correction(s) de l'app devenue(s) règle(s) manuelle(s), "
+                         f"{r['reclasses']} mail(s) reclassé(s)")
             if r["plus_tard"] or r["ecrits"] or r["supprimes"] or r["refuses"]:
                 self.log(f"Courrier : espace courrier, {r['ecrits']} publié(s), {r['supprimes']} retiré(s), "
                          f"{r['refuses']} refusé(s), {r['plus_tard']} « Plus tard » reçu(s)")

@@ -60,7 +60,8 @@ Répondu ou archivé → catégorie `fait` (`categorie_tri` garde le tri d'origi
 chaque relève sur ses messages des 90 derniers jours, **à partir de 4 messages** :
 répondu au moins 2 fois → `a_traiter` ; jamais ouvert et archivé (3 sur 4 au moins) → `bruit` ; ouvert (3 sur 4 au
 moins) sans jamais répondre → `lettre`. Les règles `source: manuel` (recatégorisation par Alexandre, lot N4) ne sont
-jamais écrasées.
+jamais écrasées. Depuis le 26/10 (lot C4 de l'app Courrier), elles viennent des corrections faites dans l'app
+(section « Corrections de l'app », en fin de fichier).
 
 ## Relève
 
@@ -267,3 +268,29 @@ gardée), puis l'app archive le mail (geste d'Alexandre) : le NUC le voit dans l
 Tests : `test_valeur_courrier_sans_corps_ni_extrait`, `test_synchroniser_courrier_differentiel`,
 `test_synchroniser_courrier_limite_et_refus`, `test_plus_tard_retient_la_notification_puis_revient_au_resume`,
 `test_plus_tard_retire_par_l_app` (205 tests Python verts le 26/10).
+
+
+## Corrections de l'app (26/10, lot C4 de l'app Courrier)
+
+Déployé le 26/10 à 20 h 55 (sauvegarde `aiguillage_courrier.py.avant-c4-20261026` à la racine du dossier AppDaemon),
+relève suivante sans erreur.
+
+- **Geste dans l'app** : Bruit › balayage « Ce n'est pas du bruit » sur un expéditeur (→ À traiter ou Lettre), ou appui
+  long › « Changer de catégorie » (Récap, Lettres, mails du Bruit, lecture). L'app change tout de suite le libellé
+  `Tri/…` des mails affichés dans Gmail (l'ancien retiré, le nouveau posé ; son client refuse tout autre libellé), puis
+  écrit **`correction:<adresse en minuscules>`** = `{categorie: a_traiter | lettre | bruit, quand: ISO}` dans l'espace
+  `courrier` (une clé par adresse).
+- **À chaque relève** (`synchroniser_courrier`, avant la publication) : `lire_corrections` lit ces clés dans
+  `donnees_apps.changements` ; `appliquer_correction` écrit la règle **`manuel`** de l'expéditeur dans `regles`
+  (prioritaire sur tout, jamais écrasée par `apprendre`) et reclasse ses mails encore ouverts (pas les `fait`) :
+  `categorie` et `categorie_tri` = la nouvelle, `source: regle`, raison « correction d'Alexandre dans Courrier ». Le
+  libellé suit à la passe de `synchroniser_libelles` (idempotent : l'app l'a déjà posé), l'espace `courrier` à celle
+  de `operations_courrier` (un mail devenu `a_traiter` est publié, sans résumé tant que l'IA ne l'a pas lu ; un mail
+  sorti de `a_traiter` est retiré).
+- **Effacement** : la clé lue est supprimée dans le même `lot` (en premier) ; si HA refuse, elle reste dans
+  `corrections_a_retirer` (fichier d'état) et repart à la relève suivante. Une catégorie inconnue est ignorée, sa clé
+  effacée quand même. Les mails reclassés en `a_traiter` peuvent apparaître dans le résumé suivant (9 h, 12 h, 18 h).
+- Journal : « Courrier : N correction(s) de l'app devenue(s) règle(s) manuelle(s), M mail(s) reclassé(s) ».
+
+Tests : `test_correction_de_l_app_devient_regle_manuelle_et_reclasse`, `test_correction_effacement_refuse_repart`,
+`test_correction_vers_lettre_retire_de_l_espace` (208 tests Python verts le 26/10).
