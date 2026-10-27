@@ -30,7 +30,8 @@ liront ce capteur plus tard.
 
 ## Ordre de décision
 
-1. **Règle apprise de l'expéditeur** (table `regles`) : prioritaire. Une règle `a_traiter` demande quand même son
+1. **Règle apprise de l'expéditeur** (table `regles`) : prioritaire (sauf, depuis le 27/10, pour un expéditeur du mémo
+   d'Aiguillage : l'IA passe avant ses règles apprises ; les règles `manuel` restent prioritaires). Une règle `a_traiter` demande quand même son
    résumé à l'IA (la catégorie de la règle reste).
 2. **Règles sûres** (`source: gmail`) :
    - onglet Promotions → `bruit` (toujours) ;
@@ -388,8 +389,10 @@ Pour mieux résumer (nommer l'expéditeur) et mieux juger la catégorie et l'urg
   moins, dans l'ordre), nom affiché égal à un nom d'un seul mot (« Swile »), ou domaine égal au nom de la fiche
   (`erika@seven-portage.fr` → « Seven Portage »). Un prénom seul ne suffit pas ; Mes lieux ne servent pas à reconnaître
   un expéditeur. Un tel mail n'est **jamais classé par une règle sûre** (lien de désinscription, adresse automatique,
-  onglet Gmail) : l'IA décide, raison « IA (expéditeur du mémo : Seven Portage) ». Une règle apprise ou `manuel`
-  d'Alexandre reste prioritaire.
+  onglet Gmail) : l'IA décide, raison « IA (expéditeur du mémo : Seven Portage) ». **Depuis le 27/10 vers 13 h 30
+  (décision d'Alexandre), l'IA avec le mémo passe aussi avant les règles apprises** de cet expéditeur ; seules les
+  règles `manuel` (corrections d'Alexandre, `regles_manuelles`) restent prioritaires. Sauvegarde
+  `aiguillage_courrier.py.avant-memo2-20261027`.
 - **Essai à blanc** : événement `aiguillage_courrier_reclasser` avec `{"essai": ["<id Gmail>", …]}` (5 au plus) :
   retrie ces messages avec le mémo **sans rien écrire** en base et journalise avant / après, coût et jetons.
 
@@ -404,6 +407,10 @@ Essai à blanc sur 4 mails réels (résumés détaillés dans le compte rendu, p
 | Enedis, coupure de nuit de 5 min | a_traiter | lettre, « …au domicile d'Alexandre à Alfortville » | 0,00020 $ (cache lu) |
 | Doctolib (seul « à traiter » ouvert, reclassé pour de vrai) | résumé du RDV | même résumé | — |
 
+**Décisions d'Alexandre (27/10)** : garder tout le mémo (6 000 caractères), coût accepté ; Enedis reste « à traiter » :
+correction `correction:noreply@enedis.fr` → `a_traiter` écrite dans l'espace `courrier`, devenue règle `manuel` à la
+relève de 13 h 30 (journal « 1 correction(s) de l'app devenue(s) règle(s) manuelle(s) », vérifiée dans `regles`).
+
 **Coût par mail** : 0,0002 à 0,0004 $ quand le cache est chaud (plusieurs mails en moins de 5 minutes, reclassement,
 amorçage), **0,0009 $ pour un mail isolé** (écriture des 4 872 tokens). Depuis le 25/10, 16 appels IA sur 17 étaient
 isolés : compter environ 0,2 $/mois au lieu de 0,07 $ (budget 15 $). Pour revenir près de 0,0003 $ : baisser
@@ -412,4 +419,5 @@ isolés : compter environ 0,2 $/mois au lieu de 0,07 $ (budget 15 $). Pour reven
 
 Tests : `test_memo_construit_sans_telephone_ni_gps`, `test_memo_borne_et_priorite_aux_personnes_recentes`,
 `test_expediteur_du_memo`, `test_expediteur_connu_pas_bruit_d_office`, `test_memo_dans_un_bloc_systeme_cache`,
-`test_memo_passe_par_la_releve`, `test_essai_memo_n_ecrit_rien`, `test_cout_avec_cache` (242 tests Python verts).
+`test_memo_passe_par_la_releve`, `test_regle_apprise_contre_memo_dans_la_base`, `test_essai_memo_n_ecrit_rien`,
+`test_cout_avec_cache` (243 tests Python verts).

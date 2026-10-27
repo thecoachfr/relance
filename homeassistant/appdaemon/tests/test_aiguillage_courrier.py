@@ -252,8 +252,18 @@ def test_expediteur_connu_pas_bruit_d_office():
     ia = {"categorie": "a_traiter", "resume": "Erika (Seven Portage) confirme.", "demande": None, "echeance": None,
           "confiance": 0.8, "urgent": False}
     assert c.finaliser(d, ia)["raison"] == "IA (expéditeur du mémo : Seven Portage)"
-    # Règle manuelle (ou apprise) d'Alexandre : prioritaire, même pour un expéditeur du mémo.
-    assert c.decider(f, {"erika@seven-portage.fr": "bruit"}, m)["categorie"] == "bruit"
+    # Règle manuelle d'Alexandre : prioritaire, même pour un expéditeur du mémo.
+    regle = {"erika@seven-portage.fr": "bruit"}
+    assert c.decider(f, regle, m, {"erika@seven-portage.fr"})["categorie"] == "bruit"
+    # Règle apprise : l'IA avec le mémo passe avant elle (décision du 27/10).
+    d = c.decider(f, regle, m, set())
+    assert d["categorie"] is None and d["ia"] and d["raison"] == "expéditeur du mémo : Seven Portage"
+    assert c.decider(f, {"erika@seven-portage.fr": "a_traiter"}, m, set())["categorie"] is None
+    # Sans savoir quelles règles sont manuelles : prudence, la règle reste.
+    assert c.decider(f, regle, m)["categorie"] == "bruit"
+    # Expéditeur inconnu du mémo : la règle apprise reste.
+    g = c.fiche(msg("3", de="news@journal.fr"))
+    assert c.decider(g, {"news@journal.fr": "bruit"}, m, set())["categorie"] == "bruit"
     # Inconnu du mémo : règle sûre inchangée.
     g = c.fiche(msg("2", de="news@journal.fr", en_tetes=[("List-Unsubscribe", "<mailto:x@journal.fr>")]))
     assert c.decider(g, {}, m)["categorie"] == "lettre"
@@ -286,6 +296,26 @@ def test_memo_passe_par_la_releve():
     assert len(ia.appels) == 1 and "Swile" in ia.appels[0]["system"][1]["text"]
     r = c.lignes(db)[0]
     assert r["source"] == "ia" and r["raison"] == "IA (expéditeur du mémo : Swile)"
+
+
+def test_regle_apprise_contre_memo_dans_la_base():
+    db = c.ouvrir_base(":memory:")
+    maintenant = MAINTENANT.isoformat()
+    db.execute("INSERT INTO regles (expediteur, categorie, source, nb, maj) VALUES (?, 'bruit', 'appris', 4, ?)",
+               ("hello@swile.co", maintenant))
+    db.execute("INSERT INTO regles (expediteur, categorie, source, nb, maj) VALUES (?, 'bruit', 'manuel', 1, ?)",
+               ("erika@seven-portage.fr", maintenant))
+    db.commit()
+    assert c.regles_manuelles(db) == {"erika@seven-portage.fr"}
+    m = c.construire_memo(FICHES, LIEUX)
+    ia = FauxClaude()
+    mails = {"s1": msg("s1", de="Swile <hello@swile.co>"), "s2": msg("s2", de="Erika <erika@seven-portage.fr>")}
+    gmail = SimpleNamespace(message=lambda i: mails[i], fil=lambda i: {"messages": []})
+    c.trier(gmail, db, ia, ["s1", "s2"], {}, 15, MAINTENANT, c.regles(db), journal=lambda t: None, memo=m)
+    rangs = {r["id"]: r for r in c.lignes(db)}
+    assert rangs["s1"]["source"] == "ia" and rangs["s1"]["categorie"] == "a_traiter"   # apprise : l'IA passe avant
+    assert rangs["s2"]["source"] == "regle" and rangs["s2"]["categorie"] == "bruit"    # manuel : prioritaire
+    assert len(ia.appels) == 1
 
 
 def test_essai_memo_n_ecrit_rien():

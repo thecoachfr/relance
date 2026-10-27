@@ -223,16 +223,23 @@ def a_soi_meme(f):
         adresse(f.get("a"))[0]) if f.get("a") else False
 
 
-def decider(f, regles, memo=None):
+def decider(f, regles, memo=None, manuelles=None):
     """Ordre de décision, sans l'IA. Renvoie {categorie, source, raison, ia} ; `ia` vrai quand il faut appeler l'IA
     (aucune règle, ou règle apprise `a_traiter` qui a besoin d'un résumé). `categorie` est None quand seule l'IA
     peut trancher. `memo` (objet `Memo`) : un expéditeur présent dans le mémo d'Aiguillage n'est jamais classé par
-    une règle sûre (lien de désinscription, adresse automatique, onglet) : l'IA décide (27/10)."""
+    une règle sûre (lien de désinscription, adresse automatique, onglet) : l'IA décide (27/10). Ni par une règle
+    apprise : l'IA avec le mémo passe avant elle (décision d'Alexandre du 27/10) ; seules les règles `manuel`
+    (`manuelles` : ensemble des expéditeurs qui en ont une) restent prioritaires. `manuelles` None : toutes les
+    règles sont prises pour prioritaires (on ne sait pas les distinguer)."""
     if a_soi_meme(f):
         # Mail qu'Alexandre s'envoie à lui-même : un pense-bête, toujours à traiter (décision du 27/10).
         return {"categorie": "a_traiter", "source": "regle", "raison": "mail à soi-même (pense-bête)", "ia": True}
     regle = (regles or {}).get(f.get("de"))
     if regle in CATEGORIES and regle != "fait":
+        if manuelles is not None and f.get("de") not in manuelles:
+            fiche_ = expediteur_du_memo(f, memo)
+            if fiche_:
+                return {"categorie": None, "source": "ia", "raison": f"expéditeur du mémo : {fiche_}", "ia": True}
         return {"categorie": regle, "source": "regle", "raison": "règle apprise de l'expéditeur",
                 "ia": regle == "a_traiter"}
     sure = regle_sure(f)
@@ -697,6 +704,11 @@ def appliquer_gestes(db, gestes, maintenant):
 
 def regles(db):
     return {r["expediteur"]: r["categorie"] for r in db.execute("SELECT expediteur, categorie FROM regles")}
+
+
+def regles_manuelles(db):
+    """Expéditeurs qui ont une règle `manuel` (correction d'Alexandre) : prioritaire même sur le mémo."""
+    return {r["expediteur"] for r in db.execute("SELECT expediteur FROM regles WHERE source = 'manuel'")}
 
 
 MASSE_NB, MASSE_MINUTES = 15, 10
@@ -1679,7 +1691,7 @@ def synchroniser_courrier(service, db, etat, maintenant, limite=ECRITURES_PAR_PA
 # MARK: - Une relève (sans AppDaemon, testable avec des clients simulés)
 
 def trier(gmail, db, ia_client, ids, etat, budget, maintenant, regles_en_place, journal=print, verifier_fil=True,
-          memo=None):
+          memo=None, manuelles=None):
     """Lit, trie et enregistre les messages `ids` pas encore connus. Renvoie le nombre de messages triés."""
     n = 0
     for message_id in ids:
@@ -1693,7 +1705,7 @@ def trier(gmail, db, ia_client, ids, etat, budget, maintenant, regles_en_place, 
             repondu = verifier_fil and a_repondu(gmail.fil(f["fil"]), f["id"])
         except Introuvable:
             continue
-        d = decider(f, regles_en_place, memo)
+        d = decider(f, regles_en_place, memo, regles_manuelles(db) if manuelles is None else manuelles)
         ia, prix = None, 0.0
         if d["ia"] and ia_client is not None and budget_ok(etat, budget, maintenant):
             try:
