@@ -275,6 +275,7 @@ MEMO_MAX = 6000                 # caractères du contexte (fiches + Mes lieux), 
 MEMO_LIEUX_MAX = 1200           # part de Mes lieux dans ce total
 MEMO_FICHE_MAX = 350            # une fiche coupée au-delà
 MEMO_RAFRAICHIR_S = 1800        # relu au plus toutes les 30 minutes, pas à chaque mail
+EXTRAIT_FICHE_MAX = 600         # extrait d'une fiche publié pour la « Fiche de l'expéditeur » de l'app (27/10)
 # Téléphones : inutiles pour trier un mail, retirés du contexte (+33…, 06 12 34 56 78, (068) 451-2817).
 _TELEPHONE = re.compile(r"\+33\s?\d(?:[\s.]?\d{2}){4}|\b0\d(?:[\s.]?\d{2}){4}\b|\(\d{3}\)\s?\d{3}-\d{4}")
 _PARENTHESE_VIDE = re.compile(r"\(\s*(?:(?:direct|cabinet|secr[ée]tariat|portable|fixe|t[ée]l\.?)\s*[:;,]?\s*)*\)",
@@ -285,10 +286,12 @@ _FICHE_SECONDAIRE = re.compile(r"^(tag\s|r[èe]gles?\s|adresse\b|mon\s|mes\s|\d)
 
 class Memo:
     """Contexte du mémo pour l'IA (`texte`, stable d'un appel à l'autre pour le cache) et noms des fiches, pour
-    reconnaître un expéditeur (`noms` : (clé normalisée, sujet de la fiche))."""
+    reconnaître un expéditeur (`noms` : (clé normalisée, sujet de la fiche)). `extraits` : {sujet : détails nettoyés,
+    sans téléphone ni rue, `EXTRAIT_FICHE_MAX` caractères au plus}, pour la fiche de l'expéditeur de l'app (27/10) ;
+    toutes les fiches de personnes et de sociétés y sont, même celles que la borne du contexte a laissées de côté."""
 
-    def __init__(self, texte="", noms=()):
-        self.texte, self.noms = texte, list(noms)
+    def __init__(self, texte="", noms=(), extraits=None):
+        self.texte, self.noms, self.extraits = texte, list(noms), dict(extraits or {})
 
     def __bool__(self):
         return bool(self.texte)
@@ -373,38 +376,50 @@ def construire_memo(fiches, lieux, limite=MEMO_MAX):
             gardees.add(i)
             reste -= len(ligne) + 1
     l_fiches = [ligne for i, ligne, _, _ in candidates if i in gardees]
-    noms = []
+    noms, extraits = [], {}
     for i, _, prioritaire, sujet in candidates:
         cle = _jetons(re.sub(r"\([^)]*\)", " ", sujet))
         if prioritaire and cle and not (cle[0] in ("alexandre", "moi") or "moi" in cle):
             noms.append((cle, sujet))
+            extraits[sujet] = _couper(nettoyer_fiche(fiches[i].get("description")), EXTRAIT_FICHE_MAX)
     parties = []
     if l_fiches:
         parties.append("Fiches du mémo :\n" + "\n".join(l_fiches))
     if l_lieux:
         parties.append("Mes lieux (groupes de l'app Aiguillage) :\n" + "\n".join(l_lieux))
-    return Memo("\n\n".join(parties), noms)
+    return Memo("\n\n".join(parties), noms, extraits)
+
+
+def _couper(texte, limite):
+    texte = (texte or "").strip()
+    return texte if len(texte) <= limite else texte[:limite - 1].rstrip() + "…"
+
+
+def fiches_de_l_expediteur(nom_affiche, de, memo):
+    """Sujets des fiches du mémo qui désignent l'expéditeur, dans l'ordre du mémo (souvent une seule). Nom affiché
+    qui contient le nom complet d'une fiche (au moins deux mots, dans l'ordre : « Violaine Pichon »), nom affiché égal
+    à un nom d'un seul mot (« Swile »), ou domaine de l'adresse égal au nom de la fiche (`seven-portage.fr` →
+    « Seven Portage »). Une seule règle pour le tri et pour la fiche de l'expéditeur de l'app (27/10)."""
+    if not memo or not memo.noms:
+        return []
+    nom = _jetons(nom_affiche)
+    domaine = (de or "").lower().rpartition("@")[2]
+    etiquettes = domaine.split(".")[:-1]                     # sans le TLD
+    domaines = {"".join(_jetons(e)) for e in etiquettes}
+    trouves = []
+    for cle, sujet in memo.noms:
+        colle = "".join(cle)
+        if ((len(cle) >= 2 and any(nom[k:k + len(cle)] == cle for k in range(len(nom) - len(cle) + 1)))
+                or (len(cle) == 1 and len(colle) >= 4 and nom == cle)
+                or (len(colle) >= 5 and colle in domaines)) and sujet not in trouves:
+            trouves.append(sujet)
+    return trouves
 
 
 def expediteur_du_memo(f, memo):
-    """Sujet de la fiche du mémo qui désigne l'expéditeur, ou None. Nom affiché qui contient le nom complet d'une
-    fiche (au moins deux mots, dans l'ordre : « Violaine Pichon »), nom affiché égal à un nom d'un seul mot (« Swile »),
-    ou domaine de l'adresse égal au nom de la fiche (`seven-portage.fr` → « Seven Portage »)."""
-    if not memo or not memo.noms:
-        return None
-    nom = _jetons(f.get("nom"))
-    domaine = (f.get("de") or "").lower().rpartition("@")[2]
-    etiquettes = domaine.split(".")[:-1]                     # sans le TLD
-    domaines = {"".join(_jetons(e)) for e in etiquettes}
-    for cle, sujet in memo.noms:
-        colle = "".join(cle)
-        if len(cle) >= 2 and any(nom[k:k + len(cle)] == cle for k in range(len(nom) - len(cle) + 1)):
-            return sujet
-        if len(cle) == 1 and len(colle) >= 4 and nom == cle:
-            return sujet
-        if len(colle) >= 5 and colle in domaines:
-            return sujet
-    return None
+    """Sujet de la (première) fiche du mémo qui désigne l'expéditeur, ou None (règle : `fiches_de_l_expediteur`)."""
+    trouves = fiches_de_l_expediteur(f.get("nom"), f.get("de"), memo)
+    return trouves[0] if trouves else None
 
 
 # MARK: - Appel à l'IA
@@ -1306,6 +1321,7 @@ def noter_notifies(db, ids, etat, maintenant, urgent=True):
 ESPACE_COURRIER = "courrier"
 PREFIXE_PLUS_TARD = "plus_tard:"
 PREFIXE_CORRECTION = "correction:"
+PREFIXE_FICHE = "fiche:"
 ECRITURES_PAR_PASSE = 40
 EMETTEUR = "nuc-courrier"
 
@@ -1326,7 +1342,8 @@ def operations_courrier(db, limite=ECRITURES_PAR_PASSE):
     """Différence entre les « à traiter » ouverts et ce qui est déjà publié : [(type, id, valeur, empreinte)], au plus
     `limite`. Suppressions d'abord (un mail traité doit vite disparaître de l'app), puis écritures du plus récent au
     plus ancien. Valeur et empreinte valent None pour une suppression."""
-    publies = {r["id"]: r["empreinte"] for r in db.execute("SELECT id, empreinte FROM publies")}
+    publies = {r["id"]: r["empreinte"] for r in db.execute("SELECT id, empreinte FROM publies")
+               if not r["id"].startswith(PREFIXE_FICHE)}
     ouverts = [dict(r) for r in db.execute(
         "SELECT * FROM messages WHERE categorie = 'a_traiter' ORDER BY date_ms DESC")]
     ids_ouverts = {r["id"] for r in ouverts}
@@ -1336,6 +1353,62 @@ def operations_courrier(db, limite=ECRITURES_PAR_PASSE):
         e = empreinte(v)
         if publies.get(r["id"]) != e:
             ops.append(("ecrire", r["id"], v, e))
+    return ops[:limite]
+
+
+# MARK: - Fiche de l'expéditeur (27/10/2026, demande d'Alexandre)
+#
+# Dans l'app, toucher l'expéditeur d'un mail ouvre sa fiche : ce que le mémo d'Aiguillage dit de lui, sa règle de tri,
+# ses tâches et ses derniers mails. La reconnaissance mémo ↔ expéditeur reste ici (une seule règle,
+# `fiches_de_l_expediteur`) : le NUC publie `fiche:<adresse>` = `{v, nom_memo, extrait, regle, maj}` pour chaque
+# expéditeur des 90 derniers jours reconnu dans le mémo ou qui a une règle (apprise ou manuelle). Même différentiel que
+# les « à traiter » (table `publies`, empreinte sans `maj`), dans la même passe et sous le même plafond, après eux.
+# Jamais le corps ni l'extrait d'un mail : seulement le texte du mémo, déjà nettoyé (sans téléphone ni rue).
+
+
+def valeur_fiche(sujets, memo, regle, maintenant):
+    """Ce que l'app reçoit pour un expéditeur. Plusieurs fiches du mémo : « Sujet : détails » par ligne."""
+    extraits = memo.extraits if memo else {}
+    if len(sujets) == 1:
+        extrait = extraits.get(sujets[0]) or None
+    elif sujets:
+        extrait = _couper("\n".join(f"{s} : {extraits[s]}" if extraits.get(s) else s for s in sujets),
+                          EXTRAIT_FICHE_MAX) or None
+    else:
+        extrait = None
+    return {"v": 1, "nom_memo": " · ".join(sujets) or None, "extrait": extrait,
+            "regle": {"categorie": regle[0], "source": regle[1]} if regle else None,
+            "maj": maintenant.isoformat(timespec="seconds")}
+
+
+def empreinte_fiche(valeur):
+    return empreinte({k: v for k, v in valeur.items() if k != "maj"})   # `maj` seul ne fait rien réécrire
+
+
+def operations_fiches(db, memo, maintenant, limite=ECRITURES_PAR_PASSE, jours=GARDE_JOURS):
+    """Différence entre les fiches voulues et celles déjà publiées : [(type, clé, valeur, empreinte)], au plus
+    `limite`, retraits d'abord. **Sans mémo lu** (pas encore lu, coupé par `memo: false`) : rien, pour ne pas retirer
+    les fiches publiées à cause d'une lecture ratée."""
+    if not memo or limite <= 0:
+        return []
+    publies = {r["id"]: r["empreinte"] for r in db.execute("SELECT id, empreinte FROM publies")
+               if r["id"].startswith(PREFIXE_FICHE)}
+    regles_ = {r["expediteur"]: (r["categorie"], r["source"]) for r in
+               db.execute("SELECT expediteur, categorie, source FROM regles")}
+    noms = {}
+    for r in db.execute("SELECT de, nom FROM messages WHERE de != '' AND date_ms >= ? ORDER BY date_ms DESC",
+                        (_debut_du_jour_ms(maintenant, jours),)):
+        de = r["de"].lower()
+        if de != ADRESSE_PERSO and (de not in noms or (not noms[de] and r["nom"])):
+            noms[de] = r["nom"] or noms.get(de) or ""          # le nom affiché le plus récent
+    voulues = {}
+    for de, nom in noms.items():
+        sujets, regle = fiches_de_l_expediteur(nom, de, memo), regles_.get(de)
+        if sujets or regle:
+            v = valeur_fiche(sujets, memo, regle, maintenant)
+            voulues[PREFIXE_FICHE + de] = (v, empreinte_fiche(v))
+    ops = [("supprimer", cle, None, None) for cle in sorted(publies) if cle not in voulues]
+    ops += [("ecrire", cle, v, e) for cle, (v, e) in sorted(voulues.items()) if publies.get(cle) != e]
     return ops[:limite]
 
 
@@ -1644,17 +1717,20 @@ def diffuser(db, etat, notifs, ids, maintenant, envoyer, envoyer_ha, reglage="au
     return ok
 
 
-def synchroniser_courrier(service, db, etat, maintenant, limite=ECRITURES_PAR_PASSE):
+def synchroniser_courrier(service, db, etat, maintenant, limite=ECRITURES_PAR_PASSE, memo=None):
     """Une passe : lit les changements de l'espace `courrier` (« Plus tard » et corrections de l'app), applique les
     corrections (règles `manuel`, mails reclassés), puis publie la différence et efface les corrections traitées.
     `service(domaine, action, données)` renvoie la réponse de l'action (`_service` de l'app, simulé dans les tests).
     Depuis C5, lit aussi les appareils de l'app (`appareil:*`) et les essais de notification (`essai_notification:*`).
-    Renvoie {plus_tard, corrections, reclasses, ecrits, supprimes, refuses, appareils, essais}."""
+    Depuis le 27/10, publie aussi les fiches des expéditeurs (`fiche:<adresse>`, d'après `memo`), après les « à
+    traiter » et sous le même plafond.
+    Renvoie {plus_tard, corrections, reclasses, ecrits, supprimes, refuses, appareils, essais, fiches_ecrites,
+    fiches_retirees} (`ecrits` et `supprimes` ne comptent que les « à traiter »)."""
     rep = service("donnees_apps", "changements",
                   {"espace": ESPACE_COURRIER, "depuis_seq": int(etat.get("courrier_seq") or 0)}) or {}
     resume = {"plus_tard": appliquer_plus_tard(db, rep, maintenant), "corrections": 0, "reclasses": 0,
               "ecrits": 0, "supprimes": 0, "refuses": 0, "appareils": appliquer_appareils(db, rep, maintenant),
-              "essais": []}
+              "essais": [], "fiches_ecrites": 0, "fiches_retirees": 0}
     voulues, cles = lire_corrections(rep)
     # Essais de notification (C5) : envoyés par l'app AppDaemon juste après cette passe ; leurs clés partent avec
     # les corrections traitées (même liste, même nouvel essai si HA refuse l'effacement).
@@ -1669,6 +1745,7 @@ def synchroniser_courrier(service, db, etat, maintenant, limite=ECRITURES_PAR_PA
         # Pas le `seq_max` du lot ci-dessous : un « Plus tard » écrit par l'app entre les deux serait sauté.
         etat["courrier_seq"] = int(rep["seq_max"])
     ops = operations_courrier(db, limite)
+    ops += operations_fiches(db, memo, maintenant, limite - len(ops))
     retraits = [("supprimer", cle, None, None) for cle in a_retirer]
     if not ops and not retraits:
         etat["corrections_a_retirer"] = []
@@ -1680,9 +1757,12 @@ def synchroniser_courrier(service, db, etat, maintenant, limite=ECRITURES_PAR_PA
     etat["corrections_a_retirer"] = [cle for (_, cle, _, _), res in zip(retraits, res_retraits + [None] * len(retraits))
                                      if (res or {}).get("statut") != "ok"]
     noter_publication(db, ops, res_ops, maintenant)
-    for (type_, _, _, _), res in zip(ops, res_ops):
+    for (type_, cle, _, _), res in zip(ops, res_ops):
         if (res or {}).get("statut") == "ok":
-            resume["ecrits" if type_ == "ecrire" else "supprimes"] += 1
+            if cle.startswith(PREFIXE_FICHE):
+                resume["fiches_ecrites" if type_ == "ecrire" else "fiches_retirees"] += 1
+            else:
+                resume["ecrits" if type_ == "ecrire" else "supprimes"] += 1
         else:
             resume["refuses"] += 1
     return resume
@@ -2051,7 +2131,7 @@ if hass is not None:
             if not self._donnees_courrier:
                 return
             try:
-                r = synchroniser_courrier(self._service, db, etat, maintenant)
+                r = synchroniser_courrier(self._service, db, etat, maintenant, memo=self._contexte_memo())
             except Exception as exc:  # noqa: BLE001
                 self.log(f"Courrier : espace courrier de donnees_apps injoignable ({type(exc).__name__})",
                          level="WARNING")
@@ -2064,6 +2144,9 @@ if hass is not None:
             if r["corrections"]:
                 self.log(f"Courrier : {r['corrections']} correction(s) de l'app devenue(s) règle(s) manuelle(s), "
                          f"{r['reclasses']} mail(s) reclassé(s)")
+            if r["fiches_ecrites"] or r["fiches_retirees"]:
+                self.log(f"Courrier : fiches des expéditeurs, {r['fiches_ecrites']} publiée(s), "
+                         f"{r['fiches_retirees']} retirée(s)")
             if r["plus_tard"] or r["ecrits"] or r["supprimes"] or r["refuses"]:
                 self.log(f"Courrier : espace courrier, {r['ecrits']} publié(s), {r['supprimes']} retiré(s), "
                          f"{r['refuses']} refusé(s), {r['plus_tard']} « Plus tard » reçu(s)")

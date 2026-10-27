@@ -892,7 +892,7 @@ def test_synchroniser_courrier_differentiel():
     ha, etat = FauxDonnees(), {}
     r = c.synchroniser_courrier(ha, db, etat, MAINTENANT)
     assert r == {"plus_tard": 0, "corrections": 0, "reclasses": 0, "ecrits": 2, "supprimes": 0, "refuses": 0,
-                 "appareils": 0, "essais": []}
+                 "appareils": 0, "essais": [], "fiches_ecrites": 0, "fiches_retirees": 0}
     assert set(ha.espace) == {"a1", "a2"} and [o["cle"] for o in ha.lots()[0]] == ["a2", "a1"]  # récents d'abord
     assert etat["courrier_seq"] == 0
     # Rien n'a changé : aucune écriture.
@@ -1211,3 +1211,102 @@ def test_mail_a_soi_meme_est_un_pense_bete():
     assert nouveaux == ["s1"] and gestes == []
     _, gestes = c.lire_historique([{"messagesAdded": [{"message": {"id": "r", "threadId": "fx", "labelIds": ["SENT"]}}]}])
     assert gestes == [(None, "fx", "repondu")]
+
+
+# MARK: - Fiche de l'expéditeur (27/10)
+
+def _recu(db, ident, de, quand=MAINTENANT, categorie="lettre"):
+    f = c.fiche(msg(ident, de=de, quand=quand, fil=f"f{ident}"))
+    c.enregistrer(db, f, {"categorie": categorie, "source": "gmail", "raison": "x"}, quand)
+
+
+def test_fiches_de_l_expediteur_meme_regle_que_le_tri():
+    m = c.construire_memo(FICHES, LIEUX)
+    assert c.fiches_de_l_expediteur("Erika Lemaire", "erika@seven-portage.fr", m) == ["Seven Portage"]
+    assert c.fiches_de_l_expediteur("Camille Martin", "cm@gmail.com", m) == ["Camille Martin"]
+    assert c.fiches_de_l_expediteur("Paul", "p@gmail.com", m) == []                       # prénom seul : non
+    assert c.fiches_de_l_expediteur("Swile", "hello@swile.co", None) == []
+    # Deux fiches : le nom affiché en cite une, le domaine l'autre.
+    assert c.fiches_de_l_expediteur("Camille Martin", "camille@seven-portage.fr", m) == ["Camille Martin",
+                                                                                         "Seven Portage"]
+    # Extraits nettoyés comme le contexte de l'IA : ni téléphone, ni rue ; toutes les fiches, même hors borne.
+    assert m.extraits["Camille Martin"] == "copropriétaire 119 PVC, catégorie Syndic"
+    assert m.extraits["Kiné"].startswith("Jean Kiné — kiné") and "06" not in m.extraits["Kiné"]
+    assert "Alexandre FAU - Moi" not in m.extraits and "Tag SCI" not in m.extraits
+    petit = c.construire_memo(FICHES + [{"summary": "Long Nom", "description": "z" * 900}], None, limite=200)
+    assert len(petit.extraits["Long Nom"]) == c.EXTRAIT_FICHE_MAX and petit.extraits["Long Nom"].endswith("…")
+    assert "Seven Portage" in petit.extraits                                              # hors borne, gardée
+
+
+def test_publication_des_fiches_differentiel_et_retrait():
+    db, m = _base(), c.construire_memo(FICHES, LIEUX)
+    _recu(db, "s1", "Erika Lemaire <erika@seven-portage.fr>")
+    _recu(db, "s2", "Swile <hello@swile.co>", categorie="bruit")
+    _recu(db, "n1", "Le Journal <news@journal.fr>")                       # ni mémo ni règle : pas de fiche
+    _recu(db, "r1", "Boutique <promo@boutique.fr>", categorie="bruit")
+    _recu(db, "v1", "Swile <vieux@swile.co>", quand=MAINTENANT - timedelta(days=95))   # plus de 90 jours
+    _recu(db, "moi", "Alexandre Fau <alexandre.fau@gmail.com>")
+    c.appliquer_correction(db, "promo@boutique.fr", "bruit", MAINTENANT)  # règle manuelle, hors mémo
+    db.execute("INSERT INTO regles (expediteur, categorie, source, nb, maj) VALUES "
+               "('hello@swile.co', 'bruit', 'appris', 4, '2026-10-24')")
+    db.commit()
+    ha, etat = FauxDonnees(), {}
+    r = c.synchroniser_courrier(ha, db, etat, MAINTENANT, memo=m)
+    assert (r["fiches_ecrites"], r["fiches_retirees"], r["ecrits"]) == (3, 0, 0)
+    assert set(ha.espace) == {"fiche:erika@seven-portage.fr", "fiche:hello@swile.co", "fiche:promo@boutique.fr"}
+    erika = ha.espace["fiche:erika@seven-portage.fr"]
+    assert erika == {"v": 1, "nom_memo": "Seven Portage", "extrait": "employeur (portage salarial, CDI) — Travail",
+                     "regle": None, "maj": "2026-10-24T18:00:00+02:00"}
+    assert ha.espace["fiche:hello@swile.co"]["regle"] == {"categorie": "bruit", "source": "appris"}
+    boutique = ha.espace["fiche:promo@boutique.fr"]
+    assert boutique["nom_memo"] is None and boutique["extrait"] is None
+    assert boutique["regle"] == {"categorie": "bruit", "source": "manuel"}
+    # Jamais le corps ni l'extrait d'un mail.
+    assert all("Tu es dispo" not in json.dumps(v, ensure_ascii=False) for v in ha.espace.values())
+    # Rien n'a changé (même une heure plus tard : `maj` seul ne réécrit rien).
+    r = c.synchroniser_courrier(ha, db, etat, MAINTENANT + timedelta(hours=1), memo=m)
+    assert (r["fiches_ecrites"], r["fiches_retirees"]) == (0, 0) and len(ha.lots()) == 1
+    # La règle change : seule cette fiche est réécrite.
+    c.appliquer_correction(db, "hello@swile.co", "lettre", MAINTENANT)
+    r = c.synchroniser_courrier(ha, db, etat, MAINTENANT, memo=m)
+    assert r["fiches_ecrites"] == 1 and [o["cle"] for o in ha.lots()[-1]] == ["fiche:hello@swile.co"]
+    assert ha.espace["fiche:hello@swile.co"]["regle"] == {"categorie": "lettre", "source": "manuel"}
+    # La fiche de Seven Portage disparaît du mémo : retirée ; sans mémo lu : rien ne bouge.
+    sans_seven = c.construire_memo([f for f in FICHES if f["summary"] != "Seven Portage"], LIEUX)
+    assert c.synchroniser_courrier(ha, db, etat, MAINTENANT, memo=None)["fiches_retirees"] == 0
+    assert c.synchroniser_courrier(ha, db, etat, MAINTENANT, memo=c.Memo())["fiches_retirees"] == 0
+    r = c.synchroniser_courrier(ha, db, etat, MAINTENANT, memo=sans_seven)
+    assert r["fiches_retirees"] == 1 and "fiche:erika@seven-portage.fr" not in ha.espace
+    assert [(o["type"], o["cle"]) for o in ha.lots()[-1]] == [("supprimer", "fiche:erika@seven-portage.fr")]
+    # Les « à traiter » ne retirent pas les fiches (et inversement).
+    _a_traiter(db, "a1", MAINTENANT, fil="fa1", de="x@exemple.fr")
+    r = c.synchroniser_courrier(ha, db, etat, MAINTENANT, memo=sans_seven)
+    assert (r["ecrits"], r["fiches_retirees"]) == (1, 0) and "fiche:hello@swile.co" in ha.espace
+    # 90 jours passés : l'expéditeur sort de la fenêtre, sa fiche est retirée.
+    r = c.synchroniser_courrier(ha, db, etat, MAINTENANT + timedelta(days=91), memo=sans_seven)
+    assert "fiche:hello@swile.co" not in ha.espace and r["fiches_retirees"] == 2
+
+
+def test_fiches_sous_le_plafond_apres_les_a_traiter_et_refus():
+    db, m = _base(), c.construire_memo(FICHES, LIEUX)
+    for i in range(3):
+        _a_traiter(db, f"m{i}", MAINTENANT - timedelta(minutes=i), fil=f"f{i}", de=f"{i}@x.fr", sujet=f"S{i}")
+    for i in range(4):
+        _recu(db, f"r{i}", f"R{i} <r{i}@regle.fr>")
+        c.appliquer_correction(db, f"r{i}@regle.fr", "bruit", MAINTENANT)
+    ha, etat = FauxDonnees(), {}
+    ha.refuser = {"fiche:r0@regle.fr"}
+    r = c.synchroniser_courrier(ha, db, etat, MAINTENANT, limite=5, memo=m)
+    assert (r["ecrits"], r["fiches_ecrites"], r["refuses"]) == (3, 1, 1)      # les « à traiter » d'abord
+    ha.refuser = set()
+    c.synchroniser_courrier(ha, db, etat, MAINTENANT, limite=5, memo=m)
+    assert {k for k in ha.espace if k.startswith("fiche:")} == {f"fiche:r{i}@regle.fr" for i in range(4)}
+
+
+def test_valeur_fiche_plusieurs_fiches_et_borne():
+    m = c.Memo("x", [], {"A B": "a" * 400, "C D": "c" * 400})
+    v = c.valeur_fiche(["A B", "C D"], m, None, MAINTENANT)
+    assert v["nom_memo"] == "A B · C D" and v["extrait"].startswith("A B : aaa") and "\nC D : c" in v["extrait"]
+    assert len(v["extrait"]) == c.EXTRAIT_FICHE_MAX
+    assert c.empreinte_fiche(v) == c.empreinte_fiche(c.valeur_fiche(["A B", "C D"], m, None,
+                                                                     MAINTENANT + timedelta(days=1)))
