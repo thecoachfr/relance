@@ -36,7 +36,7 @@ Notification : à l'heure du résumé du matin (7 h 30, `heure_resume` dans `app
 
 Code : `homeassistant/appdaemon/apps/hub_pour_info.py` (fonctions pures, portage de `Recurrence.swift`, puis la
 classe `HubPourInfo`) ; tests : `homeassistant/appdaemon/tests/test_hub_pour_info.py` (mêmes cas que les tests Swift
-de la récurrence). Déploiement : copier `hub_pour_info.py` dans `/Volumes/addon_configs/a0d7b954_appdaemon/apps/`
+de la récurrence). Déployée le 27/10/2026 vers 7 h 08 (capteur publié, 0 info ce jour-là). Déploiement : copier `hub_pour_info.py` dans `/Volumes/addon_configs/a0d7b954_appdaemon/apps/`
 et ajouter le bloc à `apps.yaml` (sauvegarde d'avant : `apps.yaml.avant-pour-info-20261026`, à la racine du dossier) :
 
 ```yaml

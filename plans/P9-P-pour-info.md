@@ -45,7 +45,10 @@ tout rappel d'Aiguillage est une tâche qui insiste jusqu'à « Fait ». Il faut
 - 26/10 : plan rédigé ; **P1 et P2 faits** (244 tests verts, app Mac compilée), à essayer sur l'iPhone. Choix en
   codant : la montre ne reçoit pas les infos (seulement la notification du résumé) ; les infos à venir sont
   repliées sous « À venir » dans À faire (iPhone, iPad), dans « Bientôt » sur Mac.
-- 26/10 (soir) : **P3 codé, pas déployé**. `hub_pour_info` + contrat `homeassistant/HUB-POUR-INFO.md` (tests verts) ;
+- 27/10 vers 7 h 10 : **P3 déployé partout** : `hub_pour_info` sur le NUC (capteur à 0 ce jour-là), carte du
+  Nest Hub `?v=c5e34ad5`, Hub TV H38 installé sur le Player, Hub iPad installé sur l'iPad et poussé (TestFlight pour
+  l'iPhone). Reste : voir le bloc à l'écran le premier jour avec une info, et la notification de 7 h 30.
+- 26/10 (soir) : P3 codé. `hub_pour_info` + contrat `homeassistant/HUB-POUR-INFO.md` (tests verts) ;
   Nest Hub (carte légère, vérifiée au banc), Hub TV (H38, 80 tests verts, commits locaux) et Hub iPad (100 tests
   verts, commits locaux). **Reste** : copier `hub_pour_info.py` et son bloc `apps.yaml` sur le NUC (bloqué par la
   protection du mode auto, à faire avec l'accord d'Alexandre), puis la carte du Nest Hub, l'APK du Player et l'app
