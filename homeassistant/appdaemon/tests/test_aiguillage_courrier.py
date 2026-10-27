@@ -1120,10 +1120,11 @@ class FauxApple:
     """APNs simulé : un statut par jeton (200 par défaut)."""
 
     def __init__(self, statuts=None):
-        self.statuts, self.envois = statuts or {}, []
+        self.statuts, self.envois, self.priorites = statuts or {}, [], []
 
-    def __call__(self, appareil, charge, collapse_id):
+    def __call__(self, appareil, charge, collapse_id, priorite="10"):
         self.envois.append((appareil["jeton"], appareil["environnement"], charge, collapse_id))
+        self.priorites.append(priorite)
         return self.statuts.get(appareil["jeton"], (200, ""))
 
 
@@ -1192,6 +1193,113 @@ def test_essai_de_notification():
     apple = FauxApple()
     charge, collapse = c.push_essai()
     assert c.pousser(db, etat, c.appareils(db), charge, collapse, apple) == 1 and apple.envois[0][3] == "essai"
+
+
+# MARK: - Pastille de l'icône (28/10)
+
+def _appareil_pastille(ident, jeton=JETON_A, pastille=None):
+    e = _appareil(ident, jeton)
+    if pastille is not None:
+        e["valeur"]["pastille"] = pastille
+    return e
+
+
+def test_nombre_pastille_sans_les_plus_tard_a_venir():
+    db = _base()
+    _a_traiter(db, "a1", MAINTENANT, fil="f1")
+    _a_traiter(db, "a2", MAINTENANT, fil="f2")
+    _a_traiter(db, "a3", MAINTENANT, fil="f3")
+    assert c.nombre_pastille(db, MAINTENANT) == 3
+    # « Plus tard » à venir : retiré du nombre ; échu (revenu) : compté.
+    c.appliquer_plus_tard(db, {"enregistrements": [_plus_tard("a1", "2026-10-25T07:00:00Z"),
+                                                   _plus_tard("a2", "2026-10-24T10:00:00Z")]}, MAINTENANT)
+    assert c.nombre_pastille(db, MAINTENANT) == 2
+    c.marquer_fait(db, "a3", "x", MAINTENANT)
+    assert c.nombre_pastille(db, MAINTENANT) == 1
+    assert c.nombre_pastille(db, MAINTENANT + timedelta(days=1)) == 2      # a1 revenu le lendemain
+
+
+def test_appareil_pastille_lue_et_dernier_nombre_oublie_si_change():
+    db = _base()
+    c.appliquer_appareils(db, {"enregistrements": [_appareil("iphone"), _appareil_pastille("ipad", JETON_B, False)]},
+                          MAINTENANT)
+    assert {a["cle"]: a["pastille"] for a in c.appareils(db)} == {"appareil:iphone": 1, "appareil:ipad": 0}
+    c.noter_badge(db, "appareil:iphone", 4)
+    assert c.appliquer_appareils(db, {"enregistrements": [_appareil_pastille("iphone", pastille=True)]},
+                                 MAINTENANT) == 0                          # `true` = absent : rien ne change
+    assert c.appareils(db)[1]["badge"] == 4
+    assert c.appliquer_appareils(db, {"enregistrements": [_appareil_pastille("iphone", pastille=False)]},
+                                 MAINTENANT) == 1
+    assert c.appareils(db)[1]["pastille"] == 0 and c.appareils(db)[1]["badge"] is None
+
+
+def test_base_ancienne_gagne_les_colonnes_de_la_pastille(tmp_path):
+    import sqlite3
+    chemin = tmp_path / "vieille.sqlite"
+    vieille = sqlite3.connect(chemin)
+    vieille.execute("CREATE TABLE appareils (cle TEXT PRIMARY KEY, jeton TEXT NOT NULL, environnement TEXT NOT NULL, "
+                    "app_version TEXT, maj TEXT NOT NULL)")
+    vieille.execute("INSERT INTO appareils VALUES ('appareil:x', ?, 'sandbox', '0.1', 'hier')", (JETON_A,))
+    vieille.commit()
+    vieille.close()
+    db = c.ouvrir_base(str(chemin))
+    a = c.appareils(db)[0]
+    assert a["pastille"] == 1 and a["badge"] is None
+
+
+def test_chaque_push_porte_le_nombre_sauf_pastille_coupee():
+    db = _base()
+    _urgent(db, "u1", MAINTENANT, fil="fu")
+    _a_traiter(db, "a1", MAINTENANT, fil="f1")
+    c.appliquer_appareils(db, {"enregistrements": [_appareil("iphone"), _appareil_pastille("ipad", JETON_B, False)]},
+                          MAINTENANT)
+    notif = c.notification_urgente([dict(db.execute("SELECT * FROM messages WHERE id = 'u1'").fetchone())])
+    apple = FauxApple()
+    n = c.nombre_pastille(db, MAINTENANT)
+    assert c.diffuser(db, {}, [notif], ["u1"], MAINTENANT, apple, lambda x: 0, journal=lambda t: None, badge=n) == 2
+    par_jeton = {e[0]: e[2]["aps"] for e in apple.envois}
+    assert par_jeton[JETON_A]["badge"] == 2 and "alert" in par_jeton[JETON_A]
+    assert "badge" not in par_jeton[JETON_B] and apple.priorites == ["10", "10"]
+    assert {a["cle"]: a["badge"] for a in c.appareils(db)} == {"appareil:iphone": 2, "appareil:ipad": None}
+    # Essai : le nombre aussi. Sans `badge` : charge inchangée (comportement d'avant).
+    apple = FauxApple()
+    charge, collapse = c.push_essai()
+    c.pousser(db, {}, c.appareils(db), charge, collapse, apple)
+    assert all("badge" not in e[2]["aps"] for e in apple.envois)
+
+
+def test_pastille_seule_seulement_si_le_nombre_a_change():
+    db = _base()
+    _a_traiter(db, "a1", MAINTENANT, fil="f1")
+    _a_traiter(db, "a2", MAINTENANT, fil="f2")
+    c.appliquer_appareils(db, {"enregistrements": [_appareil("iphone"), _appareil("ipad", JETON_B),
+                                                   _appareil_pastille("mac", "c3" * 32, False)]}, MAINTENANT)
+    apple, etat = FauxApple(), {}
+    # Premier passage : jamais envoyé → les deux appareils qui la veulent, pas le troisième.
+    assert c.mettre_a_jour_pastilles(db, etat, MAINTENANT, apple, journal=lambda t: None) == 2
+    assert [e[2] for e in apple.envois] == [{"aps": {"badge": 2}}] * 2      # ni alert ni son
+    assert apple.priorites == ["5", "5"] and [e[3] for e in apple.envois] == [None, None]
+    # Rien n'a changé : rien ne part.
+    assert c.mettre_a_jour_pastilles(db, etat, MAINTENANT, apple, journal=lambda t: None) == 0
+    assert len(apple.envois) == 2
+    # Mail traité dans Gmail : 1, une fois. La nuit aussi (silencieuse).
+    c.marquer_fait(db, "a2", "x", MAINTENANT)
+    nuit = MAINTENANT.replace(hour=23, minute=30)
+    assert c.mettre_a_jour_pastilles(db, etat, nuit, apple, journal=lambda t: None) == 2
+    assert apple.envois[-1][2] == {"aps": {"badge": 1}}
+    # Apple en panne pour un appareil : il sera repris à la relève suivante, l'autre non.
+    c.marquer_fait(db, "a1", "x", MAINTENANT)
+    panne = FauxApple({JETON_B: (0, "ConnectError")})
+    assert c.mettre_a_jour_pastilles(db, etat, MAINTENANT, panne, journal=lambda t: None) == 1
+    assert {a["cle"]: a["badge"] for a in c.appareils(db)}["appareil:ipad"] == 1
+    reprise = FauxApple()
+    assert c.mettre_a_jour_pastilles(db, etat, MAINTENANT, reprise, journal=lambda t: None) == 1
+    assert reprise.envois[0][0] == JETON_B and reprise.envois[0][2] == {"aps": {"badge": 0}}
+    # Jeton refusé pour de bon : l'appareil est retiré, comme pour les notifications.
+    _a_traiter(db, "a3", MAINTENANT, fil="f3")
+    refus = FauxApple({JETON_A: (410, "Unregistered")})
+    c.mettre_a_jour_pastilles(db, etat, MAINTENANT, refus, journal=lambda t: None)
+    assert "appareil:iphone" not in {a["cle"] for a in c.appareils(db)}
 
 
 def test_espace_courrier_ignore_appareils_et_essais_dans_les_mails():

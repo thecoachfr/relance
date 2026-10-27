@@ -648,7 +648,8 @@ CREATE TABLE IF NOT EXISTS plus_tard (
     id TEXT PRIMARY KEY, jusqua TEXT NOT NULL, rappele TEXT, maj TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS appareils (
-    cle TEXT PRIMARY KEY, jeton TEXT NOT NULL, environnement TEXT NOT NULL, app_version TEXT, maj TEXT NOT NULL
+    cle TEXT PRIMARY KEY, jeton TEXT NOT NULL, environnement TEXT NOT NULL, app_version TEXT, maj TEXT NOT NULL,
+    pastille INTEGER DEFAULT 1, badge INTEGER
 );
 """
 
@@ -668,6 +669,11 @@ def ouvrir_base(chemin):
         db.commit()
     if "notifie" not in {r["name"] for r in db.execute("PRAGMA table_info(messages)")}:
         db.execute("ALTER TABLE messages ADD COLUMN notifie TEXT")  # notification envoyée (25/10)
+        db.commit()
+    if "pastille" not in {r["name"] for r in db.execute("PRAGMA table_info(appareils)")}:
+        # Pastille de l'icône (28/10) : voulue par l'appareil (interrupteur de l'app) et dernier nombre envoyé.
+        db.execute("ALTER TABLE appareils ADD COLUMN pastille INTEGER DEFAULT 1")
+        db.execute("ALTER TABLE appareils ADD COLUMN badge INTEGER")
         db.commit()
     return db
 
@@ -1574,6 +1580,10 @@ def appliquer_correction(db, adresse_, categorie, maintenant):
 # appareil Courrier, ou si aucun envoi APNs n'a réussi ; `toujours` = les deux ; `jamais` = Courrier seul.
 # `essai_notification:<id>` (bouton des Réglages de l'app) : le NUC envoie une notification d'essai à cet appareil,
 # tout de suite, même la nuit, puis efface la clé.
+# Pastille de l'icône (28/10) : chaque push porte `aps.badge` = `nombre_pastille` (« à traiter » ouverts hors « Plus
+# tard » pas encore revenus) ; si le nombre change sans notification, une pastille seule part à la relève (au plus une
+# par appareil, seulement si le nombre diffère du dernier envoyé à cet appareil). `pastille: false` dans
+# `appareil:<id>` (interrupteur de l'app) : jamais de nombre pour cet appareil.
 
 PREFIXE_APPAREIL = "appareil:"
 PREFIXE_ESSAI = "essai_notification:"
@@ -1609,11 +1619,15 @@ def appliquer_appareils(db, reponse, maintenant):
             n += db.execute("DELETE FROM appareils WHERE cle = ?", (cle,)).rowcount
             continue
         vus.add(cle)
-        avant = db.execute("SELECT jeton, environnement, app_version FROM appareils WHERE cle = ?", (cle,)).fetchone()
-        apres = (jeton, env, str(v.get("app_version") or "") or None)
+        avant = db.execute("SELECT jeton, environnement, app_version, pastille FROM appareils WHERE cle = ?",
+                           (cle,)).fetchone()
+        # `pastille: false` (interrupteur « Nombre sur l'icône » de l'app, 28/10) : plus de nombre sur l'icône ;
+        # absent (app plus ancienne) = voulue.
+        apres = (jeton, env, str(v.get("app_version") or "") or None, 0 if v.get("pastille") is False else 1)
         if not avant or tuple(avant) != apres:
-            db.execute("INSERT OR REPLACE INTO appareils (cle, jeton, environnement, app_version, maj) "
-                       "VALUES (?, ?, ?, ?, ?)", (cle, *apres, quand))
+            # Le dernier nombre envoyé est oublié (`badge` NULL) : il repart à la relève suivante.
+            db.execute("INSERT OR REPLACE INTO appareils (cle, jeton, environnement, app_version, pastille, maj) "
+                       "VALUES (?, ?, ?, ?, ?, ?)", (cle, *apres, quand))
             n += 1
     if (reponse or {}).get("resynchro_complete"):
         for r in [dict(x) for x in db.execute("SELECT cle FROM appareils")]:
@@ -1686,15 +1700,37 @@ def push_essai():
              "courrier": {"type": "resume"}}, "essai")
 
 
-def pousser(db, etat, cibles, charge, collapse_id, envoyer, journal=print):
-    """APNs vers chaque appareil de `cibles` ; `envoyer(appareil, charge, collapse_id)` → (statut, raison)
+def nombre_pastille(db, maintenant):
+    """Nombre sur l'icône de Courrier (28/10) : les « à traiter » encore ouverts, sans ceux mis de côté par « Plus
+    tard » et pas encore revenus. Même définition que l'app (le Récap hors section « Plus tard »)."""
+    caches = mis_de_cote(db, maintenant)
+    return sum(1 for r in db.execute("SELECT id FROM messages WHERE categorie = 'a_traiter'") if r["id"] not in caches)
+
+
+def avec_pastille(charge, nombre):
+    """Copie de la charge avec `aps.badge` (0 retire la pastille)."""
+    return dict(charge, aps=dict(charge.get("aps") or {}, badge=int(nombre)))
+
+
+def noter_badge(db, cle, nombre):
+    db.execute("UPDATE appareils SET badge = ? WHERE cle = ?", (int(nombre), cle))
+    db.commit()
+
+
+def pousser(db, etat, cibles, charge, collapse_id, envoyer, journal=print, badge=None, priorite="10"):
+    """APNs vers chaque appareil de `cibles` ; `envoyer(appareil, charge, collapse_id, priorite=…)` → (statut, raison)
     (`aiguillage_apns.envoyer` dans l'app, simulé dans les tests). Un jeton refusé pour de bon (410, `BadDeviceToken`)
-    retire l'appareil. Renvoie le nombre d'envois acceptés par Apple. Le jeton n'est jamais journalisé."""
+    retire l'appareil. Renvoie le nombre d'envois acceptés par Apple. Le jeton n'est jamais journalisé.
+    `badge` (28/10) : nombre posé sur l'icône des appareils qui la veulent (`pastille`), noté s'il est accepté."""
     ok = 0
     for a in cibles:
-        statut, raison = envoyer(a, charge, collapse_id)
+        pastille = badge is not None and a.get("pastille", 1) != 0
+        statut, raison = envoyer(a, avec_pastille(charge, badge) if pastille else charge, collapse_id,
+                                 priorite=priorite)
         if statut == 200:
             ok += 1
+            if pastille:
+                noter_badge(db, a["cle"], badge)
             continue
         nom = a["cle"][len(PREFIXE_APPAREIL):][:8]
         journal(f"Courrier : APNs {statut} {raison} ({a['environnement']}, appareil {nom}…)")
@@ -1705,7 +1741,7 @@ def pousser(db, etat, cibles, charge, collapse_id, envoyer, journal=print):
 
 
 def diffuser(db, etat, notifs, ids, maintenant, envoyer, envoyer_ha, reglage="auto", apns_pret=True, resume=False,
-             journal=print):
+             journal=print, badge=None):
     """Une notification (urgente ou résumé) : par APNs à chaque appareil Courrier, puis par l'app HA
     (`envoyer_ha(notifs)` → nombre d'envois) si `par_ha` le veut. `apns_pret` : faux sans Key ID (repli HA).
     Renvoie le nombre d'envois réussis (0 = rien n'est parti : le mail sera repris au passage suivant)."""
@@ -1717,12 +1753,25 @@ def diffuser(db, etat, notifs, ids, maintenant, envoyer, envoyer_ha, reglage="au
         rangs.sort(key=lambda r: list(ids).index(r["id"]))
         for notif in notifs:
             charge, collapse_id = push_courrier(notif, rangs, maintenant, resume)
-            ok += pousser(db, etat, cibles, charge, collapse_id, envoyer, journal)
+            ok += pousser(db, etat, cibles, charge, collapse_id, envoyer, journal, badge=badge)
     if par_ha(reglage, len(cibles), ok):
         if cibles:
             journal("Courrier : aucun envoi APNs réussi, repli sur l'app Home Assistant")
         ok += envoyer_ha(notifs)
     return ok
+
+
+def mettre_a_jour_pastilles(db, etat, maintenant, envoyer, journal=print):
+    """Pastille seule (28/10) : quand le nombre a changé sans notification (mail traité ailleurs, « Plus tard »
+    revenu, nouveau mail non urgent entre deux résumés, archivage dans Gmail ou Spark), `{aps: {badge: n}}` sans
+    `alert` ni son, type `alert` (la doc d'Apple y range la pastille), priorité 5. Seulement aux appareils qui la
+    veulent et dont le dernier nombre envoyé diffère : au plus un envoi par appareil et par relève. Silencieuse :
+    elle part aussi la nuit. Renvoie le nombre d'envois acceptés."""
+    n = nombre_pastille(db, maintenant)
+    cibles = [a for a in appareils(db) if a.get("pastille", 1) != 0 and a.get("badge") != n]
+    if not cibles:
+        return 0
+    return pousser(db, etat, cibles, {"aps": {}}, None, envoyer, journal, badge=n, priorite="5")
 
 
 def synchroniser_courrier(service, db, etat, maintenant, limite=ECRITURES_PAR_PASSE, memo=None):
@@ -2009,11 +2058,14 @@ if hass is not None:
                         if self._notifier:
                             notifs, ids = notifications_a_envoyer(db, etat, maintenant, self._app_mail)
                             if notifs:
-                                envoyes = self._diffuser(db, etat, notifs, ids, maintenant)
+                                envoyes = self._diffuser(db, etat, notifs, ids, maintenant,
+                                                         badge=nombre_pastille(db, maintenant))
                                 if envoyes:
                                     noter_notifies(db, ids, etat, maintenant)
                                     noter_rappeles(db, ids, maintenant)
                                     self.log(f"Courrier : notification urgente pour {len(ids)} mail(s)")
+                        # Pastille de l'icône (28/10) : nombre changé sans notification, même la nuit.
+                        self._pastilles(db, etat, maintenant)
                     finally:
                         db.close()
                     self._erreur = None
@@ -2207,14 +2259,28 @@ if hass is not None:
             return envoyes
 
         def _envoi_apns(self, client):
-            return lambda a, charge, collapse_id: apns.envoyer(client, self._apns, a["jeton"], a["environnement"],
-                                                               charge, self._sujet_apns, collapse_id)
+            return lambda a, charge, collapse_id, priorite="10": apns.envoyer(
+                client, self._apns, a["jeton"], a["environnement"], charge, self._sujet_apns, collapse_id, priorite)
 
-        def _diffuser(self, db, etat, notifs, ids, maintenant, resume=False):
+        def _diffuser(self, db, etat, notifs, ids, maintenant, resume=False, badge=None):
             with httpx.Client(http2=True, timeout=10) as client:
                 return diffuser(db, etat, notifs, ids, maintenant, self._envoi_apns(client), self._envoyer,
                                 reglage=self._reglage_ha, apns_pret=bool(self._apns.cle_id), resume=resume,
-                                journal=lambda t: self.log(t, level="WARNING"))
+                                journal=lambda t: self.log(t, level="WARNING"), badge=badge)
+
+        def _pastilles(self, db, etat, maintenant):
+            """Pastille seule vers les appareils dont le nombre a changé (28/10). Rien sans Key ID APNs."""
+            if not self._apns.cle_id:
+                return
+            try:
+                with httpx.Client(http2=True, timeout=10) as client:
+                    n = mettre_a_jour_pastilles(db, etat, maintenant, self._envoi_apns(client),
+                                                journal=lambda t: self.log(t, level="WARNING"))
+                if n:
+                    self.log(f"Courrier : pastille de l'icône à {nombre_pastille(db, maintenant)} "
+                             f"({n} appareil(s))")
+            except Exception as exc:  # noqa: BLE001 - nouvel essai à la relève suivante
+                self.log(f"Courrier : pastille impossible ({type(exc).__name__})", level="WARNING")
 
         def _essai(self, db, etat, cle, maintenant):
             """Notification d'essai demandée depuis les Réglages de l'app (même la nuit : c'est un geste d'Alexandre)."""
@@ -2226,7 +2292,7 @@ if hass is not None:
             charge, collapse_id = push_essai()
             with httpx.Client(http2=True, timeout=10) as client:
                 ok = pousser(db, etat, cible, charge, collapse_id, self._envoi_apns(client),
-                             journal=lambda t: self.log(t, level="WARNING"))
+                             journal=lambda t: self.log(t, level="WARNING"), badge=nombre_pastille(db, maintenant))
             self.log(f"Courrier : notification d'essai {'envoyée' if ok else 'refusée'} "
                      f"({cible[0]['environnement']}, app {cible[0].get('app_version') or '?'})")
 
@@ -2265,7 +2331,8 @@ if hass is not None:
                     # « Plus tard » posés depuis la dernière relève (2 min) : lus avant de composer le résumé.
                     self._synchroniser_courrier(db, etat, maintenant)
                     notifs, ids = resume_a_envoyer(db, etat, maintenant, self._app_mail)
-                    if notifs and self._diffuser(db, etat, notifs, ids, maintenant, resume=True):
+                    if notifs and self._diffuser(db, etat, notifs, ids, maintenant, resume=True,
+                                                 badge=nombre_pastille(db, maintenant)):
                         noter_notifies(db, ids, etat, maintenant, urgent=False)
                         noter_rappeles(db, ids, maintenant)
                         self.log(f"Courrier : résumé de {maintenant:%H} h, {len(ids)} mail(s)")

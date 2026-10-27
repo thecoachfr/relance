@@ -61,22 +61,23 @@ class JetonFournisseur:
         return self._jeton
 
 
-def en_tetes(fournisseur, sujet, collapse_id=None):
-    """En-têtes d'une notification visible (`alert`, priorité 10). `apns-collapse-id` : 64 octets au plus ; une
-    nouvelle notification du même identifiant remplace l'ancienne à l'écran."""
+def en_tetes(fournisseur, sujet, collapse_id=None, priorite="10"):
+    """En-têtes d'une notification `alert` (bannière, son ou pastille : la doc d'Apple range la pastille seule dans
+    ce type). Priorité 10 = tout de suite ; 5 = « selon l'énergie de l'appareil », pour une pastille seule (28/10).
+    `apns-collapse-id` : 64 octets au plus ; une nouvelle notification du même identifiant remplace l'ancienne."""
     h = {"authorization": f"bearer {fournisseur.jeton()}", "apns-topic": sujet, "apns-push-type": "alert",
-         "apns-priority": "10"}
+         "apns-priority": str(priorite)}
     if collapse_id:
         h["apns-collapse-id"] = collapse_id.encode("utf-8")[:64].decode("utf-8", "ignore")
     return h
 
 
-def envoyer(client, fournisseur, jeton_appareil, environnement, charge, sujet, collapse_id=None):
+def envoyer(client, fournisseur, jeton_appareil, environnement, charge, sujet, collapse_id=None, priorite="10"):
     """Une notification vers un appareil. `client` : `httpx.Client(http2=True)` (ou un faux dans les tests).
     Renvoie (statut HTTP, raison) ; (0, texte de l'erreur) si Apple n'a pas pu être joint."""
     try:
         reponse = client.post(f"{hote(environnement)}/3/device/{jeton_appareil}",
-                              headers=en_tetes(fournisseur, sujet, collapse_id), json=charge)
+                              headers=en_tetes(fournisseur, sujet, collapse_id, priorite), json=charge)
     except Exception as erreur:  # noqa: BLE001 - réseau, clé illisible : journalisé par l'appelant
         return 0, f"{type(erreur).__name__} : {erreur}"[:200]
     if reponse.status_code == 200:

@@ -308,7 +308,7 @@ n'a pas été annoncé ; « Plus tard » respecté), mêmes titres et textes.
 ### Enregistrement de l'appareil (écrit par l'app)
 
 - **Clé** `appareil:<identifierForVendor en minuscules>`, valeur `{jeton (hexadécimal), environnement: sandbox |
-  production, app_version, maj}`. L'app la réécrit seulement si le jeton, l'environnement ou la version changent, ou
+  production, app_version, maj}`, plus `pastille: false` si le nombre sur l'icône est coupé (28/10). L'app la réécrit seulement si le jeton, l'environnement ou la version changent, ou
   si la clé a disparu de l'espace. `sandbox` = build Debug installé par `devicectl` (droit `aps-environment:
   development`), `production` = TestFlight / App Store (réglé par configuration dans `project.yml` de l'app).
 - Le NUC lit ces clés par `donnees_apps.changements` (même passe que les « Plus tard ») et les garde dans la table
@@ -352,6 +352,35 @@ réponses d'Apple) et, dans `tests/test_aiguillage_courrier.py`, `test_appareils
 `test_espace_courrier_ignore_appareils_et_essais_dans_les_mails`, `test_cle_apns_lue_dans_le_bloc_de_la_vigie`
 (222 tests Python verts le 26/10).
 
+
+### Pastille de l'icône (28/10, demande d'Alexandre)
+
+Déployé le 27/10 à 17 h 08 (sauvegardes `aiguillage_courrier.py.avant-pastille-20261028` et
+`aiguillage_apns.py.avant-pastille-20261028` à la racine du dossier AppDaemon). Première relève : « pastille de
+l'icône à 0 (4 appareil(s)) ».
+
+- **Nombre** (`nombre_pastille`) : les « à traiter » encore ouverts, sans ceux dont le « Plus tard » n'est pas encore
+  échu. Même définition que l'app (le Récap hors section « Plus tard ») ; un « à traiter » fait, remplacé ou expiré
+  perd aussi son libellé `Tri/À traiter` dans Gmail, donc les deux comptes se rejoignent.
+- **Chaque push** de Courrier (urgent, résumé, essai) porte `aps.badge` = ce nombre, pour les appareils qui veulent
+  la pastille ; le nombre accepté par Apple est noté par appareil (table `appareils`, colonne `badge`).
+- **Pastille seule** (`mettre_a_jour_pastilles`, à la fin de chaque relève de 2 minutes) quand le nombre change sans
+  notification (mail traité ailleurs, « Plus tard » revenu, nouveau mail non urgent entre deux résumés, archivage
+  dans Gmail ou Spark) : `{aps: {badge: n}}` sans `alert` ni son, `apns-push-type: alert` (la doc d'Apple range la
+  pastille dans ce type : « notifications that trigger a user interaction—for example, an alert, badge, or sound »),
+  **priorité 5** (« based on power considerations »), sans `apns-collapse-id`. Seulement aux appareils dont le
+  dernier nombre envoyé diffère : au plus un envoi par appareil et par relève. Silencieuse : elle part aussi la nuit.
+  Échec d'Apple : nouvel essai à la relève suivante ; 410 / `BadDeviceToken` : appareil retiré comme pour les
+  notifications.
+- **`pastille: false`** dans `appareil:<id>` (interrupteur « Nombre sur l'icône » de l'app ; absent = voulue) :
+  aucun nombre pour cet appareil (l'app retire elle-même la pastille). Tout changement de l'enregistrement oublie le
+  dernier nombre envoyé : il repart à la relève suivante.
+- L'app pose elle-même le nombre quand elle est à l'écran ; une bannière reçue au premier plan ne touche pas la
+  pastille (`willPresent` sans `.badge`).
+- Tests : `test_nombre_pastille_sans_les_plus_tard_a_venir`, `test_appareil_pastille_lue_et_dernier_nombre_oublie_si_change`,
+  `test_base_ancienne_gagne_les_colonnes_de_la_pastille`, `test_chaque_push_porte_le_nombre_sauf_pastille_coupee`,
+  `test_pastille_seule_seulement_si_le_nombre_a_change`, et la priorité 5 dans `test_envoyer_en_tetes_et_reponses`
+  (283 tests Python verts le 27/10).
 
 ## Mails à soi-même (27/10, décision d'Alexandre)
 

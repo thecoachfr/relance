@@ -109,6 +109,9 @@ def test_envoyer_en_tetes_et_reponses():
     assert h["authorization"] == "bearer jwt-1" and h["apns-topic"] == "fr.alexandrefau.courrier"
     assert h["apns-push-type"] == "alert" and h["apns-priority"] == "10" and h["apns-collapse-id"] == "x" * 64
     assert "apns-collapse-id" not in apns.en_tetes(f, "s")
+    # Pastille seule (28/10) : même type `alert`, priorité 5.
+    apns.envoyer(client, f, "ab" * 32, "production", {"aps": {"badge": 3}}, "s", priorite="5")
+    assert client.appels[-1][1]["apns-priority"] == "5" and client.appels[-1][1]["apns-push-type"] == "alert"
     assert apns.envoyer(Client(Reponse(410, {"reason": "Unregistered"})), f, "t", "production", {}, "s") == \
         (410, "Unregistered")
     assert apns.envoyer(Client(Reponse(500, None, "panne")), f, "t", "production", {}, "s") == (500, "panne")
