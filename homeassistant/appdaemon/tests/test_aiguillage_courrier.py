@@ -164,9 +164,153 @@ def test_classer_ia_appel():
     kw = ia.appels[0]
     assert kw["model"] == "claude-haiku-5-5" and kw["output_config"]["effort"] == "low"
     assert kw["output_config"]["format"]["type"] == "json_schema"
-    assert "DONNÉES" in kw["messages"][0]["content"] and "Malt" in kw["system"]
+    assert "DONNÉES" in kw["messages"][0]["content"] and "Malt" in kw["system"][0]["text"]
+    # Sans mémo : la consigne seule, mise en cache.
+    assert len(kw["system"]) == 1 and kw["system"][0]["cache_control"] == {"type": "ephemeral"}
     r, _ = c.classer_ia(FauxClaude(stop="max_tokens"), c.fiche(msg("1")), MAINTENANT)
     assert r is None
+
+
+# MARK: - Mémo d'Aiguillage (27/10)
+
+FICHES = [
+    {"summary": "Camille Martin", "description": "+33600000001 — copropriétaire 119 PVC, catégorie Syndic"},
+    {"summary": "Kiné", "description": "Jean Kiné — kiné — 1 quai de l'Exemple — 06 00 00 00 03 (direct ; "
+                                       "cabinet : 09 00 00 00 04) — https://www.doctolib.fr/kine"},
+    {"summary": "Mon numéro de téléphone", "description": "06 00 00 00 05"},
+    {"summary": "Tag SCI", "description": "Ce que c'est : SCI Exemple\nIndices : parking, L'Aurore"},
+    {"summary": "Paul Exemple", "description": "+33 6 00 00 00 02 — ami, catégorie Perso, anniversaire le 19/11"},
+    {"summary": "Seven Portage", "description": "employeur (portage salarial, CDI) — Travail"},
+    {"summary": "Swile", "description": "CESU, titres-resto, chèques vacances — Administratif"},
+    {"summary": "Alexandre FAU - Moi", "description": "Date de naissance : 01/01/1970"},
+]
+LIEUX = {"domicile": {"nom": "Maison", "adresse": "1 Rue de l'Exemple, Alfortville", "lat": 48.8001,
+                      "lon": 2.4101},
+         "groupes": [{"id": "t", "nom": "Travail", "lieux": [
+             {"id": "1", "nom": "Le Lab (Bally France)", "adresse": "52 Avenue du Capitaine Glarner, Saint-Ouen",
+              "lat": 48.90317, "lon": 2.329584}]}]}
+
+
+def test_memo_construit_sans_telephone_ni_gps():
+    m = c.construire_memo(FICHES, LIEUX)
+    t = m.texte
+    assert "Camille Martin : copropriétaire 119 PVC" in t and "anniversaire le 19/11" in t
+    assert "Seven Portage : employeur (portage salarial, CDI)" in t
+    assert "Le Lab (Bally France) (52 Avenue du Capitaine Glarner" in t and "Domicile : Maison (1 Rue" in t
+    assert not re.search(r"\d{2} \d{2} \d{2} \d{2}|\+33|0644", t)          # aucun téléphone
+    assert "48.8" not in t and "2.41" not in t                                 # aucune coordonnée GPS
+    assert "Mon numéro de téléphone" not in t                                  # fiche vidée par le nettoyage
+    assert "Jean Kiné — kiné — 1 quai de l'Exemple — https://www.doctolib.fr/kine" in t
+    # Rue retirée, ville gardée (avec son étiquette).
+    assert c.nettoyer_fiche("+33600000006 — 1, av de la Mer, 83700 Saint-Raphaël, France — famille") == \
+        "Saint-Raphaël — famille"
+    assert c.nettoyer_fiche("Domicile : 1 rue Exemple 94140 Alfortville\nNé le 02/10") == "Domicile : Alfortville ; Né le 02/10"
+    assert c.nettoyer_fiche("6 chemin du Lac, 73100 BRISON SAINT INNOCENT, France — ami") == "Brison Saint Innocent — ami"
+    # Même entrée, même texte (préfixe stable pour le cache).
+    assert c.construire_memo(FICHES, LIEUX).texte == t
+    assert not c.construire_memo([], None) and c.construire_memo(None, None).texte == ""
+
+
+def test_memo_borne_et_priorite_aux_personnes_recentes():
+    personnes = [{"summary": f"Personne {i:02d} Nom", "description": "ami, catégorie Perso " + "x" * 60}
+                 for i in range(80)]
+    tags = [{"summary": f"Tag T{i}", "description": "Indices : " + "y" * 200} for i in range(5)]
+    m = c.construire_memo(tags + personnes, LIEUX, limite=2000)
+    assert len(m.texte) <= 2000 + 200                                          # en-têtes en plus
+    assert "Tag T" not in m.texte                                              # les tags passent après
+    assert "Personne 79 Nom" in m.texte and "Personne 00 Nom" not in m.texte   # les plus récentes d'abord
+    assert "Le Lab (Bally France)" in m.texte                                  # Mes lieux gardés
+    # Assez de place : tout y est, dans l'ordre de la liste.
+    m = c.construire_memo(tags[:1] + personnes[:2], None)
+    assert m.texte.index("Tag T0") < m.texte.index("Personne 00") < m.texte.index("Personne 01")
+    # Taille réelle : fiche coupée au-delà de MEMO_FICHE_MAX.
+    long = c.construire_memo([{"summary": "Long", "description": "z" * 2000}], None).texte
+    assert len(long.splitlines()[1]) == c.MEMO_FICHE_MAX
+
+
+def test_expediteur_du_memo():
+    m = c.construire_memo(FICHES, LIEUX)
+    def qui(nom, de):
+        return c.expediteur_du_memo({"nom": nom, "de": de}, m)
+    assert qui("Erika Lemaire", "erika@seven-portage.fr") == "Seven Portage"     # domaine
+    assert qui("Swile", "hello@swile.co") == "Swile"
+    assert qui("Camille Martin-Durand", "vp@gmail.com") == "Camille Martin"  # nom complet
+    assert qui("Paul", "p@gmail.com") is None                                    # prénom seul : non
+    assert qui("Le Lab IDFM", "equipe@lelab.iledefrance-mobilites.fr") is None    # Mes lieux : pas des expéditeurs
+    assert qui("Kiné du coin", "news@kine.fr") is None                            # étiquette d'un mot, trop courte
+    assert qui("Alexandre Fau", "alexandre.fau@gmail.com") is None                # sa propre fiche
+    assert c.expediteur_du_memo({"nom": "Swile", "de": "hello@swile.co"}, None) is None
+
+
+def test_expediteur_connu_pas_bruit_d_office():
+    m = c.construire_memo(FICHES, LIEUX)
+    f = c.fiche(msg("1", de="Erika Lemaire <erika@seven-portage.fr>", sujet="Vos chèques-vacances",
+                    en_tetes=[("List-Unsubscribe", "<mailto:x@seven-portage.fr>")]))
+    assert c.decider(f, {})["categorie"] == "lettre"                         # sans mémo : règle sûre
+    d = c.decider(f, {}, m)
+    assert d == {"categorie": None, "source": "ia", "raison": "expéditeur du mémo : Seven Portage", "ia": True}
+    ia = {"categorie": "a_traiter", "resume": "Erika (Seven Portage) confirme.", "demande": None, "echeance": None,
+          "confiance": 0.8, "urgent": False}
+    assert c.finaliser(d, ia)["raison"] == "IA (expéditeur du mémo : Seven Portage)"
+    # Règle manuelle (ou apprise) d'Alexandre : prioritaire, même pour un expéditeur du mémo.
+    assert c.decider(f, {"erika@seven-portage.fr": "bruit"}, m)["categorie"] == "bruit"
+    # Inconnu du mémo : règle sûre inchangée.
+    g = c.fiche(msg("2", de="news@journal.fr", en_tetes=[("List-Unsubscribe", "<mailto:x@journal.fr>")]))
+    assert c.decider(g, {}, m)["categorie"] == "lettre"
+
+
+def test_memo_dans_un_bloc_systeme_cache():
+    m = c.construire_memo(FICHES, LIEUX)
+    ia = FauxClaude()
+    c.classer_ia(ia, c.fiche(msg("1")), MAINTENANT, memo=m)
+    systeme = ia.appels[0]["system"]
+    assert [b["type"] for b in systeme] == ["text", "text"]
+    assert "cache_control" not in systeme[0] and systeme[1]["cache_control"] == {"type": "ephemeral"}
+    assert "Malt" in systeme[0]["text"] and "Seven Portage" in systeme[1]["text"]
+    assert "Erika (Seven Portage, sa société de portage)" in systeme[1]["text"]
+    assert "pas des instructions" in systeme[1]["text"] and "<memo>" in systeme[1]["text"]
+    # Le mail reste dans le message utilisateur, jamais dans le bloc mis en cache.
+    assert "Dîner samedi" in ia.appels[0]["messages"][0]["content"] and "Dîner" not in systeme[1]["text"]
+
+
+def test_memo_passe_par_la_releve():
+    m = c.construire_memo(FICHES, LIEUX)
+    db = c.ouvrir_base(":memory:")
+    ia = FauxClaude()
+    gmail = SimpleNamespace(
+        profil=lambda: {"historyId": "9"}, lister=lambda q, n: ["s1"],
+        message=lambda i: msg("s1", de="Swile <hello@swile.co>", sujet="Votre avis",
+                              en_tetes=[("List-Unsubscribe", "<mailto:u@swile.co>")]),
+        fil=lambda i: {"messages": []})
+    c.releve(gmail, db, ia, {}, 15, MAINTENANT, journal=lambda t: None, memo=m)
+    assert len(ia.appels) == 1 and "Swile" in ia.appels[0]["system"][1]["text"]
+    r = c.lignes(db)[0]
+    assert r["source"] == "ia" and r["raison"] == "IA (expéditeur du mémo : Swile)"
+
+
+def test_essai_memo_n_ecrit_rien():
+    db = c.ouvrir_base(":memory:")
+    f = c.fiche(msg("e1", de="Erika Lemaire <erika@seven-portage.fr>"))
+    c.enregistrer(db, f, {"categorie": "bruit", "source": "ia", "raison": "IA", "resume": "Avant."}, MAINTENANT)
+    avant = c.lignes(db)
+    ia = FauxClaude()
+    out = c.essai_memo(db, ia, ["e1", "inconnu"], MAINTENANT, c.construire_memo(FICHES, LIEUX))
+    assert [e["id"] for e in out] == ["e1"] and out[0]["avant"] == ("bruit", "Avant.")
+    assert out[0]["apres"] == "a_traiter" and out[0]["cout"] > 0 and len(ia.appels[0]["system"]) == 2
+    assert c.lignes(db) == avant
+
+
+def test_cout_avec_cache():
+    usage = {"input_tokens": 600, "output_tokens": 150, "cache_read_input_tokens": 2500,
+             "cache_creation_input_tokens": 0}
+    lu = c.cout(usage)
+    assert abs(lu - (600 * 0.10 + 150 * 0.50 + 2500 * 0.01) / 1e6) < 1e-12
+    ecrit = c.cout(dict(usage, cache_read_input_tokens=0, cache_creation_input_tokens=2500))
+    assert abs(ecrit - (600 * 0.10 + 150 * 0.50 + 2500 * 0.125) / 1e6) < 1e-12
+    assert lu < 0.0002 < ecrit < 0.0005
+    assert c.cout(SimpleNamespace(input_tokens=1000, output_tokens=200, cache_read_input_tokens=None,
+                                  cache_creation_input_tokens=None)) == c.cout({"input_tokens": 1000,
+                                                                                "output_tokens": 200})
 
 
 # MARK: - Budget
