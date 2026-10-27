@@ -443,7 +443,7 @@ def test_capteur():
     assert carte == {"id": "1", "fil": "f1", "de": "Marie Dupont", "adresse": "marie@exemple.fr",
                      "sujet": "Dîner samedi ?", "resume": "Marie propose un dîner.", "demande": "Répondre",
                      "echeance": None, "date": "2026-10-24T16:00:00+00:00",
-                     "lien": "https://mail.google.com/mail/u/0/#inbox/f1"}
+                     "lien": "https://mail.google.com/mail/u/0/#inbox/f1", "qui": "Marie Dupont", "urgent": False}
     assert att["mode"] == "ombre" and att["cout_mois"] == 1.5 and not att["budget_atteint"]
     assert att["avertissement"] is None and att["derniere_erreur"] is None
     assert att["derniere_releve"] == "2026-10-24T17:58:00+02:00"
@@ -1323,3 +1323,10 @@ def test_valeur_fiche_plusieurs_fiches_et_borne():
     assert len(v["extrait"]) == c.EXTRAIT_FICHE_MAX
     assert c.empreinte_fiche(v) == c.empreinte_fiche(c.valeur_fiche(["A B", "C D"], m, None,
                                                                      MAINTENANT + timedelta(days=1)))
+
+
+def test_carte_pour_les_hubs():
+    r = {"id": "a", "fil": "f", "nom": "Tom CHICHA via leboncoin", "de": "x@y", "urgent": 1}
+    c2 = c.carte(r)
+    assert c2["qui"] == "Tom CHICHA (leboncoin)" and c2["urgent"] is True
+    assert c.carte({"id": "b", "fil": "g", "de": "noreply@enedis.fr"})["urgent"] is False

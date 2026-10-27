@@ -906,7 +906,9 @@ def comptes(rangs, depuis_ms):
 def carte(r):
     return {"id": r["id"], "fil": r["fil"], "de": r.get("nom") or r.get("de"), "adresse": r.get("de"),
             "sujet": r.get("sujet"), "resume": r.get("resume"), "demande": r.get("demande"),
-            "echeance": r.get("echeance"), "date": r.get("date"), "lien": LIEN_GMAIL.format(r["fil"])}
+            "echeance": r.get("echeance"), "date": r.get("date"), "lien": LIEN_GMAIL.format(r["fil"]),
+            # Pour les Hubs (28/10) : nom prêt à afficher (mêmes mots partout) et urgence.
+            "qui": _qui(r), "urgent": bool(r.get("urgent"))}
 
 
 def calculer_capteur(rangs, maintenant, etat, mode, budget, derniere_erreur=None):
