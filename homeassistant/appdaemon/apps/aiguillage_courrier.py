@@ -207,10 +207,28 @@ def regle_sure(f):
     return None
 
 
+ADRESSE_PERSO = "alexandre.fau@gmail.com"
+
+
+def _base_adresse(adresse):
+    """alexandre.fau+malt@gmail.com → alexandre.fau@gmail.com (alias « + » de Gmail)."""
+    local, _, domaine = (adresse or "").lower().partition("@")
+    return f"{local.split('+')[0]}@{domaine}"
+
+
+def a_soi_meme(f):
+    """Vrai pour un mail envoyé par Alexandre à lui-même (expéditeur et destinataire sa boîte perso)."""
+    return _base_adresse(f.get("de")) == ADRESSE_PERSO and ADRESSE_PERSO in _base_adresse(
+        adresse(f.get("a"))[0]) if f.get("a") else False
+
+
 def decider(f, regles):
     """Ordre de décision, sans l'IA. Renvoie {categorie, source, raison, ia} ; `ia` vrai quand il faut appeler l'IA
     (aucune règle, ou règle apprise `a_traiter` qui a besoin d'un résumé). `categorie` est None quand seule l'IA
     peut trancher."""
+    if a_soi_meme(f):
+        # Mail qu'Alexandre s'envoie à lui-même : un pense-bête, toujours à traiter (décision du 27/10).
+        return {"categorie": "a_traiter", "source": "regle", "raison": "mail à soi-même (pense-bête)", "ia": True}
     regle = (regles or {}).get(f.get("de"))
     if regle in CATEGORIES and regle != "fait":
         return {"categorie": regle, "source": "regle", "raison": "règle apprise de l'expéditeur",
@@ -371,7 +389,8 @@ def lire_historique(historique):
             libelles = m.get("labelIds") or []
             if "INBOX" in libelles and m.get("id") and m["id"] not in nouveaux:
                 nouveaux.append(m["id"])
-            if "SENT" in libelles and m.get("threadId"):
+            # Un message envoyé ET reçu (mail à soi-même) n'est pas une réponse : il ne clôt pas son fil (27/10).
+            if "SENT" in libelles and "INBOX" not in libelles and m.get("threadId"):
                 gestes.append((None, m["threadId"], "repondu"))
         for r in h.get("labelsRemoved") or []:
             m, libelles = r.get("message") or {}, r.get("labelIds") or []

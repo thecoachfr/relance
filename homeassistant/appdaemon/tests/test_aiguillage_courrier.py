@@ -1022,3 +1022,18 @@ def test_cle_apns_lue_dans_le_bloc_de_la_vigie():
     assert c.cle_apns_de_la_vigie(texte) == {"team_id": "GD6W292ZXP", "key_id": "ABCDE12345",
                                              "key_path": "/config/apps/AuthKey_relance.p8"}
     assert c.cle_apns_de_la_vigie("autre:\n  module: x\n") == {}
+
+
+def test_mail_a_soi_meme_est_un_pense_bete():
+    f = c.fiche(msg("s1", de="Alexandre Fau <alexandre.fau@gmail.com>", sujet="Test avec accent éî", corps="Teet"))
+    assert c.a_soi_meme(f)
+    d = c.decider(f, {"alexandre.fau@gmail.com": "bruit"})
+    assert d["categorie"] == "a_traiter" and d["ia"] and d["raison"].startswith("mail à soi-même")
+    assert c.a_soi_meme(dict(f, de="alexandre.fau+malt@gmail.com"))
+    assert not c.a_soi_meme(c.fiche(msg("s2")))
+    # envoyé à soi-même (SENT + INBOX) : pas un geste « répondu »
+    nouveaux, gestes = c.lire_historique([{"messagesAdded": [
+        {"message": {"id": "s1", "threadId": "fs", "labelIds": ["SENT", "INBOX", "UNREAD"]}}]}])
+    assert nouveaux == ["s1"] and gestes == []
+    _, gestes = c.lire_historique([{"messagesAdded": [{"message": {"id": "r", "threadId": "fx", "labelIds": ["SENT"]}}]}])
+    assert gestes == [(None, "fx", "repondu")]

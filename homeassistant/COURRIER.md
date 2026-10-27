@@ -349,3 +349,11 @@ réponses d'Apple) et, dans `tests/test_aiguillage_courrier.py`, `test_appareils
 `test_jeton_refuse_retire_l_appareil_et_sa_cle`, `test_essai_de_notification`,
 `test_espace_courrier_ignore_appareils_et_essais_dans_les_mails`, `test_cle_apns_lue_dans_le_bloc_de_la_vigie`
 (222 tests Python verts le 26/10).
+
+
+## Mails à soi-même (27/10, décision d'Alexandre)
+
+Un mail envoyé par Alexandre à sa propre boîte (expéditeur et destinataire `alexandre.fau@gmail.com`, alias « + »
+compris) est un pense-bête : toujours `a_traiter` (source `regle`, raison « mail à soi-même (pense-bête) »), avec résumé
+par l'IA, avant toute règle apprise. Un message à la fois SENT et INBOX n'est plus pris pour une réponse (il ne clôt plus
+son fil). Le mail d'essai de Courrier du 27/10 (classé bruit puis « fait » à tort) a été reclassé à la main.
