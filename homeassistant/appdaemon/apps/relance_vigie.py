@@ -29,6 +29,7 @@ import aiguillage_agenda
 import aiguillage_lecteur
 import aiguillage_radio
 import aiguillage_spotify
+import aiguillage_spotify_lecture
 import aiguillage_tmdb
 import aiguillage_tri
 
@@ -192,6 +193,14 @@ class RelanceVigie(Hass):
         self.listen_event(self.on_spotify_aime, "aiguillage_spotify_aime")
         # « Vu » sur une envie « À regarder » (Hub TV, Hub iPad) via script.aiguillage_envie_vue.
         self.listen_event(self.on_envie_vue, "aiguillage_envie_vue")
+        # Lecture Spotify pour le Hub (27/10/2026, homeassistant/SPOTIFY-LECTURE.md) : sensor.spotify_lecture (lecture
+        # seule de l'API), script.spotify_sur_ls50 / script.spotify_reprendre (événements du même nom).
+        self._lecture = aiguillage_spotify_lecture.Lecture(self._spotify_lecture_client)
+        self._lecture_publie = None   # ((état, attributs), instant)
+        self.run_every(self._spotify_lecture_tic, "now+10", 5)
+        self.listen_event(self.on_spotify_sur_ls50, "spotify_sur_ls50")
+        self.listen_event(self.on_spotify_reprendre, "spotify_reprendre")
+        self.listen_event(lambda *_a, **_kw: self._lecture.demander(time.monotonic()), "spotify_lecture_demande")
         # Activité en direct « En lecture sur les LS50 » du Hub iPad (23/10/2026) : jetons envoyés par l'app
         # (script.hub_ipad_activite → événement hub_ipad_activite), lecteur surveillé, push APNs `liveactivity`.
         self._lecteur_path = Path(self.args.get("hub_ipad_activite_file", "/config/hub_ipad_activite.json"))
@@ -822,6 +831,102 @@ class RelanceVigie(Hass):
                             "(droit des titres likés).", cause="action")
             return
         self.log(f"Spotify : {ref[0]} {ref[1][:8]}… ajouté aux titres likés")
+
+    # MARK: - Lecture Spotify pour le Hub (27/10/2026, SPOTIFY-LECTURE.md)
+
+    def _spotify_lecture_ids(self):
+        try:
+            return json.loads(self._spotify_path.read_text())
+        except (FileNotFoundError, ValueError):
+            return None
+
+    def _spotify_lecture_client(self):
+        """Client à part de celui de la playlist (jeton d'accès gardé, pas de playlist : lecture seule)."""
+        ids = self._spotify_lecture_ids()
+        return aiguillage_spotify_lecture.ClientLecture(ids) if ids else None
+
+    def _spotify_lecture_tic(self, **kwargs):
+        """Toutes les 5 s, sans appel : `Lecture.due` décide (15 s si les LS50 sont en Wi-Fi ou si une vue a demandé,
+        sinon 2 min ; jamais pendant une pause après erreur)."""
+        lecture = self._lecture
+        if not lecture.verrou.acquire(blocking=False):
+            return  # interrogation précédente pas finie
+        try:
+            t = time.monotonic()
+            wifi = (self.get_state(aiguillage_spotify_lecture.ENTITE_KEF, attribute="source") or "").lower() == "wifi"
+            if not lecture.due(t, wifi):
+                return
+            resultat = lecture.interroger(t, datetime.now(PARIS).isoformat(timespec="seconds"))
+            if resultat is None:
+                return
+            ancien = self._lecture_publie
+            if ancien and not aiguillage_spotify_lecture.a_publier(ancien[0], resultat, ancien[1], t):
+                return
+            self._publier_lecture(*resultat)
+            self._lecture_publie = (resultat, t)
+            if resultat[0] == "unavailable" and (ancien is None or ancien[0][0] != "unavailable"):
+                self.log(f"Spotify lecture : indisponible ({resultat[1].get('erreur')})", level="WARNING")
+        except Exception as error:  # noqa: BLE001 - HA injoignable : on republiera au prochain passage
+            self._lecture_publie = None
+            self.log(f"Spotify lecture : capteur non publié : {error!r}", level="WARNING")
+        finally:
+            lecture.verrou.release()
+
+    def _publier_lecture(self, etat, attributs):
+        """Par l'API REST et non `set_state` : AppDaemon 4.5 retire les 0 / null des attributs (voir hub_meteo)."""
+        reply = httpx.post(f"{CORE_API}/states/{aiguillage_spotify_lecture.ENTITE}", timeout=15,
+                           headers={"Authorization": f"Bearer {os.environ['SUPERVISOR_TOKEN']}"},
+                           json={"state": etat, "attributes": dict(attributs, friendly_name="Spotify : lecture",
+                                                                    icon="mdi:spotify")})
+        reply.raise_for_status()
+
+    def on_spotify_sur_ls50(self, event_name, data, **kwargs):
+        self._spotify_action(action="transfert", debut=time.monotonic())
+
+    def on_spotify_reprendre(self, event_name, data, **kwargs):
+        self._spotify_action(action="reprendre", debut=time.monotonic())
+
+    def _spotify_action(self, action, debut, reveil=False, **kwargs):
+        """script.spotify_sur_ls50 / script.spotify_reprendre : trouve « Salon LS50 » dans Spotify Connect ; absentes,
+        les réveille (media_player.turn_on sur la KEF) et relit toutes les 4 s, 20 s au plus ; sinon notification."""
+        lecture = self._lecture
+        lecture.demander(time.monotonic())
+        client = lecture.client()
+        if client is None:
+            self.log("Spotify lecture : pas d'identifiants, script sans effet", level="WARNING")
+            return
+        try:
+            devices = client.appareils()
+            lecture.appareils_lus(devices, time.monotonic())
+            ls50 = aiguillage_spotify_lecture.appareil_ls50(devices)
+            if ls50 is None:
+                ecoule = time.monotonic() - debut
+                if not reveil:
+                    self.log("Spotify lecture : LS50 absentes de Spotify Connect, réveil")
+                    self.call_service("media_player/turn_on", entity_id=aiguillage_spotify_lecture.ENTITE_KEF)
+                if ecoule < aiguillage_spotify_lecture.REVEIL_MAX:
+                    self.run_in(self._spotify_action, aiguillage_spotify_lecture.REVEIL_PAS, action=action,
+                                debut=debut, reveil=True)
+                    return
+                self.log("Spotify lecture : LS50 introuvables après 20 s", level="WARNING")
+                self._hub_notifier("LS50 introuvables pour Spotify")
+                return
+            permis = aiguillage_spotify_lecture.DROIT_RECENTS in (self._spotify_lecture_ids() or {}).get("scopes", "")
+            fait, texte = aiguillage_spotify_lecture.agir(action, client, ls50["id"], lecture.memoire, permis)
+        except Exception as error:  # noqa: BLE001
+            motif, _ = aiguillage_spotify_lecture.classer(error)
+            self.log(f"Spotify lecture : {action} en échec ({motif}) : {error!r}", level="WARNING")
+            self._hub_notifier("Spotify ne répond pas, réessaie dans un moment")
+            return
+        self.log(f"Spotify lecture : {action} : {texte}")
+        if not fait and texte == "rien à reprendre":
+            self._hub_notifier("Rien à reprendre sur Spotify")
+
+    def _hub_notifier(self, texte):
+        try:
+            self._service("script", "hub_notifier", {"texte": texte, "titre": "Spotify", "niveau": "info"}, response=False)
+        except Exception as error:  # noqa: BLE001
+            self.log(f"Spotify lecture : notification impossible : {error!r}", level="WARNING")
 
     def on_envie_vue(self, event_name, data, **kwargs):
         """« Vu » sur une envie « À regarder » (Hub TV et Hub iPad, 27/10/2026) : coche l'envie `cle`, comme « Écouté »
