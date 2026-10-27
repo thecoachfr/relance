@@ -45,6 +45,8 @@ tout rappel d'Aiguillage est une tâche qui insiste jusqu'à « Fait ». Il faut
 - 26/10 : plan rédigé ; **P1 et P2 faits** (244 tests verts, app Mac compilée), à essayer sur l'iPhone. Choix en
   codant : la montre ne reçoit pas les infos (seulement la notification du résumé) ; les infos à venir sont
   repliées sous « À venir » dans À faire (iPhone, iPad), dans « Bientôt » sur Mac.
+- 27/10 : **correctif** (vu par Alexandre) : une info avec une heure passée s'affichait « En retard · … » dans la fiche, la
+  ligne, la carte et Siri (`DueText.long` ne regardait que la date) ; paramètre `jamaisEnRetard` → « Aujourd'hui à 7 h 30 ».
 - 27/10 vers 7 h 35 : **heure facultative** (demande d'Alexandre) : affichée seulement, jamais de rappel ; résumé du
   matin « Pour info : Sport à 7 h 30, Poubelles » ; champs `heure` / `heure_texte` du capteur, à droite dans les trois
   vues (carte `?v=18d7f07d`, Hub TV H39, Hub iPad build 26). **Premier vrai essai réussi** : notification « Pour

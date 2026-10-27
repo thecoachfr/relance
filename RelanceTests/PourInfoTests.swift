@@ -100,6 +100,13 @@ struct PourInfoTests {
         #expect(item.heurePourInfo == "7 h 30")
     }
 
+    /// Vu par Alexandre le 27/10 : « Sport » (7 h 30) affiché « En retard » après l'heure dans la fiche.
+    @Test func dueTextNeverSaysLateForAnInfo() {
+        let due = day(27, 7, 30)
+        #expect(DueText.long(due: due, hasTime: true, now: day(27, 9), calendar: calendar).hasPrefix("En retard"))
+        #expect(DueText.long(due: due, hasTime: true, now: day(27, 9), calendar: calendar, jamaisEnRetard: true) == "Aujourd'hui à 7 h 30")
+    }
+
     @Test func eveningDigestIgnoresInfos() {
         let plan = planner.plan(tasks: [info("Poubelles", jours: [day(27)])], inboxCount: 0, now: day(26, 18))
         #expect(!plan.contains { $0.title == "Demain" })

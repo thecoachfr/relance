@@ -152,7 +152,7 @@ struct TaskRow: View {
     /// Même texte que dans les widgets et l'activité en direct (`DueText`).
     private var status: (text: String, symbol: String, color: Color)? {
         guard let due = item.dueInstant() else { return nil }
-        var text = DueText.long(due: due, hasTime: item.dueMinutes != nil, now: now)
+        var text = DueText.long(due: due, hasTime: item.dueMinutes != nil, now: now, jamaisEnRetard: item.estPourInfo)
         if item.isOverdue(now: now) { return (text, "clock.fill", .red) }
         // Sortie passée (P9-L1) : pas de retard, la date seulement, en attendant « Vu ».
         if item.toSee?.kind.isDated == true, due < now {

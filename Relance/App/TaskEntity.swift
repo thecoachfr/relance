@@ -27,7 +27,7 @@ struct TaskEntity: AppEntity, IndexedEntity {
     @MainActor init(_ item: TaskItem, now: Date = .now) {
         id = item.localID.uuidString
         title = item.title
-        subtitle = item.dueInstant().map { DueText.long(due: $0, hasTime: item.dueMinutes != nil, now: now) } ?? "Sans date"
+        subtitle = item.dueInstant().map { DueText.long(due: $0, hasTime: item.dueMinutes != nil, now: now, jamaisEnRetard: item.estPourInfo) } ?? "Sans date"
         contenu = ([NoteLines.visible(item.notes)] + item.pieces.compactMap(\.texte))
             .filter { !$0.isEmpty }.joined(separator: "\n")
     }
@@ -135,7 +135,7 @@ struct PostponeTaskIntent: AppIntent {
         let minutes = match.hasTime ? (c.hour ?? 0) * 60 + (c.minute ?? 0) : item.dueMinutes
         store.update(item, title: item.title, notes: item.notes, day: calendar.startOfDay(for: match.date), minutes: minutes)
         await store.sync()
-        let due = item.dueInstant().map { DueText.long(due: $0, hasTime: item.dueMinutes != nil) } ?? ""
+        let due = item.dueInstant().map { DueText.long(due: $0, hasTime: item.dueMinutes != nil, jamaisEnRetard: item.estPourInfo) } ?? ""
         return .result(dialog: "C'est reporté : \(item.title), \(due.prefix(1).lowercased() + due.dropFirst()).")
     }
 }

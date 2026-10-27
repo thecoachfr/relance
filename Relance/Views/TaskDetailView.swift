@@ -39,7 +39,7 @@ struct TaskDetailView: View {
                     .formFieldWithoutLabel()
                 // L'information clé, juste sous le titre.
                 if let due = item.dueInstant(), !item.isCompleted {
-                    Label(DueText.long(due: due, hasTime: item.dueMinutes != nil),
+                    Label(DueText.long(due: due, hasTime: item.dueMinutes != nil, jamaisEnRetard: item.estPourInfo),
                           systemImage: item.isOverdue() ? "clock.fill" : "clock")
                         .foregroundStyle(item.isOverdue() ? .red : .secondary)
                 }

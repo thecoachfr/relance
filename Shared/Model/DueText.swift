@@ -6,8 +6,10 @@ nonisolated enum DueText {
     static func isLate(due: Date, now: Date) -> Bool { due < now }
 
     /// « En retard · depuis hier », « Aujourd'hui à 15 h », « Demain à 9 h 30 », « mer. 14 oct. ».
-    static func long(due: Date, hasTime: Bool, now: Date = .now, calendar: Calendar = .current) -> String {
-        if isLate(due: due, now: now) { return "En retard · " + since(due: due, hasTime: hasTime, now: now, calendar: calendar) }
+    /// `jamaisEnRetard` : rappel « pour info » (P9-P), jamais en retard, « Aujourd'hui à 7 h 30 » toute la journée.
+    static func long(due: Date, hasTime: Bool, now: Date = .now, calendar: Calendar = .current,
+                     jamaisEnRetard: Bool = false) -> String {
+        if !jamaisEnRetard, isLate(due: due, now: now) { return "En retard · " + since(due: due, hasTime: hasTime, now: now, calendar: calendar) }
         let day = plannedDay(due: due, hasTime: hasTime, calendar: calendar)
         let time = hasTime ? " à " + clock(due, calendar: calendar) : ""
         if calendar.isDate(day, inSameDayAs: now) { return "Aujourd'hui" + time }

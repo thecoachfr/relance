@@ -111,7 +111,7 @@ struct TaskMapView: View {
         if let toSee = item.toSee, item.dueDay == nil {
             return toSee.start == nil && toSee.end == nil ? nil : toSee.text(now: now)
         }
-        return item.dueInstant().map { DueText.long(due: $0, hasTime: item.dueMinutes != nil, now: now) }
+        return item.dueInstant().map { DueText.long(due: $0, hasTime: item.dueMinutes != nil, now: now, jamaisEnRetard: item.estPourInfo) }
     }
 
     typealias Entry = (item: TaskItem, contact: TaskContact, coordinate: CLLocationCoordinate2D)
