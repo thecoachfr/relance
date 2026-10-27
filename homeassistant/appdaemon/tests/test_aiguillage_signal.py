@@ -43,6 +43,18 @@ def test_refs_dans_un_message():
     liens = [r["lien"] for r in s.refs(texte)]
     assert liens == ["https://open.spotify.com/track/A1", "https://www.youtube.com/watch?v=dQw4w9WgXcQ"]
     assert s.refs("pas de lien") == [] and s.refs(None) == []
+
+
+def test_lien_sans_https():
+    """27/10 : Yoann a envoyé « youtube.com/shorts/CTusyU_oEBE » (sans https://), ignoré jusque-là."""
+    assert [r["lien"] for r in s.refs("youtube.com/shorts/CTusyU_oEBE")] == ["https://www.youtube.com/watch?v=CTusyU_oEBE"]
+    assert [r["lien"] for r in s.refs("regarde www.youtube.com/watch?v=abcdefghijk et youtu.be/ABCDEFGHIJK")] == [
+        "https://www.youtube.com/watch?v=abcdefghijk", "https://www.youtube.com/watch?v=ABCDEFGHIJK"]
+    assert s.refs("open.spotify.com/track/5CbwkJ3eN8iG4U2b3Aph1c")[0]["plateforme"] == "spotify"
+    # Pas deux fois le même lien, et pas un faux lien dans une adresse mail ou un autre domaine.
+    assert len(s.refs("https://youtube.com/shorts/CTusyU_oEBE")) == 1
+    assert s.refs("moi@youtube.com/x") == [] and s.refs("notyoutube.com/shorts/CTusyU_oEBE") == []
+    assert s.sans_liens("trop drôle youtube.com/shorts/CTusyU_oEBE !") == "trop drôle !"
     assert s.sans_liens("Écoute ça\nhttps://open.spotify.com/track/A1 !") == "Écoute ça !"
     assert s.sans_liens("https://open.spotify.com/track/A1") == ""
 

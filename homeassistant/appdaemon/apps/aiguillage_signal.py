@@ -32,7 +32,9 @@ import uuid
 
 NAMESPACE = uuid.UUID("3b7e9c1a-5d2f-4a8e-b6c4-9f0e1d2a3b4c")
 
-URL = re.compile(r"https?://[^\s<>\"'«»]+")
+# Avec « https:// », ou sans pour les hôtes connus (27/10 : Yoann a envoyé « youtube.com/shorts/… », ignoré).
+URL = re.compile(r"(?:https?://|(?<![\w./@-])(?:(?:www|m|music)\.)?(?:youtube\.com|youtu\.be|open\.spotify\.com)/)"
+                 r"[^\s<>\"'«»]+", re.IGNORECASE)
 SPOTIFY_TYPES = ("track", "album", "episode", "playlist", "artist", "show")
 MARQUEURS = {"ecouter": "🎧 À écouter", "regarder": "🎬 À regarder"}
 TITRES_PAR_DEFAUT = {"spotify": "Morceau Spotify", "youtube": "Vidéo YouTube", "youtube_music": "Morceau YouTube Music"}
@@ -82,7 +84,8 @@ def refs(texte):
     """Liens Spotify et YouTube du texte, dans l'ordre, sans doublon."""
     out = []
     for m in URL.finditer(texte or ""):
-        ref = ref_lien(m.group(0))
+        url = m.group(0)
+        ref = ref_lien(url if re.match(r"https?://", url, re.I) else "https://" + url)
         if ref and ref["lien"] not in (r["lien"] for r in out):
             out.append(ref)
     return out
