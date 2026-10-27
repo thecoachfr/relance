@@ -421,3 +421,35 @@ Tests : `test_memo_construit_sans_telephone_ni_gps`, `test_memo_borne_et_priorit
 `test_expediteur_du_memo`, `test_expediteur_connu_pas_bruit_d_office`, `test_memo_dans_un_bloc_systeme_cache`,
 `test_memo_passe_par_la_releve`, `test_regle_apprise_contre_memo_dans_la_base`, `test_essai_memo_n_ecrit_rien`,
 `test_cout_avec_cache` (243 tests Python verts).
+
+
+## Fiche de l'expéditeur (27/10, demande d'Alexandre)
+
+Déployé le 27/10 à 13 h 49 (sauvegarde `aiguillage_courrier.py.avant-fiche-20261027` à la racine du dossier AppDaemon).
+Dans l'app Courrier, toucher l'expéditeur d'un mail ouvre sa **fiche** (mémo, tâches Aiguillage, derniers mails,
+règle de tri, contact iOS ; décision 40 de `../courrier/docs/CADRAGE.md`). La reconnaissance mémo ↔ expéditeur reste
+ici, avec **la même règle que le tri** (`fiches_de_l_expediteur`, dont `expediteur_du_memo` prend la première).
+
+- **Clé** `fiche:<adresse en minuscules>` dans l'espace `courrier`, **valeur** `{v: 1, nom_memo, extrait, regle, maj}` :
+  `nom_memo` = sujet de la fiche du mémo (plusieurs : séparés par « · »), `extrait` = ses détails nettoyés comme le
+  contexte de l'IA (**sans téléphone ni rue**, ville gardée), **600 caractères au plus** (plusieurs fiches : « Sujet :
+  détails » par ligne), `regle` = `{categorie, source: manuel | appris}` ou null, `maj` = ISO de l'écriture.
+- **Qui** : chaque expéditeur des 90 derniers jours (table `messages`, sauf Alexandre) **reconnu dans le mémo ou qui a
+  une règle**. Toutes les fiches de personnes et de sociétés du mémo comptent, même celles que la borne de 6 000
+  caractères du contexte de l'IA laisse de côté (`Memo.extraits`).
+- **Différentiel** : même table `publies` (id = la clé `fiche:…`), empreinte **sans `maj`** (une passe sans changement
+  n'écrit rien), retraits d'abord (sorti du mémo, plus de règle, plus de mail depuis 90 jours), dans le même `lot` que
+  les « à traiter », **après eux et sous le même plafond de 40 opérations**. Une opération refusée repart à la passe
+  suivante. **Mémo pas lu** (lecture ratée au démarrage, `memo: false`) : aucune fiche écrite ni retirée.
+- **Jamais le corps ni l'extrait d'un mail** : seulement le texte du mémo et la règle.
+- Journal : « Courrier : fiches des expéditeurs, N publiée(s), M retirée(s) ».
+- **Tâches** : l'app lit elle-même l'espace `aiguillage` (`donnees_apps.lire`) et filtre les tâches non faites qui
+  citent le nom, l'adresse ou la ligne `📧 Mail de X` ; rien de plus côté NUC.
+- Aiguillage s'ouvre par `relance://` (pas de lien vers une fiche du mémo ni une tâche précise).
+
+Première passe vérifiée le 27/10 à 13 h 49 : 5 fiches publiées (Seven Portage et Swile reconnues dans le mémo ; Enedis,
+LinkedIn, Claude par leur règle manuelle), lues par `donnees_apps.lire`.
+
+Tests : `test_fiches_de_l_expediteur_meme_regle_que_le_tri`, `test_publication_des_fiches_differentiel_et_retrait`,
+`test_fiches_sous_le_plafond_apres_les_a_traiter_et_refus`, `test_valeur_fiche_plusieurs_fiches_et_borne`
+(247 tests Python verts).
