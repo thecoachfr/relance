@@ -565,3 +565,13 @@ Pas fait (plan N5) : brouillons Gmail, « Demander à l'agent » dans Aiguillage
 ### Agent dans un fil à part (27/10, 16 h 05)
 
 Une question prenait 15 à 25 s dans le fil partagé d'AppDaemon (avertissement « Excessive time spent in callback », la vigie et la météo attendaient). Le gestionnaire rend maintenant la main tout de suite et traite la question dans un fil à lui (`threading.Thread`), une question à la fois (verrou). Vérifié : réponse en 9 s, plus d'avertissement.
+
+
+## Courrier sur les trois Hubs (28/10, décision d'Alexandre)
+
+Le capteur `sensor.aiguillage_courrier` donne dans chaque élément de `a_traiter` deux champs de plus : `qui` (nom prêt à
+afficher, « X via leboncoin » → « X (leboncoin) », mêmes mots partout) et `urgent` (booléen). Règle commune aux Hubs (TV,
+Nest Hub, iPad/iPhone) : pastille « 📧 N mails à traiter » à côté de « N à faire », jaune s'il y a un urgent ; section
+« Courrier » après les tâches de la page À faire (3 noms au plus, urgents d'abord, « · Urgent », « +N ») ; jamais le
+résumé, la demande ni l'objet (discret devant des invités). Hub iPad/iPhone seulement : toucher ouvre Courrier
+(`courrier://mail/<id>`, `courrier://recap`).
