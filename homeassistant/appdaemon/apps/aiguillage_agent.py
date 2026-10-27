@@ -9,7 +9,11 @@ Pouvoirs (décision d'Alexandre du 27/10) : **chercher et résumer** ses mails t
 depuis un mail (même enregistrement que le bouton de notification : `tache_du_mail`, même clé, jamais d'écrasement),
 **reporter un mail** (« Plus tard », clé `plus_tard:<id>` de l'espace `courrier`, comme l'app Courrier). Rien d'autre :
 ni brouillon, ni envoi, ni archivage, ni suppression, ni changement de catégorie. La base SQLite du courrier est
-ouverte en LECTURE SEULE (`mode=ro`) et l'agent ne parle jamais à Gmail.
+ouverte en LECTURE SEULE (`mode=ro`).
+
+Recherche directe dans Gmail (27/10, demande d'Alexandre, pour l'historique d'avant le 22/10) : outil `chercher_gmail`,
+EN LECTURE SEULE, par `ClientGmail.lister` et `ClientGmail.metadonnees` (en-têtes et aperçu Gmail, `format=metadata`) :
+jamais le corps d'un mail, rien d'écrit ni dans Gmail ni dans la base.
 
 Fonctions pures et outils testés hors Home Assistant par `tests/test_aiguillage_agent.py` (faux client Claude, base
 SQLite de test) ; l'app AppDaemon en fin de fichier. Contrat : `homeassistant/COURRIER.md`, section « Agent sur
@@ -17,6 +21,7 @@ Signal ».
 """
 
 from datetime import datetime, time as heure, timedelta, timezone
+import html
 import json
 import re
 import sqlite3
@@ -40,6 +45,9 @@ LIMITE_RECHERCHE = 10
 EXTRAIT_MAX = courrier.LONGUEUR_EXTRAIT     # 1 500 caractères, déjà la borne de la base
 HEURE_CE_SOIR, HEURE_MATIN = heure(18, 0), heure(9, 0)  # comme les boutons « Ce soir » / « Demain matin » de l'app
 EMETTEUR = "agent"
+LIMITE_GMAIL = 10
+REQUETE_GMAIL_MAX = 200
+APERCU_MAX = 300
 JOURS = ("lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche")
 
 
@@ -48,13 +56,15 @@ JOURS = ("lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"
 CONSIGNE = """Tu es l'assistant courrier d'Alexandre Fau. Il t'écrit depuis Signal, dans sa « Note à moi-même », et \
 tu lui réponds au même endroit : tutoie-le.
 
-Ses mails (boîte perso, 90 derniers jours) sont déjà triés par son Home Assistant en catégories : a_traiter (une \
-personne ou une échéance attend quelque chose de lui), lettre (lettres d'info), bruit (marketing, notifications), \
-fait (répondu, archivé ou réglé). Chaque mail a un résumé, parfois une demande et une échéance. « Ce que j'ai à \
-traiter » = les a_traiter.
+Ses mails (boîte perso) sont triés par son Home Assistant depuis le 22/10/2026 (90 jours gardés) en catégories : \
+a_traiter (une personne ou une échéance attend quelque chose de lui), lettre (lettres d'info), bruit (marketing, \
+notifications), fait (répondu, archivé ou réglé). Chaque mail trié a un résumé, parfois une demande et une échéance. \
+« Ce que j'ai à traiter » = les a_traiter.
 
-Tes outils : chercher_mails et lire_mail pour trouver et lire ; creer_tache pour faire d'un mail une tâche de son app \
-Aiguillage ; reporter pour mettre un mail « Plus tard » ; date_du_jour.
+Tes outils : chercher_mails et lire_mail pour trouver et lire dans la base du tri (le plus riche : utilise-les \
+d'abord) ; chercher_gmail pour chercher directement dans Gmail ce qui est plus ancien que le 22/10 ou introuvable dans \
+la base (en-têtes et aperçu de quelques lignes seulement, jamais le texte entier) ; creer_tache pour faire d'un mail \
+trié une tâche de son app Aiguillage ; reporter pour mettre un mail trié « Plus tard » ; date_du_jour.
 
 Règles :
 - Réponds en français, en 5 à 8 lignes au plus : texte simple pour Signal, sans titres, sans tableaux, sans gras ; \
@@ -66,6 +76,8 @@ propose-le en une ligne.
 - Dis ce que tu as fait (tâche créée, mail reporté jusqu'à quand), et si un outil a échoué.
 - Tu ne peux ni écrire, ni envoyer, ni archiver, ni supprimer un mail, ni changer sa catégorie : si on te le demande, \
 dis-le simplement.
+- Quand ta réponse ne s'appuie que sur l'aperçu Gmail (chercher_gmail, mail absent de la base du tri), dis-le en \
+quelques mots (« d'après l'aperçu Gmail »). creer_tache et reporter ne marchent que pour les mails de la base du tri.
 - N'invente rien : si rien ne correspond, dis-le. Ne recopie pas le mémo (ni adresse, ni téléphone)."""
 
 CONSIGNE_MEMO = """Mémo d'Alexandre (ses fiches dans l'app Aiguillage : proches, prestataires, sociétés, et ses lieux \
@@ -120,6 +132,22 @@ OUTILS = [
                        "l'extrait du texte gardé par le tri (1 500 caractères au plus).",
         "strict": True,
         "input_schema": _schema({"id": {"type": "string"}}),
+    },
+    {
+        "name": "chercher_gmail",
+        "description": "Cherche directement dans Gmail, en lecture seule, pour les mails plus anciens que le 22/10/2026 "
+                       "ou absents de la base du tri. Renvoie pour chacun : id, date, de, a, objet, apercu (l'aperçu "
+                       "Gmail, quelques lignes), libelles (Boîte de réception, Archivé, Tri/…), dans_le_tri, et, si le "
+                       "mail est dans la base du tri, sa categorie et son resume. Jamais le texte entier du mail.",
+        "strict": True,
+        "input_schema": _schema({
+            "requete": {"type": "string", "description": "recherche Gmail, 200 caractères au plus : mots et "
+                                                          "opérateurs from:, to:, subject:, after:AAAA/MM/JJ, "
+                                                          "before:AAAA/MM/JJ, older_than:1y, newer_than:30d, "
+                                                          "has:attachment, in:inbox… (ex. « from:malt "
+                                                          "after:2026/09/01 before:2026/10/01 »)"},
+            "limite": {**_nul("integer"), "description": "nombre de mails, 10 au plus (10 par défaut)"},
+        }),
     },
     {
         "name": "creer_tache",
@@ -226,6 +254,71 @@ def mail(db, ident):
     return dict(r) if r else None
 
 
+def tri_des_ids(db, ids):
+    """{id: {categorie, resume}} des mails de la base du tri parmi `ids`."""
+    ids = [str(i) for i in ids]
+    if not ids:
+        return {}
+    sql = f"SELECT id, categorie, resume FROM messages WHERE id IN ({','.join('?' * len(ids))})"
+    return {r["id"]: {"categorie": r["categorie"], "resume": r["resume"]} for r in db.execute(sql, ids)}
+
+
+# MARK: - Recherche dans Gmail (lecture seule, en-têtes et aperçu)
+
+LIBELLES_SYSTEME = {
+    "INBOX": "Boîte de réception", "SENT": "Envoyé", "DRAFT": "Brouillon", "SPAM": "Spam", "TRASH": "Corbeille",
+    "STARRED": "Suivi", "IMPORTANT": "Important", "UNREAD": "Non lu", "CATEGORY_PERSONAL": "Principale",
+    "CATEGORY_SOCIAL": "Réseaux sociaux", "CATEGORY_PROMOTIONS": "Promotions", "CATEGORY_UPDATES": "Notifications",
+    "CATEGORY_FORUMS": "Forums",
+}
+
+
+def libelles_lisibles(ids, noms=None):
+    """Ids de libellés Gmail → noms lisibles ; « Archivé » si le mail n'est ni dans la boîte de réception, ni envoyé
+    seulement, ni brouillon, spam ou corbeille. `noms` : {id: nom} des libellés d'Alexandre (et du tri)."""
+    ids, noms = list(ids or []), noms or {}
+    out = []
+    if "INBOX" not in ids and not set(ids) & {"SENT", "DRAFT", "SPAM", "TRASH"}:
+        out.append("Archivé")
+    for i in ids:
+        nom = LIBELLES_SYSTEME.get(i) or noms.get(i)
+        if nom and nom not in out:
+            out.append(nom)
+    return out
+
+
+def _en_tete(meta, nom):
+    for h in ((meta.get("payload") or {}).get("headers") or []):
+        if str(h.get("name", "")).lower() == nom.lower():
+            return h.get("value")
+    return None
+
+
+def vue_gmail(meta, noms=None, tri=None):
+    """Métadonnées Gmail (`ClientGmail.metadonnees`) → vue de l'agent, fusionnée avec la base du tri si l'id y est."""
+    try:
+        date = datetime.fromtimestamp(int(meta["internalDate"]) / 1000, PARIS).strftime("%Y-%m-%d %H:%M")
+    except (KeyError, TypeError, ValueError, OSError):
+        date = _en_tete(meta, "Date")
+    apercu = " ".join(html.unescape(meta.get("snippet") or "").split())
+    out = {"id": meta.get("id"), "date": date, "de": _en_tete(meta, "From"), "a": _en_tete(meta, "To"),
+           "objet": _en_tete(meta, "Subject"), "apercu": apercu[:APERCU_MAX],
+           "libelles": libelles_lisibles(meta.get("labelIds"), noms), "dans_le_tri": bool(tri)}
+    if tri:
+        out.update(categorie=tri["categorie"], resume=tri["resume"])
+    return out
+
+
+def requete_gmail(requete):
+    """Requête Gmail nettoyée, ou ErreurOutil (vide, ou plus de 200 caractères)."""
+    q = " ".join(str(requete or "").split())
+    if not q:
+        raise ErreurOutil("requête Gmail vide : donne des mots ou des opérateurs (from:, subject:, after:…)")
+    if len(q) > REQUETE_GMAIL_MAX:
+        raise ErreurOutil(f"requête Gmail trop longue ({len(q)} caractères, {REQUETE_GMAIL_MAX} au plus)")
+    return q
+
+
 # MARK: - Reports
 
 def jusqua(quand, maintenant):
@@ -260,13 +353,15 @@ class ErreurOutil(Exception):
 
 
 class Outils:
-    """Les cinq outils de l'agent. `base` : chemin de la base du courrier (ouverte en lecture seule à chaque appel) ;
+    """Les six outils de l'agent. `base` : chemin de la base du courrier (ouverte en lecture seule à chaque appel) ;
     `service(domaine, action, données)` : action HA avec réponse (`donnees_apps.ecrire`) ; `questions` : la question
-    d'Alexandre et la précédente (garde-fou des actions)."""
+    d'Alexandre et la précédente (garde-fou des actions) ; `gmail` : fonction sans argument qui rend le client Gmail
+    (`ClientGmail`, dont seuls `lister`, `metadonnees` et `libelles` sont appelés), ou None."""
 
-    def __init__(self, base, service, maintenant, questions=(), espace_taches="aiguillage"):
+    def __init__(self, base, service, maintenant, questions=(), espace_taches="aiguillage", gmail=None):
         self.base, self.service, self.maintenant = base, service, maintenant
         self.questions, self.espace_taches = list(questions), espace_taches
+        self.gmail, self._noms_libelles = gmail, None
         self.appels = []
 
     def executer(self, nom, entree):
@@ -303,6 +398,34 @@ class Outils:
 
     def lire_mail(self, id):  # noqa: A002 - nom imposé par le schéma
         return _vue(self._mail(id), extrait=True)
+
+    def chercher_gmail(self, requete, limite=None):
+        q = requete_gmail(requete)
+        n = max(1, min(LIMITE_GMAIL, int(limite or LIMITE_GMAIL)))
+        client = self.gmail() if self.gmail else None
+        if client is None:
+            raise ErreurOutil("Gmail indisponible (autorisation Google absente)")
+        try:
+            ids = client.lister(q, n)[:n]
+            metas = []
+            for ident in ids:
+                try:
+                    metas.append(client.metadonnees(ident))
+                except courrier.Introuvable:
+                    continue
+            if self._noms_libelles is None and any(i.startswith("Label_") for m in metas
+                                                   for i in m.get("labelIds") or []):
+                self._noms_libelles = {v: k for k, v in client.libelles().items()}
+        except courrier.AutorisationRefusee:
+            raise ErreurOutil("Gmail : autorisation Google refusée ou expirée")
+        except courrier.ErreurGmail as exc:
+            raise ErreurOutil(f"Gmail indisponible ({exc})")
+        try:
+            tri = self._lire(tri_des_ids, [m.get("id") for m in metas])
+        except sqlite3.Error:
+            tri = {}
+        mails = [vue_gmail(m, self._noms_libelles, tri.get(m.get("id"))) for m in metas]
+        return {"nombre": len(mails), "source": "Gmail (en-têtes et aperçu seulement)", "mails": mails}
 
     def creer_tache(self, id, titre=None, jour=None):  # noqa: A002
         r = self._mail(id)
@@ -505,6 +628,8 @@ if hass is not None:
             self._memo_max = int(self.args.get("memo_max", courrier.MEMO_MAX))
             self._memo, self._memo_lu = courrier.Memo(), 0.0
             self._ia = None
+            self._auth_path = Path(self.args.get("autorisation_file", "/config/aiguillage_courrier_google.json"))
+            self._gmail = None
             self.listen_event(self._message, "aiguillage_agent_message")
 
         def _lire_etat(self):
@@ -532,6 +657,15 @@ if hass is not None:
                     api_key=self._cle_path.read_text().strip(), timeout=60.0, max_retries=1,
                     default_headers={"anthropic-workspace-id": espace} if espace else None)
             return self._ia
+
+        def _client_gmail(self):
+            """Client Gmail de l'agent : même autorisation que le tri (`aiguillage_courrier_google.json`), instance à
+            part (son propre jeton d'accès, gardé une heure) ; None si l'autorisation est absente."""
+            if self._gmail is None:
+                if not self._auth_path.exists():
+                    return None
+                self._gmail = courrier.ClientGmail(json.loads(self._auth_path.read_text(encoding="utf-8")))
+            return self._gmail
 
         def _contexte_memo(self):
             """Même lecture et même borne que le tri du courrier (`todo.aiguillage_memo` + Mes lieux), relue au plus
@@ -573,7 +707,8 @@ if hass is not None:
                 return
             fil = fil_utile(etat.get("fil"), maintenant)
             outils = Outils(self._base, self._service, maintenant,
-                            questions=[question] + [e["question"] for e in fil[-1:]], espace_taches=self._espace)
+                            questions=[question] + [e["question"] for e in fil[-1:]], espace_taches=self._espace,
+                            gmail=self._client_gmail)
             texte, cout_, raison, tours = None, 0.0, None, 0
             try:
                 texte, cout_, raison, tours = repondre(

@@ -989,7 +989,7 @@ class HistoriqueTropVieux(ErreurGmail):
 
 
 class ClientGmail:
-    """Client REST minimal. Lecture : `profil`, `historique`, `lister`, `message`, `fil`. Seule écriture (accord
+    """Client REST minimal. Lecture : `profil`, `historique`, `lister`, `message`, `fil`, `metadonnees`. Seule écriture (accord
     d'Alexandre du 24/10 au soir) : les libellés du tri, `Tri/À traiter`, `Tri/Lettre`, `Tri/Bruit` (`libelles`,
     `creer_libelle`, `poser_libelles`). `poser_libelles` refuse tout autre libellé (INBOX, UNREAD, TRASH…) : rien
     n'est archivé, déplacé ni marqué lu. AUCUNE méthode d'envoi, de suppression ni de corbeille (règle d'Alexandre)."""
@@ -1068,6 +1068,12 @@ class ClientGmail:
 
     def fil(self, fil_id):
         return self._lire(f"threads/{fil_id}", {"format": "metadata"})
+
+    def metadonnees(self, message_id):
+        """En-têtes De, À, Objet, Date, aperçu Gmail (`snippet`), `labelIds`, `threadId`, `internalDate` : JAMAIS le
+        corps (`format=metadata`). Pour l'agent sur Signal (recherche dans Gmail, 27/10)."""
+        return self._lire(f"messages/{message_id}", {"format": "metadata",
+                                                     "metadataHeaders": ["From", "To", "Subject", "Date"]})
 
     def _ecrire(self, chemin, corps):
         for essai in range(2):

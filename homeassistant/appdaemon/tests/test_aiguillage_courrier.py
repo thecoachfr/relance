@@ -608,12 +608,25 @@ def test_client_jeton_refuse_et_rafraichi():
     assert [a[0] for a in http.appels].count("POST") == 2
 
 
+def test_metadonnees_sans_corps():
+    http = FauxHttp({"1": msg("1")})
+    gmail = c.ClientGmail(AUTH, http=http, horloge=lambda: 1000.0)
+    assert gmail.metadonnees("1")["id"] == "1"
+    get = [a for a in http.appels if a[0] == "GET"]
+    assert get == [("GET", c.API_GMAIL + "/messages/1",
+                    {"format": "metadata", "metadataHeaders": ["From", "To", "Subject", "Date"]})]
+    assert [a[0] for a in http.appels] == ["POST", "GET"]  # le jeton, puis une lecture
+
+
 # MARK: - Garde-fou : lecture seule (règle absolue d'Alexandre, 24/10)
 
 def test_garde_fou_lecture_seule():
     publiques = {n for n, _ in inspect.getmembers(c.ClientGmail, inspect.isfunction) if not n.startswith("_")}
-    assert publiques == {"profil", "historique", "lister", "message", "fil", "libelles", "creer_libelle",
-                         "poser_libelles"}
+    assert publiques == {"profil", "historique", "lister", "message", "fil", "metadonnees", "libelles",
+                         "creer_libelle", "poser_libelles"}
+    # metadonnees (agent sur Signal) : en-têtes et aperçu seulement, jamais le corps.
+    meta = inspect.getsource(c.ClientGmail.metadonnees)
+    assert '"format": "metadata"' in meta and "full" not in meta and "raw" not in meta
     source = Path(c.__file__).read_text(encoding="utf-8")
     for interdit in ("/send", "/trash", "/untrash", "batchModify", "batchDelete", "/drafts", "/import", "/insert",
                      "/delete", "http.delete", "http.put", "http.patch", "users.messages.send"):

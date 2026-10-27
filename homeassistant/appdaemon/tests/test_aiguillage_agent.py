@@ -199,11 +199,133 @@ def test_date_du_jour(base):
 
 
 def test_outils_stricts():
-    assert a.NOMS_OUTILS == ("chercher_mails", "lire_mail", "creer_tache", "reporter", "date_du_jour")
+    assert a.NOMS_OUTILS == ("chercher_mails", "lire_mail", "chercher_gmail", "creer_tache", "reporter",
+                             "date_du_jour")
     for o in a.OUTILS:
         schema = o["input_schema"]
         assert o["strict"] is True and schema["additionalProperties"] is False
         assert sorted(schema["required"]) == sorted(schema["properties"])
+
+
+# MARK: - Recherche dans Gmail (lecture seule)
+
+class FauxGmail:
+    """Faux `ClientGmail` : note chaque appel et ses paramètres ; toute autre méthode (message, fil, écriture…)
+    lève, pour prouver que l'outil ne s'en sert pas."""
+
+    def __init__(self, metas, erreur=None):
+        self.metas, self.erreur, self.appels = metas, erreur, []
+
+    def lister(self, q, limite=200):
+        self.appels.append(("lister", q, limite))
+        if self.erreur:
+            raise self.erreur
+        return list(self.metas)[:limite]
+
+    def metadonnees(self, ident):
+        self.appels.append(("metadonnees", ident))
+        if ident not in self.metas:
+            raise c.Introuvable(ident)
+        return self.metas[ident]
+
+    def libelles(self):
+        self.appels.append(("libelles",))
+        return {"Tri/À traiter": "Label_1", "Freelance": "Label_2", "Tri": "Label_0"}
+
+    def __getattr__(self, nom):
+        raise AssertionError(f"méthode Gmail interdite à l'agent : {nom}")
+
+
+def _meta(ident, de="Malt <hello@malt.com>", objet="Votre facture de septembre", quand=None, libelles=("INBOX",),
+          apercu="Bonjour Alexandre, votre facture &#39;Septembre&#39; est disponible"):
+    quand = quand or datetime(2026, 9, 14, 10, 30, tzinfo=c.PARIS)
+    return {"id": ident, "threadId": "t" + ident, "labelIds": list(libelles), "snippet": apercu,
+            "internalDate": str(_ms(quand)),
+            "payload": {"headers": [{"name": "From", "value": de}, {"name": "To", "value": "alexandre.fau@gmail.com"},
+                                    {"name": "Subject", "value": objet},
+                                    {"name": "Date", "value": "Mon, 14 Sep 2026 10:30:00 +0200"}]}}
+
+
+def outils_gmail(base, faux):
+    return a.Outils(base, FauxService(), MAINTENANT, questions=["qu'est-ce que Malt m'a envoyé ?"],
+                    gmail=lambda: faux)
+
+
+def test_chercher_gmail_entetes_apercu_et_fusion_avec_le_tri(base):
+    faux = FauxGmail({"g1": _meta("g1", libelles=("CATEGORY_UPDATES", "Label_2")),
+                      "m1": _meta("m1", de="Erika <erika@seven-portage.fr>", objet="Facture d'octobre",
+                                  libelles=("INBOX", "Label_1", "UNREAD"), apercu="x" * 500)})
+    texte, erreur = outils_gmail(base, faux).executer("chercher_gmail", {"requete": " from:malt  after:2026/09/01 ",
+                                                                          "limite": None})
+    assert not erreur
+    rep = json.loads(texte)
+    assert rep["nombre"] == 2
+    g1, m1 = rep["mails"]
+    assert g1 == {"id": "g1", "date": "2026-09-14 10:30", "de": "Malt <hello@malt.com>",
+                  "a": "alexandre.fau@gmail.com", "objet": "Votre facture de septembre",
+                  "apercu": "Bonjour Alexandre, votre facture 'Septembre' est disponible",
+                  "libelles": ["Archivé", "Notifications", "Freelance"], "dans_le_tri": False}
+    assert m1["dans_le_tri"] and m1["categorie"] == "a_traiter" and m1["resume"].startswith("Erika")
+    assert m1["libelles"] == ["Boîte de réception", "Tri/À traiter", "Non lu"] and len(m1["apercu"]) == a.APERCU_MAX
+    # Paramètres envoyés : la requête nettoyée, la limite ; seulement lister / metadonnees / libelles (une fois).
+    assert faux.appels[0] == ("lister", "from:malt after:2026/09/01", 10)
+    assert [x[0] for x in faux.appels] == ["lister", "metadonnees", "metadonnees", "libelles"]
+    assert "extrait" not in texte and "Bonjour Alexandre, voici la facture" not in texte  # rien du corps
+
+
+def test_chercher_gmail_limite_et_id_introuvable(base):
+    metas = {f"g{i}": _meta(f"g{i}") for i in range(15)}
+    faux = FauxGmail(metas)
+    rep = json.loads(outils_gmail(base, faux).executer("chercher_gmail", {"requete": "malt", "limite": 50})[0])
+    assert faux.appels[0] == ("lister", "malt", 10) and rep["nombre"] == 10
+    faux = FauxGmail(metas)
+    outils_gmail(base, faux).executer("chercher_gmail", {"requete": "malt", "limite": 0})
+    assert faux.appels[0] == ("lister", "malt", 10)  # 0 ou null : 10 par défaut
+    faux = FauxGmail(metas)
+    outils_gmail(base, faux).executer("chercher_gmail", {"requete": "malt", "limite": 3})
+    assert faux.appels[0] == ("lister", "malt", 3)
+    faux = FauxGmail({"g1": _meta("g1")})
+    faux.lister = lambda q, limite: ["disparu", "g1"]
+    rep = json.loads(outils_gmail(base, faux).executer("chercher_gmail", {"requete": "malt", "limite": 2})[0])
+    assert [m["id"] for m in rep["mails"]] == ["g1"]
+
+
+def test_chercher_gmail_requete_refusee(base):
+    faux = FauxGmail({"g1": _meta("g1")})
+    for requete in ("", "   ", None, "x" * 201):
+        texte, erreur = outils_gmail(base, faux).executer("chercher_gmail", {"requete": requete, "limite": None})
+        assert erreur and ("vide" in texte or "trop longue" in texte)
+    assert faux.appels == []  # aucun appel à Gmail
+    assert not outils_gmail(base, faux).executer("chercher_gmail", {"requete": "x" * 200, "limite": None})[1]
+
+
+def test_chercher_gmail_erreurs(base):
+    sans = a.Outils(base, FauxService(), MAINTENANT, gmail=lambda: None)
+    texte, erreur = sans.executer("chercher_gmail", {"requete": "malt", "limite": None})
+    assert erreur and "autorisation" in texte
+    for exc, mot in ((c.AutorisationRefusee("400"), "refusée"), (c.ErreurGmail("HTTP 500"), "indisponible")):
+        texte, erreur = outils_gmail(base, FauxGmail({}, erreur=exc)).executer("chercher_gmail",
+                                                                               {"requete": "malt", "limite": None})
+        assert erreur and mot in texte
+
+
+def test_chercher_gmail_lecture_seule_et_sans_corps(base):
+    # Le module de l'agent ne demande jamais le corps ni n'appelle une méthode Gmail d'écriture ou de lecture complète.
+    source = Path(a.__file__).read_text(encoding="utf-8")
+    for interdit in ('"full"', '"raw"', ".message(", ".fil(", "poser_libelles", "creer_libelle", "_ecrire("):
+        assert interdit not in source, interdit
+    # La base reste intacte après une recherche fusionnée.
+    avant = sqlite3.connect(base).execute("SELECT count(*), total(length(resume)) FROM messages").fetchone()
+    outils_gmail(base, FauxGmail({"m1": _meta("m1")})).executer("chercher_gmail", {"requete": "facture",
+                                                                                   "limite": None})
+    assert sqlite3.connect(base).execute("SELECT count(*), total(length(resume)) FROM messages").fetchone() == avant
+    # Les actions restent limitées aux mails de la base du tri.
+    texte, erreur = outils(base).executer("creer_tache", {"id": "g1", "titre": None, "jour": None})
+    assert erreur and "inconnu" in texte
+
+
+def test_consigne_gmail():
+    assert "chercher_gmail" in a.CONSIGNE and "aperçu Gmail" in a.CONSIGNE and "22/10" in a.CONSIGNE
 
 
 # MARK: - Boucle avec un faux client

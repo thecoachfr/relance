@@ -10,7 +10,7 @@ liront ce capteur plus tard.
 - **Aucun envoi de mail** sans son accord explicite pour ce mail ; brouillons permis (lot N5) ; **aucune suppression,
   corbeille ni archivage** sans accord.
 - Dans le code : le client Gmail (`ClientGmail`) ne sait que **lire** : `profil`, `historique`, `lister`, `message`,
-  `fil`. Seul POST : le rafraîchissement du jeton OAuth. Le test `test_garde_fou_lecture_seule` vérifie la liste des
+  `fil`, `metadonnees` (27/10, en-têtes et aperçu seulement, pour l'agent). Seul POST : le rafraîchissement du jeton OAuth. Le test `test_garde_fou_lecture_seule` vérifie la liste des
   méthodes publiques et l'absence, dans tout le module, des adresses et champs d'écriture de l'API Gmail (envoi,
   corbeille, modification de libellés, brouillons, suppression).
 - Portée OAuth accordée : `gmail.modify` (demande d'Alexandre, pour les libellés et brouillons des lots suivants) ;
@@ -475,6 +475,8 @@ Déployé le 27/10 à 15 h 49 (sauvegardes `aiguillage_signal.py.avant-agent-202
     l'extrait** ;
   - `lire_mail(id)` : en plus, les destinataires et l'**extrait déjà gardé** (1 500 caractères au plus) ; aucun appel
     à Gmail ;
+  - `chercher_gmail(requete, limite ≤ 10)` (ajouté le 27/10, voir plus bas) : recherche **directe dans Gmail, en
+    lecture seule**, pour l'historique d'avant le 22/10 ;
   - `creer_tache(id, titre?, jour?)` : `tache_du_mail` d'`aiguillage_courrier` (même clé uuid5 `courrier:<id>`, même
     valeur, titre et jour remplaçables), `donnees_apps.ecrire` espace `aiguillage`, **`version_attendue: 0`** (une
     tâche déjà créée, par la notification, l'app ou l'agent, n'est jamais écrasée), `modifie_par: agent`. Le mail
@@ -517,6 +519,44 @@ Tests : `tests/test_aiguillage_agent.py` (lecture seule vérifiée, recherche, e
 tâche que l'app et le NUC, pas d'écrasement, `plus_tard` relu par `appliquer_plus_tard`, refus des reports, garde-fou
 des actions, boucle bornée, délai, erreur d'outil, refus du modèle, fil, budget, troncature, journal) et, dans
 `tests/test_aiguillage_signal.py`, `test_question_a_l_agent`, `test_routage` (270 tests Python verts).
+
+### Recherche directe dans Gmail (27/10 vers 16 h, demande d'Alexandre)
+
+La base du tri ne commence qu'au 22/10 ; pour l'historique plus ancien, l'agent cherche aussi dans Gmail, **en lecture
+seule**.
+
+- **`ClientGmail.metadonnees(message_id)`** : seule méthode ajoutée au client, une **lecture** : `messages.get` avec
+  `format=metadata` et `metadataHeaders` From, To, Subject, Date ; Gmail renvoie aussi `snippet` (l'aperçu de
+  quelques lignes), `labelIds`, `threadId`, `internalDate`. **Jamais le corps** (ni `full`, ni `raw`).
+  `test_garde_fou_lecture_seule` : liste exacte des méthodes publiques (une lecture de plus), `format=metadata` dans
+  `metadonnees`, tous les interdits toujours interdits.
+- **Outil `chercher_gmail(requete, limite)`** (`strict`) : `requete` = recherche Gmail (mots et opérateurs `from:`,
+  `to:`, `subject:`, `after:AAAA/MM/JJ`, `before:`, `older_than:`, `newer_than:`, `has:attachment`…), espaces
+  resserrés ; **refusée si vide ou de plus de 200 caractères** (aucun appel à Gmail). `limite` 1 à 10 (10 par défaut).
+  Appelle `lister(q, limite)` puis `metadonnees` pour chaque id (un id disparu entre-temps est sauté), et `libelles`
+  une fois par question seulement si un libellé d'Alexandre (`Label_…`) apparaît. Renvoie : id, date (Paris, depuis
+  `internalDate`), de, à, objet, aperçu (snippet décodé, **300 caractères** au plus), libellés lisibles (« Boîte de
+  réception », « Archivé » si ni boîte de réception, ni envoyé, brouillon, spam ou corbeille, « Non lu »,
+  « Notifications », « Tri/À traiter »…), `dans_le_tri` et, si l'id est dans la base du tri (lue en `mode=ro`), sa
+  catégorie et son résumé. Rien n'est écrit, ni en base ni dans Gmail.
+- **Consigne** : d'abord `chercher_mails` / `lire_mail` (base du tri, plus riche), `chercher_gmail` pour ce qui est
+  plus ancien que le 22/10 ou introuvable ; dire « d'après l'aperçu Gmail » quand la réponse ne repose que sur
+  l'aperçu. `creer_tache` et `reporter` restent limités aux mails de la base (un id Gmail seul → « mail inconnu »).
+- **Client** : même autorisation que le tri (`/config/aiguillage_courrier_google.json`, réglage `autorisation_file`),
+  **instance à part** dans l'app de l'agent (son propre jeton d'accès, rafraîchi au besoin, gardé une heure) ;
+  autorisation absente, refusée ou Gmail en panne → erreur d'outil, que l'agent dit.
+- Déploiement le 27/10 à 16 h : sauvegardes `aiguillage_agent.py.avant-gmail-20261027` et
+  `aiguillage_courrier.py.avant-gmail-20261027` à la racine du dossier AppDaemon ; les deux modules rechargés sans
+  erreur.
+- **Essai réel du 27/10 à 16 h 00** (« qu'est-ce que Malt m'a envoyé en septembre ? ») : `chercher_gmail` avec
+  `from:malt after:2026/09/01 before:2026/10/01`, 1 jeton, 1 liste, 5 `messages/…?format=metadata` (journal), 2 tours,
+  **0,027 $**, 22,5 s ; réponse : 5 mails marketing de septembre, tous archivés, « d'après l'aperçu Gmail » (webinars
+  Malt Academy d'octobre, conseils de prospection et Portfolio, deux invitations à la soirée du 30/09, concours
+  portfolio).
+
+Tests : 7 de plus (`test_metadonnees_sans_corps` ; dans `test_aiguillage_agent.py` : en-têtes, aperçu et fusion avec
+le tri, limite et id disparu, requête refusée, erreurs Gmail, lecture seule et aucun corps demandé, consigne), 277
+tests Python verts.
 
 Pas fait (plan N5) : brouillons Gmail, « Demander à l'agent » dans Aiguillage ou Courrier, lecture de
 `sensor.aiguillage_lieu_travail` ; repli serveur en cas de refus du modèle (`fallbacks`) non activé.
