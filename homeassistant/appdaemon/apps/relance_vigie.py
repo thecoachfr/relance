@@ -450,7 +450,14 @@ class RelanceVigie(Hass):
                 self.log(f"Spotify : pas d'identifiants dans {self._spotify_path}, playlist et lecture inactives")
                 self._spotify_missing_logged = True
             return None
-        return aiguillage_spotify.Client(ids)
+        # Playlist « À écouter » déjà connue (copie pour la TV) : réutilisée, jamais recréée par erreur (27/10).
+        try:
+            record = self._service("donnees_apps", "lire", {"espace": self._espace, "cle": aiguillage_spotify.CLE_PLAYLIST})
+            playlist_id = aiguillage_spotify.playlist_configuree(record.get("enregistrement"))
+        except Exception as error:  # noqa: BLE001
+            self.log(f"Spotify : {aiguillage_spotify.CLE_PLAYLIST} illisible : {error!r}", level="WARNING")
+            return None  # sans elle, la recherche par nom pourrait recréer une playlist : on réessaiera
+        return aiguillage_spotify.Client(ids, playlist_id=playlist_id)
 
     def _publier_agenda(self, records):
         """Agenda « Sorties » (iCalendar) dans le dossier web de HA, derrière une clé secrète créée une fois

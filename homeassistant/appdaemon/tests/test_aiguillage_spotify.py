@@ -136,6 +136,90 @@ def test_coupure_reseau():
         s.time.sleep = dormir
 
 
+def test_playlist_meme_nom():
+    """27/10 : trois « À écouter ». Nom comparé sans accents, casse, espaces ni forme Unicode ; autres comptes ignorés."""
+    import unicodedata
+    moi = "alex"
+    nfd = unicodedata.normalize("NFD", "À écouter")
+    assert s.nom_cle(nfd) == s.nom_cle("À écouter") == s.nom_cle(" a  ÉCOUTER ") == "a ecouter"
+    playlists = [{"id": "X", "name": "À écouter", "owner": {"id": "autre"}},
+                 {"id": "Y", "name": "Jazz", "owner": {"id": moi}},
+                 {"id": "Z", "name": nfd, "owner": {"id": moi}},
+                 {"id": "W", "name": "A écouter", "owner": {"id": moi}}]
+    assert s.playlist_existante(playlists, moi) == "Z"
+    assert s.playlist_existante(playlists[:2], moi) is None
+    assert s.playlist_existante([{"id": "V", "name": None}], moi) is None
+
+
+def test_playlist_configuree():
+    pid = "3bZ9RxcAN2UIXIhgGYHhlp"
+    assert s.playlist_configuree({"valeur": {"playlist": pid, "titres": []}}) == pid
+    for vide in (None, {}, {"valeur": None}, {"valeur": {"playlist": ""}}, {"valeur": {"playlist": "a/b"}}, {"valeur": []}):
+        assert s.playlist_configuree(vide) is None
+
+
+class _Faux(s.Client):
+    """Client sans réseau : réponses rangées par (méthode, chemin)."""
+
+    def __init__(self, reponses, playlist_id=None):
+        super().__init__({}, playlist_id=playlist_id)
+        self.reponses, self.appels = reponses, []
+
+    def _call(self, method, path, **kw):
+        self.appels.append((method, path))
+        r = self.reponses[(method, path)]
+        if isinstance(r, Exception):
+            raise r
+        return r
+
+
+def _httpx():
+    """httpx réel, ou à défaut un faux module (comme `test_reseau`) avec l'erreur HTTP et son code."""
+    import types
+    try:
+        import httpx
+    except ImportError:
+        httpx = sys.modules.setdefault("httpx", types.ModuleType("httpx"))
+    if not hasattr(httpx, "HTTPStatusError"):
+        class HTTPStatusError(Exception):
+            def __init__(self, message, request=None, response=None):
+                super().__init__(message)
+                self.response = response
+        httpx.HTTPStatusError = HTTPStatusError
+    return httpx
+
+
+def _erreur_http(code):
+    import types
+    return _httpx().HTTPStatusError(str(code), request=None, response=types.SimpleNamespace(status_code=code))
+
+
+def test_client_reutilise_la_playlist_configuree():
+    httpx = _httpx()
+    pid, autre = "3bZ9RxcAN2UIXIhgGYHhlp", "2Rs2gc1QxanmMILrDnpHzu"
+    moi = {("GET", "/me"): {"id": "alex"}}
+    liste = {("GET", "/me/playlists"): {"items": [{"id": autre, "name": "À écouter", "owner": {"id": "alex"}}]}}
+    creee = {("POST", "/me/playlists"): {"id": "NOUVELLE"}}
+    # Configurée et présente : ni recherche ni création, et gardée pour les appels suivants.
+    c = _Faux({**moi, ("GET", f"/playlists/{pid}"): {"id": pid, "owner": {"id": "alex"}}, **liste, **creee}, pid)
+    assert c.playlist() == pid and c.playlist() == pid
+    assert ("GET", "/me/playlists") not in c.appels and ("POST", "/me/playlists") not in c.appels
+    # Panne de Spotify (503) : l'erreur remonte, rien n'est créé.
+    c = _Faux({**moi, ("GET", f"/playlists/{pid}"): _erreur_http(503), **liste, **creee}, pid)
+    try:
+        c.playlist()
+        raise AssertionError("le 503 aurait dû remonter")
+    except httpx.HTTPStatusError:
+        assert ("POST", "/me/playlists") not in c.appels
+    # Configurée mais supprimée (404) : une existante du même nom plutôt qu'une nouvelle.
+    c = _Faux({**moi, ("GET", f"/playlists/{pid}"): _erreur_http(404), **liste, **creee}, pid)
+    assert c.playlist() == autre and ("POST", "/me/playlists") not in c.appels
+    # Rien de configuré ni d'existant : création (une seule fois).
+    c = _Faux({**moi, ("GET", "/me/playlists"): {"items": []}, **creee})
+    assert c.playlist() == "NOUVELLE" and c.playlist() == "NOUVELLE"
+    assert c.appels.count(("POST", "/me/playlists")) == 1
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_"):

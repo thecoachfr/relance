@@ -5,7 +5,8 @@ Fonctions pures (testées hors Home Assistant par `tests/test_aiguillage_spotify
 La vigie (`relance_vigie.py`) s'en sert :
 
 - pour chaque envie à écouter avec un lien Spotify pas encore traité, ajouter le morceau, l'album (ses titres) ou
-  l'épisode à la playlist « À écouter » (créée privée si absente), sans doublon, puis noter dans `envie.playlist`
+  l'épisode à la playlist « À écouter » (celle de `config:playlist_a_ecouter`, sinon une existante du même nom,
+  créée privée seulement si aucune), sans doublon, puis noter dans `envie.playlist`
   {ajoute_le, playlist, ajoutes, statut} (dans `envie`, que l'app conserve en entier) ;
 - sur l'événement `aiguillage_spotify_lire` (script `script.aiguillage_spotify_sur_tv`), lancer la lecture sur
   l'appareil Spotify Connect du Freebox Player ;
@@ -20,6 +21,7 @@ from datetime import date
 import base64
 import re
 import time
+import unicodedata
 
 API = "https://api.spotify.com/v1"
 NOM_PLAYLIST = "À écouter"
@@ -140,6 +142,29 @@ CLE_PLAYLIST = "config:playlist_a_ecouter"
 MAX_TITRES = 100
 
 
+def nom_cle(nom):
+    """Nom comparable : Unicode NFC, sans accents, sans casse ni espaces en trop (« A écouter » = « À écouter »)."""
+    decompose = unicodedata.normalize("NFD", nom or "")
+    sans_accents = "".join(c for c in decompose if not unicodedata.combining(c))
+    return " ".join(sans_accents.casefold().split())
+
+
+def playlist_existante(playlists, moi):
+    """Identifiant de la première playlist d'Alexandre nommée « À écouter » (au nom près, voir `nom_cle`), ou None."""
+    voulu = nom_cle(NOM_PLAYLIST)
+    for p in playlists:
+        if nom_cle(p.get("name")) == voulu and (p.get("owner") or {}).get("id") == moi:
+            return p["id"]
+    return None
+
+
+def playlist_configuree(enregistrement):
+    """Identifiant de la playlist noté dans `config:playlist_a_ecouter` (enregistrement de donnees_apps), ou None."""
+    valeur = (enregistrement or {}).get("valeur") or {}
+    pid = valeur.get("playlist") if isinstance(valeur, dict) else None
+    return pid if isinstance(pid, str) and re.fullmatch(r"[A-Za-z0-9]{22}", pid) else None
+
+
 def piste(item):
     """Élément de `/playlists/{id}/items` → {lien, titre, artistes, image, type} pour l'app TV (ou None)."""
     e = item.get("item") or item.get("track") or {}
@@ -205,10 +230,13 @@ def cochee(valeur, fait_le):
 class Client:
     """Appels à l'API Web avec un jeton d'accès obtenu par le jeton de rafraîchissement."""
 
-    def __init__(self, identifiants, timeout=15):
+    def __init__(self, identifiants, timeout=15, playlist_id=None):
         self._ids = identifiants
         self._timeout = timeout
         self._acces = None
+        # Playlist notée dans `config:playlist_a_ecouter` : réutilisée telle quelle (27/10, trois « À écouter »).
+        self._configuree = playlist_id
+        self._playlist = None
 
     def _token(self):
         import httpx  # ici : les fonctions pures se testent sans httpx
@@ -254,13 +282,30 @@ class Client:
             data = self._call("GET", data["next"])
 
     def playlist(self):
-        """Identifiant de la playlist « À écouter » d'Alexandre, créée privée si absente."""
+        """Identifiant de la playlist « À écouter » d'Alexandre, dans l'ordre : celle de `config:playlist_a_ecouter`
+        si elle existe encore, sinon une playlist existante du même nom, sinon une nouvelle (privée).
+
+        27/10 : la recherche seule dans `/me/playlists` a créé deux doublons (21/10 et 25/10) pendant des pannes de
+        Spotify (503, coupures) où la liste revenait sans la playlist existante. La playlist configurée n'est
+        abandonnée que sur un 404 (supprimée) ; toute autre erreur remonte, sans rien créer."""
+        import httpx
+
+        if self._playlist:
+            return self._playlist
         moi = self._call("GET", "/me")["id"]
-        for p in self._pages("/me/playlists"):
-            if p.get("name") == NOM_PLAYLIST and (p.get("owner") or {}).get("id") == moi:
-                return p["id"]
-        return self._call("POST", "/me/playlists", json={"name": NOM_PLAYLIST, "public": False,
-                                                         "description": DESCRIPTION})["id"]
+        if self._configuree:
+            try:
+                p = self._call("GET", f"/playlists/{self._configuree}", params={"fields": "id,owner(id)"})
+            except httpx.HTTPStatusError as error:
+                if error.response.status_code != 404:
+                    raise
+            else:
+                if (p.get("owner") or {}).get("id") == moi:
+                    self._playlist = p.get("id") or self._configuree
+                    return self._playlist
+        self._playlist = playlist_existante(self._pages("/me/playlists"), moi) or self._call(
+            "POST", "/me/playlists", json={"name": NOM_PLAYLIST, "public": False, "description": DESCRIPTION})["id"]
+        return self._playlist
 
     def contenu(self, playlist_id):
         out = set()
