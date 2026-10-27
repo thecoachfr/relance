@@ -560,3 +560,8 @@ tests Python verts.
 
 Pas fait (plan N5) : brouillons Gmail, « Demander à l'agent » dans Aiguillage ou Courrier, lecture de
 `sensor.aiguillage_lieu_travail` ; repli serveur en cas de refus du modèle (`fallbacks`) non activé.
+
+
+### Agent dans un fil à part (27/10, 16 h 05)
+
+Une question prenait 15 à 25 s dans le fil partagé d'AppDaemon (avertissement « Excessive time spent in callback », la vigie et la météo attendaient). Le gestionnaire rend maintenant la main tout de suite et traite la question dans un fil à lui (`threading.Thread`), une question à la fois (verrou). Vérifié : réponse en 9 s, plus d'avertissement.

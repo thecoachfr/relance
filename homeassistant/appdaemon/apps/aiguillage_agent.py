@@ -600,6 +600,7 @@ def journal(question, appels, cout_, tours, etat, raison=None):
 
 try:  # L'app ne se charge que dans AppDaemon ; les fonctions ci-dessus se testent sans.
     import appdaemon.plugins.hass.hassapi as hass
+    import threading
 except ImportError:  # pragma: no cover
     hass = None
 
@@ -631,6 +632,7 @@ if hass is not None:
             self._auth_path = Path(self.args.get("autorisation_file", "/config/aiguillage_courrier_google.json"))
             self._gmail = None
             self.listen_event(self._message, "aiguillage_agent_message")
+            self._verrou = threading.Lock()
 
         def _lire_etat(self):
             try:
@@ -696,9 +698,22 @@ if hass is not None:
                 self.log(f"Agent : réponse Signal impossible ({exc!r})", level="WARNING")
 
         def _message(self, event_name, data, **kwargs):
+            """Rend la main tout de suite à AppDaemon (27/10) : une question prend 15 à 25 s et occupait le fil
+            partagé avec la vigie et la météo. Le travail part dans un fil à lui ; une question à la fois (verrou),
+            les suivantes attendent leur tour dans l'ordre."""
             question = str((data or {}).get("texte") or "").strip()
             if not question:
                 return
+            threading.Thread(target=self._traiter_seul, args=(question,), name="agent-courrier", daemon=True).start()
+
+        def _traiter_seul(self, question):
+            with self._verrou:
+                try:
+                    self._traiter(question)
+                except Exception as exc:  # noqa: BLE001 - un fil à part ne doit jamais mourir en silence
+                    self.log(f"Agent : erreur inattendue ({exc!r})", level="WARNING")
+
+        def _traiter(self, question):
             maintenant = datetime.now(PARIS)
             etat = courrier.etat_du_mois(self._lire_etat(), maintenant)
             if budget_atteint(etat, self._budget, maintenant):
