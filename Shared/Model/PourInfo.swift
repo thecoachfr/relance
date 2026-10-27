@@ -61,6 +61,9 @@ nonisolated enum PourInfo {
 extension TaskItem {
     var estPourInfo: Bool { PourInfo.est(notes) }
 
+    /// Heure d'une info (« 7 h 30 »), seulement affichée ; `nil` sans heure.
+    var heurePourInfo: String? { dueMinutes.map(ReminderPlanner.formatTime) }
+
     /// Info du jour : à montrer dans « Pour info aujourd'hui ».
     func pourInfoDuJour(now: Date = .now, calendar: Calendar = .current) -> Bool {
         guard estPourInfo, !isCompleted, !isTrashed, let dueDay else { return false }

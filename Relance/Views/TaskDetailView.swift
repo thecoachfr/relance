@@ -136,7 +136,6 @@ struct TaskDetailView: View {
                 if ToSee(notes: notes) == nil, !PourInfo.est(notes) {
                     PourInfoSection(notes: $notes) {
                         if !hasDay { day = Calendar.current.startOfDay(for: .now); hasDay = true }
-                        hasTime = false
                     }
                 }
                 if ToSee(notes: notes) == nil, !PourInfo.est(notes) {

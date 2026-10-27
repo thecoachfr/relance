@@ -151,8 +151,21 @@ def tombe(jour, echeance, regle):
 
 # MARK: - Capteur
 
+def heure_texte(heure):
+    """« 07:30 » → « 7 h 30 », « 18:00 » → « 18 h » (comme `ReminderPlanner.formatTime`) ; None sinon."""
+    m = re.match(r"^(\d{1,2}):(\d{2})", str(heure or ""))
+    if not m:
+        return None
+    h, mn = int(m.group(1)), int(m.group(2))
+    return f"{h} h" + (f" {mn:02d}" if mn else "")
+
+
+def _avec_heure(info):
+    return info["titre"] + (f" à {info['heure_texte']}" if info.get("heure_texte") else "")
+
+
 def infos(enregistrements, aujourdhui):
-    """Infos actives : liste de (cle, titre, echeance, regle), dans l'ordre des titres."""
+    """Infos actives : liste de (cle, titre, echeance, regle, heure), par heure (sans heure à la fin) puis titre."""
     trouvees = []
     for e in enregistrements or []:
         v = e.get("valeur") or {}
@@ -162,35 +175,37 @@ def infos(enregistrements, aujourdhui):
             echeance = date.fromisoformat(str(v.get("jour") or "")[:10])
         except ValueError:
             continue
-        trouvees.append((e["cle"], v.get("titre") or "", echeance, repetition(v.get("notes"))))
-    return sorted(trouvees, key=lambda i: i[1].lower())
+        heure = v.get("heure") if heure_texte(v.get("heure")) else None
+        trouvees.append((e["cle"], v.get("titre") or "", echeance, repetition(v.get("notes")), heure))
+    return sorted(trouvees, key=lambda i: (i[4] is None, (i[4] or "").zfill(5), i[1].lower()))
 
 
 def calculer(enregistrements, maintenant):
     """(état, attributs) de `sensor.hub_pour_info` (contrat : HUB-POUR-INFO.md)."""
     aujourdhui = maintenant.date()
     toutes = infos(enregistrements, aujourdhui)
-    du_jour = [{"cle": c, "titre": t} for c, t, e, r in toutes if tombe(aujourdhui, e, r)]
+    du_jour = [{"cle": c, "titre": t, "heure": h, "heure_texte": heure_texte(h)}
+               for c, t, e, r, h in toutes if tombe(aujourdhui, e, r)]
     a_venir = []
-    for c, t, e, r in toutes:
+    for c, t, e, r, h in toutes:
         for n in range(1, A_VENIR_JOURS + 1):
             jour = aujourdhui + timedelta(days=n)
             if tombe(jour, e, r):
-                a_venir.append({"cle": c, "titre": t, "jour": jour.isoformat()})
+                a_venir.append({"cle": c, "titre": t, "jour": jour.isoformat(), "heure": h, "heure_texte": heure_texte(h)})
                 break
-    a_venir.sort(key=lambda i: (i["jour"], i["titre"].lower()))
+    a_venir.sort(key=lambda i: (i["jour"], i["heure"] is None, (i["heure"] or "").zfill(5), i["titre"].lower()))
     return len(du_jour), {
         "maj": maintenant.isoformat(timespec="seconds"),
         "jour": aujourdhui.isoformat(),
         "infos": du_jour,
-        "texte": " · ".join(i["titre"] for i in du_jour) or None,
+        "texte": " · ".join(_avec_heure(i) for i in du_jour) or None,
         "a_venir": a_venir,
     }
 
 
 def texte_notification(attributs):
-    """« Pour info : Femme de ménage, Poubelles » (tous les titres : l'écran a la place), ou None si rien."""
-    titres = [i["titre"] for i in attributs.get("infos") or []]
+    """« Pour info : Sport à 7 h 30, Poubelles » (tous les titres : l'écran a la place), ou None si rien."""
+    titres = [_avec_heure(i) for i in attributs.get("infos") or []]
     return "Pour info : " + ", ".join(titres) if titres else None
 
 

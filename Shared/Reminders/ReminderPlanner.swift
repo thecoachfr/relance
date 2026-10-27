@@ -286,10 +286,13 @@ nonisolated struct ReminderPlanner: Sendable {
                 guard task.pourInfo == nil, let d = task.dueDay, let start = calendar.date(from: d) else { return false }
                 return calendar.isDate(start, inSameDayAs: day) && !isOverdue(task, at: fire)
             }.count
+            // Avec une heure d'abord (« Sport à 7 h 30 »), puis les autres : même ordre que le Hub.
             var infos: [String] = []
-            for task in tasks where task.pourInfo?.contains(where: { calendar.isDate($0, inSameDayAs: day) }) == true
-                && !infos.contains(task.title) {
-                infos.append(task.title)
+            let duJour = tasks.filter { $0.pourInfo?.contains(where: { calendar.isDate($0, inSameDayAs: day) }) == true }
+                .sorted { ($0.dueMinutes ?? Int.max, $0.title.lowercased()) < ($1.dueMinutes ?? Int.max, $1.title.lowercased()) }
+            for task in duJour {
+                let texte = task.title + (task.dueMinutes.map { " à " + Self.formatTime($0) } ?? "")
+                if !infos.contains(texte) { infos.append(texte) }
             }
             guard overdue + dueToday + inboxCount + infos.count > 0 else { continue }
 
@@ -297,7 +300,7 @@ nonisolated struct ReminderPlanner: Sendable {
             if overdue > 0 { parts.append("\(overdue) en retard") }
             if dueToday > 0 { parts.append("\(dueToday) aujourd'hui") }
             if inboxCount > 0 { parts.append("\(inboxCount) à trier") }
-            // P9-P : « Pour info : Femme de ménage, Poubelles » (deux noms, puis « … »).
+            // P9-P : « Pour info : Sport à 7 h 30, Poubelles » (deux noms, puis « … »).
             if !infos.isEmpty {
                 parts.append("Pour info : " + infos.prefix(2).joined(separator: ", ") + (infos.count > 2 ? "…" : ""))
             }

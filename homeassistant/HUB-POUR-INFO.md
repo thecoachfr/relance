@@ -6,20 +6,23 @@ Rafraîchi à chaque modification de l'espace `aiguillage` de `donnees_apps` (3 
 changement de jour à minuit compris).
 
 Un rappel « pour info » est une tâche d'Aiguillage dont les notes ont la ligne `📣 Pour info` : il signale (femme de
-ménage, poubelles…), ne demande rien, n'a ni heure ni « Fait », et disparaît le lendemain.
+ménage, poubelles…), ne demande rien, n'a ni relance ni « Fait », et disparaît le lendemain. Elle peut avoir une
+heure (27/10/2026, « Sport à 7 h 30 ») : affichée seulement, jamais de rappel.
 
 État : nombre d'infos du jour (entier, 0 s'il n'y en a pas).
 
 Attributs :
 - `maj` : ISO 8601, heure du calcul.
 - `jour` : `AAAA-MM-JJ`, le jour des infos.
-- `infos` : infos du jour, triées par titre : [{ `cle` (clé de la tâche dans `donnees_apps`), `titre` }].
-- `texte` : les titres du jour joints par « · » (« Femme de ménage · Poubelles »), ou null.
-- `a_venir` : la prochaine occurrence de chaque info dans les 7 jours suivants : [{ `cle`, `titre`, `jour` }], triée
-  par jour. Les vues ne l'affichent pas pour l'instant.
+- `infos` : infos du jour, celles avec une heure d'abord (par heure), puis les autres par titre : [{ `cle` (clé de
+  la tâche dans `donnees_apps`), `titre`, `heure` (« 07:30 » ou null), `heure_texte` (« 7 h 30 », « 18 h » ou
+  null) }].
+- `texte` : les titres du jour, avec l'heure, joints par « · » (« Sport à 7 h 30 · Poubelles »), ou null.
+- `a_venir` : la prochaine occurrence de chaque info dans les 7 jours suivants : [{ `cle`, `titre`, `jour`, `heure`,
+  `heure_texte` }], triée par jour puis heure. Les vues ne l'affichent pas pour l'instant.
 
 Notification : à l'heure du résumé du matin (7 h 30, `heure_resume` dans `apps.yaml`), s'il y a des infos,
-`script.hub_notifier` avec `texte` « Pour info : Femme de ménage, Poubelles », `titre` « Aiguillage », `niveau` info.
+`script.hub_notifier` avec `texte` « Pour info : Sport à 7 h 30, Poubelles », `titre` « Aiguillage », `niveau` info.
 
 ## Règles d'affichage communes (« Mêmes boutons, même ordre »)
 
@@ -28,7 +31,8 @@ Notification : à l'heure du résumé du matin (7 h 30, `heure_resume` dans `app
    tâche en tête), comme les envies `👀`. Jamais de case à cocher pour elles.
 2. **Bloc « Pour info »** en tête de la section **À faire**, avant les tâches (et après la phrase du lieu de travail
    si la vue l'affiche) : titre « Pour info », puis une ligne par élément de `infos` : icône mégaphone
-   (mdi:bullhorn / SF `megaphone` / équivalent Compose), le titre, en couleur secondaire. Rien à toucher (pas
+   (mdi:bullhorn / SF `megaphone` / équivalent Compose), le titre, en couleur secondaire, et `heure_texte` s'il y en a un, à droite comme l'heure d'une tâche (même
+   couleur secondaire, jamais rouge : une info n'est jamais en retard, elle reste affichée toute la journée). Rien à toucher (pas
    d'action au toucher / OK). Rien du tout si `infos` est vide ou si le capteur est absent.
 3. **Accueil** : rien de plus (la notification du matin suffit).
 

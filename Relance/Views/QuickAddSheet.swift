@@ -119,7 +119,6 @@ struct QuickAddSheet: View {
                 if !isToSee {
                     PourInfoSection(notes: $notes) {
                         if day == nil { day = Calendar.current.startOfDay(for: .now) }
-                        hasTime = false
                         manual = true
                     }
                 }
@@ -138,10 +137,8 @@ struct QuickAddSheet: View {
                                    in: Calendar.current.startOfDay(for: .now)..., displayedComponents: .date)
                     }
                     if day != nil {
-                        if !isPourInfo {
-                            Toggle("Heure", isOn: Binding(get: { hasTime }, set: { hasTime = $0; manual = true }))
-                        }
-                        if hasTime && !isPourInfo {
+                        Toggle("Heure", isOn: Binding(get: { hasTime }, set: { hasTime = $0; manual = true }))
+                        if hasTime {
                             DatePicker("Heure", selection: Binding(get: { time }, set: { time = $0; manual = true }),
                                        displayedComponents: .hourAndMinute)
                         }
@@ -294,10 +291,10 @@ struct QuickAddSheet: View {
         let c = Calendar.current.dateComponents([.hour, .minute], from: time)
         // Sans date, une répétition n'a pas de point de départ : on la retire.
         let kept = day == nil ? Recurrence.notes(notes, setting: nil) : notes
-        // Une info a toujours une date (aujourd'hui par défaut), sans heure ni priorité.
+        // Une info a toujours une date (aujourd'hui par défaut), une heure facultative (affichée, sans rappel), pas de priorité.
         let jour = isPourInfo ? (day ?? Calendar.current.startOfDay(for: .now)) : (isUndated ? nil : day)
         let item = store.add(title: cleanTitle, day: jour,
-                             minutes: hasTime && !isUndated && !isPourInfo && day != nil ? (c.hour! * 60 + c.minute!) : nil,
+                             minutes: hasTime && !isUndated && (day != nil || isPourInfo) ? (c.hour! * 60 + c.minute!) : nil,
                              category: category, priority: isPourInfo ? .normal : priority,
                              notes: isPourInfo ? notes : kept)
         if avecListe, !isToSee, !isPourInfo {

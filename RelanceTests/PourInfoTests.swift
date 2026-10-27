@@ -84,7 +84,20 @@ struct PourInfoTests {
                      info("Marché", jours: [day(27)])]
         let plan = planner.plan(tasks: tasks, inboxCount: 0, now: day(26, 21, 30))
         let digest = plan.first { $0.kind == .digest && $0.title == "Ta journée" }!
-        #expect(digest.body == "1 aujourd'hui · Pour info : Femme de ménage, Poubelles…")
+        #expect(digest.body == "1 aujourd'hui · Pour info : Femme de ménage, Marché…")
+    }
+
+    /// Une info peut avoir une heure (27/10) : nommée avec elle, en premier, toujours sans relance.
+    @Test func timedInfoIsNamedWithItsTimeAndNeverReminded() {
+        var sport = info("Sport", jours: [day(27)])
+        sport.dueMinutes = 7 * 60 + 30
+        let plan = planner.plan(tasks: [info("Poubelles", jours: [day(27)]), sport], inboxCount: 0, now: day(26, 21, 30))
+        #expect(plan.allSatisfy { $0.taskID == nil })
+        let digest = plan.first { $0.kind == .digest && $0.title == "Ta journée" }!
+        #expect(digest.body == "Pour info : Sport à 7 h 30, Poubelles")
+        let item = TaskItem(title: "Sport", notes: PourInfo.ligne, dueDay: day(27), dueMinutes: 7 * 60 + 30)
+        #expect(!item.isOverdue(now: day(27, 22), calendar: calendar))
+        #expect(item.heurePourInfo == "7 h 30")
     }
 
     @Test func eveningDigestIgnoresInfos() {

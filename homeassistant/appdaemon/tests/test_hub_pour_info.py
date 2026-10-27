@@ -77,11 +77,27 @@ def test_capteur():
     etat, attributs = p.calculer(enregistrements, maintenant)
     assert etat == 1
     assert attributs["jour"] == "2026-10-26"
-    assert attributs["infos"] == [{"cle": CLE, "titre": "Femme de ménage"}]
+    assert attributs["infos"] == [{"cle": CLE, "titre": "Femme de ménage", "heure": None, "heure_texte": None}]
     assert attributs["texte"] == "Femme de ménage"
-    assert attributs["a_venir"] == [{"cle": CLE2, "titre": "Poubelles", "jour": "2026-10-27"},
-                                    {"cle": CLE, "titre": "Femme de ménage", "jour": "2026-11-02"}]
+    assert attributs["a_venir"] == [
+        {"cle": CLE2, "titre": "Poubelles", "jour": "2026-10-27", "heure": None, "heure_texte": None},
+        {"cle": CLE, "titre": "Femme de ménage", "jour": "2026-11-02", "heure": None, "heure_texte": None}]
     assert p.texte_notification(attributs) == "Pour info : Femme de ménage"
+
+
+def test_heure_affichee_et_rangee_en_premier():
+    maintenant = datetime(2026, 10, 27, 7, 0, tzinfo=p.PARIS)  # mardi
+    enregistrements = [
+        enregistrement(CLE2, "Poubelles", "2026-10-27", "📣 Pour info"),
+        enregistrement(CLE, "Sport", "2026-10-27", "🔄 Toutes les semaines : mardi, jeudi\n📣 Pour info", heure="07:30"),
+        enregistrement(CLE3, "Kiné", "2026-10-27", "📣 Pour info", heure="18:00"),
+    ]
+    etat, attributs = p.calculer(enregistrements, maintenant)
+    assert [i["titre"] for i in attributs["infos"]] == ["Sport", "Kiné", "Poubelles"]
+    assert attributs["infos"][0]["heure_texte"] == "7 h 30" and attributs["infos"][1]["heure_texte"] == "18 h"
+    assert attributs["texte"] == "Sport à 7 h 30 · Kiné à 18 h · Poubelles"
+    assert p.texte_notification(attributs) == "Pour info : Sport à 7 h 30, Kiné à 18 h, Poubelles"
+    assert attributs["a_venir"][0]["heure_texte"] == "7 h 30"  # Sport, jeudi
 
 
 def test_rien_aujourd_hui():
