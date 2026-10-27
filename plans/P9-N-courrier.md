@@ -177,6 +177,17 @@ Cadrage d'origine :
 
 ### N5 — L'agent sur Signal et dans Aiguillage (2 soirées)
 
+**Signal fait et déployé le 27/10 à 15 h 49** (contrat : `homeassistant/COURRIER.md`, « Agent sur Signal ») : préfixe
+**« ? »** tranché par Alexandre (section 5, point 2) ; app `aiguillage_agent` (Sonnet 5.5, effort `medium`, 8 tours au
+plus) avec quatre pouvoirs seulement : chercher et résumer les mails triés (base en lecture seule, avec le mémo),
+créer une tâche Aiguillage depuis un mail (`tache_du_mail`, jamais d'écrasement), reporter un mail (« Plus tard »).
+**Pas** de brouillon, d'envoi, d'archivage, de suppression ni de changement de catégorie (décision du 27/10, qui
+remplace les brouillons prévus ci-dessous). Fil de 6 échanges sur 30 minutes, budget `agent_budget_mensuel` 5 $.
+Essai réel : 0,019 $ la question. **Reste** : « Demander à l'agent » dans Aiguillage ou Courrier.
+
+Cadrage d'origine :
+
+
 - **Signal, « Note à moi-même »** : un message qui n'est pas un lien part à l'agent (les liens gardent leur rôle
   actuel : envies). Préfixe à trancher (section 5).
 - **Agent** : Sonnet 5.5, outils limités : chercher dans la base et dans Gmail, lire un fil, résumer, préparer un

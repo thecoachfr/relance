@@ -96,6 +96,33 @@ def test_titres():
     assert s.titre_youtube({}) is None
 
 
+def test_question_a_l_agent():
+    # « ? » au début, espaces tolérés (N5, 27/10).
+    assert s.question_agent("?qu'est-ce que j'ai à traiter") == "qu'est-ce que j'ai à traiter"
+    assert s.question_agent("  ? qu'est-ce que j'ai\nà traiter ") == "qu'est-ce que j'ai\nà traiter"
+    assert s.question_agent("？ et celui d'hier ?") == "et celui d'hier ?"
+    assert s.question_agent("?") == ""
+    assert s.question_agent("demain télétravail ?") is None
+    assert s.question_agent(None) is None
+
+
+def test_routage():
+    # Note à moi-même : « ? » → l'agent seul, même avec un lien (ni envie ni consigne de lieu).
+    assert s.routage("? qu'est-ce que j'ai à traiter", None) == ("agent", "qu'est-ce que j'ai à traiter")
+    assert s.routage("?résume https://youtu.be/dQw4w9WgXcQ", None) == ("agent", "résume https://youtu.be/dQw4w9WgXcQ")
+    assert s.routage("?", None) == ("rien", None)
+    # Les réponses de l'agent (envoyées dans la même note) ne sont jamais retraitées.
+    assert s.routage("🤖 Tu as 2 mails : https://youtu.be/dQw4w9WgXcQ", None) == ("rien", None)
+    # Le reste ne change pas : liens → envies, note sans lien → lieu de travail.
+    route, liens = s.routage("https://youtu.be/dQw4w9WgXcQ", None)
+    assert route == "envies" and liens[0]["id_titre"] == "dQw4w9WgXcQ"
+    assert s.routage("demain télétravail", None) == ("lieu", "demain télétravail")
+    assert s.routage("   ", None) == ("rien", None)
+    # Un proche qui écrit « ? … » ne parle pas à l'agent.
+    assert s.routage("? tu viens samedi", "Yoann") == ("rien", None)
+    assert s.routage("? https://youtu.be/dQw4w9WgXcQ", "Yoann")[0] == "envies"
+
+
 if __name__ == "__main__":
     for nom, f in list(globals().items()):
         if nom.startswith("test_"):

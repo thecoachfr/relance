@@ -90,3 +90,14 @@ aiguillage_courrier:
   # Notifications directes à l'app Courrier par APNs (C5, 26/10) : même clé .p8 que la vigie, Key ID lu dans le bloc
   # relance_vigie (sinon key_id / team_id / key_path ici). Repli par l'app Home Assistant :
   # notifications_ha: auto (défaut : seulement sans appareil Courrier, ou si aucun envoi APNs n'a réussi) | toujours | jamais
+
+# Agent courrier sur Signal (P9-N, N5, 27/10/2026) : une « Note à moi-même » qui commence par « ? » (transmise par
+# aiguillage_signal, événement aiguillage_agent_message) → Claude Sonnet 5.5 avec outils : chercher et lire les mails
+# triés (base du courrier en lecture seule), créer une tâche Aiguillage depuis un mail, reporter un mail (« Plus tard »).
+# Ni brouillon, ni envoi, ni archivage, ni suppression. Réponse « 🤖 … » dans la même note. Contrat :
+# homeassistant/COURRIER.md, section « Agent sur Signal ». État (coût du mois, fil) : /config/aiguillage_agent_etat.json.
+aiguillage_agent:
+  module: aiguillage_agent
+  class: AiguillageAgent
+  agent_budget_mensuel: 5
+  # workspace_id: wrkspc_…

@@ -9,6 +9,10 @@ websocket `/v1/receive/<compte>` et, pour chaque message d'un expéditeur connu 
 - lien YouTube (`youtube.com/watch?v=…`, `youtu.be/…`, `/shorts/…`) → envie « 🎬 À regarder » ;
   YouTube Music → « 🎧 À écouter ».
 
+Note à moi-même : un message qui commence par « ? » part à l'agent courrier (`aiguillage_agent`, P9-N N5, 27/10,
+événement `aiguillage_agent_message`) et à lui seul ; une autre note sans lien part à `aiguillage_lieu_travail`
+(consignes de lieu) ; les réponses de l'agent (« 🤖 … ») sont ignorées.
+
 Même format qu'un partage depuis l'iPhone : ligne du type dans les notes (« 🎧 À écouter · Proposé par Yoann »)
 et champ `envie` {type, note, plateforme, id_titre, lien}. La vigie fait le reste : recette « playlist À
 écouter » pour Spotify, TMDB ignore YouTube, app TV et suggestions. Clé de la tâche tirée du lien : un même
@@ -106,6 +110,36 @@ def message_retenu(donnees, compte, sources, note_a_soi=True):
         if (envoye.get("destinationNumber") or envoye.get("destination")) == compte:
             return envoye.get("message") or "", None
     return None
+
+
+# Agent courrier (P9-N, N5, 27/10) : une « Note à moi-même » qui commence par « ? » est une question à l'agent
+# (`aiguillage_agent`), transmise sans le « ? » ; ses réponses commencent par « 🤖 » et ne sont jamais retraitées.
+_QUESTION = re.compile(r"^\s*[?？]\s*(.*)$", re.DOTALL)
+PREFIXE_AGENT = "🤖"
+
+
+def question_agent(texte):
+    """« ? qu'est-ce… » ou « ?qu'est-ce… » → « qu'est-ce… » ; « ? » seul → "" ; sinon None."""
+    m = _QUESTION.match(texte or "")
+    return m.group(1).strip() if m else None
+
+
+def routage(texte, expediteur):
+    """Où va un message retenu : ("agent", question) pour une note à soi qui commence par « ? » ; ("envies", liens)
+    s'il y a des liens Spotify ou YouTube ; ("lieu", texte) pour une autre note à soi (consigne de lieu de travail,
+    décidée par `aiguillage_lieu_travail`) ; ("rien", None) sinon (réponse de l'agent, « ? » seul, message vide)."""
+    if expediteur is None:
+        if (texte or "").lstrip().startswith(PREFIXE_AGENT):
+            return "rien", None
+        question = question_agent(texte)
+        if question is not None:
+            return ("agent", question) if question else ("rien", None)
+    liens = refs(texte)
+    if liens:
+        return "envies", liens
+    if expediteur is None and (texte or "").strip():
+        return "lieu", texte
+    return "rien", None
 
 
 def cle(ref):
@@ -250,13 +284,18 @@ if hass is not None:
             if not retenu:
                 return
             texte, expediteur = retenu
-            liens = refs(texte)
-            if not liens:
-                if expediteur is None and texte.strip():
-                    # Note à moi-même sans lien : peut-être une consigne de lieu de travail (P9-N, « demain
-                    # télétravail ») ; `aiguillage_lieu_travail` décide et répond, sinon rien.
-                    await self.fire_event("aiguillage_lieu_travail_message", texte=texte)
+            route, quoi = routage(texte, expediteur)
+            if route == "agent":
+                # Question à l'agent courrier (N5, 27/10) : « ? … » dans la Note à moi-même ; rien d'autre.
+                await self.fire_event("aiguillage_agent_message", texte=quoi, recu_le=datetime.now(UTC).isoformat())
                 return
+            if route == "lieu":
+                # Note à moi-même sans lien : peut-être une consigne de lieu de travail (P9-N, « demain
+                # télétravail ») ; `aiguillage_lieu_travail` décide et répond, sinon rien.
+                await self.fire_event("aiguillage_lieu_travail_message", texte=texte)
+            if route != "envies":
+                return
+            liens = quoi
             self._etat["dernier_message"] = f"{datetime.now():%d/%m %H:%M} {len(liens)} lien(s)"
             for ref in liens:
                 try:
