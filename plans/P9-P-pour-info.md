@@ -45,6 +45,10 @@ tout rappel d'Aiguillage est une tâche qui insiste jusqu'à « Fait ». Il faut
 - 26/10 : plan rédigé ; **P1 et P2 faits** (244 tests verts, app Mac compilée), à essayer sur l'iPhone. Choix en
   codant : la montre ne reçoit pas les infos (seulement la notification du résumé) ; les infos à venir sont
   repliées sous « À venir » dans À faire (iPhone, iPad), dans « Bientôt » sur Mac.
+- 27/10 vers 7 h 35 : **heure facultative** (demande d'Alexandre) : affichée seulement, jamais de rappel ; résumé du
+  matin « Pour info : Sport à 7 h 30, Poubelles » ; champs `heure` / `heure_texte` du capteur, à droite dans les trois
+  vues (carte `?v=18d7f07d`, Hub TV H39, Hub iPad build 26). **Premier vrai essai réussi** : notification « Pour
+  info : Sport » à 7 h 30 pile (`sensor.hub_notifications`).
 - 27/10 vers 7 h 10 : **P3 déployé partout** : `hub_pour_info` sur le NUC (capteur à 0 ce jour-là), carte du
   Nest Hub `?v=c5e34ad5`, Hub TV H38 installé sur le Player, Hub iPad installé sur l'iPad et poussé (TestFlight pour
   l'iPhone). Reste : voir le bloc à l'écran le premier jour avec une info, et la notification de 7 h 30.
