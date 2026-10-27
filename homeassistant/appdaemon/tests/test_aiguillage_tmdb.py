@@ -109,6 +109,23 @@ def test_codes():
     assert t.code_for("Mubi") is None
 
 
+def test_vue():
+    fait_le = "2026-10-27T10:00:00Z"
+    tache = {"titre": "Dune", "notes": "🎬 À regarder", "envie": {"type": "regarder", "tmdb": {"id": 1}}, "v": 2}
+    out = t.vue({"cle": "x", "version": 3, "valeur": tache}, fait_le)
+    assert out == {**tache, "fait": True, "fait_le": fait_le}
+    assert "fait" not in tache  # l'original n'est pas modifié
+    # Ancienne forme (ligne des notes, sans `envie`) : cochée aussi.
+    assert t.vue({"valeur": {"titre": "Dune", "notes": "🎬 À regarder"}}, fait_le)["fait"] is True
+    # Envie « À écouter » (même geste, pas de lien Spotify) : cochée.
+    assert t.vue({"valeur": {"titre": "Album", "envie": {"type": "ecouter"}}}, fait_le)["fait"] is True
+    # Rien à écrire : déjà cochée, supprimée, tâche ordinaire, enregistrement vide.
+    assert t.vue({"valeur": {**tache, "fait": True}}, fait_le) is None
+    assert t.vue({"supprime": True, "valeur": tache}, fait_le) is None
+    assert t.vue({"valeur": {"titre": "Pain", "categorie": "courses"}}, fait_le) is None
+    assert t.vue({}, fait_le) is None and t.vue(None, fait_le) is None
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_"):

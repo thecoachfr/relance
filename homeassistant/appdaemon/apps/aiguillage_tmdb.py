@@ -192,6 +192,18 @@ def with_status(valeur, statut, today):
     return valeur
 
 
+def vue(enregistrement, fait_le):
+    """« Vu » sur une envie « À regarder » (Hub TV et Hub iPad, 27/10/2026 ; pendant de « Écouté ») : la tâche cochée
+    (même forme que l'app TV, l'iPhone et « Écouté » : `fait`, `fait_le`, le reste recopié tel quel), ou None si
+    l'enregistrement n'est pas une envie encore à faire (supprimé, déjà coché, autre tâche) : rien à écrire."""
+    valeur = (enregistrement or {}).get("valeur") or {}
+    if not valeur or enregistrement.get("supprime") or valeur.get("fait"):
+        return None
+    if not is_to_watch(valeur) and (valeur.get("envie") or {}).get("type") != "ecouter":
+        return None
+    return dict(valeur, fait=True, fait_le=fait_le)
+
+
 class Client:
     """Appels à TMDB avec le jeton d'accès en lecture (v4, en-tête Bearer)."""
 

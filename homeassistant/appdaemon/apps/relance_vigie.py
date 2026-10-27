@@ -190,6 +190,8 @@ class RelanceVigie(Hass):
         self.listen_event(self.on_spotify_lire, "aiguillage_spotify_lire")
         self.listen_event(self.on_spotify_ecoute, "aiguillage_spotify_ecoute")
         self.listen_event(self.on_spotify_aime, "aiguillage_spotify_aime")
+        # « Vu » sur une envie « À regarder » (Hub TV, Hub iPad) via script.aiguillage_envie_vue.
+        self.listen_event(self.on_envie_vue, "aiguillage_envie_vue")
         # Activité en direct « En lecture sur les LS50 » du Hub iPad (23/10/2026) : jetons envoyés par l'app
         # (script.hub_ipad_activite → événement hub_ipad_activite), lecteur surveillé, push APNs `liveactivity`.
         self._lecteur_path = Path(self.args.get("hub_ipad_activite_file", "/config/hub_ipad_activite.json"))
@@ -813,6 +815,34 @@ class RelanceVigie(Hass):
                             "(droit des titres likés).", cause="action")
             return
         self.log(f"Spotify : {ref[0]} {ref[1][:8]}… ajouté aux titres likés")
+
+    def on_envie_vue(self, event_name, data, **kwargs):
+        """« Vu » sur une envie « À regarder » (Hub TV et Hub iPad, 27/10/2026) : coche l'envie `cle`, comme « Écouté »
+        coche une envie à écouter (même écriture : `fait`, `fait_le`, par la vigie). Un conflit (l'envie modifiée entre
+        la lecture et l'écriture) est rejoué une fois sur la version du serveur."""
+        cle = (data or {}).get("cle", "")
+        if not self._is_task_key(cle):
+            self.log(f"« Vu » ignoré : clé {cle!r} invalide", level="WARNING")
+            return
+        fait_le = datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
+        try:
+            record = self._service("donnees_apps", "lire", {"espace": self._espace, "cle": cle}).get("enregistrement") or {}
+            for _essai in range(2):
+                valeur = aiguillage_tmdb.vue(record, fait_le)
+                if valeur is None:
+                    self.log(f"« Vu » : {cle[:8]}… déjà cochée ou pas une envie, rien à écrire")
+                    return
+                result = self._service("donnees_apps", "ecrire", {
+                    "espace": self._espace, "cle": cle, "valeur": valeur, "version_attendue": record.get("version", 0),
+                    "modifie_par": "vigie", "op_id": str(uuid.uuid4()),
+                })
+                if (result or {}).get("statut") != "conflit":
+                    self.log(f"« {valeur.get('titre')} » vu (coché)")
+                    return
+                record = result.get("serveur") or {}
+            self.log(f"« Vu » : {cle[:8]}… non cochée (conflits répétés)", level="WARNING")
+        except Exception as error:  # noqa: BLE001
+            self.log(f"« Vu » en échec pour {cle[:8]}… : {error!r}", level="WARNING")
 
     def _load_known_keys(self):
         try:
