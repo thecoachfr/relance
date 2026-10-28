@@ -22,7 +22,10 @@
         "en_cours": false,
         "image": "https://img1.oqee.net/pictures/1344824/wide_generic/h480",
         "resume": "Riche, beau, puissant, Nicholas Van Orton présente les plus brillants signes de réussite dans le monde des affaires. Divorcé, il vit dans une immense maison où seuls les souvenirs de son père, un requin de la finance…",
-        "envie": true
+        "envie": true,
+        "imdb_id": "tt0119174",
+        "note_imdb": 7.7,
+        "note_texte": "7,7"
       },
       {
         "titre": "Tracker",
@@ -40,7 +43,10 @@
         "en_cours": false,
         "image": "https://img1.oqee.net/pictures/4251980/wide_generic/h480",
         "resume": "Lorsqu'une nettoyeuse de scènes de crime disparaît mystérieusement, Colter est appelé pour mener l'enquête. Il découvre que la jeune femme nourrissait une obsession pour les affaires criminelles, une passion qui l'a…",
-        "envie": false
+        "envie": false,
+        "imdb_id": "tt13875494",
+        "note_imdb": 7.2,
+        "note_texte": "7,2"
       }
     ],
     "friendly_name": "Ce soir à la TV",

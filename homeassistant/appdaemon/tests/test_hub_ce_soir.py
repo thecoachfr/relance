@@ -133,3 +133,40 @@ def test_taille_des_attributs():
     _, a = c.calculer(bruts, CHAINES, set(), SOIR)
     assert len(json.dumps(a, ensure_ascii=False).encode()) < 12000  # limite de l'enregistreur : 16 Ko
     assert all(len(p["resume"]) <= c.RESUME_MAX + 1 for p in a["programmes"])
+
+
+def test_choix_tmdb():
+    films = [{"id": 1, "title": "The Game", "original_title": "The Game", "release_date": "2025-03-01"},
+             {"id": 2, "title": "The Game", "original_title": "The Game", "release_date": "1997-09-12"}]
+    assert c.choisir_tmdb(films, "The Game", 1997, False) == 2
+    assert c.choisir_tmdb(films, "The Game", 1998, False) == 2  # année de production : un an d'écart toléré
+    assert c.choisir_tmdb(films, "Autre titre", 1997, False) is None
+    vf = [{"id": 3, "title": "Mr Wolff", "original_title": "The Accountant", "release_date": "2016-10-14"}]
+    assert c.choisir_tmdb(vf, "The Accountant", 2016, False) == 3
+    series = [{"id": 9, "name": "Tracker", "original_name": "Tracker", "first_air_date": "2024-02-11"}]
+    assert c.choisir_tmdb(series, "Tracker", 2025, True) == 9  # l'année d'OQEE est celle de l'épisode
+
+
+def test_cle_note():
+    assert c.cle_note("serie", "Tracker", 2025) == c.cle_note("serie", "Tracker", 2026)
+    assert c.cle_note("film", "Star Trek", 2009) != c.cle_note("film", "Star Trek", 1979)
+    assert c.cle_note("telefilm", "X", 2024) == c.cle_note("film", "X", 2024)
+
+
+def test_lire_notes():
+    lignes = ["tconst\taverageRating\tnumVotes\n", "tt0000001\t5.6\t2100\n", "tt0119174\t7.7\t420000\n", "tt9\tx\t1\n"]
+    assert c.lire_notes(lignes, {"tt0119174", "tt9"}) == {"tt0119174": (7.7, 420000)}
+
+
+def test_notes_dans_le_tri_et_le_capteur():
+    bruts = [prog(1173, "Bon film", annee=2021), prog(279, "Grand film", annee=1985), prog(282, "Film peu vu", annee=2024),
+             prog(845, "Kaamelott", "Série", "Série humoristique", m=10, duree=3000, annee=None)]
+    notes = {c.cle_note("film", "Bon film", 2021): ("tt1", 6.9, 1000), c.cle_note("film", "Grand film", 1985): ("tt2", 7.9, 9000),
+             c.cle_note("film", "Film peu vu", 2024): ("tt3", 9.5, 12), c.cle_note("serie", "Kaamelott", None): ("tt4", 8.7, 20000)}
+    _, a = c.calculer(bruts, CHAINES, set(), SOIR, notes=notes)
+    assert [p["titre"] for p in a["programmes"]] == ["Grand film", "Bon film", "Film peu vu", "Kaamelott"]
+    p = a["programmes"][0]
+    assert (p["imdb_id"], p["note_imdb"], p["note_texte"]) == ("tt2", 7.9, "7,9")
+    assert a["programmes"][2]["note_imdb"] is None  # 12 votes : pas montrée
+    assert c.a_noter(bruts, SOIR) == {("film", "Bon film", 2021), ("film", "Grand film", 1985), ("film", "Film peu vu", 2024),
+                                      ("serie", "Kaamelott", None)}

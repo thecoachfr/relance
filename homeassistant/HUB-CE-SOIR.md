@@ -23,19 +23,20 @@ Attributs (exemple : `HUB-CE-SOIR-exemple.json`) :
   (ISO 8601 à la minute), `heure_texte` (« 21 h 10 »), `en_cours` (booléen, au moment du calcul), `image` (image
   paysage d'OQEE en 480 px de haut, ou null ; en repli Freebox, adresse locale `mafreebox.freebox.fr`), `resume`
   (220 caractères au plus, ou null), `envie` (vrai si le titre est une envie « À regarder » d'Aiguillage pas encore
-  vue) }].
+  vue), `imdb_id` (« tt0119174 » ou null), `note_imdb` (7.7 ou null), `note_texte` (« 7,7 » ou null ; null aussi
+  sous 100 votes) }]. Notes IMDb ajoutées le 28/10/2026 au soir (films, séries et téléfilms).
 
 Ordre : d'abord les envies ; puis par genre (films, documentaires et reportages, séries, téléfilms) ; à genre égal,
-ce qui commence à partir de 20 h 50 avant l'avant-soirée, puis les grandes chaînes (TF1, France 2, France 3,
+ce qui commence à partir de 20 h 50 avant l'avant-soirée, puis la note IMDb (sans note : après), puis les grandes chaînes (TF1, France 2, France 3,
 France 5, M6, Arte) et CANAL+, puis le plus récent (année), puis l'heure. Places par genre : 6 films, 3 documentaires
-ou reportages, 3 séries, 2 téléfilms (une envie passe toujours). Les notes de TMDB viendront affiner (pas encore).
+ou reportages, 3 séries, 2 téléfilms (une envie passe toujours).
 
 ## Règles d'affichage communes
 
 1. **Rangée « Ce soir »** dans Vidéo, après « À regarder ». Rien du tout si `programmes` est vide ou le capteur absent.
 2. Tuile : `image` (sinon fond ardoise), `logo` de la chaîne (sinon `chaine`), `titre`, puis
    « `heure_texte` · `genre_texte` · `annee` » ; `episode` après le titre s'il y en a un ; pastille « En cours » si
-   `en_cours` ; marque d'envie (même signe que « À regarder ») si `envie`.
+   `en_cours` ; « IMDb `note_texte` » en fin de ligne s'il y en a une ; marque d'envie (même signe que « À regarder ») si `envie`.
 3. **Action** : mettre la TV sur la chaîne `oqee_id` (Hub TV : même ouverture qu'« En direct » ; Hub iPad : la
    télécommande de la TV, comme la carte « À la TV »).
 
