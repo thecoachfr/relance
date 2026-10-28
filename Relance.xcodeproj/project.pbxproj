@@ -210,6 +210,7 @@
 		7874B145DAC89675ACB84F1E /* EnvieSuggestions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EA131F7F608B2771AEC1E0B /* EnvieSuggestions.swift */; };
 		7904C3183D61D19746818532 /* HASettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4544084AD09A0D9E5EC2923F /* HASettingsSection.swift */; };
 		797F8B78DDCECD8C3583DBB0 /* GoogleRefreshSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D9F2F47AFB8AE35410E0899 /* GoogleRefreshSession.swift */; };
+		79E245E1200EEABE28CF02C2 /* EnviesSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91FB744F65CB739C1A9D708C /* EnviesSettingsView.swift */; };
 		7A1BFC405E0E04A81B9A4D1D /* WatchSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 297D48117D9F85F84A3B1F2F /* WatchSync.swift */; };
 		7A234061A1FBB95DF769329E /* TaskItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6A4EF6EA4834A24EB534187 /* TaskItem.swift */; };
 		7A510B9378B2557615E7E9F8 /* TaskPriority.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EE508F82F326D596EC1A031 /* TaskPriority.swift */; };
@@ -285,6 +286,7 @@
 		A77699A65FF2795D601DC068 /* TaskFields.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C219EEDD1BA5AF2BD37ABCA /* TaskFields.swift */; };
 		A7B49F2D96188F30EF0EBC5E /* WatchTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECE60A54F2DC6987A632676A /* WatchTask.swift */; };
 		A84E287EB11AF3C34F2EEE7A /* Groupes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 950A03316412CBC5F27C5479 /* Groupes.swift */; };
+		A901E27B726A9E0FF82015D2 /* Captures.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38FFE8E011E8F28D1AB69AF0 /* Captures.swift */; };
 		A9D25158884B43503A37002A /* SharedMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AC3C376A9AF6A9087AF2A12 /* SharedMessage.swift */; };
 		AA5DF43C8963DCD3BDDCD321 /* TacheHA+TaskItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51E76C6EB4ADDD641DA38896 /* TacheHA+TaskItem.swift */; };
 		AB183FA5BCFC4A2D0BE4D177 /* Journal.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB7B1C9078E359F88724ACDF /* Journal.swift */; };
@@ -350,6 +352,7 @@
 		CBA09203626EF1F615D5E69F /* DonneesHA in Frameworks */ = {isa = PBXBuildFile; productRef = AA371ED7E345598FD293A5BA /* DonneesHA */; };
 		CBAFE55704F5C1DBAA548A8D /* NotesTimeCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05822D2ACADE5BC42570E7F5 /* NotesTimeCodec.swift */; };
 		CD14AB719C3C74C632F62B26 /* TaskIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B19813EA3F6E02B516AA5F8 /* TaskIntents.swift */; };
+		CDA70C1DA890F13BFF53DB9A /* EnviesSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91FB744F65CB739C1A9D708C /* EnviesSettingsView.swift */; };
 		CE329A4A40F4563A8BC93AC6 /* TacheHA+Pieces.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40DD2C385881420D28FCE64D /* TacheHA+Pieces.swift */; };
 		CEB0661B20E19E4D74AF8B84 /* ReminderOverride.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CF4B1AF23ADE07B4C45F7D2 /* ReminderOverride.swift */; };
 		CF32123898E150E7D3B22BFE /* RendezVousTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C1A6DFA58B95CA60075943E /* RendezVousTests.swift */; };
@@ -446,6 +449,13 @@
 			remoteGlobalIDString = 44BF28039A773F50D5B322D1;
 			remoteInfo = RelanceWatchWidgets;
 		};
+		68E381C61BD779651AFAF3F4 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0C20496AA76ED5ECD2004085 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 771442508ECBB75C1E72BA56;
+			remoteInfo = Relance;
+		};
 		7AD33C56424A58DC65C7E1F8 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 0C20496AA76ED5ECD2004085 /* Project object */;
@@ -514,6 +524,7 @@
 		04E780457F28B702C2D670A0 /* MemoRemote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoRemote.swift; sourceTree = "<group>"; };
 		05822D2ACADE5BC42570E7F5 /* NotesTimeCodec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotesTimeCodec.swift; sourceTree = "<group>"; };
 		074D35A6999BBF67FD3DEC4C /* MacSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacSettingsView.swift; sourceTree = "<group>"; };
+		089B13F30BD4201CE5C20D4D /* RelanceCaptures.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = RelanceCaptures.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		09D01BAE1A3D8381127E9147 /* TaskEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskEditor.swift; sourceTree = "<group>"; };
 		0A1C53C823F56984E704EE7C /* TaskRemindersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskRemindersView.swift; sourceTree = "<group>"; };
 		0CF4B1AF23ADE07B4C45F7D2 /* ReminderOverride.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderOverride.swift; sourceTree = "<group>"; };
@@ -550,6 +561,7 @@
 		30CC842C8E9E1937E48E46CF /* DureeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DureeTests.swift; sourceTree = "<group>"; };
 		31B339A2445E0E4BF2299831 /* SharedPhoto.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedPhoto.swift; sourceTree = "<group>"; };
 		356BC2CE21D14CF0CBA3C9B6 /* TasksProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksProvider.swift; sourceTree = "<group>"; };
+		38FFE8E011E8F28D1AB69AF0 /* Captures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Captures.swift; sourceTree = "<group>"; };
 		394F54E0EF2B79881E9F3836 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		3C1E3FCC309390331F7A6DDF /* PushRegistration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushRegistration.swift; sourceTree = "<group>"; };
 		3CB106E929FD91C07948C23D /* TravelTimes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelTimes.swift; sourceTree = "<group>"; };
@@ -632,6 +644,7 @@
 		8F8E56D78749EDCE34DF8385 /* RelanceMac.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = RelanceMac.entitlements; sourceTree = "<group>"; };
 		8F9BBE7BB317EE70061CDB73 /* MemoHA.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoHA.swift; sourceTree = "<group>"; };
 		90710C68F0B11F5A74C59129 /* TaskDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskDetailView.swift; sourceTree = "<group>"; };
+		91FB744F65CB739C1A9D708C /* EnviesSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnviesSettingsView.swift; sourceTree = "<group>"; };
 		950A03316412CBC5F27C5479 /* Groupes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Groupes.swift; sourceTree = "<group>"; };
 		965A3B9A7F0371E3299ADA39 /* TasksAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksAPI.swift; sourceTree = "<group>"; };
 		967ED0E0B086490E32E03E0B /* WatchQuickAdd.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchQuickAdd.swift; sourceTree = "<group>"; };
@@ -915,6 +928,7 @@
 			isa = PBXGroup;
 			children = (
 				022966EB69538C1A4A0775FE /* Relance */,
+				C6EACB3CE30FFB371A664587 /* RelanceCaptures */,
 				9188D9530A157E03BC0FB7A8 /* RelanceMac */,
 				03FDEE4EB3BDD6B1BC68A7E9 /* RelanceShare */,
 				103CB1AB909D91F6CC84DEE1 /* RelanceTests */,
@@ -953,6 +967,7 @@
 				9966A98CACCCB07E311345FA /* DiagnosticView.swift */,
 				2085B3617089E328A5BF3F30 /* DoneView.swift */,
 				61778EC8217DA0E828BF65E1 /* DureeRow.swift */,
+				91FB744F65CB739C1A9D708C /* EnviesSettingsView.swift */,
 				FC881104B3EF983FE718DAAE /* ErreursView.swift */,
 				4544084AD09A0D9E5EC2923F /* HASettingsSection.swift */,
 				DA74C2AD3519045DE673C1B1 /* InboxView.swift */,
@@ -1023,6 +1038,7 @@
 			isa = PBXGroup;
 			children = (
 				2D32FEC519FB14B6CA29BE8F /* Relance.app */,
+				089B13F30BD4201CE5C20D4D /* RelanceCaptures.xctest */,
 				9FC595196AA59A6F7E158258 /* RelanceMac.app */,
 				886B747EA2AD882590B8C0FE /* RelanceShare.appex */,
 				9BE2244FA751B3FDCB2E97BB /* RelanceTests.xctest */,
@@ -1093,6 +1109,14 @@
 				457838C7A37CEB93648C4AB1 /* TaskCommands.swift */,
 			);
 			path = RelanceMac;
+			sourceTree = "<group>";
+		};
+		C6EACB3CE30FFB371A664587 /* RelanceCaptures */ = {
+			isa = PBXGroup;
+			children = (
+				38FFE8E011E8F28D1AB69AF0 /* Captures.swift */,
+			);
+			path = RelanceCaptures;
 			sourceTree = "<group>";
 		};
 		DD6ADFCAB085A747B7C0B264 /* RelanceWatch */ = {
@@ -1178,6 +1202,24 @@
 			productName = RelanceWidgets;
 			productReference = B5A30FBAE95AD10F86EA6D23 /* RelanceWidgets.appex */;
 			productType = "com.apple.product-type.app-extension";
+		};
+		3D24A7D382B9EB9158427B39 /* RelanceCaptures */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 98878490CB4C3784A16CA68D /* Build configuration list for PBXNativeTarget "RelanceCaptures" */;
+			buildPhases = (
+				CE325D5024936AE296D79AF8 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				5A05D47FEB651F877607D8C8 /* PBXTargetDependency */,
+			);
+			name = RelanceCaptures;
+			packageProductDependencies = (
+			);
+			productName = RelanceCaptures;
+			productReference = 089B13F30BD4201CE5C20D4D /* RelanceCaptures.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 		44BF28039A773F50D5B322D1 /* RelanceWatchWidgets */ = {
 			isa = PBXNativeTarget;
@@ -1314,6 +1356,10 @@
 					28FC620AC0B5772633531BD6 = {
 						DevelopmentTeam = GD6W292ZXP;
 					};
+					3D24A7D382B9EB9158427B39 = {
+						DevelopmentTeam = GD6W292ZXP;
+						TestTargetID = 771442508ECBB75C1E72BA56;
+					};
 					44BF28039A773F50D5B322D1 = {
 						DevelopmentTeam = GD6W292ZXP;
 					};
@@ -1359,6 +1405,7 @@
 				E4C673A16552B21499F5123B /* RelanceWatch */,
 				44BF28039A773F50D5B322D1 /* RelanceWatchWidgets */,
 				9BAF880CC3453E9283C31453 /* RelanceTests */,
+				3D24A7D382B9EB9158427B39 /* RelanceCaptures */,
 			);
 		};
 /* End PBXProject section */
@@ -1416,6 +1463,7 @@
 				FB1699F3D7AB1A4384E5522E /* DureeRow.swift in Sources */,
 				B04F3548AE5D3BCBFD303E59 /* EnergyMetrics.swift in Sources */,
 				129BBE1FBC165864FBA0C6CE /* EnvieSuggestions.swift in Sources */,
+				CDA70C1DA890F13BFF53DB9A /* EnviesSettingsView.swift in Sources */,
 				F2705EDD167FF8D3853E4DE0 /* ErreursView.swift in Sources */,
 				28789DBD3D4F6CA8FB3B49EE /* GoogleAuth.swift in Sources */,
 				67A4FDCDD524644D106A829B /* GoogleRefreshSession.swift in Sources */,
@@ -1544,6 +1592,7 @@
 				AB24AEB09104DFA277722A61 /* DueText.swift in Sources */,
 				AC123E3FDCBA451F62C28169 /* DureeRow.swift in Sources */,
 				3D64BDAD7CC844B33E35716A /* EnvieSuggestions.swift in Sources */,
+				79E245E1200EEABE28CF02C2 /* EnviesSettingsView.swift in Sources */,
 				598A9592E9AEFADE2F9D16DA /* ErreursView.swift in Sources */,
 				092960B2E85CCE39F272B33A /* GoogleAuth.swift in Sources */,
 				6F427AFAE378B76CFA22DF05 /* GoogleRefreshSession.swift in Sources */,
@@ -1772,6 +1821,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CE325D5024936AE296D79AF8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A901E27B726A9E0FF82015D2 /* Captures.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		E2CD2426D7817166E0F17415 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -1856,6 +1913,11 @@
 			target = 5D71BB8F010C077B4F80B7E1 /* RelanceShare */;
 			targetProxy = 929E492968171A4A7DF91DCB /* PBXContainerItemProxy */;
 		};
+		5A05D47FEB651F877607D8C8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 771442508ECBB75C1E72BA56 /* Relance */;
+			targetProxy = 68E381C61BD779651AFAF3F4 /* PBXContainerItemProxy */;
+		};
 		6A816B9FA15F6502E92D4F9C /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 28FC620AC0B5772633531BD6 /* RelanceWidgets */;
@@ -1910,6 +1972,23 @@
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		52AE44A4241FD65EE36582A5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = fr.alexandrefau.RelanceCaptures;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Relance;
 			};
 			name = Release;
 		};
@@ -2187,6 +2266,23 @@
 			};
 			name = Release;
 		};
+		F6348C832DB023109DE42AF3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = fr.alexandrefau.RelanceCaptures;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Relance;
+			};
+			name = Debug;
+		};
 		F893E4C07E2026EE99D75FB0 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -2310,6 +2406,15 @@
 			buildConfigurations = (
 				7796FB9B1880E5FAA9D52CD3 /* Debug */,
 				5924A74C146F44AC0D1546D1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		98878490CB4C3784A16CA68D /* Build configuration list for PBXNativeTarget "RelanceCaptures" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F6348C832DB023109DE42AF3 /* Debug */,
+				52AE44A4241FD65EE36582A5 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

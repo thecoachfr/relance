@@ -31,6 +31,9 @@ struct ToSeeSection: View {
     var pieces: [TacheHA.Piece] = []
     /// Aperçu du billet, tenu par la fiche (voir `PiecesSection.apercu`) ; `nil` hors d'une fiche (saisie rapide).
     var apercu: Binding<URL?>? = nil
+    /// Interrupteur « Envie » en tête ; sans lui (fiche et saisie rapide, 28/10), c'est le sélecteur de nature
+    /// (Tâche · Info · Envie) qui range la tâche dans les envies.
+    var avecInterrupteur = true
     /// Passer en envie retire l'échéance du formulaire.
     var onEnable: () -> Void = {}
     @State private var billetAbsent = false
@@ -39,11 +42,13 @@ struct ToSeeSection: View {
 
     var body: some View {
         Section {
-            Toggle(isOn: Binding(get: { toSee != nil }, set: { on in
-                notes = ToSee.notes(notes, setting: on ? ToSee(kind) : nil)
-                if on { onEnable() }
-            })) {
-                Label(toSee?.kind.isDated == true ? "Envie" : "Envie, sans échéance", systemImage: "bookmark")
+            if avecInterrupteur {
+                Toggle(isOn: Binding(get: { toSee != nil }, set: { on in
+                    notes = ToSee.notes(notes, setting: on ? ToSee(kind) : nil)
+                    if on { onEnable() }
+                })) {
+                    Label(toSee?.kind.isDated == true ? "Envie" : "Envie, sans échéance", systemImage: "bookmark")
+                }
             }
             if let toSee {
                 // Sept types : un menu plutôt qu'un sélecteur segmenté (illisible au-delà de cinq sur iPhone).

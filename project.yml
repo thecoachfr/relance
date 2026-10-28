@@ -130,6 +130,7 @@ targets:
       - Relance/Views/ToSeeViews.swift
       - Relance/Views/PourInfoViews.swift
       - Relance/Views/MagasinViews.swift
+      - Relance/Views/EnviesSettingsView.swift
       - Relance/Views/RecurrenceViews.swift
       - Relance/Views/TaskEditor.swift
       - Relance/Views/HASettingsSection.swift
@@ -347,6 +348,18 @@ targets:
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES
+  # Captures d'écran pour les revues d'ergonomie (28/10/2026) : test d'interface qui ouvre les écrans en mode démo,
+  # fait défiler et écrit les PNG dans /tmp/captures-relance. Schéma à part : jamais lancé avant un envoi.
+  RelanceCaptures:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [RelanceCaptures]
+    dependencies:
+      - target: Relance
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: Relance
 schemes:
   Relance:
     build:
@@ -356,6 +369,12 @@ schemes:
         RelanceTests: [test]
     test:
       targets: [RelanceTests]
+  RelanceCaptures:
+    build:
+      targets:
+        RelanceCaptures: [test]
+    test:
+      targets: [RelanceCaptures]
   RelanceMac:
     build:
       targets:

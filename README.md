@@ -105,6 +105,7 @@ iPhone, iPad, montre (incluse dans l'app iPhone) et Mac se mettent à jour depui
 | `RelanceWatch/`, `RelanceWatchWidgets/` | App et complications Apple Watch | ; écran Diagnostic de la montre (`WatchDiagnostic.swift`) |
 | `homeassistant/` | Vigie AppDaemon (phase 3) : push, tri, boîte d'entrée Google → Home Assistant |
 | `RelanceTests/` | Tests (Swift Testing) |
+| `RelanceCaptures/` | Captures d'écran pour les revues d'ergonomie (28/10) : test d'interface en mode démo qui ouvre les Réglages, les pages Relances et Envies et des fiches, fait défiler et écrit les PNG dans `/tmp/captures-relance`. Schéma à part, jamais lancé avant un envoi : `xcodebuild -scheme RelanceCaptures -destination 'platform=iOS Simulator,name=iPhone 17 Pro Max' test`. Arguments de lancement (debug) : `-reglages 1`, `-sousreglage relances\|envies`, `-fiche <début du titre>`, `-onboardingDone YES` |
 
 ## Vigie Home Assistant (phase 3)
 

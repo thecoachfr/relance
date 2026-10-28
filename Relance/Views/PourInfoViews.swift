@@ -1,25 +1,5 @@
 import SwiftUI
 
-/// Interrupteur « Pour info, sans action » (P9-P) de la saisie rapide et de la fiche.
-struct PourInfoSection: View {
-    @Binding var notes: String
-    /// Activer l'info : une date (aujourd'hui si aucune), pas d'heure.
-    var onEnable: () -> Void = {}
-
-    var body: some View {
-        Section {
-            Toggle(isOn: Binding(get: { PourInfo.est(notes) }, set: { on in
-                notes = PourInfo.notes(notes, actif: on)
-                if on { onEnable() }
-            })) {
-                Label("Pour info, sans action", systemImage: "megaphone")
-            }
-        } footer: {
-            Text("Aucune relance, rien à cocher : annoncé dans le résumé du matin et affiché le jour même, puis il disparaît. L'heure est facultative, seulement affichée. Avec « Répéter », il revient tout seul.")
-        }
-    }
-}
-
 /// « Pour info » en tête d'À faire (iPhone, iPad, Mac) : les infos du jour, une ligne chacune, sans bouton « Fait » ;
 /// celles à venir repliées dessous, pour les retrouver et les modifier.
 struct PourInfoAujourdhuiSection: View {
@@ -69,5 +49,59 @@ struct PourInfoAujourdhuiSection: View {
         }
         .buttonStyle(.plain)
         .accessibilityHint("Ouvre la fiche")
+    }
+}
+
+/// Nature d'une tâche (revue d'ergonomie du 28/10) : une tâche ordinaire, un rappel « pour info » (P9-P) ou une envie.
+/// Avant : deux interrupteurs rangés dans « Plus d'options ». Chaque nature ne montre que ses sections.
+enum NatureTache: String, CaseIterable, Identifiable {
+    case tache = "Tâche", info = "Info", envie = "Envie"
+    var id: Self { self }
+
+    init(notes: String) {
+        self = ToSee(notes: notes) != nil ? .envie : PourInfo.est(notes) ? .info : .tache
+    }
+
+    /// Les notes passées à cette nature (lignes 👀… et 📣 ajoutées ou retirées).
+    func notes(_ notes: String, envie kind: ToSee.Kind = .outing) -> String {
+        switch self {
+        case .tache: PourInfo.notes(ToSee.notes(notes, setting: nil), actif: false)
+        case .info: PourInfo.notes(ToSee.notes(notes, setting: nil), actif: true)
+        case .envie: ToSee.notes(PourInfo.notes(notes, actif: false), setting: ToSee(notes: notes) ?? ToSee(kind))
+        }
+    }
+
+    var explication: String? {
+        switch self {
+        case .tache: nil
+        case .info: "Pour info : aucune relance, rien à cocher. Annoncé dans le résumé du matin et affiché le jour même, puis il disparaît. L'heure est facultative, seulement affichée. Avec « Répéter », il revient tout seul."
+        // La section Envie, juste dessous, explique déjà où elle est rangée.
+        case .envie: nil
+        }
+    }
+}
+
+/// Sélecteur segmenté Tâche · Info · Envie, sous le titre de la fiche et de la saisie rapide.
+struct NatureSection: View {
+    @Binding var notes: String
+    /// Type proposé en passant en envie (celui de l'onglet Envies d'où vient la saisie).
+    var kind: ToSee.Kind = .outing
+    /// Appelé après un changement de nature (date à poser ou à retirer).
+    var onChange: (NatureTache) -> Void = { _ in }
+
+    var body: some View {
+        let nature = NatureTache(notes: notes)
+        Section {
+            Picker("Nature", selection: Binding(get: { nature }, set: { nouvelle in
+                notes = nouvelle.notes(notes, envie: kind)
+                onChange(nouvelle)
+            })) {
+                ForEach(NatureTache.allCases) { Text($0.rawValue).tag($0) }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+        } footer: {
+            if let texte = nature.explication { Text(texte) }
+        }
     }
 }

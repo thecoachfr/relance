@@ -43,16 +43,29 @@ struct TaskDetailView: View {
                           systemImage: item.isOverdue() ? "clock.fill" : "clock")
                         .foregroundStyle(item.isOverdue() ? .red : .secondary)
                 }
+                // Une ligne tant qu'il n'y a rien (revue du 28/10 : trois lignes vides prenaient de la place).
                 TextField("Notes", text: visibleNotes, prompt: Text("Notes"), axis: .vertical)
-                    .lineLimit(3...)
+                    .lineLimit(1...)
                     .formFieldWithoutLabel()
+            }
+            // Nature (28/10) : Tâche · Info · Envie, sous le titre ; chacune ne montre que ses sections.
+            NatureSection(notes: $notes) { nature in
+                switch nature {
+                case .info: if !hasDay { day = Calendar.current.startOfDay(for: .now); hasDay = true }
+                case .envie: if ToSee(notes: notes)?.kind.isDated != true { hasDay = false }
+                case .tache: break
+                }
+            }
+            if ToSee(notes: notes) != nil {
+                ToSeeSection(notes: $notes, availability: item.availability, pieces: item.pieces, apercu: $apercu,
+                             avecInterrupteur: false) { hasDay = false }
             }
             ProposalSection(item: item, notes: $notes)
             // Une envie n'a pas d'échéance (ni date, ni agenda), sauf une sortie réservée.
             if ToSee(notes: notes)?.kind.isDated != false {
                 Section("Échéance") {
-                    #if os(macOS)
-                    // Mac : l'interrupteur et la valeur sur la même ligne, comme dans Rappels.
+                    // L'interrupteur et la valeur sur la même ligne, comme dans Rappels (iPhone aussi depuis le 28/10 :
+                    // trois lignes au lieu de cinq).
                     LabeledContent("Date") {
                         HStack {
                             if hasDay { DatePicker("Jour", selection: $day, displayedComponents: .date).labelsHidden() }
@@ -70,34 +83,14 @@ struct TaskDetailView: View {
                         RecurrenceRow(notes: $notes, day: day)
                     }
                     ContexteRow(notes: $notes, hasDay: $hasDay, day: $day)
-                    #else
-                    Toggle("Date", isOn: $hasDay)
-                    if hasDay {
-                        DatePicker("Jour", selection: $day, displayedComponents: .date)
-                        Toggle("Heure", isOn: $hasTime)
-                        if hasTime {
-                            DatePicker("À", selection: $time, displayedComponents: .hourAndMinute)
-                            DureeRow(item: item)
-                        }
-                        RecurrenceRow(notes: $notes, day: day)
-                    }
-                    ContexteRow(notes: $notes, hasDay: $hasDay, day: $day)
-                    #endif
                 }
             }
             ContactSection(notes: $notes, searching: $searchingPlace, memoSource: (category, tags), title: title)
-            ListeSection(item: item)
+            // Une info n'a ni liste ni magasin (rien à faire).
+            if !PourInfo.est(notes) { ListeSection(item: item) }
             // Où une liste d'achats prévient (P9-Q) : le magasin nommé dans le titre, sinon Supermarchés, ou un choix.
             if HAConfig.isActive, item.category == "Achats", item.liste != nil, !item.isCompleted { MagasinSection(item: item) }
             PiecesSection(item: item, apercu: $apercu)
-            // Une info (P9-P) montre son interrupteur en haut, comme une envie.
-            if PourInfo.est(notes) {
-                PourInfoSection(notes: $notes)
-            }
-            // Une envie montre sa section en haut ; « ranger dans les envies » est un réglage rare (Plus d'options).
-            if ToSee(notes: notes) != nil {
-                ToSeeSection(notes: $notes, availability: item.availability, pieces: item.pieces, apercu: $apercu) { hasDay = false }
-            }
             ActionsSection(item: item, lien: item.envie()?.lien.flatMap(URL.init(string:)) ?? ToSee.link(in: NoteLines.visible(notes)))
             Section {
                 Button {
@@ -119,6 +112,8 @@ struct TaskDetailView: View {
                 .accessibilityHint("Priorité, relances, catégorie, tags, agenda, tri")
             }
             if showMore {
+                // Une info ne relance jamais : ni priorité ni relances à régler.
+                if !PourInfo.est(notes) {
                 Section {
                     PriorityPicker(priority: $priority)
                     TaskRemindersRow(reminders: $reminders, priority: priority)
@@ -130,22 +125,20 @@ struct TaskDetailView: View {
                 } footer: {
                     PriorityFooter(priority: priority, reminders: reminders, isEvent: ToSee(notes: notes)?.kind.isDated == true)
                 }
+                }
                 Section {
                     CategoryPicker(category: $category)
                     TagsRow(tags: $tags)
                 }
                 if ToSee(notes: notes)?.kind.isDated != false { CalendarSection(item: item) }
-                if ToSee(notes: notes) == nil, !PourInfo.est(notes) {
-                    PourInfoSection(notes: $notes) {
-                        if !hasDay { day = Calendar.current.startOfDay(for: .now); hasDay = true }
-                    }
-                }
-                if ToSee(notes: notes) == nil, !PourInfo.est(notes) {
-                    ToSeeSection(notes: $notes, availability: item.availability, pieces: item.pieces, apercu: $apercu) { hasDay = false }
-                }
                 RetriageSection(item: item)
             }
         }
+        #if os(iOS)
+        // Bas de la fiche flouté franchement sous Fait / Reporter (revue du 28/10 : le texte qui défilait dessous
+        // restait lisible et brouillait les boutons).
+        .modifier(FlouDuBas())
+        #endif
         .quickLookPreview($apercu)
         .deleteTaskConfirmation(item, isPresented: $confirmDelete) { onClose?() }
         .placeSearch(isPresented: $searchingPlace, notes: $notes)
@@ -331,3 +324,12 @@ struct TaskDetailView: View {
         self.base = TaskFields(item)
     }
 }
+
+#if os(iOS)
+/// Bas de la fiche flouté franchement sous la barre du bas (iOS 26) ; rien avant.
+private struct FlouDuBas: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) { content.scrollEdgeEffectStyle(.hard, for: .bottom) } else { content }
+    }
+}
+#endif

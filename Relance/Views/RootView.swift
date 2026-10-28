@@ -51,6 +51,14 @@ struct MainTabs: View {
         }
         .tabViewStyle(.sidebarAdaptable)
         .sheet(isPresented: $store.showQuickAdd) { QuickAddSheet() }
+        #if DEBUG
+        // `-fiche <début du titre>` au lancement : la fiche de cette tâche ouverte d'emblée (captures d'écran).
+        .task {
+            if let titre = UserDefaults.standard.string(forKey: "fiche") {
+                store.openedTaskID = active.first { $0.title.hasPrefix(titre) }?.localID
+            }
+        }
+        #endif
         .sheet(item: Binding(
             get: { store.openedTaskID.flatMap { store.task($0) } },
             set: { store.openedTaskID = $0?.localID })

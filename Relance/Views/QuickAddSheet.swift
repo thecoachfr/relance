@@ -92,6 +92,15 @@ struct QuickAddSheet: View {
                         .onSubmit(save)
                         .onChange(of: text) { detect() }
                 }
+                // Nature (28/10) : Tâche · Info · Envie, comme dans la fiche.
+                NatureSection(notes: $notes, kind: kind) { nature in
+                    manual = true
+                    switch nature {
+                    case .info: if day == nil { day = Calendar.current.startOfDay(for: .now) }
+                    case .envie: if !(ToSee(notes: notes)?.kind.isDated ?? false) { day = nil }
+                    case .tache: break
+                    }
+                }
                 #if os(iOS)
                 if !isToSee, VNDocumentCameraViewController.isSupported {
                     Section {
@@ -115,13 +124,7 @@ struct QuickAddSheet: View {
                         Text("Une période a été reconnue dans la phrase : c'est plutôt quelque chose à voir qu'une échéance.")
                     }
                 }
-                if !isPourInfo { ToSeeSection(notes: $notes, kind: kind) { day = nil; manual = true } }
-                if !isToSee {
-                    PourInfoSection(notes: $notes) {
-                        if day == nil { day = Calendar.current.startOfDay(for: .now) }
-                        manual = true
-                    }
-                }
+                if isToSee { ToSeeSection(notes: $notes, kind: kind, avecInterrupteur: false) { day = nil; manual = true } }
                 if !isUndated {
                 Section("Échéance") {
                     Picker("Jour", selection: dayChoice) {

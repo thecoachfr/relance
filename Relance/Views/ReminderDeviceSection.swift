@@ -30,8 +30,6 @@ struct ReminderDeviceSection: View {
             if chosen == here, notificationStatus == .denied {
                 Button("Notifications refusées : ouvrir les réglages") { openURL(Self.notificationSettingsURL) }
             }
-        } header: {
-            Text("Relances")
         } footer: {
             Text(footer)
         }

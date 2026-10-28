@@ -13,6 +13,12 @@ struct MacSettingsView: View {
                     .formStyle(.grouped)
                     .frame(width: 520, height: 620)
             }
+            // Revue du 28/10 : les envies ont leur page, comme sur l'iPhone.
+            Tab("Envies", systemImage: "bookmark") {
+                NavigationStack { EnviesSettingsView() }
+                    .formStyle(.grouped)
+                    .frame(width: 520, height: 620)
+            }
             Tab("Mémo", systemImage: "text.book.closed") {
                 NavigationStack { MemoListView() }
                     .formStyle(.grouped)
@@ -58,7 +64,8 @@ private struct GeneralSettings: View {
                 }
             }
             HASettingsSection()
-            ReminderDeviceSection()
+            // L'appareil qui relance est en tête de l'onglet Relances (28/10).
+            Section("Tri par Claude") { RetrierToutSection() }
         }
         .formStyle(.grouped)
         .frame(width: 520, height: 620)
