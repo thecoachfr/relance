@@ -49,6 +49,21 @@ struct ShareComposeView: View {
                             .font(.callout)
                     }
                 }
+                // Photo de produits (P9-R) : en tête de la feuille (28/10 : plus bas, sous le lieu et « Spots photo », on
+                // ne le voyait pas), vers la liste du bon magasin, articles proposés par Claude.
+                if HAConfig.isActive, let fichier, fichier.type.conforms(to: .image), !recipeText {
+                    Section {
+                        Button {
+                            Task { await ajouterAuxCourses() }
+                        } label: {
+                            Label("Ajouter à la liste de courses", systemImage: "cart.badge.plus")
+                        }
+                        .disabled(sending)
+                    } footer: {
+                        Text("Claude lira les produits sur la photo et les proposera dans la liste du bon magasin (une seule par magasin : supermarché, Leroy Merlin…), créée s'il le faut, à garder ou retirer dans l'app.")
+                    }
+                }
+
                 Section {
                     HStack {
                         TextField("Titre", text: $title, axis: .vertical)
@@ -97,20 +112,6 @@ struct ShareComposeView: View {
                         } else {
                             Text("Claude lira les ingrédients du texte et en fera une liste à cocher, quantités indicatives.")
                         }
-                    }
-                }
-
-                // Photo de produits (P9-R) : vers la liste de courses la plus récente, articles proposés par Claude.
-                if HAConfig.isActive, let fichier, fichier.type.conforms(to: .image), !recipeText {
-                    Section {
-                        Button {
-                            Task { await ajouterAuxCourses() }
-                        } label: {
-                            Label("Ajouter à la liste de courses", systemImage: "cart.badge.plus")
-                        }
-                        .disabled(sending)
-                    } footer: {
-                        Text("Claude lira les produits sur la photo et les proposera dans la liste du bon magasin (une seule par magasin : supermarché, Leroy Merlin…), créée s'il le faut, à garder ou retirer dans l'app.")
                     }
                 }
 

@@ -42,6 +42,10 @@ liste visée), `relance_vigie.photos_pass`, `aiguillage_signal._photos_vers_list
 
 ## 4. État
 
+- 28/10 vers 16 h 50 : vu par Alexandre, une photo partagée depuis Photos ne montrait ni « Ajouter à la liste de
+  courses » ni « Pièce jointe » (proposée en « Spots photo », la photo ayant une position). Cause probable : photo de
+  plus de 10 Mo écartée par l'extension ; elle est maintenant réduite (3 000 px, JPEG). Le bouton passe en tête de
+  la feuille.
 - 28/10 : R1 à R4 codés (tests Swift et Python verts), puis règle « un seul type de liste à la fois » :
   Signal range la photo dans la liste du type nommé (sinon Supermarchés) ; après lecture, la vigie déplace pièce et
   articles vers la liste du magasin vu (`destination`, `_photos_deplacer`, `sans_piece`) ; origine `fiche` jamais

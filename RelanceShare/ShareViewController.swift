@@ -53,11 +53,19 @@ final class ShareViewController: UIViewController {
             let nom = provider.suggestedName
             switch item {
             case let url as URL:
-                guard let data = try? Data(contentsOf: url), data.count <= PiecesJointes.tailleMax else { return nil }
-                return FichierPartage(donnees: data, nom: nom ?? url.lastPathComponent,
-                                      type: UTType(filenameExtension: url.pathExtension) ?? type)
+                guard let data = try? Data(contentsOf: url) else { return nil }
+                let typeFichier = UTType(filenameExtension: url.pathExtension) ?? type
+                if data.count > PiecesJointes.tailleMax {
+                    // Photo en pleine définition (plus de 10 Mo) : réduite plutôt qu'écartée (28/10, la photo de
+                    // produits n'arrivait pas, ni en pièce jointe ni vers la liste de courses).
+                    return typeFichier.conforms(to: .image) ? reduite(data, nom: nom ?? url.lastPathComponent) : nil
+                }
+                return FichierPartage(donnees: data, nom: nom ?? url.lastPathComponent, type: typeFichier)
             case let data as Data:
-                return data.count <= PiecesJointes.tailleMax ? FichierPartage(donnees: data, nom: nom ?? "Pièce jointe", type: type) : nil
+                if data.count > PiecesJointes.tailleMax {
+                    return type.conforms(to: .image) ? reduite(data, nom: nom ?? "Photo.jpg") : nil
+                }
+                return FichierPartage(donnees: data, nom: nom ?? "Pièce jointe", type: type)
             case let image as UIImage:
                 return image.jpegData(compressionQuality: 0.9).map { FichierPartage(donnees: $0, nom: nom ?? "Capture.jpg", type: .jpeg) }
             default:
@@ -65,6 +73,19 @@ final class ShareViewController: UIViewController {
             }
         }
         return nil
+    }
+
+    /// Image trop lourde réduite à 3 000 px de côté au plus, en JPEG ; `nil` si elle est illisible.
+    private static func reduite(_ data: Data, nom: String) -> FichierPartage? {
+        guard let image = UIImage(data: data) else { return nil }
+        let echelle = min(1, 3000 / max(image.size.width, image.size.height))
+        let taille = CGSize(width: image.size.width * echelle, height: image.size.height * echelle)
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let jpeg = UIGraphicsImageRenderer(size: taille, format: format).image { _ in image.draw(in: CGRect(origin: .zero, size: taille)) }
+            .jpegData(compressionQuality: 0.85)
+        guard let jpeg, jpeg.count <= PiecesJointes.tailleMax else { return nil }
+        return FichierPartage(donnees: jpeg, nom: ((nom as NSString).deletingPathExtension) + ".jpg", type: .jpeg)
     }
 
     /// Photo partagée depuis Photos : position et date lues dans le fichier (rien n'est gardé de l'image).
