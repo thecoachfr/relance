@@ -26,6 +26,12 @@ nonisolated extension TacheHA {
                 (self.coche, self.maj, self.source) = (coche, maj, source)
             }
 
+            /// Lu sur une photo par Claude et pas encore gardé (P9-R) : `propose: true` dans `autres`.
+            var propose: Bool {
+                get { autres["propose"] == .booleen(true) }
+                set { if newValue { autres["propose"] = .booleen(true) } else { autres["propose"] = nil } }
+            }
+
             private static let known = ["id", "texte", "quantite", "rayon", "coche", "maj", "source"]
 
             init(from decoder: Decoder) throws {
@@ -56,6 +62,8 @@ nonisolated extension TacheHA {
         }
 
         var articles: [Article] = []
+        /// Des articles lus sur une photo attendent d'être gardés (P9-R).
+        var aDesProposes: Bool { articles.contains(where: \.propose) }
         /// Nombre de parts des recettes (quantités prévues pour ce nombre).
         var parts: Int?
         /// `recettes`, et tout champ ajouté par la routine : gardés tels quels.
@@ -88,6 +96,25 @@ nonisolated extension TacheHA {
         }
 
         var cochés: Int { articles.filter(\.coche).count }
+
+        // MARK: Photos de produits (P9-R)
+
+        private var photos: [[String: JSONValeur]] {
+            guard case .liste(let liste)? = autres["photos"] else { return [] }
+            return liste.compactMap { if case .objet(let o) = $0 { o } else { nil } }
+        }
+
+        /// Photos que la vigie n'a pas encore lues (« Claude lit la photo… »).
+        var photosALire: Int { photos.filter { $0["a_lire"] == .booleen(true) }.count }
+        /// Photos que la vigie n'a pas pu lire.
+        var photosEnEchec: Int { photos.filter { $0["echec"] != nil }.count }
+
+        /// Note une photo (pièce jointe de la tâche) à lire par la vigie.
+        mutating func ajouterPhoto(piece: String, le maintenant: String, note: String? = nil) {
+            var entree: [String: JSONValeur] = ["piece": .texte(piece), "a_lire": .booleen(true), "ajoute_le": .texte(maintenant)]
+            if let note, !note.isEmpty { entree["note"] = .texte(note) }
+            autres["photos"] = .liste(photos.filter { $0["piece"] != .texte(piece) }.map(JSONValeur.objet) + [.objet(entree)])
+        }
         /// Liste proposée par la routine d'après le nom d'un plat (« courses pour un risotto », P9-G3).
         var proposee: Bool {
             guard case .liste(let recettes)? = autres["recettes"] else { return false }
@@ -179,6 +206,18 @@ nonisolated extension TacheHA {
             liste.articles = résultat
             if liste.parts == nil { liste.parts = serveur.parts }
             for (key, value) in serveur.autres where liste.autres[key] == nil { liste.autres[key] = value }
+            // Photos de produits (P9-R) : une photo lue (ou en échec) d'un côté l'est pour les deux, sinon elle serait
+            // relue ; les photos ajoutées d'un seul côté sont gardées.
+            if case .liste(let ici)? = locale.autres["photos"], case .liste(let enFace)? = serveur.autres["photos"] {
+                func piece(_ v: JSONValeur) -> JSONValeur? { if case .objet(let o) = v { o["piece"] } else { nil } }
+                func aLire(_ v: JSONValeur) -> Bool { if case .objet(let o) = v { o["a_lire"] == .booleen(true) } else { false } }
+                var photos = ici.map { p in
+                    guard aLire(p), let autre = enFace.first(where: { piece($0) == piece(p) }), !aLire(autre) else { return p }
+                    return autre
+                }
+                photos += enFace.filter { p in !ici.contains { piece($0) == piece(p) } }
+                liste.autres["photos"] = .liste(photos)
+            }
             return liste
         }
     }

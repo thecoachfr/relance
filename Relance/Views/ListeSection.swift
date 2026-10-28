@@ -1,3 +1,5 @@
+import PhotosUI
+import UniformTypeIdentifiers
 import SwiftUI
 
 /// Section « Liste » de la fiche (P9-G1) : articles cochables d'une tâche (courses, valise, matériel…).
@@ -25,6 +27,14 @@ struct ListeSection: View {
                         }
                         .accessibilityElement(children: .combine)
                     }
+                    // Photos de produits pas encore lues par Claude (P9-R).
+                    ForEach(0..<liste.photosALire, id: \.self) { _ in
+                        Label {
+                            Text("Claude lit la photo…")
+                        } icon: {
+                            ProgressView()
+                        }
+                    }
                     ForEach(liste.articles) { article in
                         ligne(article)
                     }
@@ -34,6 +44,7 @@ struct ListeSection: View {
                         .focused($saisieActive)
                         .submitLabel(.next)
                         .onSubmit(ajouter)
+                    PhotoDeCoursesBouton(item: item)
                 } header: {
                     HStack {
                         Text("Liste")
@@ -54,6 +65,14 @@ struct ListeSection: View {
                             }
                             .font(.footnote.bold())
                         }
+                    } else if liste.aDesProposes {
+                        HStack {
+                            Text("✦ Lus sur la photo par Claude : retire ceux qui ne vont pas.")
+                            Button("Tout garder") { store.garderProposes(of: item) }
+                                .font(.footnote.bold())
+                        }
+                    } else if liste.photosEnEchec > 0 {
+                        Text("Une photo n'a pas pu être lue : réessaie avec une photo plus nette.")
                     } else if liste.proposee {
                         Text("Liste proposée par Claude d'après une recette classique, quantités indicatives : ajuste-la.")
                     } else if liste.articles.isEmpty {
@@ -67,6 +86,7 @@ struct ListeSection: View {
                         store.setListe(TacheHA.Liste(), of: item)
                         saisieActive = true
                     }
+                    PhotoDeCoursesBouton(item: item)
                 }
             }
         }
@@ -113,6 +133,12 @@ private struct ArticleRow: View {
             .accessibilityLabel(article.coche ? "Décocher \(article.texte)" : "Cocher \(article.texte)")
             TextField("Article", text: $texte)
                 .focused($actif)
+                .overlay(alignment: .trailing) {
+                    // Lu sur une photo, pas encore gardé (P9-R).
+                    if article.propose {
+                        Image(systemName: "sparkles").foregroundStyle(.secondary).accessibilityLabel("Proposé par Claude")
+                    }
+                }
                 .strikethrough(article.coche && !actif)
                 .foregroundStyle(article.coche && !actif ? .secondary : .primary)
                 .submitLabel(.done)
@@ -123,3 +149,100 @@ private struct ArticleRow: View {
         .onChange(of: saisie) { if !actif { texte = saisie } }
     }
 }
+
+// MARK: - Photo de produits (P9-R)
+
+/// « Lire des produits sur une photo » : photo prise ou choisie, jointe à la tâche et notée à lire ; la vigie propose
+/// les articles lus par Claude (à garder ou retirer).
+struct PhotoDeCoursesBouton: View {
+    @Environment(TaskStore.self) private var store
+    let item: TaskItem
+    @State private var choix: [PhotosPickerItem] = []
+    @State private var appareil = false
+    @State private var enCours = false
+    @State private var erreur: String?
+
+    var body: some View {
+        Menu {
+            #if os(iOS)
+            if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                Button("Prendre une photo", systemImage: "camera") { appareil = true }
+            }
+            #endif
+            PhotosPicker(selection: $choix, maxSelectionCount: 4, matching: .images) {
+                Label("Choisir dans Photos", systemImage: "photo.on.rectangle")
+            }
+        } label: {
+            HStack {
+                Label("Lire des produits sur une photo", systemImage: "camera.viewfinder")
+                if enCours { Spacer(); ProgressView() }
+            }
+        }
+        .disabled(enCours)
+        .onChange(of: choix) {
+            let elements = choix
+            choix = []
+            Task {
+                var images: [Data] = []
+                for e in elements { if let d = try? await e.loadTransferable(type: Data.self) { images.append(d) } }
+                await joindre(images)
+            }
+        }
+        #if os(iOS)
+        .fullScreenCover(isPresented: $appareil) {
+            AppareilPhoto { image in
+                appareil = false
+                if let data = image?.jpegData(compressionQuality: 0.9) { Task { await joindre([data]) } }
+            }
+            .ignoresSafeArea()
+        }
+        #endif
+        if let erreur { Text(erreur).font(.footnote).foregroundStyle(.red) }
+    }
+
+    /// Photo réduite hors du fil principal, jointe et notée à lire, puis envoyée tout de suite.
+    private func joindre(_ images: [Data]) async {
+        guard !images.isEmpty else { return }
+        enCours = true
+        erreur = nil
+        let pieces = await Task.detached(priority: .userInitiated) {
+            images.enumerated().compactMap { i, data in
+                try? PiecesJointes.preparer(data, nom: "Produits \(i + 1).jpg", type: .jpeg, source: "photo")
+            }
+        }.value
+        enCours = false
+        if pieces.count < images.count { erreur = "Une photo n'a pas pu être préparée." }
+        store.ajouterPhotosDeCourses(pieces, to: item)
+        Task { await store.sync() }
+    }
+}
+
+#if os(iOS)
+/// Appareil photo du système (UIImagePickerController), pour photographier des produits.
+struct AppareilPhoto: UIViewControllerRepresentable {
+    var fini: (UIImage?) -> Void
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let vue = UIImagePickerController()
+        vue.sourceType = .camera
+        vue.delegate = context.coordinator
+        return vue
+    }
+
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+
+    func makeCoordinator() -> Coordinateur { Coordinateur(fini: fini) }
+
+    final class Coordinateur: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+        let fini: (UIImage?) -> Void
+        init(fini: @escaping (UIImage?) -> Void) { self.fini = fini }
+
+        func imagePickerController(_ picker: UIImagePickerController,
+                                   didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
+            fini(info[.originalImage] as? UIImage)
+        }
+
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) { fini(nil) }
+    }
+}
+#endif

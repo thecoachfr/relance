@@ -100,6 +100,20 @@ struct ShareComposeView: View {
                     }
                 }
 
+                // Photo de produits (P9-R) : vers la liste de courses la plus récente, articles proposés par Claude.
+                if HAConfig.isActive, let fichier, fichier.type.conforms(to: .image), !recipeText {
+                    Section {
+                        Button {
+                            Task { await ajouterAuxCourses() }
+                        } label: {
+                            Label("Ajouter à la liste de courses", systemImage: "cart.badge.plus")
+                        }
+                        .disabled(sending)
+                    } footer: {
+                        Text("Claude lira les produits sur la photo et les proposera dans ta liste de courses la plus récente (sinon une nouvelle « Courses »), à garder ou retirer dans l'app.")
+                    }
+                }
+
                 if HAConfig.isActive, let fichier {
                     Section {
                         Toggle(isOn: $joindre) {
@@ -448,6 +462,44 @@ struct ShareComposeView: View {
             return true
         }
         return true
+    }
+
+    /// Photo de produits (P9-R) : jointe à la liste d'achats ouverte la plus récente (ou à une nouvelle « Courses ») et
+    /// notée à lire ; la vigie de Home Assistant propose les articles lus. Rien d'autre n'est créé.
+    private func ajouterAuxCourses() async {
+        guard let synchro = await HAConfig.makeSynchroniser(withFallback: false), let piece = preparerPiece() else { return }
+        sending = true
+        let maintenant = TacheHA.timestamp(.now)
+        let ouvertes = ((try? synchro.tous()) ?? [])
+            .filter { UUID(uuidString: $0.cle) != nil }
+            .compactMap { e -> (cle: String, tache: TacheHA, modifie: String)? in
+                guard let t = try? TacheHA(valeur: e.valeur), !t.fait, t.categorie == "Achats", t.liste != nil else { return nil }
+                return (e.cle, t, e.modifieLe)
+            }
+            .sorted { $0.modifie > $1.modifie }
+        let cle = ouvertes.first?.cle ?? UUID().uuidString.lowercased()
+        var tache = ouvertes.first?.tache ?? {
+            var t = TacheHA(titre: "Courses")
+            t.categorie = "Achats"
+            t.liste = TacheHA.Liste()
+            return t
+        }()
+        if !tache.pieces.contains(where: { $0.id == piece.id }) && tache.pieces.count < TacheHA.Piece.maxParTache {
+            tache.pieces.append(piece)
+        }
+        tache.notes = TacheHA.Piece.notes(tache.notes, setting: tache.pieces)
+        var liste = tache.liste ?? TacheHA.Liste()
+        liste.ajouterPhoto(piece: piece.id, le: maintenant)
+        tache.liste = liste
+        guard let valeur = try? tache.valeur(),
+              Journal.essayer(.synchro, "Photo vers la liste de courses", { try synchro.ecrire(cle, valeur) }) != nil
+        else { sending = false; return }
+        _ = await Self.within(seconds: 8) { @MainActor in
+            await synchro.synchroniser()
+            await PiecesJointes.envoyerEnAttente()
+            return true
+        }
+        onDone()
     }
 
     /// La pièce prête (photo réduite, texte lu, mise en file d'envoi) ; `nil` si le fichier est illisible.

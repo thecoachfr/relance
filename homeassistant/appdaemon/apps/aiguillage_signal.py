@@ -26,7 +26,7 @@ Réglages : `/config/aiguillage_signal.json` ({"compte": "+33…", "sources": {"
 `sensor.aiguillage_signal`.
 """
 
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, quote, urlparse
 import re
 import uuid
 
@@ -113,6 +113,18 @@ def message_retenu(donnees, compte, sources, note_a_soi=True):
         if (envoye.get("destinationNumber") or envoye.get("destination")) == compte:
             return envoye.get("message") or "", None
     return None
+
+
+def images_note_a_soi(donnees, compte):
+    """Photos jointes à un message de « Note à moi-même » (P9-R, liste de courses) : [{id, contentType, filename}]."""
+    params = donnees.get("params", donnees) if isinstance(donnees, dict) else None
+    env = (params.get("envelope") if isinstance(params, dict) else None) or {}
+    envoye = (env.get("syncMessage") or {}).get("sentMessage")
+    source = env.get("sourceNumber") or env.get("source")
+    if not envoye or source != compte or (envoye.get("destinationNumber") or envoye.get("destination")) != compte:
+        return []
+    return [a for a in envoye.get("attachments") or []
+            if isinstance(a, dict) and a.get("id") and (a.get("contentType") or "").startswith("image/")]
 
 
 # Agent courrier (P9-N, N5, 27/10) : une « Note à moi-même » qui commence par « ? » est une question à l'agent
@@ -208,6 +220,7 @@ if hass is not None:
     import httpx
 
     import aiguillage_memoire as memoire
+    import aiguillage_photos
     import aiguillage_spotify
 
     CORE_API = "http://supervisor/core/api"
@@ -287,6 +300,18 @@ if hass is not None:
             if not retenu:
                 return
             texte, expediteur = retenu
+            # Photo dans la Note à moi-même (P9-R) : produits à racheter, vers la liste de courses la plus récente
+            # (ou celle que nomme le texte) ; rien d'autre (ni agent, ni consigne de lieu).
+            images = images_note_a_soi(donnees, conf["compte"]) if expediteur is None else []
+            if images:
+                try:
+                    titre = await self.run_in_executor(self._photos_vers_liste, images, texte)
+                    self.log(f"Signal : {len(images)} photo(s) de produits vers « {titre} »")
+                except Exception as exc:  # noqa: BLE001
+                    self._etat["derniere_erreur"] = f"{datetime.now():%d/%m %H:%M} photos {exc}"[:250]
+                    self.log(f"Signal : photos de produits, ERREUR {exc!r}", level="WARNING")
+                await self._publier()
+                return
             route, quoi = routage(texte, expediteur)
             if route == "agent":
                 # Question à l'agent courrier (N5, 27/10) : « ? … » dans la Note à moi-même ; rien d'autre.
@@ -313,6 +338,35 @@ if hass is not None:
                     self._etat["derniere_erreur"] = f"{datetime.now():%d/%m %H:%M} {ref['lien']} {exc}"[:250]
                     self.log(f"Signal : ERREUR pour {ref['lien']} : {exc!r}", level="WARNING")
             await self._publier()
+
+        def _photos_vers_liste(self, images, texte):
+            """Photos de Signal → fichiers de `donnees_apps`, puis la liste visée (créée s'il n'y en a pas), notées à
+            lire ; la vigie les lit (P9-R). Renvoie le titre de la liste."""
+            base = self._hote.replace("ws://", "http://").replace("wss://", "https://")
+            jeton = {"Authorization": f"Bearer {os.environ['SUPERVISOR_TOKEN']}"}
+            pieces = []
+            for a in images:
+                r = httpx.get(f"{base}/v1/attachments/{a['id']}", timeout=30)
+                r.raise_for_status()
+                nom = a.get("filename") or "Photo Signal.jpg"
+                envoi = httpx.post(f"{CORE_API}/donnees_apps/fichiers/{self._espace}", content=r.content, timeout=30,
+                                   headers={**jeton, "Content-Type": a["contentType"], "X-Nom": quote(nom)})
+                envoi.raise_for_status()
+                pieces.append(envoi.json())
+            note = (texte or "").strip() or None
+            for _ in range(3):  # conflit de version : on relit et on recommence
+                enregistrements = self._service("donnees_apps", "lire", {"espace": self._espace}).get("enregistrements", [])
+                cible = aiguillage_photos.liste_cible(enregistrements, note)
+                cle_liste = cible["cle"] if cible else str(uuid.uuid4())
+                valeur = cible["valeur"] if cible else aiguillage_photos.nouvelle_liste(note)
+                valeur = aiguillage_photos.avec_photos(valeur, pieces, datetime.now(UTC).isoformat(), note)
+                resultat = self._service("donnees_apps", "ecrire", {
+                    "espace": self._espace, "cle": cle_liste, "valeur": valeur,
+                    "version_attendue": cible["version"] if cible else 0,
+                    "modifie_par": "signal", "op_id": str(uuid.uuid4())}) or {}
+                if resultat.get("statut") != "conflit":
+                    return valeur.get("titre", "Courses")
+            raise RuntimeError("liste en conflit trois fois de suite")
 
         def _creer(self, ref, texte, expediteur):
             """Écrit l'envie (version attendue 0 : jamais par-dessus une envie existante). Renvoie (titre, statut)."""

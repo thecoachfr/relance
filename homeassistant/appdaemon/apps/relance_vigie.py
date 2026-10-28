@@ -27,6 +27,7 @@ from appdaemon.plugins.hass import Hass
 import aiguillage_actions
 import aiguillage_agenda
 import aiguillage_lecteur
+import aiguillage_photos
 import aiguillage_radio
 import aiguillage_spotify
 import aiguillage_spotify_lecture
@@ -56,6 +57,9 @@ INBOX_NAMESPACE = uuid.UUID("6f1c2a3e-1d8b-4e5f-9a7c-2b4d6e8f0a1c")
 PUSH_DEBOUNCE = 3
 # Disponibilités TMDB (P9-B3) : passage peu après une modification, puis toutes les heures ; plafond par passage.
 TMDB_DEBOUNCE = 30
+# Photos de produits à lire (P9-R) : peu après l'écriture, quelques photos par passage.
+PHOTOS_DEBOUNCE = 5
+PHOTOS_PER_PASS = 3
 TMDB_PER_PASS = 10
 # Playlist Spotify « À écouter » (P9-D4) : même rythme que TMDB.
 SPOTIFY_DEBOUNCE = 30
@@ -136,6 +140,9 @@ class RelanceVigie(Hass):
         self._tmdb_token_path = Path(self.args.get("tmdb_token_file", "/config/tmdb_token"))
         self._tmdb_handle = None
         self._tmdb_missing_logged = False
+        self._photos_handle = None
+        # Essais par photo (le fichier peut arriver après la fiche) : 5 au plus, puis la photo est notée en échec.
+        self._photos_essais = {}
         # Spotify (P9-D4) : identifiants et jeton de rafraîchissement, écrits par homeassistant/scripts/spotify_jeton.py.
         self._spotify_path = Path(self.args.get("spotify_file", "/config/spotify_aiguillage.json"))
         self._spotify_handle = None
@@ -291,6 +298,10 @@ class RelanceVigie(Hass):
         if self._spotify_handle:
             self.cancel_timer(self._spotify_handle)
         self._spotify_handle = self.run_in(self.spotify_pass, SPOTIFY_DEBOUNCE)
+        # Photo de produits ajoutée à une liste (P9-R) : lue par Claude peu après.
+        if self._photos_handle:
+            self.cancel_timer(self._photos_handle)
+        self._photos_handle = self.run_in(self.photos_pass, PHOTOS_DEBOUNCE)
         if self._radio_handle:
             self.cancel_timer(self._radio_handle)
         self._radio_handle = self.run_in(self.radio_pass, RADIO_DEBOUNCE)
@@ -300,6 +311,85 @@ class RelanceVigie(Hass):
         self.log(f"{self._espace} : {self._changes} modification(s) dans Home Assistant, réveil des appareils")
         self._changes = 0
         self.push_all("modification_ha")
+
+    # MARK: - Photos de produits → liste de courses (P9-R)
+
+    def photos_pass(self, **kwargs):
+        """Photos notées à lire dans une liste (`liste.photos[].a_lire`) : image envoyée à Claude, articles lus ajoutés
+        (proposés, à valider dans l'app), photo notée lue. Même clé API et même budget mensuel que le tri."""
+        self._photos_handle = None
+        try:
+            records = self._service("donnees_apps", "lire", {"espace": self._espace}).get("enregistrements", [])
+        except Exception as error:  # noqa: BLE001
+            self.log(f"Photos : tâches illisibles : {error!r}", level="WARNING")
+            return
+        a_lire = [(r, ph) for r in records if self._is_task_key(r.get("cle", "")) and r.get("valeur")
+                  for ph in aiguillage_photos.photos_a_lire(r["valeur"])][:PHOTOS_PER_PASS]
+        if not a_lire:
+            return
+        try:
+            import anthropic
+            cle_api = Path(self.args.get("tri_cle_api_file", "/config/anthropic_api_key")).read_text().strip()
+        except (ImportError, FileNotFoundError) as error:
+            self.log(f"Photos : lecture impossible ({error!r})", level="WARNING")
+            return
+        etat = self._tri_etat()
+        mois = datetime.now(PARIS).strftime("%Y-%m")
+        if etat.get("mois") != mois:
+            etat.update(mois=mois, cout_mois=0.0, passages_mois=0)
+        if etat.get("cout_mois", 0) >= float(self.args.get("tri_budget_mensuel", 30)):
+            self.log("Photos : budget du mois atteint (celui du tri), photos laissées à lire", level="WARNING")
+            return
+        espace_travail = self.args.get("tri_workspace_id")
+        client = anthropic.Anthropic(api_key=cle_api, timeout=120.0, max_retries=2,
+                                     default_headers={"anthropic-workspace-id": espace_travail} if espace_travail else None)
+        modele = self.args.get("photos_modele", self.args.get("tri_modele", aiguillage_tri.MODELE))
+        for record, photo in a_lire:
+            valeur, piece = record["valeur"], photo["piece"]
+            lus, echec = [], None
+            try:
+                reponse = httpx.get(f"{CORE_API}/donnees_apps/fichiers/{self._espace}/{piece}", timeout=30,
+                                    headers={"Authorization": f"Bearer {os.environ['SUPERVISOR_TOKEN']}"})
+                reponse.raise_for_status()
+                image = reponse.content
+                type_mime = aiguillage_photos.type_de_la_piece(valeur, piece)
+                if len(image) > aiguillage_photos.TAILLE_MAX or type_mime not in aiguillage_photos.TYPES_IMAGE:
+                    echec = "image trop lourde ou d'un type non lu"
+                else:
+                    message = client.messages.create(
+                        model=modele, max_tokens=4000, system=aiguillage_photos.CONSIGNE,
+                        messages=[{"role": "user", "content": aiguillage_photos.contenu(
+                            image, type_mime, aiguillage_photos.articles_deja(valeur), photo.get("note"))}],
+                        output_config={"effort": "medium",
+                                       "format": {"type": "json_schema", "schema": aiguillage_photos.SCHEMA}})
+                    cout = aiguillage_tri.cout(message.usage, modele)
+                    etat["cout_mois"] = etat.get("cout_mois", 0) + cout
+                    if message.stop_reason != "end_turn":
+                        echec = f"lecture interrompue ({message.stop_reason})"
+                    else:
+                        brut = next((b.text for b in message.content if b.type == "text"), "{}")
+                        lus = json.loads(brut).get("articles", [])
+            except Exception as error:  # noqa: BLE001 - fichier pas encore arrivé, réseau : nouvel essai dans 1 min
+                essais = self._photos_essais.get(piece, 0) + 1
+                self._photos_essais[piece] = essais
+                self.log(f"Photos : « {valeur.get('titre')} » non lue (essai {essais}) : {error!r}", level="WARNING")
+                if essais < 5:
+                    if not self._photos_handle:
+                        self._photos_handle = self.run_in(self.photos_pass, 60)
+                    continue
+                echec = "photo introuvable ou illisible"
+            self._photos_essais.pop(piece, None)
+            nouvelle, ajoutes = aiguillage_photos.fusion(valeur, piece, lus, datetime.now(UTC).isoformat(), echec)
+            try:
+                self._service("donnees_apps", "ecrire", {
+                    "espace": self._espace, "cle": record["cle"], "valeur": nouvelle,
+                    "version_attendue": record["version"], "modifie_par": "vigie", "op_id": str(uuid.uuid4())})
+            except Exception as error:  # noqa: BLE001 - conflit : relue au prochain passage
+                self.log(f"Photos : « {valeur.get('titre')} » non écrite : {error!r}", level="WARNING")
+                continue
+            self.log(f"Photos : « {valeur.get('titre')} » : {echec or f'{ajoutes} article(s) proposé(s)'}"
+                     f" ; mois : {etat.get('cout_mois', 0):.2f} $")
+        self._tri_etat(etat)
 
     # MARK: - Disponibilités TMDB (P9-B3)
 

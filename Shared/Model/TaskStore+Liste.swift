@@ -25,9 +25,30 @@ extension TaskStore {
 
     /// Coche ou décoche ; tout coché → « Fait » (renvoie `true` pour proposer « Annuler »), décoché → rouverte.
     @discardableResult
+    /// Photos de produits (P9-R) : jointes à la tâche et notées à lire ; la vigie propose les articles lus.
+    func ajouterPhotosDeCourses(_ pieces: [TacheHA.Piece], to item: TaskItem, now: Date = .now) {
+        guard !pieces.isEmpty else { return }
+        addPieces(pieces, to: item)
+        var liste = item.liste ?? Liste()
+        for piece in pieces { liste.ajouterPhoto(piece: piece.id, le: TacheHA.timestamp(now)) }
+        setListe(liste, of: item)
+    }
+
+    /// « Tout garder » : les articles proposés deviennent des articles ordinaires.
+    func garderProposes(of item: TaskItem, now: Date = .now) {
+        guard var liste = item.liste, liste.aDesProposes else { return }
+        for i in liste.articles.indices where liste.articles[i].propose {
+            liste.articles[i].propose = false
+            liste.articles[i].maj = TacheHA.timestamp(now)
+        }
+        setListe(liste, of: item)
+    }
+
     func toggleArticle(id: String, of item: TaskItem, now: Date = .now) -> Bool {
         guard var liste = item.liste, let i = liste.articles.firstIndex(where: { $0.id == id }) else { return false }
         liste.articles[i].coche.toggle()
+        // Cocher un article proposé (P9-R), c'est le garder.
+        liste.articles[i].propose = false
         liste.articles[i].maj = TacheHA.timestamp(now)
         setListe(liste, of: item)
         if liste.toutCoché, !item.isCompleted {

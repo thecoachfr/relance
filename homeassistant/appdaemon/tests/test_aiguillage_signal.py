@@ -140,3 +140,19 @@ if __name__ == "__main__":
         if nom.startswith("test_"):
             f()
     print("ok")
+
+
+def test_images_de_la_note_a_soi():
+    """P9-R : photo de produits envoyée dans « Note à moi-même » → liste de courses (pas les photos de Yoann)."""
+    compte = "+33600000000"
+    note = {"params": {"envelope": {"sourceNumber": compte, "syncMessage": {"sentMessage": {
+        "destinationNumber": compte, "message": "Leroy Merlin",
+        "attachments": [{"id": "x1.jpg", "contentType": "image/jpeg", "filename": "IMG_1.jpg"},
+                        {"id": "x2.pdf", "contentType": "application/pdf"}]}}}}}
+    assert [a["id"] for a in s.images_note_a_soi(note, compte)] == ["x1.jpg"]
+    yoann = {"params": {"envelope": {"sourceNumber": "+33611111111", "dataMessage": {
+        "message": "", "attachments": [{"id": "y.jpg", "contentType": "image/jpeg"}]}}}}
+    assert s.images_note_a_soi(yoann, compte) == []
+    ailleurs = {"params": {"envelope": {"sourceNumber": compte, "syncMessage": {"sentMessage": {
+        "destinationNumber": "+33622222222", "attachments": [{"id": "z.jpg", "contentType": "image/jpeg"}]}}}}}
+    assert s.images_note_a_soi(ailleurs, compte) == []

@@ -220,6 +220,45 @@ struct ListeStoreTests {
         #expect(action.titre == "Me le rappeler près de : Pharmacies" && !action.auToucher)
     }
 
+    /// Photo de produits (P9-R, 28/10) : notée à lire, articles proposés gardés en cochant ou par « Tout garder ».
+    @Test func photoDeCourses() throws {
+        let store = TaskStore(auth: SlowAccount(), inMemory: true)
+        let courses = store.add(title: "Courses", day: nil, minutes: nil, category: "Achats")
+        let piece = TacheHA.Piece(id: "abc", nom: "Produits 1.jpg", type: "image/jpeg", taille: 1000, source: "photo")
+        store.ajouterPhotosDeCourses([piece], to: courses)
+        #expect(courses.pieces.map(\.id) == ["abc"])
+        #expect(courses.liste?.photosALire == 1)
+        // La vigie a lu la photo : deux articles proposés, photo lue.
+        var liste = try #require(courses.liste)
+        var lu = TacheHA.Liste.Article(texte: "Lessive liquide Skip", source: "photo")
+        lu.propose = true
+        var lu2 = TacheHA.Liste.Article(texte: "Adoucissant Soupline", source: "photo")
+        lu2.propose = true
+        liste.articles = [lu, lu2]
+        liste.autres["photos"] = .liste([.objet(["piece": .texte("abc"), "lue_le": .texte("2026-10-28T14:00:00Z")])])
+        store.setListe(liste, of: courses)
+        #expect(courses.liste?.photosALire == 0 && courses.liste?.aDesProposes == true)
+        _ = store.toggleArticle(id: lu.id, of: courses)
+        #expect(courses.liste?.articles.first?.propose == false)  // cocher, c'est garder
+        store.garderProposes(of: courses)
+        #expect(courses.liste?.aDesProposes == false)
+        // Codage : `propose` est un champ de l'article, gardé tel quel.
+        let donnees = try JSONEncoder().encode(lu)
+        #expect(String(decoding: donnees, as: UTF8.self).contains("\"propose\":true"))
+    }
+
+    /// Conflit entre appareils (P9-R) : une photo lue d'un côté l'est des deux (sinon elle serait relue).
+    @Test func fusionDesPhotos() {
+        var ici = TacheHA.Liste()
+        ici.ajouterPhoto(piece: "abc", le: "2026-10-28T14:00:00Z")
+        ici.ajouterPhoto(piece: "def", le: "2026-10-28T14:01:00Z")
+        var enFace = TacheHA.Liste()
+        enFace.autres["photos"] = .liste([.objet(["piece": .texte("abc"), "lue_le": .texte("2026-10-28T14:02:00Z")]),
+                                          .objet(["piece": .texte("ghi"), "a_lire": .booleen(true)])])
+        let liste = TacheHA.Liste.fusion(locale: ici, serveur: enFace, base: nil)
+        #expect(liste?.photosALire == 2)  // def (ici) et ghi (en face) ; abc lue
+    }
+
     /// Magasin d'une liste (P9-Q, 28/10) : « Courses a Leroy merlin » prévenait près des supermarchés.
     @Test func magasinDeLaListe() throws {
         var lieux = MesLieux.parDefaut
