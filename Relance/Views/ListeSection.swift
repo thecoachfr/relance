@@ -41,6 +41,7 @@ struct ListeSection: View {
                     .onDelete { store.removeArticles(at: $0, of: item) }
                     .onMove { store.moveArticles(from: $0, to: $1, of: item) }
                     TextField("Ajouter un article", text: $saisie)
+                        .formFieldWithoutLabel()
                         .focused($saisieActive)
                         .submitLabel(.next)
                         .onSubmit(ajouter)
@@ -137,19 +138,19 @@ private struct ArticleRow: View {
             }
             .buttonStyle(.borderless)
             .accessibilityLabel(article.coche ? "Décocher \(article.texte)" : "Cocher \(article.texte)")
+            // Sans étiquette : sur Mac, « Article » s'affichait à gauche et poussait le texte à droite (28/10).
             TextField("Article", text: $texte)
+                .formFieldWithoutLabel()
                 .focused($actif)
-                .overlay(alignment: .trailing) {
-                    // Lu sur une photo, pas encore gardé (P9-R).
-                    if article.propose {
-                        Image(systemName: "sparkles").foregroundStyle(.secondary).accessibilityLabel("Proposé par Claude")
-                    }
-                }
                 .strikethrough(article.coche && !actif)
                 .foregroundStyle(article.coche && !actif ? .secondary : .primary)
                 .submitLabel(.done)
                 .onSubmit { onEdit(texte) }
                 .onChange(of: actif) { if !actif, texte != saisie { onEdit(texte) } }
+            // Lu sur une photo, pas encore gardé (P9-R) : à sa place au bout de la ligne, pas par-dessus le texte.
+            if article.propose {
+                Image(systemName: "sparkles").foregroundStyle(.secondary).accessibilityLabel("Proposé par Claude")
+            }
         }
         .onAppear { texte = saisie }
         .onChange(of: saisie) { if !actif { texte = saisie } }
