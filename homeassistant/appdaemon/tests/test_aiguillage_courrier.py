@@ -622,8 +622,11 @@ def test_metadonnees_sans_corps():
 
 def test_garde_fou_lecture_seule():
     publiques = {n for n, _ in inspect.getmembers(c.ClientGmail, inspect.isfunction) if not n.startswith("_")}
-    assert publiques == {"profil", "historique", "lister", "message", "fil", "metadonnees", "libelles",
+    assert publiques == {"profil", "historique", "lister", "lister_fils", "message", "fil", "metadonnees", "libelles",
                          "creer_libelle", "poser_libelles"}
+    # lister_fils (« Aujourd'hui », 28/10) : une lecture de `threads`, rien d'autre.
+    fils = inspect.getsource(c.ClientGmail.lister_fils)
+    assert 'self._lire("threads"' in fils and "_ecrire" not in fils
     # metadonnees (agent sur Signal) : en-têtes et aperçu seulement, jamais le corps.
     meta = inspect.getsource(c.ClientGmail.metadonnees)
     assert '"format": "metadata"' in meta and "full" not in meta and "raw" not in meta
@@ -1438,3 +1441,265 @@ def test_carte_pour_les_hubs():
     c2 = c.carte(r)
     assert c2["qui"] == "Tom CHICHA (leboncoin)" and c2["urgent"] is True
     assert c.carte({"id": "b", "fil": "g", "de": "noreply@enedis.fr"})["urgent"] is False
+
+
+# MARK: - « Aujourd'hui » (28/10)
+
+MERCREDI = datetime(2026, 10, 28, 10, 0, tzinfo=c.PARIS)
+
+
+def _fil_gmail(fid, messages):
+    """Fil `threads.get` (format metadata) : messages (id, libellés, date, destinataire, objet, aperçu)."""
+    return {"id": fid, "messages": [
+        {"id": i, "threadId": fid, "labelIds": list(lib), "internalDate": str(int(q.timestamp() * 1000)),
+         "snippet": apercu, "payload": {"headers": [{"name": "To", "value": a}, {"name": "Subject", "value": sujet}]}}
+        for i, lib, q, a, sujet, apercu in messages]}
+
+
+class FauxGmailFils:
+    def __init__(self, fils):
+        self.fils, self.recherches = fils, []
+
+    def lister_fils(self, q, limite=20):
+        self.recherches.append((q, limite))
+        return list(self.fils)[:limite]
+
+    def fil(self, fid):
+        if fid not in self.fils:
+            raise c.Introuvable(fid)
+        return self.fils[fid]
+
+
+def test_envoye_du_fil():
+    il_y_a_5j = MERCREDI - timedelta(days=5)
+    devis = _fil_gmail("t1", [("m1", ["INBOX"], il_y_a_5j - timedelta(days=1), "alexandre.fau@gmail.com", "Cuisine", "x"),
+                              ("m2", ["SENT"], il_y_a_5j, "Marc <marc@cuisines.fr>", "Re: Cuisine",
+                               "Pouvez-vous m&#39;envoyer le devis ?"),
+                              ("m3", ["DRAFT"], MERCREDI, "marc@cuisines.fr", "Re: Cuisine", "brouillon")])
+    e = c.envoye_du_fil(devis)
+    assert e["id"] == "m2" and e["fil"] == "t1" and e["nb"] == 2 and e["recus"] == 1
+    assert e["apercu"] == "Pouvez-vous m'envoyer le devis ?" and "marc@cuisines.fr" in e["a"]
+    # Dernier message reçu, mail à soi-même, réponse à une adresse automatique : rien à relancer.
+    assert c.envoye_du_fil(_fil_gmail("t2", [("a", ["SENT"], il_y_a_5j, "x@y.fr", "s", ""),
+                                             ("b", ["INBOX"], MERCREDI, "alexandre.fau@gmail.com", "s", "")])) is None
+    assert c.envoye_du_fil(_fil_gmail("t3", [("a", ["SENT", "INBOX"], il_y_a_5j, "alexandre.fau@gmail.com", "s", "")])) is None
+    assert c.envoye_du_fil(_fil_gmail("t4", [("a", ["SENT"], il_y_a_5j, "alexandre.fau+memo@gmail.com", "s", "")])) is None
+    assert c.envoye_du_fil(_fil_gmail("t5", [("a", ["SENT"], il_y_a_5j, "noreply@banque.fr", "s", "")])) is None
+    assert c.envoye_du_fil({"messages": []}) is None
+
+
+def test_lire_envoyes_lecture_bornee():
+    q = MERCREDI - timedelta(days=4)
+    g = FauxGmailFils({"t1": _fil_gmail("t1", [("m1", ["SENT"], q, "tom@x.fr", "Switch", "Toujours ok pour 150 € ?")]),
+                       "t2": _fil_gmail("t2", [("m2", ["INBOX"], q, "alexandre.fau@gmail.com", "s", "")])})
+    trouves = c.lire_envoyes(g, MERCREDI)
+    assert [e["id"] for e in trouves] == ["m1"]
+    assert g.recherches == [("in:sent newer_than:15d older_than:3d", c.RELANCE_FILS_MAX)]
+
+
+def _range(db, ident, quand, categorie, sujet="Info", resume=None, echeance=None, libelles=("INBOX",), fil=None,
+           extrait="Texte du mail"):
+    f = c.fiche(msg(ident, sujet=sujet, quand=quand, libelles=libelles, fil=fil, corps=extrait))
+    c.enregistrer(db, f, {"categorie": categorie, "source": "ia", "raison": "IA", "resume": resume,
+                          "echeance": echeance}, quand)
+
+
+def _envoye(ident, fil, jours, sujet="Devis cuisine"):
+    q = MERCREDI - timedelta(days=jours)
+    return {"id": ident, "fil": fil, "a": "Marc <marc@cuisines.fr>", "sujet": sujet, "apercu": "Le devis ?",
+            "envoi_ms": int(q.timestamp() * 1000), "nb": 2, "recus": 1}
+
+
+def test_candidats_aujourdhui():
+    db = _base()
+    h = MERCREDI - timedelta(hours=3)
+    _range(db, "f1", h, "a_traiter", sujet="Switch", resume="Tom veut la Switch.")
+    _range(db, "f2", h, "a_traiter", sujet="Reporté")
+    db.execute("INSERT INTO plus_tard (id, jusqua, maj) VALUES ('f2', '2026-10-29T09:00:00+01:00', 'x')")
+    _range(db, "v1", h, "fait", sujet="Votre rendez-vous", resume="RDV chez le Dr Martin le 30/10 à 15 h.")
+    _range(db, "v2", h, "bruit", sujet="Votre colis arrive", resume="Colis Amazon en route.", extrait="Livré jeudi")
+    _range(db, "v3", h, "lettre", sujet="Échéance", echeance="2026-11-02")
+    _range(db, "v4", h, "bruit", sujet="Livraison offerte !", libelles=("INBOX", "CATEGORY_PROMOTIONS"))
+    _range(db, "v5", h, "lettre", sujet="Actualités de la semaine")
+    _range(db, "v6", MERCREDI - timedelta(days=30), "fait", sujet="Rendez-vous ancien")
+    # Une réponse de Marc dans le fil t9 : plus rien à relancer là.
+    _range(db, "r9", MERCREDI - timedelta(days=1), "a_traiter", sujet="Re: Devis", fil="t9")
+    envoyes = [_envoye("s1", "t1", 5), _envoye("s2", "t2", 2), _envoye("s3", "t3", 20), _envoye("s9", "t9", 6)]
+    k = c.candidats_aujourdhui(db, MERCREDI, envoyes)
+    assert [x["id"] for x in k["a_faire"]] == ["r9", "f1"] or {x["id"] for x in k["a_faire"]} == {"r9", "f1"}
+    assert "f2" not in {x["id"] for x in k["a_faire"]}
+    assert [x["id"] for x in k["a_relancer"]] == ["s1"] and k["a_relancer"][0]["jours"] == 5
+    venir = {x["id"]: x for x in k["a_venir"]}
+    assert set(venir) == {"v1", "v2", "v3"}
+    # Extrait seulement quand le résumé ne donne pas de date (et jamais au-delà de 1 500 caractères).
+    assert "extrait" not in venir["v1"] and venir["v2"]["extrait"] == "Livré jeudi" and "extrait" not in venir["v3"]
+    assert all("extrait" not in x for x in k["a_faire"] + k["a_relancer"])
+
+
+def test_nettoyer_aujourdhui():
+    k = {"a_faire": [{"id": "f1"}, {"id": "f2"}], "a_relancer": [{"id": "s1", "envoye": "2026-10-23"}],
+         "a_venir": [{"id": "v1"}]}
+    brut = {"a_faire": [{"titre": "Vente de la Switch : répondre à Tom", "detail": None, "echeance": "2026-10-31",
+                         "mails": ["f1", "inconnu", "f1", "f2"]},
+                        {"titre": "Inventé", "detail": None, "echeance": None, "mails": ["x"]}]
+                       + [{"titre": f"T{i}", "detail": None, "echeance": "pas une date", "mails": ["f2"]} for i in range(8)],
+            "a_relancer": [{"titre": "Relancer Marc : devis", "detail": "Sans réponse depuis 5 jours", "mails": ["s1"]},
+                           {"titre": "Pas un envoi", "detail": None, "mails": ["f1"]}],
+            "a_venir": [{"titre": "Dr Martin", "quand": "2026-10-30T15:00", "mails": ["v1"]},
+                        {"titre": "Hier", "quand": "2026-10-27", "mails": ["v1"]},
+                        {"titre": "Trop loin", "quand": "2026-11-10", "mails": ["v1"]},
+                        {"titre": "Mal daté", "quand": "jeudi", "mails": ["v1"]},
+                        {"titre": "Aujourd'hui", "quand": "2026-10-28", "mails": ["v1"]}]}
+    n = c.nettoyer_aujourdhui(brut, k, MERCREDI)
+    assert n["a_faire"][0] == {"titre": "Vente de la Switch : répondre à Tom", "detail": None, "echeance": "2026-10-31",
+                               "mails": ["f1", "f2"]}
+    assert len(n["a_faire"]) == 6 and n["a_faire"][1]["echeance"] is None
+    assert n["a_relancer"] == [{"titre": "Relancer Marc : devis", "detail": "Sans réponse depuis 5 jours",
+                                "depuis": "2026-10-23", "mails": ["s1"]}]
+    assert [x["titre"] for x in n["a_venir"]] == ["Aujourd'hui", "Dr Martin"]
+    assert c.nettoyer_aujourdhui("pas un objet", k, MERCREDI) is None
+    assert c.nettoyer_aujourdhui({}, k, MERCREDI) == {"a_faire": [], "a_relancer": [], "a_venir": []}
+
+
+def _reponse_aujourdhui():
+    return {"a_faire": [{"titre": "Vente de la Switch : répondre à Tom", "detail": None, "echeance": None, "mails": ["f1"]}],
+            "a_relancer": [{"titre": "Relancer Marc : devis", "detail": None, "mails": ["s1"]}],
+            "a_venir": [{"titre": "Dr Martin, 15 h", "quand": "2026-10-30T15:00", "mails": ["v1"]}]}
+
+
+def test_calculer_aujourdhui_appel():
+    ia = FauxClaude(reponse=_reponse_aujourdhui())
+    k = {"a_faire": [{"id": "f1"}], "a_relancer": [{"id": "s1", "envoye": "2026-10-23"}], "a_venir": [{"id": "v1"}]}
+    memo = c.construire_memo([{"summary": "Marc Durand", "description": "cuisiniste"}], None)
+    listes, prix, raison = c.calculer_aujourdhui(ia, k, MERCREDI, memo=memo)
+    assert raison is None and listes["a_venir"][0]["quand"] == "2026-10-30T15:00"
+    assert abs(prix - (1000 * 2.0 + 200 * 10.0) / 1e6) < 1e-12        # prix de Sonnet 5.5
+    kw = ia.appels[0]
+    assert kw["model"] == "claude-sonnet-5-5" and kw["output_config"]["effort"] == "low"
+    assert kw["output_config"]["format"] == {"type": "json_schema", "schema": c.SCHEMA_AUJOURDHUI}
+    assert "thinking" not in kw and "temperature" not in kw
+    # Consigne puis mémo, le dernier bloc en cache ; les candidats dans le message, en DONNÉES.
+    assert len(kw["system"]) == 2 and "Marc Durand" in kw["system"][1]["text"]
+    assert kw["system"][1]["cache_control"] == {"type": "ephemeral"} and "cache_control" not in kw["system"][0]
+    assert "DONNÉES" in kw["messages"][0]["content"] and "mercredi 28/10/2026" in kw["messages"][0]["content"]
+    _, _, raison = c.calculer_aujourdhui(FauxClaude(stop="refusal"), k, MERCREDI)
+    assert raison == "refus du modèle"
+
+
+def test_schema_aujourdhui_strict():
+    def verifier(s):
+        if s.get("type") == "object":
+            assert s["additionalProperties"] is False and set(s["required"]) == set(s["properties"])
+            for v in s["properties"].values():
+                verifier(v)
+        if s.get("type") == "array":
+            verifier(s["items"])
+    verifier(c.SCHEMA_AUJOURDHUI)
+
+
+def _base_aujourdhui():
+    db = _base()
+    h = MERCREDI - timedelta(hours=3)
+    _range(db, "f1", h, "a_traiter", sujet="Switch", resume="Tom veut la Switch.")
+    _range(db, "v1", h, "fait", sujet="Votre rendez-vous", resume="RDV chez le Dr Martin le 30/10 à 15 h.")
+    return db
+
+
+def test_passe_aujourdhui_recalcul_seulement_si_les_candidats_changent():
+    db, etat, donnees = _base_aujourdhui(), {}, FauxDonnees()
+    ia = FauxClaude(reponse=_reponse_aujourdhui())
+    g = FauxGmailFils({"t1": _fil_gmail("t1", [("s1", ["SENT"], MERCREDI - timedelta(days=5), "marc@cuisines.fr",
+                                                 "Devis cuisine", "Le devis ?")])})
+    r = c.passe_aujourdhui(db, etat, MERCREDI, ia, donnees, 3, gmail=g)
+    assert r["calcule"] and r["publie"] and len(ia.appels) == 1 and len(g.recherches) == 1
+    v = donnees.espace["aujourdhui"]
+    assert v["v"] == 1 and v["calcule_le"] == "2026-10-28T09:00:00+00:00"
+    assert v["a_relancer"][0]["depuis"] == "2026-10-23" and v["a_faire"][0]["mails"] == ["f1"]
+    assert etat["valeur"] == v and etat["cout_mois"] > 0
+    # Rien de changé : pas d'appel (et les envoyés ne sont pas relus avant 3 heures).
+    assert not c.passe_aujourdhui(db, etat, MERCREDI + timedelta(hours=1), ia, donnees, 3, gmail=g)["calcule"]
+    assert len(ia.appels) == 1 and len(g.recherches) == 1
+    # Un nouveau mail à traiter : recalcul, mais pas moins de 30 minutes après le précédent.
+    _range(db, "f3", MERCREDI + timedelta(hours=1), "a_traiter", sujet="CRA", resume="Opteamis attend le CRA.")
+    c.passe_aujourdhui(db, etat, MERCREDI + timedelta(hours=1), ia, donnees, 3, gmail=g)
+    assert len(ia.appels) == 2
+    _range(db, "f4", MERCREDI + timedelta(hours=1, minutes=5), "a_traiter", sujet="Autre")
+    c.passe_aujourdhui(db, etat, MERCREDI + timedelta(hours=1, minutes=10), ia, donnees, 3, gmail=g)
+    assert len(ia.appels) == 2
+    c.passe_aujourdhui(db, etat, MERCREDI + timedelta(hours=1, minutes=31), ia, donnees, 3, gmail=g)
+    assert len(ia.appels) == 3
+    # La nuit : rien, même si les candidats changent ; 6 h 45 (force) : toujours, et les envoyés relus.
+    _range(db, "f5", MERCREDI + timedelta(hours=13), "a_traiter", sujet="Nuit")
+    c.passe_aujourdhui(db, etat, MERCREDI.replace(hour=23), ia, donnees, 3, gmail=g)
+    assert len(ia.appels) == 3
+    c.passe_aujourdhui(db, etat, MERCREDI.replace(hour=6, minute=45) + timedelta(days=1), ia, donnees, 3, gmail=g,
+                       force=True)
+    assert len(ia.appels) == 4 and len(g.recherches) == 2
+
+
+def test_passe_aujourdhui_sans_candidat_budget_et_echecs():
+    donnees, ia = FauxDonnees(), FauxClaude(reponse=_reponse_aujourdhui())
+    # Aucun candidat : valeur vide publiée, sans appel à l'IA.
+    etat = {}
+    r = c.passe_aujourdhui(_base(), etat, MERCREDI, ia, donnees, 3)
+    assert r["publie"] and not ia.appels
+    assert donnees.espace["aujourdhui"]["a_faire"] == [] and donnees.espace["aujourdhui"]["a_venir"] == []
+    # Budget atteint : pas d'appel, la valeur publiée reste.
+    etat = {"mois": "2026-10", "cout_mois": 3.0}
+    r = c.passe_aujourdhui(_base_aujourdhui(), etat, MERCREDI, ia, donnees, 3)
+    assert r["raison"] == "budget atteint" and not ia.appels
+    # Mois suivant : compteur remis à zéro.
+    assert c.budget_aujourdhui_ok({"mois": "2026-10", "cout_mois": 3.0}, 3, MERCREDI + timedelta(days=5))
+    # Publication refusée : l'empreinte n'est pas notée, nouvel essai après 30 minutes.
+    db, etat = _base_aujourdhui(), {}
+    donnees.refuser = {"aujourdhui"}
+    r = c.passe_aujourdhui(db, etat, MERCREDI, ia, donnees, 3)
+    assert r["calcule"] and not r["publie"] and "empreinte" not in etat
+    c.passe_aujourdhui(db, etat, MERCREDI + timedelta(minutes=10), ia, donnees, 3)
+    assert len(ia.appels) == 1
+    donnees.refuser = set()
+    c.passe_aujourdhui(db, etat, MERCREDI + timedelta(minutes=31), ia, donnees, 3)
+    assert len(ia.appels) == 2 and "empreinte" in etat
+    # IA injoignable ou refus : la valeur reste, pas de nouvel essai avant 30 minutes.
+    db, etat = _base_aujourdhui(), {}
+    panne = FauxClaude(erreur=RuntimeError("réseau"))
+    r = c.passe_aujourdhui(db, etat, MERCREDI, panne, donnees, 3)
+    assert r["raison"].startswith("IA injoignable") and "valeur" not in etat
+    c.passe_aujourdhui(db, etat, MERCREDI + timedelta(minutes=5), panne, donnees, 3)
+    assert len(panne.appels) == 1
+    # HA injoignable : pas de plantage, l'empreinte n'est pas notée.
+    def en_panne(*a):
+        raise RuntimeError("HA")
+    etat, notes = {}, []
+    r = c.passe_aujourdhui(_base_aujourdhui(), etat, MERCREDI, ia, en_panne, 3, journal=notes.append)
+    assert r["calcule"] and not r["publie"] and "empreinte" not in etat and notes
+
+
+def test_resume_de_9h_commence_par_aujourdhui():
+    valeur = {"v": 1, "calcule_le": "2026-10-28T05:45:00+00:00",
+              "a_faire": [{"titre": "Vente de la Switch : répondre à Tom", "echeance": None, "mails": ["n1"]},
+                          {"titre": "CRA d'octobre pour Opteamis", "echeance": "2026-10-31", "mails": ["x"]},
+                          {"titre": "Troisième", "echeance": None, "mails": ["y"]}],
+              "a_relancer": [], "a_venir": [{"titre": "Dr Martin", "quand": "2026-10-30T15:00", "mails": ["v"]}]}
+    neuf = MERCREDI.replace(hour=9)
+    lignes, ids = c.lignes_aujourdhui(valeur, neuf)
+    assert lignes == ["▸ Vente de la Switch : répondre à Tom", "▸ CRA d'octobre pour Opteamis (avant le 31/10)",
+                      "▸ Dr Martin (30/10 15 h)"]
+    assert ids == {"n1", "x", "v"}
+    # Calculé un autre jour : rien.
+    assert c.lignes_aujourdhui(valeur, neuf + timedelta(days=1)) == ([], set())
+    # Sans « À venir » : trois « À faire ».
+    assert len(c.lignes_aujourdhui(dict(valeur, a_venir=[]), neuf)[0]) == 3
+    db = _base()
+    etat = {"notif_depuis": "2026-10-27T00:00:00+01:00"}
+    _a_traiter(db, "n1", MERCREDI.replace(hour=8), fil="fn1")
+    _a_traiter(db, "n2", MERCREDI.replace(hour=8, minute=30), fil="fn2")
+    notifs, ids = c.resume_a_envoyer(db, etat, neuf, aujourdhui=valeur)
+    corps = notifs[0]["message"].split("\n")
+    assert notifs[0]["title"] == "📧 2 mails à traiter" and corps[:3] == lignes
+    assert len(corps) == 4 and set(ids) == {"n1", "n2"}          # n1 est couvert par « Aujourd'hui »
+    c.noter_notifies(db, ids, etat, neuf, urgent=False)
+    # Rien de nouveau : le résumé de 9 h part quand même, avec « Aujourd'hui » seul ; pas à 12 h.
+    notifs, ids = c.resume_a_envoyer(db, etat, neuf + timedelta(minutes=1), aujourdhui=valeur)
+    assert notifs[0]["title"] == "☀️ Aujourd’hui" and notifs[0]["message"].split("\n") == lignes and ids == []
+    assert c.resume_a_envoyer(db, etat, neuf.replace(hour=12)) == ([], [])

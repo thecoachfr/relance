@@ -604,3 +604,87 @@ Nest Hub, iPad/iPhone) : pastille « 📧 N mails à traiter » à côté de « 
 « Courrier » après les tâches de la page À faire (3 noms au plus, urgents d'abord, « · Urgent », « +N ») ; jamais le
 résumé, la demande ni l'objet (discret devant des invités). Hub iPad/iPhone seulement : toucher ouvre Courrier
 (`courrier://mail/<id>`, `courrier://recap`).
+
+
+## « Aujourd'hui » : À faire, À relancer, À venir (28/10, façon Today de Dove)
+
+Déployé le 28/10 à 13 h 46 (sauvegarde `aiguillage_courrier.py.avant-aujourdhui-20261028` à la racine du dossier
+AppDaemon). Pour la carte « Aujourd'hui » en tête du Récap de l'app Courrier (décisions 57 à 62 de
+`../courrier/docs/CADRAGE.md`) et le résumé de 9 h.
+
+### Candidats (`candidats_aujourdhui`, base du tri en lecture)
+
+- **À faire** : les `a_traiter` ouverts, sans ceux dont le « Plus tard » n'est pas échu : id, qui, objet, date,
+  résumé, demande, échéance, urgent.
+- **À relancer** : les fils où Alexandre a écrit le **dernier** message il y a 3 à 14 jours. Le NUC ne voit dans
+  l'historique que les réponses aux fils qu'il connaît : il **lit Gmail** (`ClientGmail.lister_fils`, nouvelle lecture
+  `threads.list` q=`in:sent newer_than:15d older_than:3d`, 20 fils au plus, puis `fil` = `threads.get` en
+  métadonnées), **toutes les 3 heures le jour et à 6 h 45**, jamais la nuit. Gardé : dernier message `SENT` (ni
+  brouillon, spam, corbeille, ni mail à soi-même, ni réponse à une adresse automatique). Entre deux lectures, un fil
+  dont un message plus récent est arrivé dans la base du tri (réponse) sort tout de suite. Donné à l'IA : id du
+  message envoyé, destinataires, objet, date, aperçu Gmail (300 caractères), nombre de messages du fil.
+- **À venir** : mails des 21 derniers jours hors `a_traiter` (et hors onglet Promotions) dont l'échéance tombe dans
+  les 7 jours, ou dont l'objet ou le résumé parle d'un rendez-vous, d'une livraison, d'un colis, d'une réservation,
+  d'une coupure… (30 au plus). L'**extrait de 1 500 caractères** n'est joint que si ni l'échéance ni le résumé ne
+  donnent de date (8 extraits au plus par appel). Jamais de corps.
+
+### Calcul (`calculer_aujourdhui`)
+
+- **Claude Sonnet 5.5** (`claude-sonnet-5-5`), effort `low` (réglage `aujourdhui_effort`), réflexion adaptative par
+  défaut, sortie structurée (`SCHEMA_AUJOURDHUI`, json_schema strict), `max_tokens` 8 000. Système : la consigne
+  (`CONSIGNE_AUJOURDHUI` : trois listes de 6 au plus, regroupées par affaire, titres « Affaire : action », relance
+  seulement si le message attendait une réponse, à venir daté dans les 7 jours, ids reçus seulement, candidats =
+  DONNÉES) puis le **mémo d'Aiguillage** (même lecture que le tri, borné à **3 000 caractères**,
+  `aujourdhui_memo_max`), `cache_control` sur ce dernier bloc. Les candidats vont dans le message utilisateur, avec la
+  date du jour.
+- **Nettoyage** (`nettoyer_aujourdhui`) : ids inconnus retirés (À relancer : ids des envoyés seulement ; sinon ceux
+  des autres candidats), élément sans id valable retiré, échéance `AAAA-MM-JJ`, « quand » `AAAA-MM-JJ[THH:MM]` entre
+  aujourd'hui et J+7 (sinon retiré), À venir trié par date, 6 au plus par liste, titres 90 caractères.
+- **Quand** (`faut_recalculer`) : à **6 h 45** (toujours) ; sinon seulement si l'**empreinte des candidats** change
+  (jour, ids, résumés, demandes, échéances, urgence ; envoyés), **au plus toutes les 30 minutes**, et **jamais de
+  22 h à 6 h 45**. Vérifié à la fin de chaque relève de 2 minutes, dans un **fil à part** (un calcul à la fois). Aucun
+  candidat : liste vide publiée sans appel. Événement `aiguillage_courrier_aujourdhui` : recalcul tout de suite.
+- **Échec** (refus du modèle, réponse illisible, API ou HA injoignable) : la valeur publiée reste, nouvel essai 30
+  minutes plus tard au plus tôt (le coût est compté).
+- **Budget** à part : `aujourdhui_budget_mensuel` (3 $ par défaut), compté au prix de Sonnet 5.5 dans
+  `/config/aiguillage_courrier_aujourdhui.json` (avec l'empreinte, la dernière valeur et les envoyés lus).
+
+### Publication
+
+Espace `courrier`, clé **`aujourdhui`**, par `donnees_apps.lot` (`modifie_par: nuc-courrier`) :
+
+    {v: 1, calcule_le: ISO UTC,
+     a_faire:    [{titre, detail (ou null), echeance (AAAA-MM-JJ ou null), mails: [id…]}],
+     a_relancer: [{titre, detail (ou null), depuis (AAAA-MM-JJ de l'envoi), mails: [id du message envoyé]}],
+     a_venir:    [{titre, quand (AAAA-MM-JJ ou AAAA-MM-JJTHH:MM, heure de Paris), mails: [id…]}]}
+
+Le premier id de `mails` est celui à ouvrir. Les anciennes versions de l'app ignorent cette clé (pas de `fil`).
+
+### Résumé de 9 h
+
+Le premier résumé du jour (`heures_resume`, 9 h) commence par **3 lignes** d'« Aujourd'hui » calculé le jour même
+(deux « À faire » puis un « À venir », complétées par l'autre liste) : « ▸ CRA d'octobre pour Opteamis (avant le
+31/10) », « ▸ Doctolib : CMD Confluences, 15 h (28/10 15 h) ». Les mails déjà couverts par ces lignes n'ont pas de
+ligne à eux. S'il n'y a aucun mail nouveau, le résumé part quand même, titré « ☀️ Aujourd'hui », avec ces lignes
+seules. 12 h et 18 h ne changent pas.
+
+### Premier calcul réel (28/10 à 13 h 46)
+
+10 s dans le fil à part, **0,038 $** (consigne + mémo de 3 000 caractères + 3 + 1 + ~20 candidats). Lu par
+`donnees_apps.lire` :
+
+- À faire : « Rendez-vous CMD Confluences : compléter les infos sur Doctolib » (aujourd'hui, 2 mails) ;
+  « Opteamis : CRA d'octobre et facture, avant le 31/10 » (2 mails) ; « Vente de la Switch : répondre à Tom ».
+- À relancer : « Relancer Macplace : remplacement mémoire Mac Studio M1 » (envoyé le 23/10, sans réponse).
+- À venir : Doctolib 28/10 15 h ; Opteamis 31/10 ; Mondial Relay, colis à retirer 01/11 ; Enedis, coupure à
+  Alfortville 03/11 23 h 10 ; Enedis 04/11.
+
+**Coût attendu** : ~0,04 $ par calcul ; 6 h 45 plus 3 à 5 recalculs par jour ≈ 4 à 6 $/mois, **au-dessus du budget
+de 3 $** si les candidats changent souvent : au-delà, plus de calcul jusqu'au mois suivant (la dernière valeur reste
+affichée). Leviers si besoin : `aujourdhui_memo_max` plus court, écart de 30 minutes plus long, ou budget relevé.
+
+Tests : `test_envoye_du_fil`, `test_lire_envoyes_lecture_bornee`, `test_candidats_aujourdhui`,
+`test_nettoyer_aujourdhui`, `test_calculer_aujourdhui_appel`, `test_schema_aujourdhui_strict`,
+`test_passe_aujourdhui_recalcul_seulement_si_les_candidats_changent`,
+`test_passe_aujourdhui_sans_candidat_budget_et_echecs`, `test_resume_de_9h_commence_par_aujourdhui`, et
+`lister_fils` dans `test_garde_fou_lecture_seule` (310 tests Python verts).
