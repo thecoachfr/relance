@@ -6,6 +6,11 @@ import WidgetKit
 struct ComplicationEntry: TimelineEntry {
     var date: Date
     var tasks: [WatchTask]
+    /// Libellés des jours travaillés reçus de l'iPhone (P9-N2), par date `AAAA-MM-JJ`.
+    var lieux: [String: String] = [:]
+
+    /// « 🏢 Bureau », « 🏠 Télétravail »… le jour de l'entrée s'il est travaillé ; `nil` sinon (rien d'affiché).
+    var lieu: String? { WatchLink.libelleDuJour(lieux, date: date) }
 
     var late: [WatchTask] {
         tasks.filter { $0.isLate(at: date) && ($0.snoozedUntil ?? .distantPast) <= date }
@@ -51,15 +56,18 @@ struct ComplicationProvider: TimelineProvider {
     }
 
     func getSnapshot(in context: Context, completion: @escaping (ComplicationEntry) -> Void) {
-        completion(context.isPreview ? placeholder(in: context) : ComplicationEntry(date: .now, tasks: load()))
+        completion(context.isPreview ? placeholder(in: context) : ComplicationEntry(date: .now, tasks: load(), lieux: loadLieux()))
     }
 
     /// Une entrée à chaque passage d'une tâche en retard, pour que le compteur change tout seul.
     func getTimeline(in context: Context, completion: @escaping (Timeline<ComplicationEntry>) -> Void) {
         let now = Date.now
         let tasks = load()
+        let lieux = loadLieux()
         let horizon = now.addingTimeInterval(24 * 3600)
         var dates = Set([now])
+        // Le libellé du lieu de travail change à minuit (calculé d'avance, sans rechargement : budget B6).
+        if !lieux.isEmpty { dates.formUnion(WatchLink.minuits(apres: now, jusqua: horizon)) }
         for task in tasks {
             // Une heure avant une tâche avec heure, le widget remonte dans la pile intelligente.
             let early = task.hasTime ? task.due?.addingTimeInterval(-3600) : nil
@@ -67,13 +75,18 @@ struct ComplicationProvider: TimelineProvider {
                 dates.insert(date)
             }
         }
-        completion(Timeline(entries: dates.sorted().map { ComplicationEntry(date: $0, tasks: tasks) },
+        completion(Timeline(entries: dates.sorted().map { ComplicationEntry(date: $0, tasks: tasks, lieux: lieux) },
                             policy: .after(horizon)))
     }
 
     private func load() -> [WatchTask] {
         let defaults = Groupes.defaults
         return WatchLink.decode(defaults.data(forKey: "watchTasks"))
+    }
+
+    /// Copie de la montre, écrite à chaque envoi de l'iPhone (jours travaillés seulement : l'iPhone filtre).
+    private func loadLieux() -> [String: String] {
+        WatchLink.decodeLieux(Groupes.defaults.data(forKey: WatchLink.lieuTravailStoreKey))
     }
 }
 
@@ -111,14 +124,23 @@ struct ComplicationView: View {
             Text("\(late)").font(.title2.bold().monospacedDigit())
                 .widgetLabel(late > 0 ? "en retard" : "à jour")
         case .accessoryInline:
+            // Lieu de travail du jour en tête (jours travaillés seulement), puis le reste.
+            let lieu = entry.lieu.map { $0 + " · " } ?? ""
             if let next = entry.next {
-                Text(late > 0 ? "\(late) en retard · \(next.title)" : next.title)
+                Text(lieu + (late > 0 ? "\(late) en retard · \(next.title)" : next.title))
             } else {
-                Text("Rien d'urgent")
+                Text(lieu + "Rien d'urgent")
             }
         default:
             VStack(alignment: .leading, spacing: 1) {
-                Text(late > 0 ? "\(late) en retard" : "Aiguillage").font(.headline).widgetAccentable()
+                HStack(spacing: 4) {
+                    Text(late > 0 ? "\(late) en retard" : "Aiguillage").font(.headline).widgetAccentable()
+                    Spacer(minLength: 2)
+                    if let lieu = entry.lieu {
+                        Text(lieu).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                            .accessibilityLabel("Aujourd'hui : \(lieu)")
+                    }
+                }
                 if let next = entry.next, let due = next.due {
                     Text(next.title).font(.caption).lineLimit(1)
                     Text(DueText.short(due: due, hasTime: next.hasTime, now: entry.date))
@@ -157,6 +179,11 @@ struct TodayView: View {
                     .foregroundStyle(Color(red: 1, green: 0.478, blue: 0.314))  // orange de la charte (#FF7A50)
                     .widgetAccentable()
                 Spacer(minLength: 4)
+                // Lieu de travail du jour (P9-N2), jours travaillés seulement : discret, à droite du titre.
+                if let lieu = entry.lieu {
+                    Text(lieu).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                        .accessibilityLabel("Aujourd'hui : \(lieu)")
+                }
                 if tasks.count > 3 {
                     Text("+\(tasks.count - 3)").font(.caption2.monospacedDigit()).foregroundStyle(.secondary)
                 }

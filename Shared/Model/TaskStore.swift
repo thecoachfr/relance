@@ -17,6 +17,8 @@ final class TaskStore {
     var lastError: String?
     /// Tâche à ouvrir (touche sur une notification).
     var openedTaskID: UUID?
+    /// Fiche du mémo à ouvrir (lien `relance://memo/<id>`, 28/10/2026).
+    var memoDemande: String?
     /// Ouvre la saisie rapide (commande du Centre de contrôle).
     var showQuickAdd = false
     /// Appelé après chaque changement des tâches (activité en direct, côté app).
@@ -361,8 +363,10 @@ final class TaskStore {
             }
             plannables.append(p)
         }
+        // Lieu de travail des jours (P9-N2) : les tâches du contexte du jour en tête du résumé du matin.
         await scheduler.apply(tasks: plannables, inboxCount: inbox,
-                              finishedTaskIDs: completedIDs, overdueNow: overdue)
+                              finishedTaskIDs: completedIDs, overdueNow: overdue,
+                              lieuxDuJour: isHAActive ? (lieuTravail?.lieuxParDate ?? [:]) : [:])
         // Les widgets ne sont rechargés que si ce qu'ils montrent a changé (iOS limite les rechargements par jour).
         let pourWidgets = WidgetTask.depuis(tasks)
         if pourWidgets != dernierEtatWidgets {

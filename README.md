@@ -87,6 +87,20 @@ iPhone, iPad, montre (incluse dans l'app iPhone) et Mac se mettent à jour depui
 - Le paquet `DonneesHA` vient d'un dépôt **privé** : Xcode Cloud doit avoir reçu l'accès à `thecoachfr/ha-donnees-apps`
   (App Store Connect › Xcode Cloud › Réglages › Dépôts, ou Xcode le propose au premier build qui échoue).
 
+## Liens
+
+Schéma `relance://` (iPhone, iPad et Mac ; depuis le 28/10/2026 sur Mac), pour que d'autres apps (Courrier…) ouvrent
+Aiguillage au bon endroit :
+
+| Lien | Ouvre |
+|---|---|
+| `relance://tache/<clé>` | La fiche de la tâche (iPhone, iPad : en feuille ; Mac : sélectionnée dans sa liste, détail à droite). `<clé>` = clé de la tâche dans Home Assistant (UUID en minuscules, espace `aiguillage` de `donnees_apps`), ou identifiant Google Tasks en mode Google. Tâche pas encore arrivée : synchro, puis ouverture. |
+| `relance://memo/<id>` | La fiche du mémo pour le tri, en feuille (modifiable). `<id>` = `uid` de l'élément de `todo.aiguillage_memo` (mode HA) ou identifiant Google (liste « Relance · mémo ») ; à défaut, le sujet de la fiche (`relance://memo/Dentiste`, sans tenir compte des majuscules ni des accents). Identifiant encodé pour l'URL (`%20`…). |
+| `relance://nouvelle` | La saisie rapide. |
+
+Code : `Shared/Model/LienAiguillage.swift` (lecture et fabrication des liens, testé dans `ResteN2Tests`),
+`Shared/Model/TaskStore+Liens.swift` (ouverture). La montre garde ses propres liens (`relance://add`, `relance://list`).
+
 ## Organisation du code
 
 | Dossier | Rôle |

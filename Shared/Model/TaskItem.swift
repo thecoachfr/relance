@@ -128,6 +128,12 @@ final class TaskItem {
             imageID: pieces.first(where: \.estImage)?.id,
             pourInfo: estPourInfo ? dueDay.map {
                 PourInfo.jours(echeance: $0, repetition: Recurrence(notes: notes), debut: now, nombre: 9, calendar: calendar)
-            } ?? [] : nil)
+            } ?? [] : nil,
+            contexte: contexte)
     }
+}
+
+extension TaskItem {
+    /// Contexte de la tâche (P9-N2), d'après la ligne des notes.
+    var contexte: ContexteTache? { ContexteTache(notes: notes) }
 }

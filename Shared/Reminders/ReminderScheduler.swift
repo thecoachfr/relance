@@ -99,13 +99,15 @@ final class ReminderScheduler {
         await center.notificationSettings().authorizationStatus
     }
 
-    func apply(tasks: [PlannableTask], inboxCount: Int, finishedTaskIDs: Set<String>, overdueNow: Int) async {
+    func apply(tasks: [PlannableTask], inboxCount: Int, finishedTaskIDs: Set<String>, overdueNow: Int,
+               lieuxDuJour: [String: String] = [:]) async {
         let now = Date.now
         var history = EnvieHistory.load(from: AppGroup.defaults)
         history.recordShown(now: now)
         history.keepOnly(Set(tasks.filter { $0.toSee != nil }.map(\.id)), now: now)
         let plan = Self.isEnabledOnThisDevice
-            ? ReminderPlanner(calendar: .current, settings: settings, history: history).plan(tasks: tasks, inboxCount: inboxCount, now: now)
+            ? ReminderPlanner(calendar: .current, settings: settings, history: history, lieuxDuJour: lieuxDuJour)
+                .plan(tasks: tasks, inboxCount: inboxCount, now: now)
             : []
         history.planned = Dictionary(plan.filter { $0.kind == .suggestion }.compactMap { r in r.taskID.map { ($0, r.fireDate) } },
                                      uniquingKeysWith: min)

@@ -71,6 +71,8 @@ struct TodoView: View {
                 section("Bientôt", groups.later, now: now)
                 doneLink(now: now)
             }
+            // Pastille du lieu à côté de la date de chaque tâche (jours travaillés, mode HA seulement).
+            .environment(\.lieuTravailDesJours, store.isHAActive ? store.lieuTravail : nil)
             .overlay {
                 if dated.isEmpty {
                     ContentUnavailableView("Rien d'urgent", systemImage: "checkmark.circle",

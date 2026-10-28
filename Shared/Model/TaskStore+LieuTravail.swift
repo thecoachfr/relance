@@ -16,8 +16,10 @@ extension TaskStore {
         guard nouveau != lieuTravail else { return }
         lieuTravail = nouveau
         LieuTravail.cache(nouveau)
-        // La montre affiche le libellé du jour : elle suit (envoi seulement si le contexte a changé).
-        onTasksChanged?()
+        // Le résumé du matin met en tête les tâches du contexte du jour : il est recalculé (seul le différentiel est
+        // posé), puis la montre suit (libellé du jour ; envoi seulement si le contexte a changé). `reschedule` appelle
+        // `onTasksChanged` quand l'appareil relance ; sinon on le fait ici.
+        if schedulesReminders { await reschedule() } else { onTasksChanged?() }
     }
 
     /// Change un réglage : écrit tout de suite dans la base locale (puis HA, version attendue de la base), en partant

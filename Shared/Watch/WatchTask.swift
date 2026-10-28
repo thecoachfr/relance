@@ -51,6 +51,20 @@ nonisolated enum WatchLink {
     /// Lieu de travail (P9-N2) : libellés des jours travaillés des 14 prochains jours, `{"AAAA-MM-JJ": "🏢 Bureau"}`
     /// (JSON, clés triées). Données vides = rien à afficher. La montre montre celui du jour sans rien demander à HA.
     static let lieuTravailKey = "lieuTravail"
+    /// Copie locale de la montre (App Group de la montre), lue aussi par la complication (reste de N2, 28/10/2026).
+    static let lieuTravailStoreKey = "watchLieuTravail"
+
+    /// Débuts des jours suivants entre `debut` (exclu) et `fin` (inclus) : la complication change de libellé à minuit
+    /// sans rien demander (timeline calculée à l'avance, B6).
+    static func minuits(apres debut: Date, jusqua fin: Date, calendar: Calendar = .current) -> [Date] {
+        var dates: [Date] = []
+        var jour = calendar.startOfDay(for: debut)
+        while let suivant = calendar.date(byAdding: .day, value: 1, to: jour), suivant <= fin {
+            dates.append(suivant)
+            jour = suivant
+        }
+        return dates
+    }
 
     static func decodeLieux(_ data: Data?) -> [String: String] {
         data.flatMap { try? JSONDecoder().decode([String: String].self, from: $0) } ?? [:]

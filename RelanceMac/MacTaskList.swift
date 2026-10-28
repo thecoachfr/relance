@@ -40,6 +40,8 @@ struct MacTaskList: View {
                 }
             }
             .listStyle(.inset)
+            // Pastille du lieu à côté de la date de chaque tâche (P9-N2 : jours travaillés, mode HA seulement).
+            .environment(\.lieuTravailDesJours, store.isHAActive && section != .done ? store.lieuTravail : nil)
             .overlay { if items.isEmpty { empty } }
             .navigationTitle(section.title)
             .navigationSubtitle(subtitle(items, now: now))

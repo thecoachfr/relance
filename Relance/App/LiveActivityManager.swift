@@ -1,5 +1,26 @@
 import ActivityKit
 import Foundation
+import UIKit
+
+/// Démarrage de l'activité en direct : un seul essai par passage au premier plan (28/10/2026).
+/// iOS refuse `Activity.request` quand l'app n'est pas au premier plan (« Target is not foreground ») : le 27/10 à
+/// 7 h 00, les synchros en arrière-plan (push de la vigie, réveil iOS) l'ont tenté 8 fois. Désormais : rien en
+/// arrière-plan, un essai à l'ouverture, et s'il échoue, plus rien avant la prochaine ouverture (une ligne au journal).
+/// Code pur, testé (`ActiviteDemarrageTests`).
+nonisolated struct DemarrageActivite: Equatable, Sendable {
+    /// Essai déjà fait depuis le dernier passage au premier plan.
+    private(set) var essaye = false
+
+    /// Faut-il appeler `Activity.request` maintenant ? Oui une seule fois, et seulement au premier plan.
+    mutating func autoriser(auPremierPlan: Bool) -> Bool {
+        guard auPremierPlan, !essaye else { return false }
+        essaye = true
+        return true
+    }
+
+    /// Retour au premier plan, ou activité en place (elle pourra être redémarrée si elle se termine) : nouvel essai permis.
+    mutating func reinitialiser() { essaye = false }
+}
 
 /// Garde une seule activité en direct, avec les tâches les plus urgentes :
 /// en retard d'abord, puis celles prévues dans les deux prochaines heures.
@@ -9,6 +30,16 @@ import Foundation
 final class LiveActivityManager {
     static let maxItems = 3
     private let upcomingWindow: TimeInterval = 2 * 3600
+    private var demarrage = DemarrageActivite()
+    private var observateur: (any NSObjectProtocol)?
+
+    init() {
+        // Chaque retour au premier plan permet un nouvel essai (et un seul).
+        observateur = NotificationCenter.default.addObserver(forName: UIApplication.didBecomeActiveNotification,
+                                                             object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.demarrage.reinitialiser() }
+        }
+    }
 
     func refresh(tasks: [TaskItem], settings: ReminderSettings, now: Date = .now) {
         let state = urgentState(tasks: tasks, settings: settings, now: now)
@@ -54,10 +85,12 @@ final class LiveActivityManager {
         let content = ActivityContent(state: state, staleDate: changes.min())
 
         if let activity = current.first {
+            demarrage.reinitialiser()
             await activity.update(content)
             for extra in current.dropFirst() { await extra.end(nil, dismissalPolicy: .immediate) }
-        } else if ActivityAuthorizationInfo().areActivitiesEnabled {
-            // Ne fonctionne qu'avec l'app au premier plan : on réessaie à chaque ouverture.
+        } else if ActivityAuthorizationInfo().areActivitiesEnabled,
+                  demarrage.autoriser(auPremierPlan: UIApplication.shared.applicationState == .active) {
+            // Ne fonctionne qu'avec l'app au premier plan : un essai par ouverture, jamais en arrière-plan.
             Journal.essayer(.systeme, "Démarrage de l'activité en direct") {
                 try Activity.request(attributes: TaskActivityAttributes(), content: content)
             }

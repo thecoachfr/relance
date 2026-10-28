@@ -3,6 +3,8 @@ import SwiftUI
 struct TaskRow: View {
     /// Ligne sélectionnée (Mac, iPad) : sur le fond d'accent, le rouge et le gris ne se lisent plus.
     @Environment(\.backgroundProminence) private var prominence
+    /// Lieu de travail des 14 jours (P9-N2), donné seulement par les vues par jours (À faire) : pastille à côté de la date.
+    @Environment(\.lieuTravailDesJours) private var lieuTravail
     let item: TaskItem
     var now: Date = .now
     /// Sélectionnée dans la liste du Mac (où `backgroundProminence` ne suit pas la sélection).
@@ -128,6 +130,10 @@ struct TaskRow: View {
                 if let rule = Recurrence(notes: item.notes) {
                     Image(systemName: "repeat").imageScale(.small)
                         .accessibilityLabel(rule.text)
+                }
+                // Bureau ou télétravail ce jour-là (reste de N2, 28/10) : jours travaillés seulement, rien sinon.
+                if let lieu = lieuTravail?.pastille(item.dueDay) {
+                    LieuPastille(libelle: lieu)
                 }
             }
             .font(.subheadline)

@@ -125,6 +125,20 @@ nonisolated struct LieuTravail: Codable, Equatable, Sendable {
         return jours.first { $0.date == cle }
     }
 
+    /// Pastille de la vue par jours (reste de N2, 28/10/2026) : le libellé du jour de `date` (« 🏢 Bureau »,
+    /// « 🏠 Télétravail ? »…) s'il est travaillé, `nil` sinon (repos, férié, jour hors des 14 publiés, sans date).
+    func pastille(_ date: Date?, calendar: Calendar = .current) -> String? {
+        guard let date, let jour = jour(date, calendar: calendar), jour.estTravaille else { return nil }
+        let libelle = jour.libelle.trimmingCharacters(in: .whitespaces)
+        return libelle.isEmpty ? nil : libelle
+    }
+
+    /// Lieu de chaque jour publié (`AAAA-MM-JJ` → `bureau`, `teletravail`…), pour la relance du matin qui pousse en
+    /// tête les tâches du contexte du jour (`ReminderPlanner.lieuxDuJour`).
+    var lieuxParDate: [String: String] {
+        Dictionary(jours.map { ($0.date, $0.lieu) }, uniquingKeysWith: { a, _ in a })
+    }
+
     /// Prochain jour (aujourd'hui compris) qui convient au contexte, ou `nil` s'il n'y en a pas dans les 14 jours
     /// publiés : la tâche reste alors sans date. Même règle que `aiguillage_tri.jour_pour_contexte`.
     func prochainJour(pour contexte: ContexteTache, aPartirDe aujourdhui: Date = .now,

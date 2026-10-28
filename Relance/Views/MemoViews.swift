@@ -147,3 +147,46 @@ struct MemoEditor: View {
         }
     }
 }
+
+/// Fiche du mémo ouverte par un lien `relance://memo/<id>` (28/10/2026), en feuille (iPhone, iPad, Mac).
+/// Le mémo est chargé si besoin ; une fiche inconnue le dit au lieu d'ouvrir une fiche vide.
+struct MemoLienSheet: View {
+    @Environment(TaskStore.self) private var store
+    @Environment(\.dismiss) private var dismiss
+    let id: String
+    @State private var charge = false
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if let fiche = LienAiguillage.fiche(id, dans: store.memo.entries) {
+                    MemoEditor(entry: fiche)
+                } else if !charge || store.memo.isLoading {
+                    ProgressView()
+                } else {
+                    ContentUnavailableView("Fiche introuvable", systemImage: "text.book.closed",
+                                           description: Text("Elle a peut-être été retirée du mémo."))
+                }
+            }
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Fermer") { dismiss() } }
+            }
+        }
+        #if os(macOS)
+        .frame(minWidth: 460, minHeight: 420)
+        #endif
+        .task {
+            if LienAiguillage.fiche(id, dans: store.memo.entries) == nil { await store.memo.load() }
+            charge = true
+        }
+    }
+}
+
+extension View {
+    /// Présente la fiche demandée par un lien `relance://memo/<id>` (`TaskStore.memoDemande`).
+    func memoDemandeSheet(_ store: TaskStore) -> some View {
+        sheet(isPresented: Binding(get: { store.memoDemande != nil }, set: { if !$0 { store.memoDemande = nil } })) {
+            if let id = store.memoDemande { MemoLienSheet(id: id) }
+        }
+    }
+}

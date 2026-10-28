@@ -66,5 +66,7 @@ struct MainTabs: View {
         ) { item in
             TaskEditor(item: item)
         }
+        // Lien `relance://memo/<id>` (28/10) : la fiche du mémo en feuille.
+        .memoDemandeSheet(store)
     }
 }

@@ -67,7 +67,4 @@ nonisolated enum ContexteTache: String, CaseIterable, Sendable, Identifiable {
     }
 }
 
-extension TaskItem {
-    /// Contexte de la tâche (P9-N2), d'après la ligne des notes.
-    var contexte: ContexteTache? { ContexteTache(notes: notes) }
-}
+// `TaskItem.contexte` est dans `TaskItem.swift` : ce fichier est aussi compilé pour la montre (relance du matin).

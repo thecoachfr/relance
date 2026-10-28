@@ -28,6 +28,8 @@ nonisolated struct PlannableTask: Sendable, Equatable {
     /// Rappel « pour info » (P9-P) : les jours (début de jour) où il tombe, sur l'horizon ; `nil` = tâche ordinaire.
     /// Aucune relance : seulement nommé dans le résumé du matin de ces jours-là.
     var pourInfo: [Date]?
+    /// À faire au bureau ou à la maison (P9-N2) : passe en tête du résumé du matin d'un jour qui correspond.
+    var contexte: ContexteTache?
 }
 
 nonisolated struct ReminderSettings: Sendable, Equatable {
@@ -144,6 +146,9 @@ nonisolated struct ReminderPlanner: Sendable {
     var settings = ReminderSettings()
     /// Suggestions déjà faites sur cet appareil (rotation, « Pas maintenant »).
     var history = EnvieHistory()
+    /// Lieu de travail de chaque jour publié (`AAAA-MM-JJ` → `bureau`, `teletravail`, `off`…), lu dans
+    /// `sensor.aiguillage_lieu_travail` (reste de N2, 28/10/2026) ; vide = pas de « contexte du jour ».
+    var lieuxDuJour: [String: String] = [:]
 
     func plan(tasks: [PlannableTask], inboxCount: Int, now: Date) -> [PlannedReminder] {
         let horizon = calendar.date(byAdding: .day, value: settings.horizonDays, to: now)!
@@ -294,9 +299,16 @@ nonisolated struct ReminderPlanner: Sendable {
                 let texte = task.title + (task.dueMinutes.map { " à " + Self.formatTime($0) } ?? "")
                 if !infos.contains(texte) { infos.append(texte) }
             }
-            guard overdue + dueToday + inboxCount + infos.count > 0 else { continue }
+            let contexte = tachesDuContexte(tasks, day: day, fire: fire)
+            guard overdue + dueToday + inboxCount + infos.count + contexte.taches.count > 0 else { continue }
 
             var parts: [String] = []
+            // Reste de N2 (28/10) : un jour de bureau, « 🏢 Au bureau : Rendre le badge, … » en tête ; un jour de
+            // télétravail ou de repos, « 🏠 À la maison : … ». Rien si le lieu du jour n'est pas connu.
+            if let ligne = contexte.ligne, !contexte.taches.isEmpty {
+                parts.append(ligne + " : " + contexte.taches.prefix(2).joined(separator: ", ")
+                             + (contexte.taches.count > 2 ? "…" : ""))
+            }
             if overdue > 0 { parts.append("\(overdue) en retard") }
             if dueToday > 0 { parts.append("\(dueToday) aujourd'hui") }
             if inboxCount > 0 { parts.append("\(inboxCount) à trier") }
@@ -316,6 +328,31 @@ nonisolated struct ReminderPlanner: Sendable {
                 badge: 0))
         }
         return digests
+    }
+
+    /// Tâches à faire dans le contexte du jour (`ContexteTache.lieuxDuJour` contient le lieu publié pour `day`) :
+    /// celles du jour, en retard ou sans date, ni infos ni envies ; l'urgent d'abord, puis par échéance.
+    /// Fonction pure : `lieuxDuJour` vide ou jour inconnu → aucune.
+    func tachesDuContexte(_ tasks: [PlannableTask], day: Date, fire: Date) -> (ligne: String?, taches: [String]) {
+        let c = calendar.dateComponents([.year, .month, .day], from: day)
+        guard let annee = c.year, let mois = c.month, let jour = c.day,
+              let lieu = lieuxDuJour[String(format: "%04d-%02d-%02d", annee, mois, jour)],
+              let contexte = ContexteTache.allCases.first(where: { $0.lieuxDuJour.contains(lieu) }) else { return (nil, []) }
+        let retenues = tasks.filter { task in
+            guard task.contexte == contexte, task.pourInfo == nil, task.toSee == nil else { return false }
+            guard let d = task.dueDay, let start = calendar.date(from: d) else { return true }
+            return calendar.isDate(start, inSameDayAs: day) || isOverdue(task, at: fire)
+        }
+        .sorted { a, b in
+            if a.priority.rank != b.priority.rank { return a.priority.rank < b.priority.rank }
+            let ja = a.dueDay.flatMap { calendar.date(from: $0) } ?? .distantFuture
+            let jb = b.dueDay.flatMap { calendar.date(from: $0) } ?? .distantFuture
+            if ja != jb { return ja < jb }
+            return (a.dueMinutes ?? Int.max, a.title.lowercased()) < (b.dueMinutes ?? Int.max, b.title.lowercased())
+        }
+        var titres: [String] = []
+        for task in retenues where !titres.contains(task.title) { titres.append(task.title) }
+        return (contexte.ligne, titres)
     }
 
     /// Relances du matin (report « demain matin », moment du matin, retard) qui tombent avec le résumé « Ta journée » :

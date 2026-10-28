@@ -174,6 +174,9 @@ targets:
         RelanceWebhookURL: $(RELANCE_WEBHOOK_URL)
         CFBundleURLTypes:
           - CFBundleURLSchemes: [$(GOOGLE_REVERSED_CLIENT_ID)]
+          # Liens profonds (28/10/2026) : relance://tache/<clé>, relance://memo/<id>, relance://nouvelle.
+          - CFBundleURLName: fr.alexandrefau.relance
+            CFBundleURLSchemes: [relance]
     settings:
       base:
         # Même identifiant que l'app iOS : le client OAuth Google est lié à cet identifiant.
@@ -265,6 +268,7 @@ targets:
       - Shared/Model/DueText.swift
       - Shared/Model/DateDetection.swift
       - Shared/Reminders/ReminderPlanner.swift
+      - Shared/Model/ContexteTache.swift
       - Shared/Reminders/EnvieSuggestions.swift
       - Shared/Reminders/ReminderProfile.swift
       - Shared/Model/ToSee.swift
@@ -318,6 +322,7 @@ targets:
       - Shared/Model/DueText.swift
       - Shared/Model/TaskPriority.swift
       - Shared/Reminders/ReminderPlanner.swift
+      - Shared/Model/ContexteTache.swift
       - Shared/Reminders/EnvieSuggestions.swift
       - Shared/Reminders/ReminderProfile.swift
       - Shared/Model/ToSee.swift

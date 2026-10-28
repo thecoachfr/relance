@@ -10,7 +10,10 @@ struct RelanceMacApp: App {
                 .environment(delegate.store)
                 .environment(delegate.auth)
                 .modelContainer(delegate.store.container)
-                .onOpenURL { delegate.auth.handle($0) }
+                // Liens `relance://` (28/10, README « Liens ») ; sinon le retour de la connexion Google.
+                .onOpenURL { url in
+                    if url.scheme == LienAiguillage.schema { delegate.store.ouvrir(url) } else { delegate.auth.handle(url) }
+                }
         }
         .defaultSize(width: 1100, height: 700)
         .commands { TaskCommands(store: delegate.store) }

@@ -56,8 +56,10 @@ recalcul en moins d'une seconde, mesuré), et sur l'événement
 - **Aiguillage** (iPhone, iPad, Mac) : bandeau `phrase` en tête de « À faire » (caché en mode Google Tasks ou si le
   capteur manque) ; lecture `GET /api/states/sensor.aiguillage_lieu_travail` (jeton `apps-perso`) à la fin d'une
   synchro, au plus une fois par quart d'heure, et juste après un réglage ; copie dans l'App Group.
-- **Montre** : libellé du jour (`jours[].libelle`, jours travaillés seulement) en tête de la liste, reçu de l'iPhone
-  avec l'état (aucune requête de la montre).
+- **Montre** : libellé du jour (`jours[].libelle`, jours travaillés seulement) en tête de la liste, dans la
+  complication « En retard » et le widget « Aujourd'hui » (28/10), reçu de l'iPhone avec l'état (aucune requête de la montre).
+- **Aiguillage, 28/10** : pastille `jours[].libelle` à côté de la date de chaque tâche dans « À faire » (jours
+  travaillés) ; `jours[].lieu` met en tête du résumé du matin les tâches du contexte du jour.
 - **Tri et vigie** : `jours` sert à dater une tâche sans date qui reçoit un `contexte` (`aiguillage_tri.jour_pour_contexte`).
 
 ## Mise en œuvre (déployée le 24/10/2026 vers 11 h 47)

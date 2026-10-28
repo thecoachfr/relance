@@ -104,8 +104,16 @@ Source selon N0 :
   vigie qui date d'après `jours`) et de l'index (section 3), déployés avant le build ;
 - montre : libellé du jour (jours travaillés) en tête de la liste, envoyé par l'iPhone avec l'état.
 
-**Reste** : pastille du lieu à côté de chaque date dans la vue par jours ; relance du matin qui pousse en tête les
-tâches du contexte du jour ; complication / Smart Stack de la montre (🏢 / 🏠) ; essais réels sur les appareils.
+**Reste soldé le 28/10** (code, tests, build TestFlight) :
+- pastille du lieu à côté de la date de chaque tâche dans « À faire » (iPhone, iPad, Mac ; `LieuPastille`, libellé
+  `jours[].libelle` tel quel, jours travaillés seulement, rien en mode Google Tasks) ;
+- montre : libellé du jour dans la complication « En retard » (rectangulaire, en ligne) et le widget « Aujourd'hui » de la
+  pile intelligente, jours travaillés seulement ; données envoyées par l'iPhone avec l'état (et avec le transfert de
+  complication, dans le budget), timeline qui change de libellé à minuit, rechargement seulement si le contenu change ;
+- résumé du matin « Ta journée » (app, appareil qui relance ; la vigie n'y est pour rien) : « 🏢 Au bureau : … » un jour
+  de bureau, « 🏠 À la maison : … » un jour de télétravail, de repos ou férié, en tête (tâches du jour, en retard ou
+  sans date ; l'urgent d'abord ; deux noms puis « … ») ; rien le jour du Lab ou sans capteur ; recalculé quand le capteur change.
+**Reste** : essais réels sur les appareils.
 
 **Trois vues du Hub, faites le 24/10** (pastille `aujourdhui.libelle` à côté de la météo de l'en-tête les jours
 travaillés seulement ; `phrase` en tête d'À faire, cachée quand elle est nulle, c'est-à-dire les jours de repos) :

@@ -43,6 +43,29 @@ struct LieuTravailBandeau: View {
     }
 }
 
+/// Lieu de travail des jours affichés (P9-N2, reste du 28/10/2026) : posé par les vues par jours (À faire sur iPhone,
+/// iPad et Mac) pour que `TaskRow` montre la pastille du lieu à côté de la date. `nil` ailleurs (rien d'affiché).
+extension EnvironmentValues {
+    @Entry var lieuTravailDesJours: LieuTravail? = nil
+}
+
+/// Pastille discrète du lieu d'un jour travaillé (« 🏢 Bureau »), à côté de la date d'une tâche : même texte que le
+/// bandeau (libellé du capteur, tel quel), en gris sur un fond léger.
+struct LieuPastille: View {
+    let libelle: String
+
+    var body: some View {
+        Text(libelle)
+            .font(.caption.weight(.medium))
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 1)
+            .background(.fill.tertiary, in: .capsule)
+            .accessibilityLabel("Ce jour-là : \(libelle)")
+    }
+}
+
 /// Réglages › Lieu de travail (P9-N2, « réglable facilement », demande d'Alexandre du 24/10) : les 14 prochains jours,
 /// chacun changé d'un toucher (exception), puis la semaine type et le premier vendredi du mois. Tout s'écrit dans
 /// `config:lieu_travail` ; l'affichage vient du capteur, recalculé par HA en quelques secondes.

@@ -22,7 +22,7 @@ final class WatchStore: NSObject, WCSessionDelegate {
     private static let tasksInHAKey = "watchTasksInHA"
     /// Tâches dans Home Assistant (dit par l'iPhone) : lecture, coche, ajout et mémo passent par l'iPhone.
     var tasksInHA: Bool { Self.defaults.bool(forKey: Self.tasksInHAKey) }
-    private static let lieuxKey = "watchLieuTravail"
+    private static let lieuxKey = WatchLink.lieuTravailStoreKey
     /// Libellés des jours travaillés reçus de l'iPhone (P9-N2), par date.
     private(set) var lieuxTravail: [String: String] = WatchLink.decodeLieux(WatchStore.defaults.data(forKey: WatchStore.lieuxKey))
 
@@ -215,19 +215,28 @@ final class WatchStore: NSObject, WCSessionDelegate {
         }
         if let inHA = payload.tasksInHA { Self.defaults.set(inHA, forKey: Self.tasksInHAKey) }
         if let url = payload.haURL, let token = payload.haToken { WatchHA.store(url: url, token: token) }
+        var lieuxChanges = false
         if let lieux = payload.lieuxTravail {
             Self.defaults.set(lieux, forKey: Self.lieuxKey)
             let decodes = WatchLink.decodeLieux(lieux)
-            if decodes != lieuxTravail { lieuxTravail = decodes }
+            if decodes != lieuxTravail {
+                lieuxTravail = decodes
+                lieuxChanges = true
+            }
         }
-        if let tasks = payload.tasks { receive(tasks) }
+        // La complication montre aussi le libellé du jour (28/10) : rechargée si l'un ou l'autre a changé, une fois.
+        if let tasks = payload.tasks {
+            receive(tasks, rechargerAussi: lieuxChanges)
+        } else if lieuxChanges {
+            WidgetCenter.shared.reloadAllTimelines()
+        }
     }
 
-    private func receive(_ tasks: [WatchTask]) {
+    private func receive(_ tasks: [WatchTask], rechargerAussi: Bool = false) {
         let change = tasks != self.tasks
         self.tasks = tasks
         lastUpdate = .now
-        save(rechargerComplication: change)
+        save(rechargerComplication: change || rechargerAussi)
     }
 
     // MARK: - Copie locale (partagée avec la complication)

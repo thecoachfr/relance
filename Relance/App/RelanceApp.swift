@@ -15,8 +15,10 @@ struct RelanceApp: App {
                 .environment(delegate.auth)
                 .modelContainer(delegate.store.container)
                 .onOpenURL { url in
-                    if url.scheme == "relance" {
-                        if url.host() == "nouvelle" { delegate.store.showQuickAdd = true }
+                    // relance://nouvelle, relance://tache/<clé>, relance://memo/<id> (README, « Liens ») ;
+                    // sinon le retour de la connexion Google.
+                    if url.scheme == LienAiguillage.schema {
+                        delegate.store.ouvrir(url)
                     } else {
                         delegate.auth.handle(url)
                     }

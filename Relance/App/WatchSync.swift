@@ -51,7 +51,9 @@ final class WatchSync: NSObject, WCSessionDelegate {
                 != nil else { return }
         // La complication suit l'état en retard : on la prévient, dans la limite du budget quotidien d'Apple.
         if session.isComplicationEnabled, session.remainingComplicationUserInfoTransfers > 0 {
-            session.transferCurrentComplicationUserInfo([WatchLink.tasksKey: WatchLink.encode(payload)])
+            // Le libellé du jour (P9-N2) part avec : la complication l'affiche même si l'app montre ne tourne pas.
+            session.transferCurrentComplicationUserInfo([WatchLink.tasksKey: WatchLink.encode(payload),
+                                                         WatchLink.lieuTravailKey: context[WatchLink.lieuTravailKey] ?? Data()])
         }
     }
 
