@@ -124,16 +124,31 @@ struct TaskRow: View {
             .foregroundStyle(toSee.isOver(now: now) ? Color.secondary : toSee.text(now: now).hasPrefix("Plus que") || toSee.text(now: now) == "Dernier jour" ? Color.orange : Color.secondary)
         } else if let status {
             // Pas de `Label` : dans une liste, il réserve une colonne d'icône trop large.
-            HStack(spacing: 5) {
+            let echeance = HStack(spacing: 5) {
                 Image(systemName: status.symbol).imageScale(.small)
                 Text(status.text)
                 if let rule = Recurrence(notes: item.notes) {
                     Image(systemName: "repeat").imageScale(.small)
                         .accessibilityLabel(rule.text)
                 }
-                // Bureau ou télétravail ce jour-là (reste de N2, 28/10) : jours travaillés seulement, rien sinon.
+            }
+            Group {
+                // Bureau ou télétravail ce jour-là (reste de N2, 28/10) : jours travaillés seulement, rien sinon. À côté
+                // de la date si tout tient sur une ligne ; sinon dessous (grand texte : la date passait sur deux
+                // lignes et la pastille restait collée à droite).
                 if let lieu = lieuTravail?.pastille(item.dueDay) {
-                    LieuPastille(libelle: lieu)
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: 5) {
+                            echeance.fixedSize()
+                            LieuPastille(libelle: lieu).fixedSize()
+                        }
+                        VStack(alignment: .leading, spacing: 4) {
+                            echeance
+                            LieuPastille(libelle: lieu)
+                        }
+                    }
+                } else {
+                    echeance
                 }
             }
             .font(.subheadline)
