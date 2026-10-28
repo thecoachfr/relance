@@ -42,6 +42,9 @@ liste visée), `relance_vigie.photos_pass`, `aiguillage_signal._photos_vers_list
 
 ## 4. État
 
+- 28/10 vers 17 h 20 : le partage d'une photo plantait (vu par Alexandre) : la réduction ajoutée à 16 h 50 décodait
+  l'image entière (UIImage), au-delà de la mémoire d'une extension ; remplacée par `PiecesJointes.reduire` (ImageIO).
+  Plantage non confirmé par un rapport (iPhone pas joignable depuis le Mac).
 - 28/10 vers 17 h : la saisie rapide (Liste d'articles) propose aussi « Lire des produits sur une photo » : une
   liste se crée directement d'une photo (titre « Courses » par défaut, catégorie Achats), remarque d'Alexandre.
 - 28/10 vers 16 h 50 : vu par Alexandre, une photo partagée depuis Photos ne montrait ni « Ajouter à la liste de

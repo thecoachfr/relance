@@ -75,16 +75,11 @@ final class ShareViewController: UIViewController {
         return nil
     }
 
-    /// Image trop lourde réduite à 3 000 px de côté au plus, en JPEG ; `nil` si elle est illisible.
+    /// Image trop lourde réduite (2 048 px de côté, JPEG) par ImageIO, sans décoder l'image entière : une extension
+    /// n'a qu'environ 120 Mo de mémoire, et une photo de 48 Mpx décodée en prend près de 200 (plantage du 28/10, quand
+    /// la réduction passait par UIImage). `nil` si elle est illisible.
     private static func reduite(_ data: Data, nom: String) -> FichierPartage? {
-        guard let image = UIImage(data: data) else { return nil }
-        let echelle = min(1, 3000 / max(image.size.width, image.size.height))
-        let taille = CGSize(width: image.size.width * echelle, height: image.size.height * echelle)
-        let format = UIGraphicsImageRendererFormat()
-        format.scale = 1
-        let jpeg = UIGraphicsImageRenderer(size: taille, format: format).image { _ in image.draw(in: CGRect(origin: .zero, size: taille)) }
-            .jpegData(compressionQuality: 0.85)
-        guard let jpeg, jpeg.count <= PiecesJointes.tailleMax else { return nil }
+        guard let jpeg = PiecesJointes.reduire(data), jpeg.count <= PiecesJointes.tailleMax else { return nil }
         return FichierPartage(donnees: jpeg, nom: ((nom as NSString).deletingPathExtension) + ".jpg", type: .jpeg)
     }
 
