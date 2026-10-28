@@ -48,13 +48,14 @@ struct TaskDetailView: View {
                     .lineLimit(1...)
                     .formFieldWithoutLabel()
             }
-            // Nature (28/10) : Tâche · Info · Envie, sous le titre ; chacune ne montre que ses sections.
-            NatureSection(notes: $notes) { nature in
-                switch nature {
-                case .info: if !hasDay { day = Calendar.current.startOfDay(for: .now); hasDay = true }
-                case .envie: if ToSee(notes: notes)?.kind.isDated != true { hasDay = false }
-                case .tache: break
-                }
+            // Liste de courses (28/10, remarque d'Alexandre : il fallait passer nature, date et lieu pour l'atteindre) :
+            // la liste et son magasin juste sous le titre ; la nature descend en bas.
+            if estCourses {
+                ListeSection(item: item)
+                magasin
+            } else {
+                // Nature (28/10) : Tâche · Info · Envie, sous le titre ; chacune ne montre que ses sections.
+                nature
             }
             if ToSee(notes: notes) != nil {
                 ToSeeSection(notes: $notes, availability: item.availability, pieces: item.pieces, apercu: $apercu,
@@ -90,12 +91,13 @@ struct TaskDetailView: View {
                 }
             }
             ContactSection(notes: $notes, searching: $searchingPlace, memoSource: (category, tags), title: title)
-            // Une info n'a ni liste ni magasin (rien à faire).
-            if !PourInfo.est(notes) { ListeSection(item: item) }
+            // Une info n'a ni liste ni magasin (rien à faire) ; une liste de courses est déjà en haut.
+            if !PourInfo.est(notes), !estCourses { ListeSection(item: item) }
             // Où une liste d'achats prévient (P9-Q) : le magasin nommé dans le titre, sinon Supermarchés, ou un choix.
-            if HAConfig.isActive, item.category == "Achats", item.liste != nil, !item.isCompleted { MagasinSection(item: item) }
+            if !estCourses { magasin }
             PiecesSection(item: item, apercu: $apercu)
             ActionsSection(item: item, lien: item.envie()?.lien.flatMap(URL.init(string:)) ?? ToSee.link(in: NoteLines.visible(notes)))
+            if estCourses { nature }
             Section {
                 Button {
                     withAnimation { showMore.toggle() }
@@ -270,6 +272,23 @@ struct TaskDetailView: View {
 
     private func supprimer() {
         if item.calendarEventID != nil { confirmDelete = true } else { store.delete(item); onClose?() }
+    }
+
+    /// Liste de courses : catégorie Achats avec une liste (pas une info).
+    private var estCourses: Bool { category == "Achats" && item.liste != nil && !PourInfo.est(notes) }
+
+    @ViewBuilder private var magasin: some View {
+        if HAConfig.isActive, item.category == "Achats", item.liste != nil, !item.isCompleted { MagasinSection(item: item) }
+    }
+
+    private var nature: some View {
+        NatureSection(notes: $notes) { nature in
+            switch nature {
+            case .info: if !hasDay { day = Calendar.current.startOfDay(for: .now); hasDay = true }
+            case .envie: if ToSee(notes: notes)?.kind.isDated != true { hasDay = false }
+            case .tache: break
+            }
+        }
     }
 
     /// Résumé de « Plus d'options » replié : ce qui n'est pas réglé par défaut.
