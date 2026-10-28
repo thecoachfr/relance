@@ -4,7 +4,8 @@ Cadrage : `hub-tv/docs/CE-SOIR.md` (H46). Calculé par l'app AppDaemon `hub_ce_s
 vigie). Les vues ne font QUE l'afficher : aucun filtre ni tri dans les vues. Le Nest Hub n'a pas de Vidéo.
 
 Ce que c'est : les films, séries, documentaires et reportages qui **commencent entre 20 h 40 et 21 h 20** sur les
-chaînes d'Alexandre (abonnement Free : TNT, chaînes `has_abo` de la Freebox, plus CANAL+ Box Office). Direct
+chaînes d'Alexandre (liste fixe validée par lui le 28/10/2026 : TNT, CANAL+ 40, 45 et 46, et ses chaînes cinéma,
+séries et documentaires). Direct
 seulement. Programmes de moins de 20 min, interdits aux moins de 18 ans et déjà finis écartés ; d'une série dont
 plusieurs épisodes se suivent sur la même chaîne, seul le premier est gardé.
 
@@ -49,10 +50,11 @@ Code : `homeassistant/appdaemon/apps/hub_ce_soir.py` (fonctions pures, puis la c
   pas ou ne donne rien : guide de la Freebox (`/api/v8/tv/epg/by_time/<21 h>`).
 - **Capteur** recalculé toutes les 15 min (`en_cours`, programmes finis, envies), publié par l'API REST de HA (comme
   `hub_meteo`).
-- **Chaînes** : table `CHAINES` (numéro Free, nom, identifiant OQEE, uuid Freebox), filtrée par
-  `http://mafreebox.freebox.fr/api/v8/tv/channels` (sans jeton). Freebox muette : toute la table. Les chaînes de
-  l'abonnement absentes de la table sont écrites dans le journal (« hors table ») ; info, sport, musique et jeunesse
-  y sont volontairement.
+- **Chaînes** : table `CHAINES` (numéro Free, nom, identifiant OQEE, uuid Freebox), **liste fixe** des chaînes
+  d'Alexandre (42, validée par lui le 28/10/2026 ; info, sport, musique et jeunesse laissées de côté). Pas de filtre
+  par la Freebox (retiré le 28/10 au soir) : son `has_abo` veut dire « chaîne payante », pas « dans l'abonnement »
+  (CANAL+ Cinéma(s) 47 et CANAL+ Docs 48 marquées oui alors qu'Alexandre ne les a pas, CANAL+ Box Office 45 marquée
+  non alors qu'il l'a). Changement d'abonnement : modifier la table à la main.
 - **Relier une nouvelle chaîne** : télécharger quelques heures des deux guides (OQEE `epg/all/<heure>` et Freebox
   `tv/epg/by_time/<heure>`), et pour l'uuid Freebox de la chaîne, compter les identifiants OQEE qui ont le même titre
   à 15 min près : le plus fréquent est le bon (méthode du 28/10/2026 ; France 2 et France 3 ont des doublons

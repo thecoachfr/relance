@@ -2,9 +2,9 @@
 commencent en début de soirée sur les chaînes d'Alexandre, pour le Hub TV et le Hub iPad (le Nest Hub n'a pas de
 Vidéo).
 
-- Chaînes : la table `CHAINES` (numéro Free, nom, identifiant OQEE, uuid de la Freebox), filtrée par l'API locale de
-  la Freebox (`/api/v8/tv/channels`, sans jeton) : TNT (numéros 1 à 27), chaînes de l'abonnement (`has_abo`) et
-  `TOUJOURS` (CANAL+ Box Office, que la Freebox marque hors abonnement alors qu'Alexandre l'a).
+- Chaînes : la table `CHAINES` (numéro Free, nom, identifiant OQEE, uuid de la Freebox), liste fixe des chaînes
+  d'Alexandre (validée par lui le 28/10/2026). Pas de filtre par la Freebox : son `has_abo` dit « chaîne payante »,
+  pas « dans l'abonnement » (CANAL+ Cinéma(s) marquée oui, CANAL+ Box Office non : l'inverse de la réalité).
 - Programme : le guide d'OQEE (`api.oqee.net/api/v1/epg/all/<heure>`, sans compte, non officiel), dont les clés sont
   les identifiants de chaîne qu'ouvre le Hub TV. Repli : le guide de la Freebox (`/api/v8/tv/epg/by_time/<heure>`),
   moins riche (ni sous-genre ni année).
@@ -35,7 +35,8 @@ HAUTEUR_IMAGE = 480
 # Numéro Free, nom affiché, identifiant OQEE, uuid de la Freebox (sans « uuid-webtv- »). Correspondance
 # Freebox ↔ OQEE établie le 28/10/2026 en recoupant 24 h des deux guides (titre et début à 15 min près) ; France 2
 # et France 3 reprises de `Applis.CHAINES` du Hub TV (relevées en zappant). Chaînes d'info, de sport, de musique et
-# de jeunesse laissées de côté. Pour une nouvelle chaîne : même recoupement (voir HUB-CE-SOIR.md).
+# de jeunesse laissées de côté ; CANAL+ : seulement les options d'Alexandre (40, 45, 46). Pour une nouvelle chaîne :
+# même recoupement (voir HUB-CE-SOIR.md).
 CHAINES = [
     (1, "TF1", 536, "612"), (2, "France 2", 270, "201"), (3, "France 3", 321, "202"),
     (4, "France 4", 412, "376"), (5, "France 5", 272, "203"), (6, "M6", 537, "613"), (7, "Arte", 273, "204"),
@@ -45,7 +46,6 @@ CHAINES = [
     (24, "RMC Découverte", 847, "997"), (25, "RMC Life", 848, "998"), (27, "TV5 Monde", 275, "206"),
     (28, "Paris Première", 282, "213"), (29, "RTL9", 279, "210"),
     (40, "CANAL+", 403, "362"), (45, "CANAL+ Box Office", 1164, "1648"), (46, "CANAL+ Grand Écran", 1079, "1539"),
-    (47, "CANAL+ Cinéma(s)", 613, "742"), (48, "CANAL+ Docs", 1078, "1529"),
     (52, "AB1", 280, "211"), (53, "Téva", 433, "404"), (55, "TLC", 1128, "1615"),
     (56, "National Geographic", 28, "1061"), (147, "13ème Rue", 1167, "1655"), (148, "SciFi", 1173, "1656"),
     (149, "Polar+", 247, "1298"), (150, "Novelas+", 249, "1300"), (152, "Série Club", 156, "1205"),
@@ -53,11 +53,9 @@ CHAINES = [
     (547, "Planète+ Aventure", 140, "1189"), (548, "Planète+ Crime", 139, "1188"), (549, "Comédie+", 130, "1179"),
     (553, "Toute l'Histoire", 314, "250"), (554, "Bravo", 1174, "1657"),
 ]
-TNT_MAX = 27
-TOUJOURS = {45}
 # Chaînes mises en avant à genre égal (grandes chaînes historiques, Arte et CANAL+) ; ensuite, le plus récent d'abord
 # (en attendant les notes de TMDB).
-PRIORITAIRES = {1, 2, 3, 5, 6, 7, 40, 45, 46, 47, 48}
+PRIORITAIRES = {1, 2, 3, 5, 6, 7, 40, 45, 46}
 
 # Logos d'OQEE connus (ceux de `Applis.CHAINES` du Hub TV) : img<serveur>.oqee.net/channel_pictures/<image>/w300.
 LOGOS = {536: (2, 789), 270: (2, 1045), 321: (2, 2073), 272: (1, 790), 537: (2, 2515), 273: (2, 2513),
@@ -108,30 +106,6 @@ def genre(categorie, sous_categorie):
     if cat == "magazine" and sous in ("magazine de reportages", "magazine d'investigation"):
         return "reportage"
     return None
-
-
-def mes_chaines(chaines_freebox):
-    """Les lignes de `CHAINES` de l'abonnement. `chaines_freebox` : résultat de `/api/v8/tv/channels` (dict par uuid),
-    ou None si la Freebox est muette (toute la table est alors gardée)."""
-    if not chaines_freebox:
-        return list(CHAINES)
-    gardees = []
-    for numero, nom, oqee, uuid in CHAINES:
-        info = chaines_freebox.get(f"uuid-webtv-{uuid}") or {}
-        if numero <= TNT_MAX or numero in TOUJOURS or info.get("has_abo"):
-            gardees.append((numero, nom, oqee, uuid))
-    return gardees
-
-
-def non_reliees(chaines_freebox, bouquet):
-    """Numéros des chaînes de l'abonnement (`has_abo`) absentes de la table, pour le journal."""
-    connues = {f"uuid-webtv-{u}" for _, _, _, u in CHAINES}
-    numeros = set()
-    for c in bouquet or []:
-        u = c.get("uuid")
-        if c.get("sub_number", 0) == 0 and u not in connues and (chaines_freebox or {}).get(u, {}).get("has_abo"):
-            numeros.add(c.get("number"))
-    return sorted(n for n in numeros if n is not None)
 
 
 def heure_texte(d):
@@ -313,12 +287,7 @@ if hass is not None:
 
         def _guide(self, maintenant):
             """(source, bruts, chaines) : OQEE, sinon la Freebox."""
-            liste = self._freebox("tv/channels")
-            chaines = mes_chaines(liste)
-            if liste:
-                manquent = non_reliees(liste, self._freebox("tv/bouquets/freeboxtv/channels"))
-                if manquent:
-                    self.log(f"Ce soir : chaînes de l'abonnement hors table : {manquent}")
+            chaines = list(CHAINES)
             heure = heure_du_guide(maintenant)
             try:
                 r = httpx.get(OQEE_EPG.format(heure), timeout=30)

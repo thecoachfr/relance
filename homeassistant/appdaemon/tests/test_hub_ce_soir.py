@@ -88,15 +88,11 @@ def test_quotas_par_genre():
     assert sum(r.startswith("Série") for r in resultat) == c.QUOTAS["serie"]
 
 
-def test_mes_chaines_par_la_freebox():
-    freebox = {f"uuid-webtv-{u}": {"has_abo": n in (40, 46)} for n, _, _, u in c.CHAINES}
-    numeros = [n for n, _, _, _ in c.mes_chaines(freebox)]
-    assert 1 in numeros and 27 in numeros and 40 in numeros and 46 in numeros
-    assert 45 in numeros  # CANAL+ Box Office : marquée hors abonnement par la Freebox, gardée quand même
-    assert 47 not in numeros and 546 not in numeros
-    assert c.mes_chaines(None) == list(c.CHAINES)
-    bouquet = [{"number": 999, "uuid": "uuid-webtv-x", "sub_number": 0}, {"number": 40, "uuid": "uuid-webtv-362"}]
-    assert c.non_reliees({"uuid-webtv-x": {"has_abo": True}}, bouquet) == [999]
+def test_chaines_d_alexandre():
+    numeros = [n for n, _, _, _ in c.CHAINES]
+    assert {40, 45, 46} <= set(numeros)
+    assert 47 not in numeros and 48 not in numeros  # pas dans son abonnement (28/10/2026)
+    assert len(set(numeros)) == len(numeros) and len({o for _, _, o, _ in c.CHAINES}) == len(numeros)
 
 
 def test_lecture_des_deux_guides():
