@@ -8,6 +8,10 @@ struct TodoView: View {
     private var dated: [TaskItem]
     @Query(filter: #Predicate<TaskItem> { $0.isCompleted && !$0.isTrashed })
     private var completed: [TaskItem]
+    /// Sans date : seules les listes de courses (rappelées par le magasin) sont montrées ici.
+    @Query(filter: #Predicate<TaskItem> { !$0.isCompleted && !$0.isTrashed && $0.dueDay == nil },
+           sort: \TaskItem.updatedAt, order: .reverse)
+    private var undated: [TaskItem]
 
     @State private var showAdd = false
     @State private var showDone = false
@@ -68,13 +72,14 @@ struct TodoView: View {
                 PourInfoAujourdhuiSection(infos: dated.filter(\.estPourInfo), now: now, onSelect: open)
                 section("En retard", groups.overdue, now: now)
                 section("Aujourd'hui", groups.today, now: now)
+                section("Listes de courses", undated.filter { $0.estListeDeCoursesSansDate && $0.matches(categoryFilter: categoryFilter) }, now: now)
                 section("Bientôt", groups.later, now: now)
                 doneLink(now: now)
             }
             // Pastille du lieu à côté de la date de chaque tâche (jours travaillés, mode HA seulement).
             .environment(\.lieuTravailDesJours, store.isHAActive ? store.lieuTravail : nil)
             .overlay {
-                if dated.isEmpty {
+                if dated.isEmpty && !undated.contains(where: \.estListeDeCoursesSansDate) {
                     ContentUnavailableView("Rien d'urgent", systemImage: "checkmark.circle",
                                            description: Text("Les tâches avec une date apparaissent ici."))
                 } else if !categoryFilter.isEmpty, !dated.contains(where: { $0.matches(categoryFilter: categoryFilter) }) {

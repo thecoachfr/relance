@@ -220,6 +220,18 @@ struct ListeStoreTests {
         #expect(action.titre == "Me le rappeler près de : Pharmacies" && !action.auToucher)
     }
 
+    /// Liste de courses sans date (28/10) : pas dans À trier (le magasin la rappelle), une tâche sans date si.
+    @Test func listeDeCoursesSansDateHorsDeATrier() {
+        let store = TaskStore(auth: SlowAccount(), inMemory: true)
+        let courses = store.add(title: "Courses", day: nil, minutes: nil, category: "Achats")
+        #expect(courses.needsTriage)  // pas encore de liste
+        store.addArticle("Pain", to: courses)
+        #expect(!courses.needsTriage && courses.estListeDeCoursesSansDate)
+        let valise = store.add(title: "Valise", day: nil, minutes: nil, category: "Perso")
+        store.addArticle("Chargeur", to: valise)
+        #expect(valise.needsTriage && !valise.estListeDeCoursesSansDate)  // une liste qui n'est pas des courses
+    }
+
     /// Photo de produits (P9-R, 28/10) : notée à lire, articles proposés gardés en cochant ou par « Tout garder ».
     @Test func photoDeCourses() throws {
         let store = TaskStore(auth: SlowAccount(), inMemory: true)
@@ -292,6 +304,7 @@ struct ListeStoreTests {
         #expect(!courses.needsTriage && courses.plannable().atMyPlaces)
         let sansDate = store.add(title: "Courses plus tard", day: nil, minutes: nil, category: "Achats")
         store.addArticle("Lait", to: sansDate)
-        #expect(sansDate.needsTriage)  // sans date : toujours à trier
+        // Sans date : plus à trier depuis le 28/10 (le magasin la rappelle ; elle était bloquée dans À trier).
+        #expect(!sansDate.needsTriage)
     }
 }

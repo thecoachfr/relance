@@ -53,7 +53,7 @@ struct MacTaskList: View {
     private var filtered: [TaskItem] {
         let query = search.trimmingCharacters(in: .whitespaces)
         let base: [TaskItem] = switch section {
-        case .todo: all.filter { !$0.isCompleted && $0.dueDay != nil }
+        case .todo: all.filter { !$0.isCompleted && ($0.dueDay != nil || $0.estListeDeCoursesSansDate) }
         case .inbox: all.filter { !$0.isCompleted && $0.needsTriage }
         case .map, .toSee: []
         case .done: all.filter(\.isCompleted).sorted { ($0.completedAt ?? .distantPast) > ($1.completedAt ?? .distantPast) }
@@ -83,7 +83,8 @@ struct MacTaskList: View {
             ("En retard", overdue),
             ("Aujourd'hui", dated.filter { calendar.isDateInToday($0.dueDay!) }),
             ("Bientôt", dated.filter { !calendar.isDateInToday($0.dueDay!) }),
-            ("Sans date", taches.filter { $0.dueDay == nil }),
+            ("Listes de courses", taches.filter(\.estListeDeCoursesSansDate)),
+            ("Sans date", taches.filter { $0.dueDay == nil && !$0.estListeDeCoursesSansDate }),
         ].filter { !$0.1.isEmpty }
     }
 

@@ -101,8 +101,14 @@ final class TaskItem {
     /// (17/10, remarque d'Alexandre).
     var needsTriage: Bool { needsTriage() }
 
+    /// Liste de courses sans date (28/10, remarque d'Alexandre : elle restait bloquée dans À trier) : le passage devant
+    /// le magasin la rappelle, elle n'a pas besoin de date. Montrée dans À faire, section « Listes de courses ».
+    var estListeDeCoursesSansDate: Bool {
+        dueDay == nil && !isCompleted && !isTrashed && category == "Achats" && liste != nil
+    }
+
     func needsTriage(now: Date = .now, calendar: Calendar = .current) -> Bool {
-        guard toSee == nil, !estPourInfo else { return false }
+        guard toSee == nil, !estPourInfo, !estListeDeCoursesSansDate else { return false }
         guard let dueDay else { return true }
         return dueMinutes == nil && calendar.startOfDay(for: dueDay) <= calendar.startOfDay(for: now) && groupesDeLieux.isEmpty
     }
