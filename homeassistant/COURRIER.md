@@ -474,7 +474,7 @@ ici, avec **la même règle que le tri** (`fiches_de_l_expediteur`, dont `expedi
 - Journal : « Courrier : fiches des expéditeurs, N publiée(s), M retirée(s) ».
 - **Tâches** : l'app lit elle-même l'espace `aiguillage` (`donnees_apps.lire`) et filtre les tâches non faites qui
   citent le nom, l'adresse ou la ligne `📧 Mail de X` ; rien de plus côté NUC.
-- Aiguillage s'ouvre par `relance://` (pas de lien vers une fiche du mémo ni une tâche précise).
+- Aiguillage s'ouvre sur la bonne fiche ou tâche depuis le 28/10 : `relance://memo/<sujet>` (le NUC ne publie pas encore l'`uid` de la fiche : ajouter `memo_uid` à `fiche:<adresse>` serait plus robuste) et `relance://tache/<clé>` (voir README, « Liens »).
 
 Première passe vérifiée le 27/10 à 13 h 49 : 5 fiches publiées (Seven Portage et Swile reconnues dans le mémo ; Enedis,
 LinkedIn, Claude par leur règle manuelle), lues par `donnees_apps.lire`.
