@@ -220,6 +220,29 @@ struct ListeStoreTests {
         #expect(action.titre == "Me le rappeler près de : Pharmacies" && !action.auToucher)
     }
 
+    /// Magasin d'une liste (P9-Q, 28/10) : « Courses a Leroy merlin » prévenait près des supermarchés.
+    @Test func magasinDeLaListe() throws {
+        var lieux = MesLieux.parDefaut
+        let store = TaskStore(auth: SlowAccount(), inMemory: true)
+        let leroy = store.add(title: "Courses a Leroy merlin", day: nil, minutes: nil, category: "Achats")
+        store.addArticle("Gouttière", to: leroy)
+        // Enseigne connue sans groupe : aucun rappel (surtout pas les supermarchés), la fiche propose de le créer.
+        #expect(lieux.magasin(titre: leroy.title, actions: leroy.actions) == .enseigneSansGroupe("Leroy Merlin"))
+        #expect(leroy.groupesDeLieux(lieux).isEmpty)
+        // Groupe créé : lui seul, accents et casse ignorés.
+        lieux.groupes.append(.init(id: "lm", nom: "Leroy Merlin"))
+        #expect(leroy.groupesDeLieux(lieux) == ["lm"])
+        #expect(MesLieux.nomme("Brico Dépôt", dans: "achats BRICO DEPOT samedi"))
+        #expect(!MesLieux.nomme("Lidl", dans: "Courses Lidlx"))
+        // Choix explicite : il fait foi, et lui seul (avant : Supermarchés en plus).
+        store.addAction(.pres(groupe: "brico", nom: "Bricolage"), to: leroy)
+        #expect(leroy.groupesDeLieux(lieux) == ["brico"])
+        // Sans enseigne : Supermarchés, comme avant.
+        let courses = store.add(title: "Courses de la semaine", day: nil, minutes: nil, category: "Achats")
+        store.addArticle("Pain", to: courses)
+        #expect(courses.groupesDeLieux(lieux) == [MesLieux.supermarches])
+    }
+
     /// Liste du jour sans heure rattachée aux magasins : dans À faire, pas dans À trier, pas de « À quelle heure ? »
     /// (17/10, remarque d'Alexandre : elle passait dans À trier).
     @Test func listeDuJourSansHeureResteDansAFaire() {

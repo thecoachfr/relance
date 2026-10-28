@@ -66,7 +66,7 @@ final class ProximityReminders: NSObject, CLLocationManagerDelegate {
         // Mes lieux (P9-H2) : chaque lieu d'un groupe rattaché à une tâche active est une zone ; urgente et échéance
         // d'après les tâches qui l'attendent.
         let lieux = store?.mesLieux ?? MesLieux.cached()
-        let rattachees = tasks.map { ($0, $0.groupesDeLieux) }.filter { !$0.1.isEmpty }
+        let rattachees = tasks.map { ($0, $0.groupesDeLieux(lieux)) }.filter { !$0.1.isEmpty }
         for groupe in lieux.groupes {
             let enAttente = rattachees.filter { $0.1.contains(groupe.id) }.map(\.0)
             guard !enAttente.isEmpty else { continue }
@@ -154,7 +154,7 @@ final class ProximityReminders: NSObject, CLLocationManagerDelegate {
         notified = Self.recentGroupNotifications(notified, now: now)
         let c = Calendar.current.dateComponents([.hour, .minute], from: now)
         let quiet = store.scheduler.settings.isQuiet(minuteOfDay: (c.hour ?? 0) * 60 + (c.minute ?? 0))
-        for item in store.activeTasks() where item.groupesDeLieux.contains(groupe.id) {
+        for item in store.activeTasks() where item.groupesDeLieux(store.mesLieux).contains(groupe.id) {
             let taskID = item.localID.uuidString
             let key = Self.groupKey(taskID: taskID, lieuID: lieuID)
             guard notified[key] == nil else { continue }

@@ -54,10 +54,6 @@ struct ListeSection: View {
                             }
                             .font(.footnote.bold())
                         }
-                    } else if item.groupesDeLieux.contains(MesLieux.supermarches) {
-                        let n = store.mesLieux.groupe(MesLieux.supermarches)?.lieux.count ?? 0
-                        Text(n == 0 ? "Ajoute tes supermarchés dans Réglages › Mes lieux pour être prévenu en passant devant."
-                                    : "Rappel à 150 m de l'un de tes \(n) supermarchés, tant que la liste n'est pas finie.")
                     } else if liste.proposee {
                         Text("Liste proposée par Claude d'après une recette classique, quantités indicatives : ajuste-la.")
                     } else if liste.articles.isEmpty {

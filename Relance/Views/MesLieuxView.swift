@@ -48,7 +48,7 @@ struct MesLieuxView: View {
                     Text(groupe.nom)
                 } footer: {
                     if groupe.id == MesLieux.supermarches {
-                        Text("Une liste d'achats pas finie (catégorie Achats) te prévient à 150 m de l'un de ces lieux, au plus une fois toutes les 2 heures.")
+                        Text("Une liste d'achats pas finie (catégorie Achats) te prévient à 150 m de l'un de ces lieux, au plus une fois toutes les 2 heures, sauf si son titre nomme une enseigne (« Leroy Merlin ») : alors seulement près de celle-ci.")
                     }
                 }
             }

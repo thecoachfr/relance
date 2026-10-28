@@ -87,6 +87,8 @@ struct TaskDetailView: View {
             }
             ContactSection(notes: $notes, searching: $searchingPlace, memoSource: (category, tags), title: title)
             ListeSection(item: item)
+            // Où une liste d'achats prévient (P9-Q) : le magasin nommé dans le titre, sinon Supermarchés, ou un choix.
+            if HAConfig.isActive, item.category == "Achats", item.liste != nil, !item.isCompleted { MagasinSection(item: item) }
             PiecesSection(item: item, apercu: $apercu)
             // Une info (P9-P) montre son interrupteur en haut, comme une envie.
             if PourInfo.est(notes) {

@@ -64,16 +64,81 @@ nonisolated struct MesLieux: Codable, Equatable, Sendable {
     }
 }
 
-/// Rattachement d'une tâche à des groupes de lieux (P9-H2).
+// MARK: - Magasin d'une liste (P9-Q, 28/10/2026)
+
+nonisolated extension MesLieux {
+    /// Enseignes reconnues dans le titre d'une liste (P9-Q) : nommée, elle seule prévient (décision d'Alexandre,
+    /// 28/10). Sans groupe de ce nom dans Mes lieux, la fiche propose de le créer.
+    static let enseignes = [
+        "Leroy Merlin", "Castorama", "Brico Dépôt", "Bricorama", "Mr Bricolage", "Weldom", "Ikea", "Conforama", "But",
+        "Maisons du Monde", "Decathlon", "Go Sport", "Intersport", "Boulanger", "Darty", "Fnac", "Cultura",
+        "Nature & Découvertes", "Truffaut", "Jardiland", "Botanic", "Gamm Vert", "Action", "Gifi", "La Foir'Fouille",
+        "Picard", "Grand Frais", "Biocoop", "Naturalia", "Lidl", "Aldi", "Carrefour", "Leclerc", "Auchan",
+        "Intermarché", "Monoprix", "Franprix", "Casino", "Super U", "Sephora", "Nocibé", "Kiabi", "Zara", "Uniqlo",
+        "Norauto", "Feu Vert", "Speedy", "Point P", "Cedeo", "Lapeyre", "Bricomarché", "Apple Store",
+    ]
+
+    /// Minuscules, sans accents ni ponctuation, mots séparés par une espace.
+    static func normaliser(_ texte: String) -> String {
+        let plie = texte.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: Locale(identifier: "fr_FR"))
+        let mots = plie.components(separatedBy: CharacterSet.alphanumerics.inverted).filter { !$0.isEmpty }
+        return mots.joined(separator: " ")
+    }
+
+    /// `nom` est dans `titre`, en mots entiers (« leroy merlin » dans « courses a leroy merlin »).
+    static func nomme(_ nom: String, dans titre: String) -> Bool {
+        let n = normaliser(nom)
+        return n.count >= 2 && (" " + normaliser(titre) + " ").contains(" " + n + " ")
+    }
+
+    /// Le groupe dont le nom est dans le titre (le plus long d'abord : « Leroy Merlin Ivry » avant « Leroy Merlin »).
+    func groupeNomme(dans titre: String) -> Groupe? {
+        groupes.filter { Self.nomme($0.nom, dans: titre) }.max { Self.normaliser($0.nom).count < Self.normaliser($1.nom).count }
+    }
+
+    /// L'enseigne connue nommée dans le titre, ou `nil`.
+    static func enseigne(dans titre: String) -> String? {
+        enseignes.filter { nomme($0, dans: titre) }.max { normaliser($0).count < normaliser($1).count }
+    }
+
+    /// D'où vient le magasin d'une liste d'achats (règles de P9-Q, dans l'ordre).
+    enum Magasin: Equatable {
+        /// Action « Me le rappeler près de… » : elle seule.
+        case choisi([String])
+        /// Groupe nommé dans le titre.
+        case nomme(String)
+        /// Enseigne connue sans groupe : aucun rappel, la fiche propose de créer le groupe.
+        case enseigneSansGroupe(String)
+        /// Le défaut, Supermarchés.
+        case supermarches
+    }
+
+    func magasin(titre: String, actions: [TacheHA.Action]) -> Magasin {
+        let choisis = actions.filter { $0.type == TacheHA.Action.rappelGroupe && $0.etat == "a_faire" }.compactMap(\.groupe)
+        if !choisis.isEmpty { return .choisi(Array(Set(choisis)).sorted()) }
+        if let g = groupeNomme(dans: titre) { return .nomme(g.id) }
+        if let e = Self.enseigne(dans: titre) { return .enseigneSansGroupe(e) }
+        return .supermarches
+    }
+}
+
+/// Rattachement d'une tâche à des groupes de lieux (P9-H2, P9-Q).
 extension TaskItem {
-    /// Groupes dont un lieu proche doit rappeler cette tâche : ceux de ses actions « Me le rappeler près de… »,
-    /// plus « Supermarchés » pour une liste d'achats pas finie.
-    var groupesDeLieux: [String] {
+    var groupesDeLieux: [String] { groupesDeLieux(MesLieux.cached()) }
+
+    /// Groupes dont un lieu proche doit rappeler cette tâche : ceux de ses actions « Me le rappeler près de… » ; pour
+    /// une liste d'achats pas finie sans action, le magasin nommé dans le titre, sinon Supermarchés (P9-Q).
+    func groupesDeLieux(_ lieux: MesLieux) -> [String] {
         guard !isCompleted, !isTrashed else { return [] }
-        var groupes = actions.filter { $0.type == TacheHA.Action.rappelGroupe && $0.etat == "a_faire" }.compactMap(\.groupe)
-        if category == "Achats", let liste, !liste.articles.isEmpty, !liste.toutCoché {
-            groupes.append(MesLieux.supermarches)
+        let explicites = actions.filter { $0.type == TacheHA.Action.rappelGroupe && $0.etat == "a_faire" }.compactMap(\.groupe)
+        guard category == "Achats", let liste, !liste.articles.isEmpty, !liste.toutCoché else {
+            return Array(Set(explicites)).sorted()
         }
-        return Array(Set(groupes)).sorted()
+        return switch lieux.magasin(titre: title, actions: actions) {
+        case .choisi(let ids): ids
+        case .nomme(let id): [id]
+        case .enseigneSansGroupe: []
+        case .supermarches: [MesLieux.supermarches]
+        }
     }
 }

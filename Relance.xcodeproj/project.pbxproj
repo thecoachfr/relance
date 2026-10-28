@@ -93,6 +93,7 @@
 		349BC19B237A6CEC02A88CFD /* WatchStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC00912BDF3BB70B789A18F5 /* WatchStore.swift */; };
 		34E81DC10AA654646A7BB1FB /* TaskContact.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB47AF80FF2840FC777CCEC2 /* TaskContact.swift */; };
 		35CCA00BCE1D5AC227F6E6C6 /* TaskContact.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB47AF80FF2840FC777CCEC2 /* TaskContact.swift */; };
+		372E487DDCA2DA3103EFF615 /* MagasinViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DE0AC2C7611CB41D94EBFF6 /* MagasinViews.swift */; };
 		376B7919ADD2A02145627FD6 /* DonneesHA in Frameworks */ = {isa = PBXBuildFile; productRef = 25C0008109AA6C62C171A4E9 /* DonneesHA */; };
 		3888D1FAFD3CF0E5B7B1F584 /* WidgetTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B1BA22C6B3C70BDE59C34A0 /* WidgetTask.swift */; };
 		3960553E64701F2B73DB89D8 /* TaskActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7D24B2FA7C99714EB6FC0BD /* TaskActions.swift */; };
@@ -109,6 +110,7 @@
 		3DF1925113495E486AC32BCC /* HAConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97FADF69313D958AAEDF4ED3 /* HAConfig.swift */; };
 		3E4A287FBFA2A0CA01BEAB79 /* JournalTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1306CC5C8B2C7EB6E20EDA2F /* JournalTests.swift */; };
 		3E9FFFC514E3BD217B581094 /* NoteLines.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6203FE3484BB9AB47B0C2D83 /* NoteLines.swift */; };
+		3F39278AA95159866BBF1549 /* MagasinViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DE0AC2C7611CB41D94EBFF6 /* MagasinViews.swift */; };
 		3F8D144215F91E1F3FF80CAD /* ToSee.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A3B053B5BF69150A21C6DA2 /* ToSee.swift */; };
 		3FFA6E47ADFC793D3579268E /* TagViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3D83AD9429BAA01C53166A7 /* TagViews.swift */; };
 		4106F764A65EB2E06BE8BCEA /* ReminderProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8FDF7A0D1D79E016D9F07AA /* ReminderProfile.swift */; };
@@ -598,6 +600,7 @@
 		69CF78204F9215F7576BF46B /* ListeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListeTests.swift; sourceTree = "<group>"; };
 		6A158CA0EBF4E13AC0646123 /* PlaceCategory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceCategory.swift; sourceTree = "<group>"; };
 		6CDD265E590F7F5F04849975 /* TaskProposal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskProposal.swift; sourceTree = "<group>"; };
+		6DE0AC2C7611CB41D94EBFF6 /* MagasinViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MagasinViews.swift; sourceTree = "<group>"; };
 		7101AAD132DC47E2F1E92A49 /* RelanceWatch.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = RelanceWatch.entitlements; sourceTree = "<group>"; };
 		719434D8C63A56B7090C5E3F /* TacheHA.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TacheHA.swift; sourceTree = "<group>"; };
 		72B30BDF848AF91385168C9F /* ProximityPlanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProximityPlanner.swift; sourceTree = "<group>"; };
@@ -955,6 +958,7 @@
 				DA74C2AD3519045DE673C1B1 /* InboxView.swift */,
 				D432C528091EA9B78F149769 /* LieuTravailView.swift */,
 				A1781498457E2D3F1F70A8C4 /* ListeSection.swift */,
+				6DE0AC2C7611CB41D94EBFF6 /* MagasinViews.swift */,
 				E3D7BA9AC7A9D6DB8068F7BB /* MemoContactsImport.swift */,
 				A3BA2CD7259FBD2501089EDD /* MemoViews.swift */,
 				B38217CE3F5D1B7B7925B62E /* MesLieuxView.swift */,
@@ -1424,6 +1428,7 @@
 				9156E9A9098E5385EB8DF347 /* LieuTravailView.swift in Sources */,
 				4D74538732C5282CC070AA60 /* ListeSection.swift in Sources */,
 				2FFD58C76AEB38E084377310 /* LiveActivityManager.swift in Sources */,
+				372E487DDCA2DA3103EFF615 /* MagasinViews.swift in Sources */,
 				079384DFFE7FA5E5A7AAB104 /* MemoContactsImport.swift in Sources */,
 				7279A70EC91C14590F6E4DE9 /* MemoHA.swift in Sources */,
 				C858D4E004FC4E97118EAD02 /* MemoMerge.swift in Sources */,
@@ -1554,6 +1559,7 @@
 				21764D67E4736716AF18B998 /* MacSettingsView.swift in Sources */,
 				305E38E51F2369415D44951D /* MacSignInView.swift in Sources */,
 				DFC6E932EB58DED730E9A2DC /* MacTaskList.swift in Sources */,
+				3F39278AA95159866BBF1549 /* MagasinViews.swift in Sources */,
 				CA24E32C49EBEBA142493072 /* MemoHA.swift in Sources */,
 				9459DAF4A91A5AAD43963E9E /* MemoMerge.swift in Sources */,
 				A6C84B728CE6E14D394C72AD /* MemoRemote.swift in Sources */,
