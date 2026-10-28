@@ -104,3 +104,9 @@ aiguillage_agent:
   class: AiguillageAgent
   agent_budget_mensuel: 5
   # workspace_id: wrkspc_…
+
+# « Ce soir » à la TV (H46, 28/10/2026) : sensor.hub_ce_soir pour le Hub TV et le Hub iPad. Guide d'OQEE (repli :
+# Freebox), chaînes de l'abonnement lues sur la Freebox. Contrat : homeassistant/HUB-CE-SOIR.md (dépôt Rappels).
+hub_ce_soir:
+  module: hub_ce_soir
+  class: HubCeSoir

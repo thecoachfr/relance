@@ -1,0 +1,49 @@
+{
+  "entity_id": "sensor.hub_ce_soir",
+  "state": 12,
+  "attributes": {
+    "maj": "2026-10-28T18:00:00+01:00",
+    "soiree": "2026-10-28",
+    "source": "oqee",
+    "programmes": [
+      {
+        "titre": "The Game",
+        "episode": null,
+        "genre": "film",
+        "genre_texte": "Thriller",
+        "annee": 1997,
+        "chaine": "Arte",
+        "numero": 7,
+        "oqee_id": 273,
+        "logo": "https://img2.oqee.net/channel_pictures/2513/w300",
+        "debut": "2026-10-28T21:00+01:00",
+        "fin": "2026-10-28T23:09+01:00",
+        "heure_texte": "21 h",
+        "en_cours": false,
+        "image": "https://img1.oqee.net/pictures/1344824/wide_generic/h480",
+        "resume": "Riche, beau, puissant, Nicholas Van Orton présente les plus brillants signes de réussite dans le monde des affaires. Divorcé, il vit dans une immense maison où seuls les souvenirs de son père, un requin de la finance…",
+        "envie": true
+      },
+      {
+        "titre": "Tracker",
+        "episode": "S3 · É6",
+        "genre": "serie",
+        "genre_texte": "Série policière",
+        "annee": 2025,
+        "chaine": "TF1",
+        "numero": 1,
+        "oqee_id": 536,
+        "logo": "https://img2.oqee.net/channel_pictures/789/w300",
+        "debut": "2026-10-28T21:10+01:00",
+        "fin": "2026-10-28T21:50+01:00",
+        "heure_texte": "21 h 10",
+        "en_cours": false,
+        "image": "https://img1.oqee.net/pictures/4251980/wide_generic/h480",
+        "resume": "Lorsqu'une nettoyeuse de scènes de crime disparaît mystérieusement, Colter est appelé pour mener l'enquête. Il découvre que la jeune femme nourrissait une obsession pour les affaires criminelles, une passion qui l'a…",
+        "envie": false
+      }
+    ],
+    "friendly_name": "Ce soir à la TV",
+    "icon": "mdi:television-classic"
+  }
+}
