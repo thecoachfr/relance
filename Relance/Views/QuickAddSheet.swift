@@ -39,6 +39,8 @@ struct QuickAddSheet: View {
     @State private var avecListe = false
     @State private var articles: [String] = []
     @State private var article = ""
+    /// Photos de produits (P9-R) prises avant l'ajout : jointes et notées à lire à l'enregistrement.
+    @State private var photosProduits: [TacheHA.Piece] = []
     @FocusState private var articleActif: Bool
     /// « Scanner un rendez-vous » (P9-L4) : carton, convocation ou courrier photographié, texte lu sur l'iPhone.
     @State private var scanning = false
@@ -168,9 +170,20 @@ struct QuickAddSheet: View {
                                     article = ""
                                     articleActif = true
                                 }
+                            // Une liste créée d'une photo (28/10 : on ne pouvait le faire qu'une fois la tâche créée).
+                            if !photosProduits.isEmpty {
+                                Label(photosProduits.count == 1 ? "1 photo : Claude lira les produits après l'ajout"
+                                                                : "\(photosProduits.count) photos : Claude lira les produits après l'ajout",
+                                      systemImage: "photo.on.rectangle")
+                                    .foregroundStyle(.secondary)
+                            }
+                            PhotoDeCoursesBouton { photosProduits += $0 }
                         }
                     } footer: {
-                        if avecListe { Text("Quand tout est coché, la tâche passe en « Fait ».") }
+                        if avecListe {
+                            Text(photosProduits.isEmpty ? "Quand tout est coché, la tâche passe en « Fait »."
+                                 : "Les produits lus sur les photos arriveront marqués ✦, à garder ou retirer. Sans titre, la liste s'appelle « Courses ».")
+                        }
                     }
                 }
                 if context != .map { ContactSection(notes: $notes, searching: $searchingPlace) }
@@ -202,7 +215,7 @@ struct QuickAddSheet: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Annuler") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Ajouter", action: save).disabled(cleanTitle.isEmpty)
+                    Button("Ajouter", action: save).disabled(cleanTitle.isEmpty && photosProduits.isEmpty)
                 }
             }
             .onAppear { focused = true }
@@ -290,15 +303,18 @@ struct QuickAddSheet: View {
     }
 
     private func save() {
-        guard !cleanTitle.isEmpty else { return }
+        guard !cleanTitle.isEmpty || !photosProduits.isEmpty else { return }
+        // Liste créée d'une photo, sans titre : « Courses », rangée dans les achats (magasin d'après le titre, P9-Q).
+        let titre = cleanTitle.isEmpty ? "Courses" : cleanTitle
+        let categorie = category ?? (photosProduits.isEmpty ? nil : "Achats")
         let c = Calendar.current.dateComponents([.hour, .minute], from: time)
         // Sans date, une répétition n'a pas de point de départ : on la retire.
         let kept = day == nil ? Recurrence.notes(notes, setting: nil) : notes
         // Une info a toujours une date (aujourd'hui par défaut), une heure facultative (affichée, sans rappel), pas de priorité.
         let jour = isPourInfo ? (day ?? Calendar.current.startOfDay(for: .now)) : (isUndated ? nil : day)
-        let item = store.add(title: cleanTitle, day: jour,
+        let item = store.add(title: titre, day: jour,
                              minutes: hasTime && !isUndated && (day != nil || isPourInfo) ? (c.hour! * 60 + c.minute!) : nil,
-                             category: category, priority: isPourInfo ? .normal : priority,
+                             category: categorie, priority: isPourInfo ? .normal : priority,
                              notes: isPourInfo ? notes : kept)
         if avecListe, !isToSee, !isPourInfo {
             let maintenant = TacheHA.timestamp(.now)
@@ -308,6 +324,10 @@ struct QuickAddSheet: View {
                 return article
             }
             store.setListe(TacheHA.Liste(articles: liste), of: item)
+            if !photosProduits.isEmpty {
+                store.ajouterPhotosDeCourses(photosProduits, to: item)
+                Task { await store.sync() }
+            }
         }
         // Le scan du rendez-vous devient une pièce jointe (mode Home Assistant), préparé hors du fil principal.
         if let scanPDF, HAConfig.isActive {

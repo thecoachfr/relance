@@ -44,7 +44,10 @@ struct ListeSection: View {
                         .focused($saisieActive)
                         .submitLabel(.next)
                         .onSubmit(ajouter)
-                    PhotoDeCoursesBouton(item: item)
+                    PhotoDeCoursesBouton { pieces in
+                        store.ajouterPhotosDeCourses(pieces, to: item)
+                        Task { await store.sync() }
+                    }
                 } header: {
                     HStack {
                         Text("Liste")
@@ -86,7 +89,10 @@ struct ListeSection: View {
                         store.setListe(TacheHA.Liste(), of: item)
                         saisieActive = true
                     }
-                    PhotoDeCoursesBouton(item: item)
+                    PhotoDeCoursesBouton { pieces in
+                        store.ajouterPhotosDeCourses(pieces, to: item)
+                        Task { await store.sync() }
+                    }
                 }
             }
         }
@@ -152,11 +158,10 @@ private struct ArticleRow: View {
 
 // MARK: - Photo de produits (P9-R)
 
-/// « Lire des produits sur une photo » : photo prise ou choisie, jointe à la tâche et notée à lire ; la vigie propose
-/// les articles lus par Claude (à garder ou retirer).
+/// « Lire des produits sur une photo » : photo prise ou choisie, préparée (réduite), puis remise à `ajouter` : jointe à
+/// la tâche et notée à lire (fiche), ou gardée jusqu'à l'ajout (saisie rapide, 28/10). La vigie propose les articles.
 struct PhotoDeCoursesBouton: View {
-    @Environment(TaskStore.self) private var store
-    let item: TaskItem
+    let ajouter: ([TacheHA.Piece]) -> Void
     @State private var choix: [PhotosPickerItem] = []
     @State private var appareil = false
     @State private var enCours = false
@@ -212,8 +217,7 @@ struct PhotoDeCoursesBouton: View {
         }.value
         enCours = false
         if pieces.count < images.count { erreur = "Une photo n'a pas pu être préparée." }
-        store.ajouterPhotosDeCourses(pieces, to: item)
-        Task { await store.sync() }
+        ajouter(pieces)
     }
 }
 

@@ -42,6 +42,8 @@ liste visée), `relance_vigie.photos_pass`, `aiguillage_signal._photos_vers_list
 
 ## 4. État
 
+- 28/10 vers 17 h : la saisie rapide (Liste d'articles) propose aussi « Lire des produits sur une photo » : une
+  liste se crée directement d'une photo (titre « Courses » par défaut, catégorie Achats), remarque d'Alexandre.
 - 28/10 vers 16 h 50 : vu par Alexandre, une photo partagée depuis Photos ne montrait ni « Ajouter à la liste de
   courses » ni « Pièce jointe » (proposée en « Spots photo », la photo ayant une position). Cause probable : photo de
   plus de 10 Mo écartée par l'extension ; elle est maintenant réduite (3 000 px, JPEG). Le bouton passe en tête de
