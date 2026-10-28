@@ -10,7 +10,12 @@ struct RecurrenceRow: View {
         NavigationLink {
             RecurrenceView(notes: $notes, day: day)
         } label: {
-            LabeledContent("Répéter", value: Recurrence(notes: notes)?.text ?? "Jamais")
+            LabeledContent {
+                Text(Recurrence(notes: notes)?.text ?? "Jamais")
+            } label: {
+                // Une icône par ligne de l'échéance, comme Durée et Où la faire (28/10).
+                Label("Répéter", systemImage: "repeat")
+            }
         }
     }
 }

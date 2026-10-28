@@ -66,18 +66,22 @@ struct TaskDetailView: View {
                 Section("Échéance") {
                     // L'interrupteur et la valeur sur la même ligne, comme dans Rappels (iPhone aussi depuis le 28/10 :
                     // trois lignes au lieu de cinq).
-                    LabeledContent("Date") {
+                    LabeledContent {
                         HStack {
                             if hasDay { DatePicker("Jour", selection: $day, displayedComponents: .date).labelsHidden() }
                             Toggle("Date", isOn: $hasDay).labelsHidden()
                         }
+                    } label: {
+                        Label("Date", systemImage: "calendar")
                     }
                     if hasDay {
-                        LabeledContent("Heure") {
+                        LabeledContent {
                             HStack {
                                 if hasTime { DatePicker("À", selection: $time, displayedComponents: .hourAndMinute).labelsHidden() }
                                 Toggle("Heure", isOn: $hasTime).labelsHidden()
                             }
+                        } label: {
+                            Label("Heure", systemImage: "clock")
                         }
                         if hasTime { DureeRow(item: item) }
                         RecurrenceRow(notes: $notes, day: day)
@@ -134,11 +138,6 @@ struct TaskDetailView: View {
                 RetriageSection(item: item)
             }
         }
-        #if os(iOS)
-        // Bas de la fiche flouté franchement sous Fait / Reporter (revue du 28/10 : le texte qui défilait dessous
-        // restait lisible et brouillait les boutons).
-        .modifier(FlouDuBas())
-        #endif
         .quickLookPreview($apercu)
         .deleteTaskConfirmation(item, isPresented: $confirmDelete) { onClose?() }
         .placeSearch(isPresented: $searchingPlace, notes: $notes)
@@ -325,11 +324,3 @@ struct TaskDetailView: View {
     }
 }
 
-#if os(iOS)
-/// Bas de la fiche flouté franchement sous la barre du bas (iOS 26) ; rien avant.
-private struct FlouDuBas: ViewModifier {
-    func body(content: Content) -> some View {
-        if #available(iOS 26.0, *) { content.scrollEdgeEffectStyle(.hard, for: .bottom) } else { content }
-    }
-}
-#endif

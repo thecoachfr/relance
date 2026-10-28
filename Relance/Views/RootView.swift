@@ -54,7 +54,8 @@ struct MainTabs: View {
         #if DEBUG
         // `-fiche <début du titre>` au lancement : la fiche de cette tâche ouverte d'emblée (captures d'écran).
         .task {
-            if let titre = UserDefaults.standard.string(forKey: "fiche") {
+            // Grand écran : la tâche s'ouvre dans la colonne de droite d'À faire (voir `TodoView`), pas en feuille.
+            if UIDevice.current.userInterfaceIdiom == .phone, let titre = UserDefaults.standard.string(forKey: "fiche") {
                 store.openedTaskID = active.first { $0.title.hasPrefix(titre) }?.localID
             }
         }

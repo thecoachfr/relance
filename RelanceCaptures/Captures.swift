@@ -39,5 +39,11 @@ nonisolated final class Captures: XCTestCase {
     @MainActor func testFicheAvecLieu() { defiler(ouvrir(["-fiche", "Réserver le contrôle"]), "fiche-lieu") }
     @MainActor func testFicheSimple() { defiler(ouvrir(["-fiche", "Acheter un cadeau"]), "fiche-simple") }
     @MainActor func testFicheEnvie() { defiler(ouvrir(["-fiche", "Chez Janou"]), "fiche-envie") }
+    /// iPad (deux colonnes) : lancer avec une destination iPad, `-only-testing:RelanceCaptures/Captures/testIPad`.
+    @MainActor func testIPad() {
+        let app = ouvrir(["-fiche", "Réserver le contrôle"])
+        try? XCUIScreen.main.screenshot().pngRepresentation.write(to: dossier.appendingPathComponent("ipad-fiche.png"))
+        _ = app
+    }
     @MainActor func testEnvies() { defiler(ouvrir(["-reglages", "1", "-sousreglage", "envies"]), "envies") }
 }

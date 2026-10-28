@@ -27,6 +27,12 @@ struct TodoView: View {
                     .navigationSplitViewColumnWidth(min: 320, ideal: 380, max: 460)
                     // Grand écran : la colonne de droite montre d'emblée la tâche la plus urgente.
                     .onAppear {
+                        #if DEBUG
+                        // `-fiche <début du titre>` (captures d'écran) : cette tâche à droite.
+                        if let titre = UserDefaults.standard.string(forKey: "fiche") {
+                            selectedID = dated.first { $0.title.hasPrefix(titre) }?.localID
+                        }
+                        #endif
                         if selectedID == nil {
                             selectedID = dated.min { ($0.dueInstant() ?? .distantFuture) < ($1.dueInstant() ?? .distantFuture) }?.localID
                         }

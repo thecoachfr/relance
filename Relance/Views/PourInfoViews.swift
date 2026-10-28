@@ -92,14 +92,21 @@ struct NatureSection: View {
     var body: some View {
         let nature = NatureTache(notes: notes)
         Section {
-            Picker("Nature", selection: Binding(get: { nature }, set: { nouvelle in
-                notes = nouvelle.notes(notes, envie: kind)
-                onChange(nouvelle)
-            })) {
-                ForEach(NatureTache.allCases) { Text($0.rawValue).tag($0) }
+            // Une ligne « Nature » avec le sélecteur compact à droite (28/10 après-midi : en pleine largeur, il
+            // s'étirait sur tout l'écran de l'iPad).
+            LabeledContent {
+                Picker("Nature", selection: Binding(get: { nature }, set: { nouvelle in
+                    notes = nouvelle.notes(notes, envie: kind)
+                    onChange(nouvelle)
+                })) {
+                    ForEach(NatureTache.allCases) { Text($0.rawValue).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .fixedSize()
+            } label: {
+                Label("Nature", systemImage: "square.stack")
             }
-            .pickerStyle(.segmented)
-            .labelsHidden()
         } footer: {
             if let texte = nature.explication { Text(texte) }
         }
