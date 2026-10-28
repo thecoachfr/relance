@@ -9,8 +9,11 @@ Envoyer une photo de produits à racheter : Claude lit les produits et complète
 - **Trois entrées** : bouton dans la fiche (section Liste), partage depuis Photos, photo dans la « Note à moi-même »
   de Signal.
 - **Proposé à valider** : les articles lus arrivent marqués ✦, à garder (cocher, « Tout garder ») ou retirer.
-- **La liste la plus récente** quand plusieurs listes d'achats sont ouvertes ; un texte envoyé avec la photo qui
-  nomme une liste ouverte (« Leroy Merlin ») la désigne ; aucune liste ouverte : une nouvelle « Courses » (Achats).
+- **Un seul type de liste à la fois** (précisé le 28/10, remplace « la plus récente ») : au plus une liste ouverte
+  par magasin (groupe de Mes lieux, enseigne nommée, sinon Supermarchés, même règle que l'app, P9-Q). Le type d'une
+  photo : celui que nomme le texte envoyé avec elle, sinon celui que Claude voit (champ `magasin`, choisi parmi
+  « Supermarchés » et les groupes de Mes lieux). Pas de liste de ce type : « Courses » ou « Courses <magasin> ».
+  Une photo prise depuis la fiche reste dans cette liste (choix explicite).
 
 ## 2. Le circuit
 
@@ -34,10 +37,13 @@ liste visée), `relance_vigie.photos_pass`, `aiguillage_signal._photos_vers_list
 |---|---|---|
 | R1 | Lecture par la vigie (module `aiguillage_photos`, `photos_pass`) | codé, testé |
 | R2 | Bouton « Lire des produits sur une photo » dans la fiche (appareil photo, Photos) ; ✦ et « Tout garder » | codé, testé |
-| R3 | Signal : photo dans la Note à moi-même → liste la plus récente (ou nommée), sinon « Courses » | codé, testé |
+| R3 | Signal : photo dans la Note à moi-même → liste du magasin nommé, sinon Supermarchés (puis déplacée selon ce que voit Claude) | codé, testé |
 | R4 | Partage depuis Photos : « Ajouter à la liste de courses » | codé, compilé |
 
 ## 4. État
 
-- 28/10 : R1 à R4 codés (tests Swift et Python verts). **À déployer** : `aiguillage_photos.py`, `relance_vigie.py`,
-  `aiguillage_signal.py` sur le NUC ; l'app part par TestFlight. Pas encore essayé avec une vraie photo.
+- 28/10 : R1 à R4 codés (tests Swift et Python verts), puis règle « un seul type de liste à la fois » :
+  Signal range la photo dans la liste du type nommé (sinon Supermarchés) ; après lecture, la vigie déplace pièce et
+  articles vers la liste du magasin vu (`destination`, `_photos_deplacer`, `sans_piece`) ; origine `fiche` jamais
+  déplacée. **Déployé sur le NUC le 28/10 vers 16 h 16** (`aiguillage_photos.py`,
+  `relance_vigie.py`, `aiguillage_signal.py` ; sauvegardes `*.avant-photos-20261028`) ; l'app part par TestFlight. Pas encore essayé avec une vraie photo.

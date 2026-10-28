@@ -109,9 +109,11 @@ nonisolated extension TacheHA {
         /// Photos que la vigie n'a pas pu lire.
         var photosEnEchec: Int { photos.filter { $0["echec"] != nil }.count }
 
-        /// Note une photo (pièce jointe de la tâche) à lire par la vigie.
-        mutating func ajouterPhoto(piece: String, le maintenant: String, note: String? = nil) {
-            var entree: [String: JSONValeur] = ["piece": .texte(piece), "a_lire": .booleen(true), "ajoute_le": .texte(maintenant)]
+        /// Note une photo (pièce jointe de la tâche) à lire par la vigie. `origine` : `fiche` (les articles restent
+        /// dans cette liste) ou `partage` (la vigie les range dans la liste du magasin vu sur la photo, 28/10).
+        mutating func ajouterPhoto(piece: String, le maintenant: String, note: String? = nil, origine: String = "fiche") {
+            var entree: [String: JSONValeur] = ["piece": .texte(piece), "a_lire": .booleen(true), "ajoute_le": .texte(maintenant),
+                                                "origine": .texte(origine)]
             if let note, !note.isEmpty { entree["note"] = .texte(note) }
             autres["photos"] = .liste(photos.filter { $0["piece"] != .texte(piece) }.map(JSONValeur.objet) + [.objet(entree)])
         }

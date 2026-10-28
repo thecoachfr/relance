@@ -36,8 +36,9 @@ SCHEMA = {
                 "additionalProperties": False,
             },
         },
+        "magasin": {"type": "string"},
     },
-    "required": ["articles"],
+    "required": ["articles", "magasin"],
     "additionalProperties": False,
 }
 
@@ -53,7 +54,9 @@ Quantité : seulement si elle se voit (nombre d'exemplaires) ; sinon null.
 Rayon, parmi : fruits_legumes, frais, epicerie, boissons, hygiene (corps, soins, pharmacie), maison (lessive, \
 entretien, ménage), placard (conserves, pâtes, riz…), autre.
 
-Les articles déjà dans la liste sont donnés : ne les rends pas une seconde fois. Rien de lisible : une liste vide."""
+Les articles déjà dans la liste sont donnés : ne les rends pas une seconde fois. Rien de lisible : une liste vide.
+
+Magasin : où ces produits s'achètent, parmi les magasins donnés (recopie le nom tel quel). « Supermarchés » pour l'alimentation, l'entretien et l'hygiène courants ; un autre magasin seulement si les produits s'y achètent (une gouttière chez un magasin de bricolage). Une note d'Alexandre qui nomme un magasin l'emporte."""
 
 
 def _normaliser(texte):
@@ -77,9 +80,10 @@ def type_de_la_piece(valeur, piece_id):
     return "image/jpeg"
 
 
-def contenu(image, type_mime, deja, note=None):
-    """Contenu du message : l'image (base64), puis les articles déjà là et la note éventuelle."""
+def contenu(image, type_mime, deja, note=None, magasins=("Supermarchés",)):
+    """Contenu du message : l'image (base64), puis les articles déjà là, les magasins possibles et la note."""
     texte = "Articles déjà dans la liste : " + (", ".join(deja) if deja else "aucun") + "."
+    texte += "\nMagasins possibles : " + ", ".join(magasins) + "."
     if note:
         texte += f"\nNote d'Alexandre avec la photo : « {note} »."
     return [
@@ -144,26 +148,118 @@ def listes_ouvertes(enregistrements):
     return sorted(ouvertes, key=lambda e: e.get("modifie_le") or "", reverse=True)
 
 
+# Un seul type de liste à la fois (décision d'Alexandre, 28/10) : au plus une liste ouverte par magasin (groupe de
+# Mes lieux, enseigne nommée, ou Supermarchés par défaut) ; même règle que l'app (`MesLieux.magasin`, P9-Q).
+SUPERMARCHES = "supermarches"
+ENSEIGNES = (
+    "Leroy Merlin", "Castorama", "Brico Dépôt", "Bricorama", "Mr Bricolage", "Weldom", "Ikea", "Conforama", "But",
+    "Maisons du Monde", "Decathlon", "Go Sport", "Intersport", "Boulanger", "Darty", "Fnac", "Cultura",
+    "Nature & Découvertes", "Truffaut", "Jardiland", "Botanic", "Gamm Vert", "Action", "Gifi", "La Foir'Fouille",
+    "Picard", "Grand Frais", "Biocoop", "Naturalia", "Lidl", "Aldi", "Carrefour", "Leclerc", "Auchan",
+    "Intermarché", "Monoprix", "Franprix", "Casino", "Super U", "Sephora", "Nocibé", "Kiabi", "Zara", "Uniqlo",
+    "Norauto", "Feu Vert", "Speedy", "Point P", "Cedeo", "Lapeyre", "Bricomarché", "Apple Store",
+)
+
+
+def _nomme(nom, texte):
+    n = _normaliser(nom)
+    return len(n) >= 2 and f" {n} " in f" {_normaliser(texte)} "
+
+
+def groupes(enregistrements):
+    """Groupes de Mes lieux (`config:lieux`) : [(id, nom)]."""
+    for e in enregistrements or []:
+        if e.get("cle") == "config:lieux" and isinstance(e.get("valeur"), dict):
+            return [(g["id"], g.get("nom") or g["id"]) for g in e["valeur"].get("groupes") or [] if g.get("id")]
+    return []
+
+
+def type_nomme(texte, grps):
+    """Le type que nomme un texte : un groupe (le plus long nom), sinon une enseigne connue, sinon None."""
+    if not texte:
+        return None
+    trouves = [(len(_normaliser(nom)), gid) for gid, nom in grps if _nomme(nom, texte)]
+    if trouves:
+        return max(trouves)[1]
+    enseignes = [e for e in ENSEIGNES if _nomme(e, texte)]
+    if enseignes:
+        return "enseigne:" + _normaliser(max(enseignes, key=lambda e: len(_normaliser(e))))
+    return SUPERMARCHES if _normaliser(texte) in ("supermarches", "supermarche") else None
+
+
+def type_de_liste(valeur, grps):
+    """Type d'une liste : « Me le rappeler près de… », sinon le magasin nommé dans le titre, sinon Supermarchés."""
+    for a in (valeur or {}).get("actions") or []:
+        params = a.get("params") or {}
+        if a.get("type") == "rappel_groupe" and a.get("etat", "a_faire") == "a_faire" and params.get("groupe"):
+            return params["groupe"]
+    return type_nomme((valeur or {}).get("titre"), grps) or SUPERMARCHES
+
+
+def nom_du_type(t, grps):
+    for gid, nom in grps:
+        if gid == t:
+            return nom
+    if t.startswith("enseigne:"):
+        return next((e for e in ENSEIGNES if "enseigne:" + _normaliser(e) == t), t[len("enseigne:"):])
+    return "Supermarchés"
+
+
+def magasins(grps):
+    """Noms proposés à Claude : Supermarchés, les groupes de Mes lieux (hors domicile et travail)."""
+    noms = ["Supermarchés"] + [nom for gid, nom in grps if gid != SUPERMARCHES
+                               and _normaliser(nom) not in ("domicile", "travail", "maison")]
+    return list(dict.fromkeys(noms))
+
+
+def liste_du_type(enregistrements, t, grps):
+    """La liste ouverte de ce type (la plus récente s'il y en avait plusieurs), ou None."""
+    return next((e for e in listes_ouvertes(enregistrements) if type_de_liste(e["valeur"], grps) == t), None)
+
+
 def liste_cible(enregistrements, note=None):
-    """La liste qui reçoit la photo (décision d'Alexandre, 28/10 : la plus récente) ; une note qui nomme une liste
-    ouverte (« Leroy Merlin ») la désigne. `None` : aucune liste ouverte, en créer une (`nouvelle_liste`)."""
-    ouvertes = listes_ouvertes(enregistrements)
-    n = _normaliser(note)
-    if n:
-        for e in ouvertes:
-            if n in _normaliser(e["valeur"].get("titre")):
-                return e
-    return ouvertes[0] if ouvertes else None
+    """Où ranger une photo reçue (Signal, partage) avant sa lecture : (enregistrement ou None, type, type_fixe).
+    Une note qui nomme un magasin fixe le type ; sans note, la liste Supermarchés, et la vigie déplacera les articles
+    lus si Claude voit un autre magasin."""
+    grps = groupes(enregistrements)
+    t = type_nomme(note, grps)
+    fixe = t is not None
+    t = t or SUPERMARCHES
+    return liste_du_type(enregistrements, t, grps), t, fixe
 
 
-def nouvelle_liste(note=None):
-    """Une tâche « Courses » (ou le texte envoyé avec la photo), catégorie Achats, liste vide."""
-    titre = (note or "").strip()[:120] or "Courses"
+def nouvelle_liste(t=SUPERMARCHES, grps=()):
+    """Une liste « Courses » (Supermarchés) ou « Courses <magasin> », catégorie Achats : le titre porte le type."""
+    titre = "Courses" if t == SUPERMARCHES else f"Courses {nom_du_type(t, grps)}"
     return {"v": 2, "titre": titre, "fait": False, "notes": "", "categorie": "Achats", "liste": {"articles": []}}
 
 
-def avec_photos(valeur, pieces, maintenant, note=None, source="signal"):
-    """La tâche avec ces pièces jointes (`{id, nom, type, taille}` du stockage) et leurs photos à lire."""
+def destination(enregistrements, hote, photo, magasin_lu):
+    """Après lecture : (None, None) si les articles restent dans la liste de la photo ; sinon (enregistrement ou None
+    pour une nouvelle liste, type). Une photo de la fiche (`origine: fiche`) ou au type fixé par une note reste."""
+    if photo.get("origine", "fiche") == "fiche" or photo.get("type_fixe"):
+        return None, None
+    grps = groupes(enregistrements)
+    t = type_nomme(magasin_lu, grps) or SUPERMARCHES
+    if t == type_de_liste(hote["valeur"], grps):
+        return None, None
+    return liste_du_type(enregistrements, t, grps), t
+
+
+def sans_piece(valeur, piece_id, vers):
+    """La liste d'origine après un déplacement : pièce retirée, photo notée déplacée."""
+    valeur = dict(valeur)
+    valeur["pieces"] = [p for p in valeur.get("pieces") or [] if not (isinstance(p, dict) and p.get("id") == piece_id)]
+    liste = dict(valeur.get("liste") or {})
+    liste["photos"] = [{**{k: v for k, v in ph.items() if k != "a_lire"}, "deplacee_vers": vers}
+                       if isinstance(ph, dict) and ph.get("piece") == piece_id else ph for ph in liste.get("photos") or []]
+    valeur["liste"] = liste
+    return valeur
+
+
+def avec_photos(valeur, pieces, maintenant, note=None, source="signal", type_fixe=False):
+    """La tâche avec ces pièces jointes (`{id, nom, type, taille}` du stockage) et leurs photos à lire, notées avec
+    leur origine (`signal`, `partage`) : la vigie peut déplacer leurs articles vers la liste du bon magasin."""
     valeur = dict(valeur)
     existantes = list(valeur.get("pieces") or [])
     connues = {p.get("id") for p in existantes if isinstance(p, dict)}
@@ -175,7 +271,9 @@ def avec_photos(valeur, pieces, maintenant, note=None, source="signal"):
                                "taille": p.get("taille") or 0, "ajoute_le": maintenant, "source": source})
             connues.add(p["id"])
         if not any(isinstance(x, dict) and x.get("piece") == p["id"] for x in photos):
-            entree = {"piece": p["id"], "a_lire": True, "ajoute_le": maintenant}
+            entree = {"piece": p["id"], "a_lire": True, "ajoute_le": maintenant, "origine": source}
+            if type_fixe:
+                entree["type_fixe"] = True
             if note:
                 entree["note"] = note
             photos.append(entree)

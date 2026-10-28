@@ -340,8 +340,8 @@ if hass is not None:
             await self._publier()
 
         def _photos_vers_liste(self, images, texte):
-            """Photos de Signal → fichiers de `donnees_apps`, puis la liste visée (créée s'il n'y en a pas), notées à
-            lire ; la vigie les lit (P9-R). Renvoie le titre de la liste."""
+            """Photos de Signal → fichiers de `donnees_apps`, puis la liste du bon type (créée s'il n'y en a pas),
+            notées à lire ; la vigie les lit (P9-R). Renvoie le titre de la liste."""
             base = self._hote.replace("ws://", "http://").replace("wss://", "https://")
             jeton = {"Authorization": f"Bearer {os.environ['SUPERVISOR_TOKEN']}"}
             pieces = []
@@ -356,10 +356,14 @@ if hass is not None:
             note = (texte or "").strip() or None
             for _ in range(3):  # conflit de version : on relit et on recommence
                 enregistrements = self._service("donnees_apps", "lire", {"espace": self._espace}).get("enregistrements", [])
-                cible = aiguillage_photos.liste_cible(enregistrements, note)
+                # Un seul type de liste à la fois (28/10) : la liste du magasin que nomme le texte, sinon Supermarchés ;
+                # la vigie déplace les articles lus si Claude voit un autre magasin.
+                cible, type_liste, fixe = aiguillage_photos.liste_cible(enregistrements, note)
                 cle_liste = cible["cle"] if cible else str(uuid.uuid4())
-                valeur = cible["valeur"] if cible else aiguillage_photos.nouvelle_liste(note)
-                valeur = aiguillage_photos.avec_photos(valeur, pieces, datetime.now(UTC).isoformat(), note)
+                valeur = cible["valeur"] if cible else aiguillage_photos.nouvelle_liste(
+                    type_liste, aiguillage_photos.groupes(enregistrements))
+                valeur = aiguillage_photos.avec_photos(valeur, pieces, datetime.now(UTC).isoformat(), note,
+                                                       source="signal", type_fixe=fixe)
                 resultat = self._service("donnees_apps", "ecrire", {
                     "espace": self._espace, "cle": cle_liste, "valeur": valeur,
                     "version_attendue": cible["version"] if cible else 0,

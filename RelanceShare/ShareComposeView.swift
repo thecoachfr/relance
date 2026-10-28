@@ -110,7 +110,7 @@ struct ShareComposeView: View {
                         }
                         .disabled(sending)
                     } footer: {
-                        Text("Claude lira les produits sur la photo et les proposera dans ta liste de courses la plus récente (sinon une nouvelle « Courses »), à garder ou retirer dans l'app.")
+                        Text("Claude lira les produits sur la photo et les proposera dans la liste du bon magasin (une seule par magasin : supermarché, Leroy Merlin…), créée s'il le faut, à garder ou retirer dans l'app.")
                     }
                 }
 
@@ -489,7 +489,7 @@ struct ShareComposeView: View {
         }
         tache.notes = TacheHA.Piece.notes(tache.notes, setting: tache.pieces)
         var liste = tache.liste ?? TacheHA.Liste()
-        liste.ajouterPhoto(piece: piece.id, le: maintenant)
+        liste.ajouterPhoto(piece: piece.id, le: maintenant, origine: "partage")
         tache.liste = liste
         guard let valeur = try? tache.valeur(),
               Journal.essayer(.synchro, "Photo vers la liste de courses", { try synchro.ecrire(cle, valeur) }) != nil

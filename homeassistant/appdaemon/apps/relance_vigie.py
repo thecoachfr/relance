@@ -344,9 +344,10 @@ class RelanceVigie(Hass):
         client = anthropic.Anthropic(api_key=cle_api, timeout=120.0, max_retries=2,
                                      default_headers={"anthropic-workspace-id": espace_travail} if espace_travail else None)
         modele = self.args.get("photos_modele", self.args.get("tri_modele", aiguillage_tri.MODELE))
+        magasins = aiguillage_photos.magasins(aiguillage_photos.groupes(records))
         for record, photo in a_lire:
             valeur, piece = record["valeur"], photo["piece"]
-            lus, echec = [], None
+            lus, echec, magasin = [], None, None
             try:
                 reponse = httpx.get(f"{CORE_API}/donnees_apps/fichiers/{self._espace}/{piece}", timeout=30,
                                     headers={"Authorization": f"Bearer {os.environ['SUPERVISOR_TOKEN']}"})
@@ -359,7 +360,7 @@ class RelanceVigie(Hass):
                     message = client.messages.create(
                         model=modele, max_tokens=4000, system=aiguillage_photos.CONSIGNE,
                         messages=[{"role": "user", "content": aiguillage_photos.contenu(
-                            image, type_mime, aiguillage_photos.articles_deja(valeur), photo.get("note"))}],
+                            image, type_mime, aiguillage_photos.articles_deja(valeur), photo.get("note"), magasins)}],
                         output_config={"effort": "medium",
                                        "format": {"type": "json_schema", "schema": aiguillage_photos.SCHEMA}})
                     cout = aiguillage_tri.cout(message.usage, modele)
@@ -368,7 +369,8 @@ class RelanceVigie(Hass):
                         echec = f"lecture interrompue ({message.stop_reason})"
                     else:
                         brut = next((b.text for b in message.content if b.type == "text"), "{}")
-                        lus = json.loads(brut).get("articles", [])
+                        lu = json.loads(brut)
+                        lus, magasin = lu.get("articles", []), lu.get("magasin")
             except Exception as error:  # noqa: BLE001 - fichier pas encore arrivé, réseau : nouvel essai dans 1 min
                 essais = self._photos_essais.get(piece, 0) + 1
                 self._photos_essais[piece] = essais
@@ -379,7 +381,20 @@ class RelanceVigie(Hass):
                     continue
                 echec = "photo introuvable ou illisible"
             self._photos_essais.pop(piece, None)
-            nouvelle, ajoutes = aiguillage_photos.fusion(valeur, piece, lus, datetime.now(UTC).isoformat(), echec)
+            maintenant = datetime.now(UTC).isoformat()
+            # Un seul type de liste à la fois (28/10) : des produits d'un autre magasin partent vers sa liste.
+            vers, type_lu = (None, None) if echec else aiguillage_photos.destination(records, record, photo, magasin)
+            if type_lu:
+                try:
+                    titre = self._photos_deplacer(records, record, photo, vers, type_lu, lus, maintenant)
+                    self.log(f"Photos : produits de « {valeur.get('titre')} » rangés dans « {titre} »"
+                             f" ; mois : {etat.get('cout_mois', 0):.2f} $")
+                except Exception as error:  # noqa: BLE001 - relue au prochain passage
+                    self.log(f"Photos : déplacement impossible : {error!r}", level="WARNING")
+                # Les listes ont changé : la suite au prochain passage (déclenché par ces écritures), relue à neuf,
+                # pour ne pas créer deux listes du même type.
+                break
+            nouvelle, ajoutes = aiguillage_photos.fusion(valeur, piece, lus, maintenant, echec)
             try:
                 self._service("donnees_apps", "ecrire", {
                     "espace": self._espace, "cle": record["cle"], "valeur": nouvelle,
@@ -390,6 +405,26 @@ class RelanceVigie(Hass):
             self.log(f"Photos : « {valeur.get('titre')} » : {echec or f'{ajoutes} article(s) proposé(s)'}"
                      f" ; mois : {etat.get('cout_mois', 0):.2f} $")
         self._tri_etat(etat)
+
+    def _photos_deplacer(self, records, record, photo, vers, type_lu, lus, maintenant):
+        """Articles lus rangés dans la liste du magasin vu par Claude (créée s'il n'y en a pas), avec la photo ; la
+        liste d'origine garde la trace du déplacement. Renvoie le titre de la liste qui reçoit les articles."""
+        piece = next((p for p in record["valeur"].get("pieces") or [] if p.get("id") == photo["piece"]),
+                     {"id": photo["piece"]})
+        grps = aiguillage_photos.groupes(records)
+        cle = vers["cle"] if vers else str(uuid.uuid4())
+        cible = vers["valeur"] if vers else aiguillage_photos.nouvelle_liste(type_lu, grps)
+        cible = aiguillage_photos.avec_photos(cible, [piece], maintenant, photo.get("note"),
+                                              source=photo.get("origine", "signal"))
+        cible, _ = aiguillage_photos.fusion(cible, photo["piece"], lus, maintenant)
+        self._service("donnees_apps", "ecrire", {
+            "espace": self._espace, "cle": cle, "valeur": cible, "version_attendue": vers["version"] if vers else 0,
+            "modifie_par": "vigie", "op_id": str(uuid.uuid4())})
+        self._service("donnees_apps", "ecrire", {
+            "espace": self._espace, "cle": record["cle"],
+            "valeur": aiguillage_photos.sans_piece(record["valeur"], photo["piece"], cle),
+            "version_attendue": record["version"], "modifie_par": "vigie", "op_id": str(uuid.uuid4())})
+        return cible.get("titre", "Courses")
 
     # MARK: - Disponibilités TMDB (P9-B3)
 

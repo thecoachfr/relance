@@ -27,10 +27,10 @@ def test_photos_a_lire():
 
 
 def test_contenu_image_puis_texte():
-    c = p.contenu(b"\xff\xd8image", "image/jpeg", ["Pain"], note="Leroy Merlin")
+    c = p.contenu(b"\xff\xd8image", "image/jpeg", ["Pain"], note="Leroy Merlin", magasins=["Supermarchés", "Leroy Merlin"])
     assert c[0]["type"] == "image" and c[0]["source"]["media_type"] == "image/jpeg"
     assert base64.b64decode(c[0]["source"]["data"]) == b"\xff\xd8image"
-    assert "Pain" in c[1]["text"] and "Leroy Merlin" in c[1]["text"]
+    assert "Pain" in c[1]["text"] and "Note d'Alexandre" in c[1]["text"] and "Magasins possibles : Supermarchés, Leroy Merlin" in c[1]["text"]
     assert "aucun" in p.contenu(b"x", "image/png", [])[1]["text"]
 
 
@@ -60,6 +60,7 @@ def test_fusion_echec():
 def test_schema_strict():
     item = p.SCHEMA["properties"]["articles"]["items"]
     assert item["additionalProperties"] is False and set(item["required"]) == {"texte", "quantite", "rayon"}
+    assert p.SCHEMA["required"] == ["articles", "magasin"]
 
 
 CLE_A = "0b7c3a5e-1f2d-4c6b-9a8e-112233445566"
@@ -70,25 +71,64 @@ def enr(cle, titre, modifie, **v):
     return {"cle": cle, "modifie_le": modifie, "valeur": {"titre": titre, "categorie": "Achats", "liste": {"articles": []}, **v}}
 
 
-def test_liste_cible_la_plus_recente_ou_nommee():
-    e = [enr(CLE_A, "Courses a Leroy merlin", "2026-10-27T10:00:00Z"),
-         enr(CLE_B, "Courses de la semaine", "2026-10-28T09:00:00Z"),
-         enr("aaaaaaaa-1f2d-4c6b-9a8e-112233445566", "Finie", "2026-10-28T12:00:00Z", fait=True),
-         {"cle": "config:lieux", "valeur": {"titre": "x"}}]
-    assert p.liste_cible(e)["cle"] == CLE_B
-    assert p.liste_cible(e, "leroy MERLIN")["cle"] == CLE_A
-    assert p.liste_cible(e, "Pharmacie")["cle"] == CLE_B
-    assert p.liste_cible([]) is None
+LIEUX = {"cle": "config:lieux", "valeur": {"groupes": [
+    {"id": "supermarches", "nom": "Supermarchés"}, {"id": "lm", "nom": "Leroy Merlin"},
+    {"id": "dom", "nom": "Domicile"}, {"id": "pharma", "nom": "Pharmacie"}]}}
+
+
+def test_type_de_liste_comme_l_app():
+    grps = p.groupes([LIEUX])
+    assert p.type_de_liste({"titre": "Courses a Leroy merlin"}, grps) == "lm"
+    assert p.type_de_liste({"titre": "Courses de la semaine"}, grps) == "supermarches"
+    assert p.type_de_liste({"titre": "Achats Ikea"}, grps) == "enseigne:ikea"
+    assert p.type_de_liste({"titre": "Courses", "actions": [
+        {"type": "rappel_groupe", "etat": "a_faire", "params": {"groupe": "pharma"}}]}, grps) == "pharma"
+    assert p.magasins(grps) == ["Supermarchés", "Leroy Merlin", "Pharmacie"]
+    assert p.nom_du_type("enseigne:ikea", grps) == "Ikea" and p.nom_du_type("supermarches", grps) == "Supermarchés"
+
+
+def test_un_seul_type_de_liste_a_la_fois():
+    e = [LIEUX, enr(CLE_A, "Courses a Leroy merlin", "2026-10-28T10:00:00Z"),
+         enr(CLE_B, "Courses de la semaine", "2026-10-27T09:00:00Z"),
+         enr("aaaaaaaa-1f2d-4c6b-9a8e-112233445566", "Finie", "2026-10-28T12:00:00Z", fait=True)]
+    # Sans note : la liste Supermarchés, même si la Leroy Merlin est plus récente ; type pas fixé.
+    cible, t, fixe = p.liste_cible(e)
+    assert cible["cle"] == CLE_B and t == "supermarches" and not fixe
+    cible, t, fixe = p.liste_cible(e, "leroy MERLIN")
+    assert cible["cle"] == CLE_A and t == "lm" and fixe
+    cible, t, fixe = p.liste_cible(e, "Pharmacie")
+    assert cible is None and t == "pharma" and fixe
+    assert p.nouvelle_liste(t, p.groupes(e))["titre"] == "Courses Pharmacie"
+    assert p.nouvelle_liste()["titre"] == "Courses"
+    # Après lecture : une gouttière vue sur une photo reçue dans la liste Supermarchés part vers la Leroy Merlin.
+    hote = e[2]
+    photo = {"piece": "abc", "origine": "signal"}
+    vers, t = p.destination(e, hote, photo, "Leroy Merlin")
+    assert vers["cle"] == CLE_A and t == "lm"
+    assert p.destination(e, hote, photo, "Supermarchés") == (None, None)
+    assert p.destination(e, hote, {"piece": "abc", "origine": "fiche"}, "Leroy Merlin") == (None, None)
+    assert p.destination(e, hote, {"piece": "abc", "origine": "signal", "type_fixe": True}, "Leroy Merlin") == (None, None)
+    vers, t = p.destination(e, hote, photo, "Ikea")
+    assert vers is None and t == "enseigne:ikea"
+
+
+def test_deplacement_de_la_photo():
+    v = p.avec_photos(p.nouvelle_liste(), [{"id": "abc", "nom": "IMG.jpg", "type": "image/jpeg", "taille": 9}], MAINTENANT)
+    assert v["liste"]["photos"][0]["origine"] == "signal"
+    apres = p.sans_piece(v, "abc", CLE_A)
+    assert apres["pieces"] == [] and apres["liste"]["photos"] == [
+        {"piece": "abc", "ajoute_le": MAINTENANT, "origine": "signal", "deplacee_vers": CLE_A}]
+    assert p.photos_a_lire(apres) == []
 
 
 def test_nouvelle_liste_et_photos():
     v = p.nouvelle_liste()
     assert v["titre"] == "Courses" and v["categorie"] == "Achats" and v["liste"] == {"articles": []}
-    assert p.nouvelle_liste("Pharmacie")["titre"] == "Pharmacie"
     piece = {"id": "abc", "nom": "IMG_1.jpg", "type": "image/jpeg", "taille": 1234}
-    avec = p.avec_photos(v, [piece], MAINTENANT, note="Pharmacie")
+    avec = p.avec_photos(v, [piece], MAINTENANT, note="Pharmacie", type_fixe=True)
     assert avec["pieces"][0]["id"] == "abc" and avec["pieces"][0]["source"] == "signal"
-    assert p.photos_a_lire(avec) == [{"piece": "abc", "a_lire": True, "ajoute_le": MAINTENANT, "note": "Pharmacie"}]
+    assert p.photos_a_lire(avec) == [{"piece": "abc", "a_lire": True, "ajoute_le": MAINTENANT, "origine": "signal",
+                                      "type_fixe": True, "note": "Pharmacie"}]
     # Même photo envoyée deux fois : une seule pièce, une seule lecture.
     deux = p.avec_photos(avec, [piece], MAINTENANT)
     assert len(deux["pieces"]) == 1 and len(deux["liste"]["photos"]) == 1
