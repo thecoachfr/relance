@@ -691,3 +691,27 @@ Tests : `test_envoye_du_fil`, `test_lire_envoyes_lecture_bornee`, `test_candidat
 
 
 **Budget d'« Aujourd'hui » (28/10, choix d'Alexandre)** : 6 $ par mois (`aujourdhui_budget_mensuel: 6` dans le bloc `aiguillage_courrier`, NUC et dépôt), au lieu de 3 $ : ~0,04 $ par calcul, 4 à 5 calculs par jour.
+
+### Lignes faites ou masquées dans l'app (28/10 au soir, retours d'Alexandre)
+
+- **À faire › « Fait »** (balayage, coche, touche E) : l'app archive **les mails de la ligne** dans Gmail (même geste
+  que « Fait » sur une carte), après 5 s pendant lesquelles « Annuler » est possible. Rien à faire de plus ici : la
+  relève voit l'archivage, les mails passent en `fait`, l'empreinte change.
+- **À relancer › « Pas besoin de relancer »**, **À venir › « C'est noté »** : rien n'est archivé ; l'app écrit, une
+  clé par mail de la ligne :
+
+      aujourdhui_masque:<id du mail> = {quand: ISO}
+
+  Le NUC les lit avec les autres changements de l'espace (`appliquer_masques`, table `masques_aujourdhui` ; une clé
+  effacée retire le masque) et **ne propose plus ces mails** (À faire, À relancer, À venir). Les clés de plus de
+  **30 jours** sont effacées (table et espace, `masques_a_purger`, avec les corrections traitées).
+- **Candidats** : en plus des masqués, un « à traiter » passé en `fait` (`categorie_tri = 'a_traiter'`) n'est plus
+  candidat d'À venir (sinon une ligne faite revenait par là). Une lettre ou un bruit archivé reste candidat d'À venir
+  (rendez-vous, livraisons : « Tout archiver » du Bruit ne doit pas vider la liste).
+- **Recalcul** : un masquage change l'empreinte des candidats ; recalcul au plus tôt dans la limite habituelle
+  (30 minutes après le précédent, pas la nuit), **jamais forcé**. D'ici là l'app cache la ligne (les autres appareils
+  aussi : ils lisent les clés `aujourdhui_masque:*`).
+- Journal : « Courrier : Aujourd'hui, n ligne(s) masquée(s) dans l'app, m masque(s) de plus de 30 jours effacé(s) ».
+- Tests : `test_masques_lus_puis_annules`, `test_masques_purges_apres_30_jours`, `test_candidats_sans_masques_ni_faits`
+  (339 tests Python verts). Déployé le 28/10 à 22 h 15 (sauvegarde `aiguillage_courrier.py.avant-aujourdhui2-20261028`).
+  App : `../courrier`, décisions 63 à 65.

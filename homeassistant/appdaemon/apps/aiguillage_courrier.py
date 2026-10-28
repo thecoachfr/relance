@@ -647,6 +647,9 @@ CREATE TABLE IF NOT EXISTS publies (
 CREATE TABLE IF NOT EXISTS plus_tard (
     id TEXT PRIMARY KEY, jusqua TEXT NOT NULL, rappele TEXT, maj TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS masques_aujourdhui (
+    id TEXT PRIMARY KEY, quand TEXT NOT NULL, maj TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS appareils (
     cle TEXT PRIMARY KEY, jeton TEXT NOT NULL, environnement TEXT NOT NULL, app_version TEXT, maj TEXT NOT NULL,
     pastille INTEGER DEFAULT 1, badge INTEGER
@@ -1352,6 +1355,8 @@ ESPACE_COURRIER = "courrier"
 PREFIXE_PLUS_TARD = "plus_tard:"
 PREFIXE_CORRECTION = "correction:"
 PREFIXE_FICHE = "fiche:"
+PREFIXE_MASQUE = "aujourdhui_masque:"   # ligne d'« Aujourd'hui » masquée dans l'app (28/10)
+MASQUE_JOURS = 30                       # clés `aujourdhui_masque:*` purgées après 30 jours
 ECRITURES_PAR_PASSE = 40
 EMETTEUR = "nuc-courrier"
 
@@ -1521,6 +1526,60 @@ def appliquer_plus_tard(db, reponse, maintenant):
     db.execute("DELETE FROM plus_tard WHERE id NOT IN (SELECT id FROM messages WHERE categorie = 'a_traiter')")
     db.commit()
     return n
+
+
+# MARK: - Lignes d'« Aujourd'hui » masquées dans l'app (28/10, retour d'Alexandre)
+#
+# « Pas besoin de relancer » (À relancer) et « C'est noté » (À venir) n'archivent rien : l'app écrit
+# `aujourdhui_masque:<id du mail>` = `{quand}` dans l'espace `courrier`. Le NUC le lit avec les autres changements,
+# le garde dans la table `masques_aujourdhui` et ne propose plus ce mail à « Aujourd'hui » : l'empreinte des candidats
+# change, le recalcul suit dans la limite habituelle (30 minutes, pas la nuit), sans calcul forcé ; l'app cache la
+# ligne d'ici là. Les clés de plus de 30 jours sont effacées (table et espace). « Fait » (À faire) archive les mails :
+# la relève les passe en `fait`, ce qui suffit.
+
+
+def appliquer_masques(db, reponse, maintenant):
+    """Applique les `aujourdhui_masque:*` des changements de l'espace `courrier` (une clé effacée, par « Annuler »
+    ou par la purge, retire le masque). Renvoie le nombre de masques ajoutés."""
+    quand_maj, n = maintenant.isoformat(timespec="seconds"), 0
+    vus = set()
+    for e in (reponse or {}).get("enregistrements") or []:
+        cle = str(e.get("cle") or "")
+        if not cle.startswith(PREFIXE_MASQUE):
+            continue
+        ident = cle[len(PREFIXE_MASQUE):]
+        if not ident:
+            continue
+        if e.get("supprime"):
+            db.execute("DELETE FROM masques_aujourdhui WHERE id = ?", (ident,))
+            continue
+        vus.add(ident)
+        quand = _instant((e.get("valeur") or {}).get("quand")) or _instant(e.get("modifie_le")) \
+            or maintenant.astimezone(timezone.utc)
+        if not db.execute("SELECT 1 FROM masques_aujourdhui WHERE id = ?", (ident,)).fetchone():
+            n += 1
+        db.execute("INSERT OR REPLACE INTO masques_aujourdhui (id, quand, maj) VALUES (?, ?, ?)",
+                   (ident, quand.isoformat(timespec="seconds"), quand_maj))
+    if (reponse or {}).get("resynchro_complete"):
+        for r in [dict(x) for x in db.execute("SELECT id FROM masques_aujourdhui")]:
+            if r["id"] not in vus:
+                db.execute("DELETE FROM masques_aujourdhui WHERE id = ?", (r["id"],))
+    db.commit()
+    return n
+
+
+def masques_a_purger(db, maintenant, jours=MASQUE_JOURS):
+    """Masques de plus de `jours` jours : retirés de la table ; renvoie leurs clés, à effacer dans l'espace."""
+    limite = maintenant.astimezone(timezone.utc) - timedelta(days=jours)
+    vieux = [r["id"] for r in db.execute("SELECT id, quand FROM masques_aujourdhui")
+             if (_instant(r["quand"]) or limite) < limite]
+    db.executemany("DELETE FROM masques_aujourdhui WHERE id = ?", [(i,) for i in vieux])
+    db.commit()
+    return {PREFIXE_MASQUE + i for i in vieux}
+
+
+def masques(db):
+    return {r["id"] for r in db.execute("SELECT id FROM masques_aujourdhui")}
 
 
 def mis_de_cote(db, maintenant):
@@ -1797,14 +1856,21 @@ def synchroniser_courrier(service, db, etat, maintenant, limite=ECRITURES_PAR_PA
     Depuis C5, lit aussi les appareils de l'app (`appareil:*`) et les essais de notification (`essai_notification:*`).
     Depuis le 27/10, publie aussi les fiches des expéditeurs (`fiche:<adresse>`, d'après `memo`), après les « à
     traiter » et sous le même plafond.
+    Depuis le 28/10, lit aussi les lignes d'« Aujourd'hui » masquées (`aujourdhui_masque:*`) et efface celles de plus
+    de 30 jours.
     Renvoie {plus_tard, corrections, reclasses, ecrits, supprimes, refuses, appareils, essais, fiches_ecrites,
-    fiches_retirees} (`ecrits` et `supprimes` ne comptent que les « à traiter »)."""
+    fiches_retirees, masques, masques_purges} (`ecrits` et `supprimes` ne comptent que les « à traiter »)."""
     rep = service("donnees_apps", "changements",
                   {"espace": ESPACE_COURRIER, "depuis_seq": int(etat.get("courrier_seq") or 0)}) or {}
     resume = {"plus_tard": appliquer_plus_tard(db, rep, maintenant), "corrections": 0, "reclasses": 0,
               "ecrits": 0, "supprimes": 0, "refuses": 0, "appareils": appliquer_appareils(db, rep, maintenant),
               "essais": [], "fiches_ecrites": 0, "fiches_retirees": 0}
+    # Lignes d'« Aujourd'hui » masquées dans l'app (28/10) ; les clés de plus de 30 jours partent avec les corrections
+    # traitées (même liste, même nouvel essai si HA refuse l'effacement).
+    resume["masques"] = appliquer_masques(db, rep, maintenant)
     voulues, cles = lire_corrections(rep)
+    resume["masques_purges"] = len(purges := masques_a_purger(db, maintenant))
+    cles = cles | purges
     # Essais de notification (C5) : envoyés par l'app AppDaemon juste après cette passe ; leurs clés partent avec
     # les corrections traitées (même liste, même nouvel essai si HA refuse l'effacement).
     resume["essais"], cles_essais = lire_essais(rep, maintenant)
@@ -1983,6 +2049,9 @@ def candidats_aujourdhui(db, maintenant, envoyes=()):
     """Les candidats des trois listes, sans corps : {a_faire, a_relancer, a_venir}, chacun une liste de dicts."""
     jour = maintenant.astimezone(PARIS).date()
     caches = mis_de_cote(db, maintenant)
+    # Masqués dans l'app (« Pas besoin de relancer », « C'est noté », 28/10) : plus proposés, dans aucune liste.
+    masques_ = masques(db)
+    caches |= masques_
     a_faire = []
     for r in db.execute("SELECT * FROM messages WHERE categorie = 'a_traiter' ORDER BY date_ms DESC"):
         if r["id"] in caches:
@@ -1996,7 +2065,7 @@ def candidats_aujourdhui(db, maintenant, envoyes=()):
     bas, haut = maintenant - timedelta(days=RELANCE_JOURS[1]), maintenant - timedelta(days=RELANCE_JOURS[0])
     for e in envoyes or ():
         quand = _paris(e["envoi_ms"])
-        if not bas <= quand <= haut:
+        if not bas <= quand <= haut or e["id"] in masques_:
             continue
         if db.execute("SELECT 1 FROM messages WHERE fil = ? AND date_ms > ?", (e["fil"], e["envoi_ms"])).fetchone():
             continue
@@ -2010,7 +2079,11 @@ def candidats_aujourdhui(db, maintenant, envoyes=()):
     depuis = _debut_du_jour_ms(maintenant, A_VENIR_RECUL_JOURS)
     for r in db.execute("SELECT * FROM messages WHERE categorie != 'a_traiter' AND date_ms >= ? ORDER BY date_ms DESC",
                         (depuis,)):
-        if "CATEGORY_PROMOTIONS" in (r["libelles"] or ""):
+        if "CATEGORY_PROMOTIONS" in (r["libelles"] or "") or r["id"] in masques_:
+            continue
+        # Un « à traiter » passé en `fait` (« Fait » dans l'app, sur la carte ou sur une ligne À faire, répondu…) ne
+        # revient pas par À venir (28/10). Une lettre ou un bruit archivé garde son rendez-vous ou sa livraison.
+        if r["categorie"] == "fait" and r["categorie_tri"] == "a_traiter":
             continue
         dans_la_fenetre = bool(r["echeance"]) and jour.isoformat() <= r["echeance"] <= fin
         if not dans_la_fenetre and not _MOTS_A_VENIR.search(f"{r['sujet'] or ''} {r['resume'] or ''}"):
@@ -2663,6 +2736,9 @@ if hass is not None:
             if r["corrections"]:
                 self.log(f"Courrier : {r['corrections']} correction(s) de l'app devenue(s) règle(s) manuelle(s), "
                          f"{r['reclasses']} mail(s) reclassé(s)")
+            if r.get("masques") or r.get("masques_purges"):
+                self.log(f"Courrier : Aujourd'hui, {r.get('masques', 0)} ligne(s) masquée(s) dans l'app, "
+                         f"{r.get('masques_purges', 0)} masque(s) de plus de 30 jours effacé(s)")
             if r["fiches_ecrites"] or r["fiches_retirees"]:
                 self.log(f"Courrier : fiches des expéditeurs, {r['fiches_ecrites']} publiée(s), "
                          f"{r['fiches_retirees']} retirée(s)")

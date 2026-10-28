@@ -908,7 +908,8 @@ def test_synchroniser_courrier_differentiel():
     ha, etat = FauxDonnees(), {}
     r = c.synchroniser_courrier(ha, db, etat, MAINTENANT)
     assert r == {"plus_tard": 0, "corrections": 0, "reclasses": 0, "ecrits": 2, "supprimes": 0, "refuses": 0,
-                 "appareils": 0, "essais": [], "fiches_ecrites": 0, "fiches_retirees": 0}
+                 "appareils": 0, "essais": [], "fiches_ecrites": 0, "fiches_retirees": 0, "masques": 0,
+                 "masques_purges": 0}
     assert set(ha.espace) == {"a1", "a2"} and [o["cle"] for o in ha.lots()[0]] == ["a2", "a1"]  # récents d'abord
     assert etat["courrier_seq"] == 0
     # Rien n'a changé : aucune écriture.
@@ -1703,3 +1704,50 @@ def test_resume_de_9h_commence_par_aujourdhui():
     notifs, ids = c.resume_a_envoyer(db, etat, neuf + timedelta(minutes=1), aujourdhui=valeur)
     assert notifs[0]["title"] == "☀️ Aujourd’hui" and notifs[0]["message"].split("\n") == lignes and ids == []
     assert c.resume_a_envoyer(db, etat, neuf.replace(hour=12)) == ([], [])
+
+
+# MARK: - Lignes d'« Aujourd'hui » masquées dans l'app (28/10)
+
+def _masque(ident, quand="2026-10-28T08:00:00Z", supprime=False):
+    return {"cle": f"aujourdhui_masque:{ident}", "valeur": None if supprime else {"quand": quand}, "supprime": supprime}
+
+
+def test_masques_lus_puis_annules():
+    db, ha, etat = _base(), FauxDonnees(), {}
+    ha.changements = {"enregistrements": [_masque("s1"), _masque("v2"), _plus_tard("x", supprime=True)], "seq_max": 5}
+    r = c.synchroniser_courrier(ha, db, etat, MERCREDI)
+    assert r["masques"] == 2 and c.masques(db) == {"s1", "v2"}
+    # « Annuler » dans l'app (clé effacée) : le masque disparaît ; rien d'autre n'est écrit pour lui.
+    ha.changements = {"enregistrements": [_masque("v2", supprime=True)], "seq_max": 6}
+    r = c.synchroniser_courrier(ha, db, etat, MERCREDI)
+    assert r["masques"] == 0 and c.masques(db) == {"s1"}
+    assert not any(o["cle"].startswith("aujourdhui_masque:") for lot in ha.lots() for o in lot)
+
+
+def test_masques_purges_apres_30_jours():
+    db, ha, etat = _base(), FauxDonnees(), {}
+    ha.changements = {"enregistrements": [_masque("vieux", "2026-09-20T08:00:00Z"), _masque("recent")], "seq_max": 5}
+    r = c.synchroniser_courrier(ha, db, etat, MERCREDI)
+    assert r["masques"] == 2 and r["masques_purges"] == 1 and c.masques(db) == {"recent"}
+    assert ("supprimer", "aujourdhui_masque:vieux") in [(o["type"], o["cle"]) for o in ha.lots()[-1]]
+    assert etat["corrections_a_retirer"] == []
+
+
+def test_candidats_sans_masques_ni_faits():
+    db = _base()
+    h = MERCREDI - timedelta(hours=3)
+    _range(db, "f1", h, "a_traiter", sujet="Switch", resume="Tom veut la Switch.")
+    _range(db, "f2", h, "a_traiter", sujet="CRA", resume="Opteamis attend le CRA.")
+    _range(db, "v1", h, "lettre", sujet="Votre rendez-vous", resume="RDV le 30/10 à 15 h.")
+    _range(db, "v2", h, "lettre", sujet="Votre colis arrive", resume="Livraison jeudi.")
+    # f2 : « Fait » dans l'app (archivé, la relève l'a passé en `fait`) ; son tri reste « à traiter ».
+    db.execute("UPDATE messages SET categorie = 'fait' WHERE id = 'f2'")
+    envoyes = [_envoye("s1", "t1", 5), _envoye("s2", "t2", 6)]
+    avant = c.candidats_aujourdhui(db, MERCREDI, envoyes)
+    assert {x["id"] for x in avant["a_venir"]} == {"v1", "v2"} and "f2" not in {x["id"] for x in avant["a_faire"]}
+    c.appliquer_masques(db, {"enregistrements": [_masque("s2"), _masque("v2"), _masque("f1")]}, MERCREDI)
+    k = c.candidats_aujourdhui(db, MERCREDI, envoyes)
+    assert [x["id"] for x in k["a_relancer"]] == ["s1"]
+    assert {x["id"] for x in k["a_venir"]} == {"v1"} and {x["id"] for x in k["a_faire"]} == set()
+    # Le masque change l'empreinte : recalcul au plus tôt dans la limite habituelle (pas de calcul forcé).
+    assert c.empreinte_candidats(k, MERCREDI) != c.empreinte_candidats(avant, MERCREDI)
