@@ -688,3 +688,6 @@ Tests : `test_envoye_du_fil`, `test_lire_envoyes_lecture_bornee`, `test_candidat
 `test_passe_aujourdhui_recalcul_seulement_si_les_candidats_changent`,
 `test_passe_aujourdhui_sans_candidat_budget_et_echecs`, `test_resume_de_9h_commence_par_aujourdhui`, et
 `lister_fils` dans `test_garde_fou_lecture_seule` (310 tests Python verts).
+
+
+**Budget d'« Aujourd'hui » (28/10, choix d'Alexandre)** : 6 $ par mois (`aujourdhui_budget_mensuel: 6` dans le bloc `aiguillage_courrier`, NUC et dépôt), au lieu de 3 $ : ~0,04 $ par calcul, 4 à 5 calculs par jour.

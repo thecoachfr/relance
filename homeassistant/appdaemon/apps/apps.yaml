@@ -84,6 +84,8 @@ aiguillage_courrier:
   # Espace « courrier » de donnees_apps pour l'app Courrier (C2, 26/10) : donnees_courrier: false pour le couper.
   mode: ombre
   courrier_budget_mensuel: 15
+  # « Aujourd'hui » : 6 $ par mois (choix d'Alexandre du 28/10, ~0,04 $ par calcul).
+  aujourdhui_budget_mensuel: 6
   refresh_seconds: 120
   # autorisation_file: /config/aiguillage_courrier_google.json
   # workspace_id: wrkspc_…
