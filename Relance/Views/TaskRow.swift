@@ -162,11 +162,28 @@ struct TaskRow: View {
             HStack(spacing: 5) {
                 Image(systemName: "checklist").imageScale(.small)
                 Text("\(liste.cochés)/\(liste.articles.count)").monospacedDigit()
+                // Magasin d'une liste de courses (28/10, demande d'Alexandre) : celui qui la rappelle (P9-Q).
+                if let magasin {
+                    Image(systemName: "storefront").imageScale(.small).padding(.leading, 6)
+                    Text(magasin).lineLimit(1)
+                }
             }
             .font(.subheadline)
             .foregroundStyle(.secondary)
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel("Liste : \(liste.cochés) cochés sur \(liste.articles.count)")
+            .accessibilityLabel("Liste : \(liste.cochés) cochés sur \(liste.articles.count)" + (magasin.map { ", \($0)" } ?? ""))
+        }
+    }
+
+    /// Nom du magasin d'une liste d'achats (même règle que les rappels, `MesLieux.magasin`), ou `nil`.
+    private var magasin: String? {
+        guard item.category == "Achats", item.liste != nil else { return nil }
+        let lieux = MesLieux.cached()
+        return switch lieux.magasin(titre: item.title, actions: item.actions) {
+        case .choisi(let ids): ids.compactMap { lieux.groupe($0)?.nom }.joined(separator: ", ")
+        case .nomme(let id): lieux.groupe(id)?.nom
+        case .enseigneSansGroupe(let enseigne): enseigne
+        case .supermarches: lieux.groupe(MesLieux.supermarches)?.nom ?? "Supermarchés"
         }
     }
 
