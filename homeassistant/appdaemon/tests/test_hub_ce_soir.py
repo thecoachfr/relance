@@ -62,6 +62,8 @@ def test_en_cours_et_champs():
     assert p["numero"] == 45 and p["oqee_id"] == 1164 and p["heure_texte"] == "21 h"
     assert p["logo"] == "https://img2.oqee.net/channel_pictures/3109/w300"
     assert p["debut"] == "2026-10-28T21:00+01:00" and a["soiree"] == "2026-10-28"
+    assert (p["fin_texte"], p["duree_texte"]) == ("22 h 40", "1 h 40")
+    assert c.duree_texte(3600) == "1 h" and c.duree_texte(3000) == "50 min" and c.duree_texte(7740) == "2 h 09"
 
 
 def test_episodes_a_la_suite_une_seule_fois():
@@ -102,6 +104,7 @@ def test_lecture_des_deux_guides():
                "99999": [{"live": {"title": "Hors table", "start": t(21)}}]}
     bruts = c.programmes_oqee(entrees, CHAINES)
     assert len(bruts) == 1 and bruts[0]["image"] == "https://img1.oqee.net/pictures/1/wide/h480"
+    assert bruts[0]["image_grande"] == "https://img1.oqee.net/pictures/1/wide/h1080"
     epg = {"uuid-webtv-204": {"a": {"title": "The Game", "date": t(21), "duration": 7800, "category_name": "Film",
                                     "picture_big": "/api/latest/tv/img/x.jpg"}}}
     fb = c.programmes_freebox(epg, CHAINES)
@@ -131,7 +134,7 @@ def test_taille_des_attributs():
     long = "mot " * 200
     bruts = [dict(prog(o, f"Programme {i}"), resume=long) for i, (_, _, o, _) in enumerate(CHAINES)]
     _, a = c.calculer(bruts, CHAINES, set(), SOIR)
-    assert len(json.dumps(a, ensure_ascii=False).encode()) < 12000  # limite de l'enregistreur : 16 Ko
+    assert len(json.dumps(a, ensure_ascii=False).encode()) < 15500  # limite de l'enregistreur : 16 Ko
     assert all(len(p["resume"]) <= c.RESUME_MAX + 1 for p in a["programmes"])
 
 
@@ -166,7 +169,8 @@ def test_notes_dans_le_tri_et_le_capteur():
     _, a = c.calculer(bruts, CHAINES, set(), SOIR, notes=notes)
     assert [p["titre"] for p in a["programmes"]] == ["Grand film", "Bon film", "Film peu vu", "Kaamelott"]
     p = a["programmes"][0]
-    assert (p["imdb_id"], p["note_imdb"], p["note_texte"]) == ("tt2", 7.9, "7,9")
+    assert (p["imdb_id"], p["note_imdb"], p["note_texte"], p["votes_imdb"]) == ("tt2", 7.9, "7,9", 9000)
+    assert a["programmes"][2]["votes_imdb"] is None
     assert a["programmes"][2]["note_imdb"] is None  # 12 votes : pas montrée
     assert c.a_noter(bruts, SOIR) == {("film", "Bon film", 2021), ("film", "Grand film", 1985), ("film", "Film peu vu", 2024),
                                       ("serie", "Kaamelott", None)}

@@ -33,8 +33,9 @@ DEBUT_MAX = time(21, 20)
 PRIME = time(20, 50)  # avant : courts programmes d'avant-soirée (sitcoms, feuilletons), mis après à genre égal
 DUREE_MIN = 20 * 60  # écarte les pastilles (« Scènes de ménages », météo…)
 MAX_PROGRAMMES = 12
-RESUME_MAX = 220
+RESUME_MAX = 600  # la fiche détaillée l'affiche en entier (220 jusqu'au 28/10/2026 au soir)
 HAUTEUR_IMAGE = 480
+HAUTEUR_GRANDE = 1080  # image de la fiche
 VOTES_MIN = 100
 IMDB_NOTES = "https://datasets.imdbws.com/title.ratings.tsv.gz"
 TMDB = "https://api.themoviedb.org/3"
@@ -120,8 +121,16 @@ def heure_texte(d):
     return f"{d.hour} h" + (f" {d.minute:02d}" if d.minute else "")
 
 
-def _image(gabarit):
-    return gabarit.replace("%d", str(HAUTEUR_IMAGE)) if gabarit else None
+def _image(gabarit, hauteur=HAUTEUR_IMAGE):
+    return gabarit.replace("%d", str(hauteur)) if gabarit else None
+
+
+def duree_texte(secondes):
+    """« 2 h 09 », « 1 h », « 50 min »."""
+    h, mn = divmod(round(secondes / 60), 60)
+    if not h:
+        return f"{mn} min"
+    return f"{h} h" + (f" {mn:02d}" if mn else "")
 
 
 def _resume(texte):
@@ -153,6 +162,7 @@ def programmes_oqee(entrees, chaines):
                 "sous_categorie": l.get("sub_category"), "annee": l.get("year"), "debut": int(l["start"]),
                 "duree": int(l.get("duration_seconds") or (l.get("end", l["start"]) - l["start"])),
                 "resume": l.get("description"), "image": _image(images.get("main") or images.get("huge")),
+                "image_grande": _image(images.get("huge") or images.get("main"), HAUTEUR_GRANDE),
                 "age": l.get("parental_rating") or 0,
             })
     return sortie
@@ -172,7 +182,8 @@ def programmes_freebox(epg, chaines):
             sortie.append({
                 "oqee_id": par_uuid[uuid], "titre_brut": p["title"], "categorie": p.get("category_name"),
                 "sous_categorie": None, "annee": None, "debut": int(p["date"]), "duree": int(p.get("duration") or 0),
-                "resume": p.get("desc"), "image": f"{FREEBOX}{image}" if image else None, "age": 0,
+                "resume": p.get("desc"), "image": f"{FREEBOX}{image}" if image else None,
+                "image_grande": f"{FREEBOX}{p.get('picture_big')}" if p.get("picture_big") else None, "age": 0,
             })
     return sortie
 
@@ -284,9 +295,10 @@ def calculer(bruts, chaines, envies, maintenant, source="oqee", notes=None):
             "annee": p["annee"], "chaine": nom, "numero": numero, "oqee_id": p["oqee_id"],
             "logo": f"https://img{logo[0]}.oqee.net/channel_pictures/{logo[1]}/w300" if logo else None,
             "debut": debut.isoformat(timespec="minutes"), "fin": fin.isoformat(timespec="minutes"),
-            "heure_texte": heure_texte(debut), "en_cours": p["debut"] <= instant,
+            "heure_texte": heure_texte(debut), "fin_texte": heure_texte(fin), "duree_texte": duree_texte(p["duree"]),
+            "en_cours": p["debut"] <= instant, "image_grande": p.get("image_grande"),
             "image": p["image"], "resume": _resume(p["resume"]), "envie": cle in envies,
-            "imdb_id": imdb_id, "note_imdb": note, "note_texte": f"{note:.1f}".replace(".", ",") if note is not None else None,
+            "imdb_id": imdb_id, "note_imdb": note, "votes_imdb": votes if note is not None else None, "note_texte": f"{note:.1f}".replace(".", ",") if note is not None else None,
         })
     prime = datetime.combine(maintenant.date(), PRIME, PARIS).isoformat(timespec="minutes")
     # À genre égal : le vrai début de soirée, puis la note IMDb (sans note : après), puis grandes chaînes, puis le plus récent.

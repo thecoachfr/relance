@@ -20,25 +20,30 @@ Attributs (exemple : `HUB-CE-SOIR-exemple.json`) :
   `serie`, `telefilm`), `genre_texte` (sous-genre d'OQEE, « Thriller », « Série policière »…), `annee` (ou null),
   `chaine` (nom affiché), `numero` (numéro Free), `oqee_id` (identifiant de chaîne qu'ouvre le Hub TV, comme
   `Applis.CHAINES`), `logo` (logo d'OQEE pour fond sombre, ou null : afficher alors le nom), `debut` et `fin`
-  (ISO 8601 à la minute), `heure_texte` (« 21 h 10 »), `en_cours` (booléen, au moment du calcul), `image` (image
-  paysage d'OQEE en 480 px de haut, ou null ; en repli Freebox, adresse locale `mafreebox.freebox.fr`), `resume`
-  (220 caractères au plus, ou null), `envie` (vrai si le titre est une envie « À regarder » d'Aiguillage pas encore
+  (ISO 8601 à la minute), `heure_texte` (« 21 h 10 »), `fin_texte` (« 23 h 20 »), `duree_texte` (« 2 h 10 », « 50 min »), `en_cours` (booléen, au moment du calcul), `image` (image
+  paysage d'OQEE en 480 px de haut, ou null ; en repli Freebox, adresse locale `mafreebox.freebox.fr`), `image_grande` (même image
+  en 1080 px, pour la fiche, ou null), `resume` (600 caractères au plus, ou null ; 220 avant le 28/10 au soir), `envie` (vrai si le titre est une envie « À regarder » d'Aiguillage pas encore
   vue), `imdb_id` (« tt0119174 » ou null), `note_imdb` (7.7 ou null), `note_texte` (« 7,7 » ou null ; null aussi
-  sous 100 votes) }]. Notes IMDb ajoutées le 28/10/2026 au soir (films, séries et téléfilms).
+  sous 100 votes), `votes_imdb` (entier, null sans note) }]. Notes IMDb ajoutées le 28/10/2026 au soir (films, séries et téléfilms).
 
 Ordre : d'abord les envies ; puis par genre (films, documentaires et reportages, séries, téléfilms) ; à genre égal,
 ce qui commence à partir de 20 h 50 avant l'avant-soirée, puis la note IMDb (sans note : après), puis les grandes chaînes (TF1, France 2, France 3,
 France 5, M6, Arte) et CANAL+, puis le plus récent (année), puis l'heure. Places par genre : 6 films, 3 documentaires
 ou reportages, 3 séries, 2 téléfilms (une envie passe toujours).
 
-## Règles d'affichage communes
+## Règles d'affichage communes (revues le 28/10/2026 au soir, après la photo d'Alexandre : trop petit, note coupée)
 
 1. **Rangée « Ce soir »** dans Vidéo, après « À regarder ». Rien du tout si `programmes` est vide ou le capteur absent.
-2. Tuile : `image` (sinon fond ardoise), `logo` de la chaîne (sinon `chaine`), `titre`, puis
-   « `heure_texte` · `genre_texte` · `annee` » ; `episode` après le titre s'il y en a un ; pastille « En cours » si
-   `en_cours` ; « IMDb `note_texte` » en fin de ligne s'il y en a une ; marque d'envie (même signe que « À regarder ») si `envie`.
-3. **Action** : mettre la TV sur la chaîne `oqee_id` (Hub TV : même ouverture qu'« En direct » ; Hub iPad : la
-   télécommande de la TV, comme la carte « À la TV »).
+2. **Tuile** : `image` (sinon fond ardoise), `logo` de la chaîne en haut à gauche (sinon `chaine`), « En cours » (vert) si
+   `en_cours`, sinon « Envie » (jaune) si `envie`, en haut à droite ; **pastille « IMDb `note_texte` » en bas à droite
+   de l'image** (jaune IMDb, texte sombre), toujours lisible ; dessous, `titre` (et `episode`), puis
+   « `heure_texte` · `genre_texte` · `annee` » (plus de note dans cette ligne : elle était coupée).
+3. **Action : la fiche détaillée** (OK au Hub TV, toucher sur l'iPad) : `image_grande` (sinon `image`), logo ou nom de
+   la chaîne, `titre`, `episode`, « `heure_texte` – `fin_texte` · `duree_texte` » (« En cours » si `en_cours`),
+   « `genre_texte` · `annee` », « IMDb `note_texte` » et le nombre de votes (« 420 000 votes »), « Dans tes envies » si
+   `envie`, `resume` en entier. Boutons : **« Regarder »** (sélectionné d'office au Hub TV : OK puis OK met la chaîne),
+   qui met la TV sur la chaîne `oqee_id` (Hub TV : même ouverture qu'« En direct » ; Hub iPad : la télécommande de la TV,
+   comme la carte « À la TV »), et **« Fermer »** (Retour au Hub TV).
 
 ## Mise en œuvre : app AppDaemon `hub_ce_soir`
 
