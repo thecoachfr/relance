@@ -127,7 +127,7 @@ Rien n'est gardé sur l'appareil. Essai réel par l'API le 23/10 vers 0 h : jour
   pendant le tracé (exigence d'iOS).
 - Mesure avec `EnergyMetrics` (heures de GPS actif) sur une semaine avec et sans ; seuil fixé avec Alexandre.
 
-*Fait le 29/10 (demande d'Alexandre), à essayer sur l'iPhone* : `Relance/App/TraceRecorder.swift`, Réglages › Mes trajets ›
+*Fait le 29/10 (demande d'Alexandre), côté HA déployé le 29/10 à 10 h 45, à essayer sur l'iPhone* : `Relance/App/TraceRecorder.swift`, Réglages › Mes trajets ›
 « Tracé précis » (Coupé / Pendant 24 h / Toujours, coupé par défaut). `CLLocationUpdate.liveUpdates(.fitness)` avec
 `CLBackgroundActivitySession` et `CLServiceSession(.always)` (mode d'arrière-plan `location` ajouté) : iOS suspend les
 positions à l'arrêt (`stationary`) et relance l'app au départ, plutôt que `CMMotionActivity` prévu au plan. Point gardé
