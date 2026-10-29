@@ -11,6 +11,7 @@ nonisolated final class EnergyMetrics: NSObject, MXMetricManagerSubscriber, @unc
         case push = "Push de la vigie"
         case zone = "Entrée dans une zone"
         case visite = "Arrêt relevé (trajets)"
+        case trace = "Lot du tracé précis envoyé"
     }
 
     /// Résumé d'un rapport MetricKit (en général 24 h).

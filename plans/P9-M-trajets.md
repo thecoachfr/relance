@@ -127,6 +127,17 @@ Rien n'est gardé sur l'appareil. Essai réel par l'API le 23/10 vers 0 h : jour
   pendant le tracé (exigence d'iOS).
 - Mesure avec `EnergyMetrics` (heures de GPS actif) sur une semaine avec et sans ; seuil fixé avec Alexandre.
 
+*Fait le 29/10 (demande d'Alexandre), à essayer sur l'iPhone* : `Relance/App/TraceRecorder.swift`, Réglages › Mes trajets ›
+« Tracé précis » (Coupé / Pendant 24 h / Toujours, coupé par défaut). `CLLocationUpdate.liveUpdates(.fitness)` avec
+`CLBackgroundActivitySession` et `CLServiceSession(.always)` (mode d'arrière-plan `location` ajouté) : iOS suspend les
+positions à l'arrêt (`stationary`) et relance l'app au départ, plutôt que `CMMotionActivity` prévu au plan. Point gardé
+s'il est précis à 50 m près et à 50 m du précédent (100 m au-delà de 30 km/h). File dans l'App Group (20 000 au plus),
+envoi par lots de 400 dans l'espace `trajets` de `donnees_apps` (`lot:<id>`, au plus tous les quarts d'heure, et au
+retour au premier plan) ; `aiguillage_trajets` les range (source `precis`), supprime le lot, reprend au démarrage ceux
+restés là. Sur la carte, là où le tracé précis existe, les points des autres sources sont retirés
+(`priorite_au_trace_precis`). Batterie : temps de GPS par MetricKit, compteur « tracé » dans Diagnostic batterie.
+Tests : Swift `TraceTests`, Python 2 de plus.
+
 ## 5. Stockage et agrégation (à décider avec Alexandre)
 
 Pistes, sans choix pour l'instant :

@@ -96,6 +96,44 @@ def lire_visites(brut):
     return out
 
 
+# MARK: - Tracé précis en mouvement (M4)
+
+def lire_lot(valeur):
+    """Lot de points du tracé précis (enregistrement `lot:<id>` de l'espace « trajets », écrit par l'app) :
+    `{"points": [[t, lat, lon, precision, vitesse], …]}` → points valides (précision au plus 100 m)."""
+    out = []
+    for p in (valeur or {}).get("points") or []:
+        if not isinstance(p, (list, tuple)) or len(p) < 3:
+            continue
+        t, lat, lon = _nombre(p[0]), _nombre(p[1]), _nombre(p[2])
+        precision = _nombre(p[3]) if len(p) > 3 else None
+        vitesse = _nombre(p[4]) if len(p) > 4 else None
+        if t is None or t < DEBUT_VALIDE or not _coords_valides(lat, lon):
+            continue
+        if precision is not None and (precision < 0 or precision > PRECISION_POINT_MAX):
+            continue
+        out.append({"t": int(t), "lat": lat, "lon": lon, "precision": precision,
+                    "vitesse": vitesse if vitesse is not None and vitesse >= 0 else None})
+    return out
+
+
+def priorite_au_trace_precis(points, marge=120):
+    """Points d'un jour pour la carte : là où le tracé précis existe, les points des autres sources (plus espacés,
+    moins précis) sont retirés, pour ne pas faire de zigzags ; ailleurs, tout est gardé."""
+    precis = sorted(p["t"] for p in points if p.get("source") == "precis")
+    if not precis:
+        return points
+    plages, debut, fin = [], precis[0], precis[0]
+    for t in precis[1:]:
+        if t - fin > 600:  # même règle que l'écran : un trou de plus de 10 min coupe le tracé
+            plages.append((debut, fin))
+            debut = t
+        fin = t
+    plages.append((debut, fin))
+    return [p for p in points if p.get("source") == "precis"
+            or not any(a - marge <= p["t"] <= b + marge for a, b in plages)]
+
+
 # MARK: - Tracés de Santé (M0)
 
 GPX_POINT = re.compile(r'<trkpt\s+lon="([^"]+)"\s+lat="([^"]+)">(.*?)</trkpt>', re.S)
@@ -266,7 +304,7 @@ def reponse_jour(db, jour, taille_max=TAILLE_REPONSE_MAX):
     jour = jour if isinstance(jour, date) else date.fromisoformat(jour)
     contenu = lire_jour(db, jour)
     precedent, suivant = jours_voisins(db, jour)
-    points, pas = contenu["points"], 10
+    points, pas = priorite_au_trace_precis(contenu["points"]), 10
     while True:
         valeur = {"type": "jour", "jour": jour.isoformat(), "km": km(contenu["points"]),
                   "points": [[p["t"], round(p["lat"], 5), round(p["lon"], 5)] for p in points],
@@ -334,6 +372,10 @@ if hass is not None:
             # Écran « Mes trajets » (M3) : l'app écrit `demande` dans l'espace « trajets » de donnees_apps, la réponse
             # va dans `reponse` (même id).
             self.listen_event(self._demande, "donnees_apps_modifie", espace=ESPACE, cle="demande")
+            # Tracé précis (M4) : l'app écrit des lots `lot:<id>` dans le même espace ; rangés (source « precis »),
+            # puis supprimés. Ceux restés là (HA arrêté) sont repris au démarrage.
+            self.listen_event(self._lot_precis, "donnees_apps_modifie", espace=ESPACE)
+            self.run_in(self._lots_en_attente, 30)
             # Reprise des points encore dans le recorder (10 jours) : sans doublon, donc à chaque démarrage.
             self.run_in(self._rattraper, 20)
 
@@ -418,6 +460,44 @@ if hass is not None:
                                headers={"Authorization": f"Bearer {os.environ['SUPERVISOR_TOKEN']}"})
             reply.raise_for_status()
             return reply.json().get("service_response")
+
+        def _lot_precis(self, event_name, data, **kwargs):
+            cle = str((data or {}).get("cle") or "")
+            if cle.startswith("lot:") and not (data or {}).get("supprime"):
+                self._ranger_lot(cle)
+
+        def _lots_en_attente(self, **kwargs):
+            try:
+                lu = self._service("donnees_apps", "lire", {"espace": ESPACE}) or {}
+            except Exception as exc:  # noqa: BLE001
+                self.log(f"Trajets : lots du tracé précis illisibles ({exc!r})", level="WARNING")
+                return
+            for e in lu.get("enregistrements") or []:
+                if str(e.get("cle", "")).startswith("lot:") and not e.get("supprime"):
+                    self._ranger_lot(e["cle"], e.get("valeur"))
+
+        def _ranger_lot(self, cle, valeur=None):
+            try:
+                if valeur is None:
+                    lu = self._service("donnees_apps", "lire", {"espace": ESPACE, "cle": cle}) or {}
+                    enregistrement = lu.get("enregistrement") or {}
+                    if enregistrement.get("supprime"):
+                        return
+                    valeur = enregistrement.get("valeur")
+                points = lire_lot(valeur)
+                db = ouvrir(self._db_path)
+                try:
+                    ajoutes = ajouter_points(db, points, "precis")
+                finally:
+                    db.close()
+                self._service("donnees_apps", "supprimer", {"espace": ESPACE, "cle": cle,
+                                                            "modifie_par": "aiguillage_trajets", "op_id": str(uuid.uuid4())})
+                self._derniere = f"{datetime.now():%d/%m %H:%M} tracé précis"
+                self.log(f"Trajets : tracé précis, {ajoutes} point(s) rangé(s) sur {len(points)} reçu(s)"
+                         f" ({(valeur or {}).get('device') or '?'})")
+                self._publier()
+            except Exception as exc:  # noqa: BLE001 - le lot reste dans l'espace, repris au prochain démarrage
+                self.log(f"Trajets : lot {cle} non rangé ({exc!r})", level="WARNING")
 
         def _demande(self, event_name, data, **kwargs):
             try:

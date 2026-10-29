@@ -141,3 +141,31 @@ def test_repondre(tmp_path):
     assert m.repondre(base, {"id": "a3", "type": "jour", "jour": "pas une date"})["erreur"]
     assert m.repondre(base, None)["erreur"] == "type inconnu"
     assert m.repondre(base, {"id": "a4", "type": "jour", "jour": "2026-10-22"})["id"] == "a4"
+
+
+def test_lot_du_trace_precis():
+    """M4 : lot écrit par l'app (`lot:<id>`), points [t, lat, lon, precision, vitesse]."""
+    t0 = 1793260000
+    valeur = {"device": "iPhone", "points": [
+        [t0, 48.8086, 2.4178, 8.0, 1.4], [t0 + 30, 48.8090, 2.4180, 12.0, -1],
+        [t0 + 60, 48.81, 2.42, 250.0, 1.2],        # trop imprécis
+        [100, 48.81, 2.42, 5.0, 1.0],               # date impossible
+        [t0 + 90, 95.0, 2.42, 5.0, 1.0], "x", [t0]]}
+    pts = m.lire_lot(valeur)
+    assert [p["t"] for p in pts] == [t0, t0 + 30]
+    assert pts[1]["vitesse"] is None and pts[0]["precision"] == 8.0
+    assert m.lire_lot(None) == [] and m.lire_lot({"points": "oups"}) == []
+
+
+def test_priorite_au_trace_precis():
+    t0 = 1793260000
+    pts = [{"source": "compagnon", "t": t0 - 1000, "lat": 0, "lon": 0},   # avant le tracé : gardé
+           {"source": "compagnon", "t": t0 + 50, "lat": 0, "lon": 0},     # pendant : retiré
+           {"source": "precis", "t": t0, "lat": 0, "lon": 0},
+           {"source": "precis", "t": t0 + 100, "lat": 0, "lon": 0},
+           {"source": "compagnon", "t": t0 + 5000, "lat": 0, "lon": 0}]   # après : gardé
+    garde = m.priorite_au_trace_precis(pts)
+    assert [(p["source"], p["t"] - t0) for p in garde] == [
+        ("compagnon", -1000), ("precis", 0), ("precis", 100), ("compagnon", 5000)]
+    sans = [p for p in pts if p["source"] == "compagnon"]
+    assert m.priorite_au_trace_precis(sans) == sans

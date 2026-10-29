@@ -79,6 +79,7 @@ struct DiagnosticView: View {
         case .push: "push"
         case .zone: "zone"
         case .visite: "arrêt"
+        case .trace: "tracé"
         }
     }
 

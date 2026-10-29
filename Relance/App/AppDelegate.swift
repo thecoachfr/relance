@@ -41,6 +41,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         ProximityReminders.shared.start(store: store)
         // Historique des trajets (P9-M2) : iOS relance aussi l'app pour chaque arrêt relevé.
         TrajetsRecorder.shared.start()
+        // Tracé précis (P9-M4) : relancé ici quand iOS rouvre l'app pour de nouvelles positions.
+        TraceRecorder.shared.start()
         store.onTasksChanged = { [liveActivity] in
             let tasks = store.activeTasks()
             Task { await ProximityReminders.shared.update(tasks: tasks) }

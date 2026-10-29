@@ -66,7 +66,7 @@ targets:
         UISupportedInterfaceOrientations~ipad:
           [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown,
            UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
-        UIBackgroundModes: [fetch, remote-notification]
+        UIBackgroundModes: [fetch, remote-notification, location]
         NSSupportsLiveActivities: true
         # Ancien nom et variantes : Siri reconnaît toujours « nouvelle Relance ».
         NSCalendarsFullAccessUsageDescription: Aiguillage ajoute à ton agenda les tâches que tu choisis, et met l'événement à jour quand l'heure de la tâche change.

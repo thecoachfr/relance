@@ -1,3 +1,4 @@
+import CoreLocation
 import Foundation
 import Testing
 @testable import Relance
@@ -71,5 +72,26 @@ struct TrajetsCarteTests {
         let c = TrajetsService.calendrier.dateComponents([.year, .month, .day, .hour], from: d)
         #expect(c.year == 2026 && c.month == 10 && c.day == 22 && c.hour == 12)
         #expect(TrajetsService.date(jour: "n'importe quoi") == nil)
+    }
+}
+
+/// Tracé précis (P9-M4) : un point gardé tous les 50 m à pied, 100 m au-delà de 30 km/h, jamais s'il est imprécis.
+struct TraceTests {
+    private func position(_ lat: Double, _ lon: Double, precision: Double = 8, vitesse: Double = 1.4) -> CLLocation {
+        CLLocation(coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon), altitude: 0,
+                   horizontalAccuracy: precision, verticalAccuracy: 5, course: 0, speed: vitesse,
+                   timestamp: Date(timeIntervalSince1970: 1_793_260_000))
+    }
+
+    @Test func pasSelonLaVitesse() {
+        let depart = position(48.8086, 2.4178)
+        #expect(TraceRecorder.garder(depart, apres: nil)?.count == 5)
+        // ~33 m plus loin à pied : trop près.
+        #expect(TraceRecorder.garder(position(48.8089, 2.4178), apres: depart) == nil)
+        // ~67 m : gardé à pied, pas en voiture (pas de 100 m).
+        #expect(TraceRecorder.garder(position(48.8092, 2.4178), apres: depart) != nil)
+        #expect(TraceRecorder.garder(position(48.8092, 2.4178, vitesse: 12), apres: depart) == nil)
+        // Imprécis : jamais.
+        #expect(TraceRecorder.garder(position(48.82, 2.42, precision: 80), apres: depart) == nil)
     }
 }

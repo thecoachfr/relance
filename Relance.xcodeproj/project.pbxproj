@@ -134,6 +134,7 @@
 		477300362673693C83EF14FE /* DueText.swift in Sources */ = {isa = PBXBuildFile; fileRef = 666C8CA69B643438FA2EC7C2 /* DueText.swift */; };
 		49371094B35A54ABB18B1134 /* TriageRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 856B480B3D562813D03F3EC2 /* TriageRequest.swift */; };
 		49A4C207454C37D9F756CAA5 /* TaskActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7D24B2FA7C99714EB6FC0BD /* TaskActions.swift */; };
+		4B922851E215DB46EB0F866B /* TraceRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5876C0AAE9BD484C6D7CAA94 /* TraceRecorder.swift */; };
 		4B9576648ACF89C848961140 /* AppGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A12D2947BB91F0172F0ED7C /* AppGroup.swift */; };
 		4C0DD1159A97C2066C6C3D06 /* SessionsEcran.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27E7252FBE54D4D20377051A /* SessionsEcran.swift */; };
 		4CD52775BC86628184290EB8 /* TaskStore+LieuTravail.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8555DED2FCAE370EC74B8CB9 /* TaskStore+LieuTravail.swift */; };
@@ -606,6 +607,7 @@
 		56EA1E62136D1804E55FE844 /* TrajetsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrajetsTests.swift; sourceTree = "<group>"; };
 		57E018902DF086E23048C8AE /* Recurrence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Recurrence.swift; sourceTree = "<group>"; };
 		58450EAF33557E45B79243CC /* TaskCategory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskCategory.swift; sourceTree = "<group>"; };
+		5876C0AAE9BD484C6D7CAA94 /* TraceRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TraceRecorder.swift; sourceTree = "<group>"; };
 		59196264DF41F8F7B0C15A3A /* DemoData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoData.swift; sourceTree = "<group>"; };
 		595289CE4264CBC8CBE2415D /* CalendarSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarSection.swift; sourceTree = "<group>"; };
 		59E6DFE31CE62707FB0EB4F9 /* Recettes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Recettes.swift; sourceTree = "<group>"; };
@@ -1164,6 +1166,7 @@
 				59F7A908CED23B538B56A391 /* RelanceApp.swift */,
 				01BFACD05E33901EC0A7A084 /* RelanceShortcuts.swift */,
 				FFB4D2440243DC69496203BA /* TaskEntity.swift */,
+				5876C0AAE9BD484C6D7CAA94 /* TraceRecorder.swift */,
 				FC3D0B79C51A77FD6C981C3D /* TrajetsRecorder.swift */,
 				48475C1CB9617CFB41F59012 /* TrajetsService.swift */,
 				3CB106E929FD91C07948C23D /* TravelTimes.swift */,
@@ -1574,6 +1577,7 @@
 				269D75D8A94AB72041983689 /* ToSee.swift in Sources */,
 				B0490222571119DD7A357A77 /* ToSeeViews.swift in Sources */,
 				030C7DAFDDC60DD19687BBED /* TodoView.swift in Sources */,
+				4B922851E215DB46EB0F866B /* TraceRecorder.swift in Sources */,
 				6ECE96698026ED626307490F /* TrajetsCarteView.swift in Sources */,
 				871279E917F2F25B1CF440B3 /* TrajetsRecorder.swift in Sources */,
 				929DB90E6F0CEA35AFEB2041 /* TrajetsService.swift in Sources */,
