@@ -322,6 +322,86 @@ def test_spotify_termine_l_activite_en_cours_puis_redemarre_apres():
     assert action == "update" and sorted((g, j) for g, j, *_ in liste) == [("activite", A2), ("start", P1)]
 
 
+# MARK: - Hors de la maison (29/10/2026)
+
+def _deux_appareils_en_lecture():
+    """iPad et iPhone démarrés sur une radio, chacun avec son jeton d'activité."""
+    etat = l.etat_vide()
+    _pts(etat, P1, IPAD, "iPad")
+    _pts(etat, P2, IPHONE, "iPhone")
+    radio = l.contenu(MA, HA)
+    action, _ = l.envois(etat, radio, None, 100)
+    l.apres_envois(etat, action, radio, [IPAD, IPHONE], 2, [], 100)
+    l.ranger_jeton(etat, {"type": "activite", "jeton": A1, "activite_id": "X", "appareil": IPAD, "modele": "iPad"}, 101)
+    l.ranger_jeton(etat, {"type": "activite", "jeton": A2, "activite_id": "Y", "appareil": IPHONE, "modele": "iPhone"}, 101)
+    etat["envoye"] = radio
+    return etat, radio
+
+
+def test_absents_par_modele_et_etat_inconnu_present():
+    etat, _ = _deux_appareils_en_lecture()
+    assert l.absents(etat, {"iPhone": "not_home"}) == {IPHONE}
+    assert l.absents(etat, {"iPhone": "Travail"}) == {IPHONE}  # une zone n'est pas la maison
+    assert l.absents(etat, {"iPhone": "home"}) == set()
+    for inconnu in (None, "unknown", "unavailable", ""):
+        assert l.absents(etat, {"iPhone": inconnu}) == set()
+    assert l.absents(etat, {}) == set()
+
+
+def test_depart_termine_l_activite_de_l_iphone_seulement():
+    etat, radio = _deux_appareils_en_lecture()
+    action, liste = l.envois(etat, radio, None, 200, sortis={IPHONE})
+    assert action is None and [(g, j) for g, j, *_ in liste] == [("fin_absent", A2)]
+    fin = liste[0][4]["aps"]
+    assert fin["event"] == "end" and fin["dismissal-date"] == 200  # retiré tout de suite de l'écran
+    l.apres_envois(etat, action, radio, [], 1, [], 200, finis=[A2])
+    assert list(etat["activites"]) == ["X"] and IPHONE not in etat["demarres"]
+    # Toujours dehors : ni démarrage ni fin de plus ; l'iPad reçoit ses mises à jour.
+    assert l.envois(etat, radio, None, 210, sortis={IPHONE}) == (None, [])
+    autre = {**radio, "titre": "Autre titre"}
+    action, liste = l.envois(etat, autre, None, 220, sortis={IPHONE})
+    assert action == "update" and [(g, j) for g, j, *_ in liste] == [("activite", A1)]
+
+
+def test_retour_a_la_maison_pendant_la_lecture_demarre_l_iphone():
+    etat, radio = _deux_appareils_en_lecture()
+    action, liste = l.envois(etat, radio, None, 200, sortis={IPHONE})
+    l.apres_envois(etat, action, radio, [], 1, [], 200, finis=[A2])
+    action, liste = l.envois(etat, radio, None, 300)
+    assert [(g, j) for g, j, *_ in liste] == [("start", P2)]
+
+
+def test_dehors_pas_de_demarrage():
+    etat = l.etat_vide()
+    _pts(etat, P1, IPAD, "iPad")
+    _pts(etat, P2, IPHONE, "iPhone")
+    action, liste = l.envois(etat, l.contenu(MA, HA), None, 100, sortis=l.absents(etat, {"iPhone": "not_home"}))
+    assert action == "start" and [(g, j) for g, j, *_ in liste] == [("start", P1)]
+
+
+def test_fin_normale_dehors_une_seule_fin():
+    etat, _ = _deux_appareils_en_lecture()
+    action, liste = l.envois(etat, None, 100, 100 + l.ARRET_AVANT_FIN, sortis={IPHONE})
+    assert action == "end" and sorted((g, j) for g, j, *_ in liste) == [("activite", A1), ("activite", A2)]
+
+
+def test_sans_jeton_appareil_demarre_sans_activite_connue():
+    etat = l.etat_vide()
+    _pts(etat, P1, IPAD, "iPad")
+    _pts(etat, P2, IPHONE, "iPhone")
+    radio = l.contenu(MA, HA)
+    action, _ = l.envois(etat, radio, None, 100)
+    l.apres_envois(etat, action, radio, [IPAD, IPHONE], 2, [], 100)
+    l.ranger_jeton(etat, {"type": "activite", "jeton": A1, "activite_id": "X", "appareil": IPAD}, 101)
+    # Cas du 28-29/10 : le jeton de l'activité de l'iPhone n'arrive jamais.
+    assert l.sans_jeton(etat) == [IPHONE]
+
+
+def test_compte_fin_absent():
+    stats = l.compter_pushs({}, "2026-10-29", [("iPhone AEE13B85", "fin_absent")])
+    assert stats == {"2026-10-29": {"iPhone AEE13B85": {"fin_absent": 1}}}
+
+
 # MARK: - Compte des pushs par appareil (suivi batterie)
 
 def test_nom_appareil_et_compte():

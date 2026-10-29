@@ -221,6 +221,11 @@ class RelanceVigie(Hass):
         self.listen_event(self.on_hub_ipad_activite, "hub_ipad_activite")
         for entite in (aiguillage_lecteur.ENTITE_MA, aiguillage_lecteur.ENTITE_KEF):
             self.listen_state(self.on_lecteur, entite, attribute="all")
+        # Hors de la maison (29/10/2026) : présence par modèle d'appareil ; l'iPhone suit person.alex. Départ : fin de
+        # l'activité de l'iPhone ; retour : démarrage s'il y a lecture.
+        self._lecteur_presences = self.args.get("hub_ipad_presences", {"iPhone": "person.alex"}) or {}
+        for entite in set(self._lecteur_presences.values()):
+            self.listen_state(self.on_lecteur, entite)
         # Relecture chaque minute : la fin arrive 5 min après l'arrêt, sans changement d'état entre-temps.
         self.run_every(self._lecteur_passage, "now+20", 60)
         self._refreshes = 0
@@ -1501,6 +1506,11 @@ class RelanceVigie(Hass):
         # Activité : elle reçoit l'état complet ; push-to-start : un appareil arrivé pendant la lecture démarre aussi.
         self.run_in(self._lecteur_passage, 1)
 
+    def _lecteur_sortis(self, etat):
+        """Appareils hors de la maison (`aiguillage_lecteur.absents`), d'après l'entité de présence de leur modèle."""
+        presences = {modele: self.get_state(entite) for modele, entite in self._lecteur_presences.items()}
+        return aiguillage_lecteur.absents(etat, presences)
+
     def on_lecteur(self, entity, attribute, old, new, **kwargs):
         # Anti-rafale : un seul passage 2 s après le premier changement ; les suivants y sont fondus.
         if self._lecteur_handle is None:
@@ -1524,7 +1534,14 @@ class RelanceVigie(Hass):
             etat = self._lecteur_charger()
             # Un envoi par appareil (iPad, iPhone) : mises à jour et fin aux activités, démarrage aux appareils sans
             # activité (aussi ceux arrivés en cours de lecture).
-            action, liste = aiguillage_lecteur.envois(etat, actuel, self._lecteur_arret, maintenant, spotify)
+            sortis = self._lecteur_sortis(etat)
+            action, liste = aiguillage_lecteur.envois(etat, actuel, self._lecteur_arret, maintenant, spotify, sortis)
+            if action == "end":
+                # Une activité démarrée dont le jeton n'est jamais arrivé reste affichée : la vigie ne peut pas la finir.
+                for appareil in aiguillage_lecteur.sans_jeton(etat):
+                    self.log(f"Hub iPad : fin impossible sur {aiguillage_lecteur.nom_appareil(etat, appareil)} "
+                             "(jeton de l'activité jamais reçu), elle reste à l'écran jusqu'à ce que l'app s'ouvre",
+                             level="WARNING")
             if not liste:
                 if action == "end":
                     aiguillage_lecteur.apres_envois(etat, action, actuel, [], 0, [], maintenant)
@@ -1545,12 +1562,12 @@ class RelanceVigie(Hass):
                     elif genre == "activite":
                         comptes.append((nom, action or "update"))
                     else:
-                        comptes.append((nom, "start" if genre == "start" else "fin_spotify"))
+                        comptes.append((nom, {"start": "start", "fin": "fin_spotify"}.get(genre, genre)))
                     if statut == 200:
                         reussis += 1
                         if genre == "start":
                             demarres.append(appareil)
-                        elif genre == "fin":
+                        elif genre in ("fin", "fin_absent"):
                             finis.append(jeton)
                     elif statut == 410 or raison in ("BadDeviceToken", "Unregistered", "ExpiredToken"):
                         perimes.append(jeton)
@@ -1560,10 +1577,13 @@ class RelanceVigie(Hass):
             self._lecteur_sauver(etat)
             self._lecteur_compter(comptes)
         for genre in sorted({e[0] for e in liste}):
-            cause = {"start": "start", "fin": "fin_spotify"}.get(genre, action)
+            cause = {"start": "start", "fin": "fin_spotify", "fin_absent": "fin_absent"}.get(genre, action)
             self._count_push(f"hub_ipad_{cause}", sum(1 for e in liste if e[0] == genre))
-        if finis:
-            self.log(f"Hub iPad : Spotify pilote les LS50, activité terminée sur {len(finis)} appareil(s)")
+        fins = {g: sum(1 for e in liste if e[0] == g and e[1] in finis) for g in ("fin", "fin_absent")}
+        if fins["fin"]:
+            self.log(f"Hub iPad : Spotify pilote les LS50, activité terminée sur {fins['fin']} appareil(s)")
+        if fins["fin_absent"]:
+            self.log(f"Hub iPad : hors de la maison, activité terminée sur {fins['fin_absent']} appareil(s)")
         if action not in ("update", None) or demarres:
             titre = (actuel or {}).get("titre", "")
             self.log(f"Hub iPad : activité {action or 'start'} ({reussis}/{len(liste)}, {len(demarres)} démarrée(s))"

@@ -353,13 +353,58 @@ def retirer_jeton(etat, jeton):
         activites.pop(ident)
 
 
-def a_demarrer(etat, actuel, spotify=False):
+# MARK: - Hors de la maison (29/10/2026)
+#
+# Constat d'Alexandre (29/10, 9 h 11, dehors) : l'activité « Salon LS50 » restait sur l'écran verrouillé de l'iPhone.
+# Règle : l'activité ne s'affiche que sur un appareil qui est à la maison. La présence d'un appareil vient d'une entité
+# HA par modèle (`presences`, { modèle : état }) : l'iPhone suit `person.alex` (GPS de l'app Compagnon) ; l'iPad n'a
+# pas d'entité (il reste à la maison). Absent (état connu autre que `home`) : son activité reçoit une fin (dismissal
+# immédiat, genre `fin_absent`) et il n'est pas démarré ; à son retour, il démarre s'il y a lecture, comme un appareil
+# arrivé pendant la lecture. État inconnu (`unknown`, `unavailable`, entité absente) : présent, comme avant.
+
+PRESENT = "home"
+INCONNUS = ("", "unknown", "unavailable", "none")
+
+
+def _modele(etat, appareil):
+    for info in [*etat.get("push_to_start", {}).values(), *etat.get("activites", {}).values()]:
+        if info.get("appareil") == appareil and info.get("modele"):
+            return info["modele"]
+    return ""
+
+
+def absents(etat, presences):
+    """Les appareils hors de la maison : ceux dont le modèle a une entité de présence dont l'état connu n'est pas
+    `home`. `presences` : { modèle : état de l'entité } (ex. {"iPhone": "not_home"})."""
+    if not presences:
+        return set()
+    appareils = {cle_appareil(i, j) for j, i in etat.get("push_to_start", {}).items()}
+    appareils |= {a["appareil"] for a in etat.get("activites", {}).values() if a.get("appareil")}
+    sortis = set()
+    for appareil in appareils:
+        etat_presence = presences.get(_modele(etat, appareil))
+        if etat_presence is None:
+            continue
+        texte = str(etat_presence).strip().lower()
+        if texte not in INCONNUS and texte != PRESENT:
+            sortis.add(appareil)
+    return sortis
+
+
+def sans_jeton(etat):
+    """Appareils démarrés pour cette lecture dont le jeton d'activité n'est jamais arrivé : la vigie ne peut ni mettre à
+    jour ni terminer leur activité (cas du 28-29/10/2026 : app réveillée en arrière-plan qui n'envoyait pas le jeton)."""
+    connus = {a.get("appareil") for a in etat.get("activites", {}).values()}
+    return sorted(a for a in (etat.get("demarres") or {}) if a not in connus)
+
+
+def a_demarrer(etat, actuel, spotify=False, sortis=()):
     """Les jetons push-to-start des appareils sans activité : [(jeton, environnement, appareil)].
 
     Seulement sur une vraie lecture. Un appareil qui a déjà une activité (ou déjà démarré pour cette lecture) est
     sauté. Activité d'une app d'avant (sans appareil) en cours : on ne sait pas de quel écran elle est, rien de plus
     n'est démarré tant qu'elle dure (comportement d'avant). Spotify Connect : pas d'activité sur les appareils qui la
-    masquent.
+    masquent. Appareils hors de la maison (`sortis`, voir `absents`) : pas de démarrage.
     """
     if not actuel or actuel.get("etat") != "lecture":
         return []
@@ -369,37 +414,42 @@ def a_demarrer(etat, actuel, spotify=False):
     occupes = {a["appareil"] for a in activites if a.get("appareil")} | set(etat.get("demarres") or {})
     return [(j, i.get("environnement", "production"), cle_appareil(i, j))
             for j, i in etat.get("push_to_start", {}).items()
-            if cle_appareil(i, j) not in occupes and not (spotify and masque_spotify(etat, i.get("appareil")))]
+            if cle_appareil(i, j) not in occupes and cle_appareil(i, j) not in sortis
+            and not (spotify and masque_spotify(etat, i.get("appareil")))]
 
 
-def envois(etat, actuel, arret_depuis, maintenant, spotify=False):
+def envois(etat, actuel, arret_depuis, maintenant, spotify=False, sortis=()):
     """Ce que la vigie envoie à ce passage : (action, [(genre, jeton, environnement, appareil, payload, priorité)]).
 
     `action` vient de `decider` (start, update, end ou None) ; s'y ajoutent les démarrages des appareils arrivés en
     cours de lecture (un iPhone ouvert pendant que l'activité tourne déjà sur l'iPad). `spotify` : la lecture vient de
     Spotify Connect (`spotify_connect`) ; les appareils qui masquent l'activité dans ce cas reçoivent une fin (genre
-    `fin`) au lieu de la mise à jour, et aucun démarrage.
+    `fin`) au lieu de la mise à jour, et aucun démarrage. `sortis` : appareils hors de la maison (`absents`) ; leur
+    activité reçoit une fin (genre `fin_absent`), lecture ou pas, et ils ne démarrent pas.
     """
     action, priorite = decider(actuel, etat.get("envoye"), etat.get("en_cours"), arret_depuis, maintenant)
     liste = []
     fin = payload_end({**(etat.get("envoye") or REPOS), "etat": "pause"}, maintenant)
     for a in etat.get("activites", {}).values():
         env, appareil = a.get("environnement", "production"), a.get("appareil")
-        if actuel is not None and spotify and masque_spotify(etat, appareil):
+        if appareil in sortis and action != "end":
+            liste.append(("fin_absent", a["jeton"], env, appareil, fin, 10))
+        elif actuel is not None and spotify and masque_spotify(etat, appareil):
             liste.append(("fin", a["jeton"], env, appareil, fin, 10))
         elif action == "update":
             liste.append(("activite", a["jeton"], env, appareil, payload_update(actuel, maintenant), priorite))
         elif action == "end":
             liste.append(("activite", a["jeton"], env, appareil, fin, priorite))
     if action != "end":
-        for jeton, env, appareil in a_demarrer(etat, actuel, spotify):
+        for jeton, env, appareil in a_demarrer(etat, actuel, spotify, sortis):
             liste.append(("start", jeton, env, appareil, payload_start(actuel, maintenant), 10))
     return action, liste
 
 
 def apres_envois(etat, action, actuel, demarres, reussis, perimes, maintenant, finis=()):
-    """Met l'état à jour après les envois : jetons périmés retirés, activités terminées pour Spotify retirées (leur
-    appareil pourra redémarrer quand Spotify ne pilotera plus), appareils démarrés notés, fin ou lecture en cours."""
+    """Met l'état à jour après les envois : jetons périmés retirés, activités terminées pour Spotify ou hors de la maison
+    retirées (`finis` ; leur appareil pourra redémarrer quand Spotify ne pilotera plus ou à son retour), appareils
+    démarrés notés, fin ou lecture en cours."""
     for jeton in perimes:
         retirer_jeton(etat, jeton)
     activites = etat.get("activites", {})
@@ -426,17 +476,12 @@ def nom_appareil(etat, appareil):
     """« iPhone 1A2B3C4D » : le modèle (s'il est connu) et le début de l'identifiant ; « ancien » sans appareil."""
     if not appareil:
         return "ancien"
-    modele = ""
-    for info in [*etat.get("push_to_start", {}).values(), *etat.get("activites", {}).values()]:
-        if info.get("appareil") == appareil and info.get("modele"):
-            modele = info["modele"]
-            break
-    return f"{modele or 'appareil'} {appareil[:8]}"
+    return f"{_modele(etat, appareil) or 'appareil'} {appareil[:8]}"
 
 
 def compter_pushs(stats, jour, envoyes):
     """Ajoute les pushs d'activité de ce passage : `envoyes` = [(nom de l'appareil, genre)] avec genre start, update,
-    end ou fin_spotify (fin pour Spotify Connect) ; `echec` compté à part. Garde les 31 derniers jours."""
+    end, fin_spotify (fin pour Spotify Connect) ou fin_absent (hors de la maison) ; `echec` compté à part. Garde les 31 derniers jours."""
     if not envoyes:
         return stats
     jour_stats = stats.setdefault(jour, {})
