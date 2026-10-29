@@ -16,6 +16,11 @@ def test_search_query():
     # Titres réels du 16/10 (proposés par la routine pour des messages partagés).
     assert t.search_query("Regarder Haunted Hotel sur Netflix") == ("Haunted Hotel", None)
     assert t.search_query("Regarder VisionQuest sur Disney+") == ("VisionQuest", None)
+    # 29/10/2026 : genre en tête sans verbe, ponctuation finale.
+    assert t.search_query("Série La Fièvre sur Canal+ !") == ("La Fièvre", None)
+    assert t.search_query("Le film Dune (2021).") == ("Dune", 2021)
+    assert t.search_query("La Fièvre") == ("La Fièvre", None)
+    assert t.search_query("Série") == ("Série", None)
     assert t.search_query("Voir la série The Bear sur Disney Plus") == ("The Bear", None)
     assert t.search_query("À regarder sur Netflix") == ("", None)
     assert t.search_query("Monarch legacy of monsters") == ("Monarch legacy of monsters", None)
@@ -131,3 +136,35 @@ if __name__ == "__main__":
         if name.startswith("test_"):
             fn()
             print("ok", name)
+
+
+def test_indices_du_titre():
+    # 29/10/2026 : « Série La Fièvre sur Canal+ ! » était ambigu (plusieurs « La Fièvre »).
+    assert t.indices("Série La Fièvre sur Canal+ !") == ("tv", "canal")
+    assert t.indices("Le film Dune sur Netflix") == ("movie", "netflix")
+    assert t.indices("La Fièvre") == (None, None)
+
+
+def test_choose_avec_le_genre():
+    res = [{"media_type": "movie", "id": 1, "title": "La Fièvre", "popularity": 3},
+           {"media_type": "tv", "id": 2, "name": "La Fièvre", "popularity": 2}]
+    assert t.choose(res, "La Fièvre") is None
+    assert t.choose(res, "La Fièvre", kind="tv")["id"] == 2
+
+
+def test_departager_par_plateforme():
+    a = {"media_type": "tv", "id": 1, "name": "La Fièvre"}
+    b = {"media_type": "tv", "id": 2, "name": "La Fièvre"}
+    dispo = {1: {"abonnement": [{"id": 8, "nom": "Netflix", "code": "netflix"}]},
+             2: {"abonnement": [{"id": 381, "nom": "Canal+", "code": "canal"}]}}
+    assert t.departager([a, b], lambda r: dispo[r["id"]], "canal")["id"] == 2
+    assert t.departager([a, b], lambda r: {}, "canal") is None
+
+
+def test_ambigue_sans_indices_recherchee_de_nouveau():
+    from datetime import date
+    v = {"titre": "Série La Fièvre sur Canal+ !", "envie": {"type": "regarder", "tmdb_statut": "ambigu",
+         "tmdb_maj": "2026-10-29", "tmdb_requete": "La Fièvre"}}
+    assert t.needs_lookup(v, date(2026, 10, 29))
+    v2 = t.with_status(v, "ambigu", date(2026, 10, 29))
+    assert not t.needs_lookup(v2, date(2026, 10, 29))

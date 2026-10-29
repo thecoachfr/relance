@@ -54,8 +54,15 @@ def search_query(title):
     if m:
         year = int(m.group(0)[1:-1])
     query = re.sub(r"\([^)]*\)", " ", title or "")
+    # Ponctuation finale (« Série La Fièvre sur Canal+ ! », 29/10/2026) : sinon « sur Canal+ » n'est pas en fin de titre.
+    query = query.strip().rstrip("!?.…").strip()
     query = re.sub(r"^\s*(re)?(regarder|voir|mater)\s+((le|la|les)\s+(film|série|serie|documentaire|saison)s?\s+)?",
                    "", query, flags=re.IGNORECASE)
+    # Genre en tête sans verbe (« Série La Fièvre », « Le film Dune », « Doc Les Abeilles ») : retiré s'il reste un titre.
+    sans_genre = re.sub(r"^\s*((le|la|les|un|une)\s+)?(film|série|serie|documentaire|doc|mini-série|minisérie)s?\s+",
+                        "", query, flags=re.IGNORECASE)
+    if sans_genre.strip():
+        query = sans_genre
     query = re.sub(r"\s+en\s+(ligne|streaming)\s*$", "", query, flags=re.IGNORECASE)
     query = re.sub(r"\s+sur\s+" + PLATFORM_WORDS + r"\s*$", "", query, flags=re.IGNORECASE)
     query = re.sub(r"^\s*à regarder\s*$", "", query, flags=re.IGNORECASE)
@@ -90,6 +97,10 @@ def needs_lookup(valeur, today):
     # (Aussi pour une recherche faite avant que le texte cherché soit mémorisé.)
     if ("tmdb" in envie or "tmdb_statut" in envie) and envie.get("tmdb_requete") != search_query(valeur.get("titre", ""))[0]:
         return True
+    # Ambiguë sans les indices du titre (genre, plateforme : 29/10/2026) : on retente avec eux tout de suite.
+    ind = list(indices(valeur.get("titre", "")))
+    if envie.get("tmdb_statut") == "ambigu" and any(ind) and envie.get("tmdb_indices") != ind:
+        return True
     checked = envie.get("dispo_maj") or envie.get("tmdb_maj")
     if not checked:
         return True
@@ -99,9 +110,26 @@ def needs_lookup(valeur, today):
         return True
 
 
-def choose(results, query, year=None):
-    """L'œuvre (film ou série) qui correspond, ou None si rien ou plusieurs œuvres plausibles."""
+def indices(title):
+    """Ce que le titre dit en plus du nom de l'œuvre (29/10/2026) : le genre (« Série La Fièvre » → tv, « Le film
+    Dune » → movie) et la plateforme (« … sur Canal+ » → canal). Sert à départager les homonymes."""
+    t = (title or "").strip()
+    kind = None
+    if re.search(r"\b(série|serie|séries|saison|mini-série|minisérie)\b", t, flags=re.IGNORECASE):
+        kind = "tv"
+    elif re.search(r"\bfilm\b", t, flags=re.IGNORECASE):
+        kind = "movie"
+    m = re.search(r"\bsur\s+" + PLATFORM_WORDS + r"\s*[!?.…]*\s*$", t, flags=re.IGNORECASE)
+    platform = code_for(m.group(1)) if m else None
+    return kind, platform
+
+
+def choose(results, query, year=None, kind=None):
+    """L'œuvre (film ou série) qui correspond, ou None si rien ou plusieurs œuvres plausibles. `kind` (indice du
+    titre : tv ou movie) écarte l'autre type s'il reste au moins une œuvre."""
     works = [r for r in results if r.get("media_type") in ("movie", "tv")]
+    if kind:
+        works = [r for r in works if r.get("media_type") == kind] or works
     if year:
         dated = [r for r in works if (r.get("release_date") or r.get("first_air_date") or "")[:4] == str(year)]
         works = dated or works
@@ -116,6 +144,29 @@ def choose(results, query, year=None):
             return ranked[0]
         return None
     return works[0] if len(works) == 1 else None
+
+
+def candidats(results, query, year=None, kind=None):
+    """Les œuvres au nom exact (même filtres que `choose`), les plus connues d'abord."""
+    works = [r for r in results if r.get("media_type") in ("movie", "tv")]
+    if kind:
+        works = [r for r in works if r.get("media_type") == kind] or works
+    if year:
+        works = [r for r in works if (r.get("release_date") or r.get("first_air_date") or "")[:4] == str(year)] or works
+    wanted = _fold(query)
+    exact = [r for r in works if wanted in {_fold(r.get(k)) for k in ("title", "name", "original_title", "original_name")}]
+    return sorted(exact, key=lambda r: r.get("popularity") or 0, reverse=True)
+
+
+def departager(candidates, dispo_de, platform):
+    """Parmi des homonymes, celui qui est sur `platform` en France (abonnement, gratuit, location ou achat), s'il est
+    seul ; sinon None. `dispo_de(r)` rend les disponibilités (forme de `providers_fr`)."""
+    sur = []
+    for r in candidates:
+        dispo = dispo_de(r) or {}
+        if any(p.get("code") == platform for liste in dispo.values() for p in (liste or [])):
+            sur.append(r)
+    return sur[0] if len(sur) == 1 else None
 
 
 def work_info(result):
@@ -184,6 +235,7 @@ def with_status(valeur, statut, today):
     envie["tmdb_statut"] = statut
     envie["tmdb_maj"] = today.isoformat()
     envie["tmdb_requete"] = search_query(valeur.get("titre", ""))[0]
+    envie["tmdb_indices"] = list(indices(valeur.get("titre", "")))
     valeur["envie"] = envie
     valeur["v"] = max(valeur.get("v", 1), 2)
     notes = valeur.get("notes") or ""
@@ -229,8 +281,14 @@ class Client:
         query, year = search_query(title)
         if not query:
             return "introuvable", None
+        kind, platform = indices(title)
         results = self.search(query)
-        found = choose(results, query, year)
+        found = choose(results, query, year, kind)
+        if found is None and platform:
+            # Homonymes et plateforme donnée (« … sur Canal+ ») : l'œuvre disponible sur cette plateforme en France,
+            # si une seule l'est (4 candidats au plus, un appel chacun).
+            found = departager(candidats(results, query, year, kind)[:4],
+                               lambda r: providers_fr(self.providers(r["media_type"], r["id"])), platform)
         if found is None:
             return ("ambigu" if any(r.get("media_type") in ("movie", "tv") for r in results) else "introuvable"), None
         info = work_info(found)
