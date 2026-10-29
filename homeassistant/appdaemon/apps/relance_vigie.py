@@ -30,6 +30,7 @@ import aiguillage_lecteur
 import aiguillage_lecture_source
 import aiguillage_photos
 import aiguillage_radio
+import aiguillage_radio_morceau
 import aiguillage_spotify
 import aiguillage_spotify_lecture
 import aiguillage_tmdb
@@ -223,6 +224,18 @@ class RelanceVigie(Hass):
                        aiguillage_lecture_source.ENTITE_SPOTIFY):
             self.listen_state(self.on_source_etat, entite, attribute="all")
         self.run_every(self._source_passage, "now+8", 30)
+        # Morceau de la radio en cours (29/10/2026, homeassistant/RADIO-MORCEAU.md) : sensor.radio_morceau et
+        # script.radio_garder_titre (événement radio_garder_titre : « ♡ Garder ce titre » → titres likés).
+        self._radio_m = aiguillage_radio_morceau.Suivi(self._radio_m_json, self._radio_m_chercher, self._radio_m_contient)
+        self._radio_m_lock = threading.Lock()
+        self._radio_m_publie = None     # ((état, attributs), instant)
+        self._radio_m_handle = None
+        self._radio_m_client = None
+        self._radio_m_pause = 0.0       # pas de recherche Spotify avant cet instant (après une erreur)
+        for entite in aiguillage_radio_morceau.LECTEURS:
+            self.listen_state(self.on_radio_m_etat, entite, attribute="all")
+        self.run_every(self._radio_m_passage, "now+12", 10)
+        self.listen_event(self.on_radio_garder, aiguillage_radio_morceau.EVENEMENT)
         # Activité en direct « En lecture sur les LS50 » du Hub iPad (23/10/2026) : jetons envoyés par l'app
         # (script.hub_ipad_activite → événement hub_ipad_activite), lecteur surveillé, push APNs `liveactivity`.
         self._lecteur_path = Path(self.args.get("hub_ipad_activite_file", "/config/hub_ipad_activite.json"))
@@ -1139,6 +1152,136 @@ class RelanceVigie(Hass):
                                                                     icon="mdi:music-box-multiple")})
         reply.raise_for_status()
 
+    # MARK: - Morceau de la radio en cours (29/10/2026, RADIO-MORCEAU.md)
+
+    @staticmethod
+    def _radio_m_json(url):
+        reply = httpx.get(url, timeout=8, headers={"Accept": "application/json"})
+        reply.raise_for_status()
+        return reply.json()
+
+    def _radio_m_spotify(self, appel):
+        """Appel Spotify en lecture seule (client à part) ; après une erreur, pause selon `classer` (429 : Retry-After)."""
+        if time.monotonic() < self._radio_m_pause:
+            raise RuntimeError("pause Spotify")
+        if self._radio_m_client is None:
+            ids = self._spotify_lecture_ids()
+            if not ids:
+                raise RuntimeError("pas d'identifiants Spotify")
+            self._radio_m_client = aiguillage_spotify_lecture.ClientLecture(ids)
+        try:
+            return appel(self._radio_m_client)
+        except Exception as error:  # noqa: BLE001
+            _motif, pause = aiguillage_spotify_lecture.classer(error)
+            self._radio_m_pause = time.monotonic() + pause
+            raise
+
+    def _radio_m_chercher(self, q):
+        data = self._radio_m_spotify(lambda c: c._call("GET", "/search", params={"q": q, "type": "track", "limit": 10}))
+        return ((data or {}).get("tracks") or {}).get("items") or []
+
+    def _radio_m_contient(self, uri):
+        return self._radio_m_spotify(lambda c: aiguillage_radio_morceau.contient(c, uri))
+
+    def on_radio_m_etat(self, entity, attribute, old, new, **kwargs):
+        if self._radio_m_handle is None:
+            self._radio_m_handle = self.run_in(self._radio_m_passage, 1)
+
+    def _radio_m_passage(self, **kwargs):
+        self._radio_m_handle = None
+        if not self._radio_m_lock.acquire(blocking=False):
+            return
+        try:
+            t = time.monotonic()
+            maintenant = datetime.now(PARIS).isoformat(timespec="seconds")
+            R = aiguillage_radio_morceau
+            try:
+                etats = {e: self.get_state(e, attribute="all") for e in R.LECTEURS}
+                ajoutees = self.get_state(aiguillage_radio.ENTITE, attribute="radios") or []
+            except Exception as error:  # noqa: BLE001
+                resultat = R.indisponible(type(error).__name__, maintenant)
+            else:
+                resultat = self._radio_m.calculer(etats, ajoutees, t, time.time(), maintenant)
+            ancien = self._radio_m_publie
+            if ancien and not R.a_publier(ancien[0], resultat, ancien[1], t):
+                return
+            try:
+                self._publier_radio_m(*resultat)
+                self._radio_m_publie = (resultat, t)
+            except Exception as error:  # noqa: BLE001 - HA injoignable : on republiera au prochain passage
+                self._radio_m_publie = None
+                self.log(f"Radio : capteur non publié : {error!r}", level="WARNING")
+                return
+            if ancien is None or ancien[0][0] != resultat[0] or ancien[0][1].get("titre") != resultat[1].get("titre"):
+                a = resultat[1]
+                self.log(f"Radio : {resultat[0]} ({a.get('station')}, {a.get('origine')}) "
+                         f"{a.get('titre') or ''} — {a.get('artiste') or ''} {a.get('erreur') or ''}".rstrip(" —"))
+        finally:
+            self._radio_m_lock.release()
+
+    def _publier_radio_m(self, etat, attributs):
+        """Par l'API REST et non `set_state` : AppDaemon 4.5 retire les 0 / null des attributs (voir hub_meteo)."""
+        reply = httpx.post(f"{CORE_API}/states/{aiguillage_radio_morceau.ENTITE}", timeout=15,
+                           headers={"Authorization": f"Bearer {os.environ['SUPERVISOR_TOKEN']}"},
+                           json={"state": etat, "attributes": dict(attributs, friendly_name="Radio : morceau en cours",
+                                                                    icon="mdi:radio")})
+        reply.raise_for_status()
+
+    def on_radio_garder(self, event_name, data, **kwargs):
+        """« ♡ Garder ce titre » (script.radio_garder_titre) : le titre `uri` dans les titres likés (par défaut,
+        décision d'Alexandre du 29/10), ou dans « À écouter » si `destination` = « a_ecouter » (jamais de playlist
+        créée : celle de config:playlist_a_ecouter, sinon l'identifiant connu) ; noté dans radio:entendus ;
+        notification « Liké : … » par script.hub_notifier."""
+        R = aiguillage_radio_morceau
+        data = data or {}
+        uri, dest = (data.get("uri") or "").strip(), R.destination(data.get("destination"))
+        if not R.uri_valide(uri):
+            self.log(f"Radio : « Garder » ignoré, uri invalide {uri!r}", level="WARNING")
+            return
+        ids = self._spotify_lecture_ids()
+        if not ids:
+            self.log("Radio : « Garder » impossible, pas d'identifiants Spotify", level="WARNING")
+            self._hub_notifier("Spotify ne répond pas, réessaie", titre="Radio")
+            return
+        record = None
+        if dest == "a_ecouter":
+            try:
+                record = self._service("donnees_apps", "lire", {"espace": self._espace,
+                                                                "cle": aiguillage_spotify.CLE_PLAYLIST}).get("enregistrement")
+            except Exception as error:  # noqa: BLE001 - l'identifiant connu suffit
+                self.log(f"Radio : {aiguillage_spotify.CLE_PLAYLIST} illisible : {error!r}", level="WARNING")
+        pid = aiguillage_spotify.playlist_configuree(record) or R.PLAYLIST_A_ECOUTER
+        client = aiguillage_spotify.Client(ids, playlist_id=pid)
+        client._playlist = pid   # jamais de recherche ni de création de playlist (leçon du 27/10)
+        try:
+            ajoute = R.garder(client, pid, uri, dest)
+        except Exception as error:  # noqa: BLE001
+            self.log(f"Radio : « Garder » en échec : {error!r}", level="WARNING")
+            self._hub_notifier("Spotify ne répond pas, réessaie", titre="Radio")
+            return
+        infos = R.infos_garde(uri, self._radio_m.dernier, self._radio_m.cache)
+        self._radio_m.garde(uri, dest)
+        self.log(f"Radio : {uri} gardé ({dest}, {'ajouté' if ajoute else 'déjà là'})")
+        self._hub_notifier(R.texte_garde(infos, dest), titre="Radio")
+        entree = dict(infos, date=datetime.now(PARIS).isoformat(timespec="seconds"), uri=uri, destination=dest)
+        try:
+            rec = self._service("donnees_apps", "lire", {"espace": self._espace, "cle": R.CLE_ENTENDUS}).get(
+                "enregistrement") or {}
+            for _essai in range(2):
+                result = self._service("donnees_apps", "ecrire", {
+                    "espace": self._espace, "cle": R.CLE_ENTENDUS, "valeur": R.entendus_apres(rec.get("valeur"), entree),
+                    "version_attendue": rec.get("version", 0), "modifie_par": "vigie", "op_id": str(uuid.uuid4()),
+                })
+                if (result or {}).get("statut") != "conflit":
+                    break
+                rec = result.get("serveur") or {}
+        except Exception as error:  # noqa: BLE001
+            self.log(f"Radio : {R.CLE_ENTENDUS} non écrit : {error!r}", level="WARNING")
+        if ajoute and dest == "a_ecouter" and record:
+            self._copier_playlist(client, [dict(record, cle=aiguillage_spotify.CLE_PLAYLIST)])
+        if self._radio_m_handle is None:
+            self._radio_m_handle = self.run_in(self._radio_m_passage, 1)
+
     def on_spotify_sur_ls50(self, event_name, data, **kwargs):
         self._spotify_action(action="transfert", debut=time.monotonic())
 
@@ -1181,9 +1324,9 @@ class RelanceVigie(Hass):
         if not fait and texte == "rien à reprendre":
             self._hub_notifier("Rien à reprendre sur Spotify")
 
-    def _hub_notifier(self, texte):
+    def _hub_notifier(self, texte, titre="Spotify"):
         try:
-            self._service("script", "hub_notifier", {"texte": texte, "titre": "Spotify", "niveau": "info"}, response=False)
+            self._service("script", "hub_notifier", {"texte": texte, "titre": titre, "niveau": "info"}, response=False)
         except Exception as error:  # noqa: BLE001
             self.log(f"Spotify lecture : notification impossible : {error!r}", level="WARNING")
 
