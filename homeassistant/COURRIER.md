@@ -794,7 +794,8 @@ autorisation Google que le courrier.
     uv run homeassistant/scripts/courrier_autoriser.py ~/Downloads/client_secret_XXXX.json --agenda
 
 (cocher Gmail **et** « Afficher vos agendas » ; le fichier `aiguillage_courrier_google.json` est remplacé par un
-jeton qui couvre les deux ; sans la case agenda, rien n'est écrit). D'ici là, le journal dit une fois par jour
+jeton qui couvre les deux ; sans la case agenda, rien n'est écrit). **Depuis le 29/10 au soir : préférer `--tout`** (agenda et Drive dans le
+même consentement, voir « Pièces jointes dans Google Drive ») : chaque consentement remplace le jeton précédent. D'ici là, le journal dit une fois par jour
 « Agenda : accès refusé par Google… » et Programme ne montre que les « À venir » des mails.
 
 ### Journal et coût
@@ -813,3 +814,90 @@ Tests : `tests/test_aiguillage_assistant.py` (question bornée et périmée, mai
 brouillon dans la conversation et jamais envoyé, Gmail qui refuse, actions qui ne font rien, agenda et portée
 manquante, jeton rafraîchi sur 401, garde-fou du module, boucle complète avec mails cités, purge, journal sans
 contenu) ; 361 tests Python verts.
+
+## Pièces jointes dans Google Drive (29/10 au soir, demande d'Alexandre ; décision 80 de Courrier)
+
+« Demander à l'IA » sait enregistrer des pièces jointes dans le Google Drive d'Alexandre. Module
+`apps/aiguillage_drive.py` (outils de l'agent, client Drive, exécution), branché dans `aiguillage_assistant` (outils)
+et `aiguillage_agent` (exécution). Déployé le 29/10 à 18 h 08 (sauvegardes `aiguillage_agent.py.avant-drive-20261029`
+et `aiguillage_assistant.py.avant-drive-20261029` à la racine du dossier AppDaemon).
+
+### Deux temps, comme les actions sur les mails
+
+1. **Proposition** (agent) : `chercher_dossiers_drive(mots)` (lecture : dossiers dont le nom contient un des mots, ou
+   ceux de la racine ; rend `{id, chemin}`), puis `proposer_enregistrement_drive(id, dossier_id, nouveau_chemin,
+   fichiers, candidats)` : pièces jointes du mail lues par leurs **métadonnées seulement** (`fields` de Gmail, jamais
+   `data`), petites images de signature écartées d'office, dossier existant **ou** nouveau chemin (5 niveaux au plus),
+   0 à 3 autres dossiers proposés. Rien n'est écrit dans Drive. Le NUC garde la proposition **avant** d'écrire la
+   réponse :
+
+       ia_drive_proposition:<id> = {v: 1, mail, fichiers: [{partie, nom, type, taille}], dossier: {id | null, chemin,
+                                    nouveau}, candidats: [...], propose_le}
+       bloc de ia_reponse        = {type: drive, id, mail, objet, fichiers, dossier, candidats}
+
+2. **Exécution, sur le geste d'Alexandre** : l'app écrit, quand il touche « Enregistrer » (`version_attendue: 0`, une
+   fois par proposition) :
+
+       ia_drive_confirmation:<id> = {v: 1, proposition: <id>, fichiers: [partie…], dossier: {id | null, chemin},
+                                     appareil, quand}
+
+   Le NUC (événement `donnees_apps_modifie`, fil à part, verrou à part) vérifie (`plan`) : proposition du NUC présente
+   et de moins de 7 jours, confirmation de moins de **10 minutes**, fichiers **parmi ceux proposés**, dossier
+   **proposé** (ou candidat) ou **chemin tapé** par Alexandre (nettoyé) ; sinon `Refus`, rien n'est fait. Puis
+   (`executer`) : crée les dossiers manquants du chemin (existants réutilisés), relit le mail (l'id de pièce jointe
+   de Gmail change d'une lecture à l'autre : partie retrouvée par son numéro et son nom), télécharge chaque pièce
+   jointe **en mémoire** (jamais de fichier, ni journal, ni état), la dépose (`multipart` jusqu'à 5 Mo, session
+   `resumable` au-delà ; 25 Mo au plus), et répond :
+
+       ia_drive_resultat:<id> = {v: 1, statut: en_cours | ok | echec, raison, dossier: {id, chemin, lien},
+                                 fichiers: [{nom, id, lien}], fait_le}
+
+   L'app suit ce résultat (relecture 3 s puis 2 à 3 s, 5 minutes au plus) et montre « Ouvrir dans Drive » (lien du
+   dossier). Au démarrage, les confirmations sans résultat sont reprises (si elles ont moins de 10 minutes).
+
+Pourquoi le NUC exécute : l'app n'a que `gmail.modify` ; le jeton Drive est sur le NUC avec Gmail et l'agenda (un seul
+consentement). C'est conforme à la règle d'Alexandre : ce n'est pas une action sur un mail (rien n'est envoyé, archivé
+ni supprimé ; le mail ne change pas), seulement une copie de pièces jointes, faite uniquement sur son geste explicite
+(« Enregistrer ») et seulement pour ce que le NUC a proposé.
+
+### Portée : `https://www.googleapis.com/auth/drive`
+
+Il faut à la fois **lister ses dossiers existants** et **y déposer un fichier**. `drive.file` (non sensible) ne donne
+accès qu'aux fichiers créés par l'app ou choisis dans le sélecteur Google (Picker), que le NUC n'a pas : ses dossiers
+existants lui sont invisibles et un dépôt dedans échoue (404 sur le parent). `drive.metadata.readonly` permet de les
+lister mais pas d'écrire : `drive.file` + `drive.metadata.readonly` ne permet donc toujours pas de déposer dans un
+dossier existant. Les deux sont d'ailleurs, comme `drive`, des portées « restreintes » : aucun gain côté Google. Le
+code se limite lui-même : `ClientDrive` n'a que `files.list`, `files.get` (métadonnées) et `files.create` (dossier ou
+fichier) ; ni suppression, ni corbeille, ni modification, ni partage (`test_drive_garde_fou`).
+
+### Consentement (à faire une fois par Alexandre, avec l'agenda)
+
+Console Google Cloud, projet « Relance » : activer **Google Calendar API** et **Google Drive API** ; écran de
+consentement OAuth › Accès aux données : ajouter `…/auth/calendar.readonly` et `…/auth/drive`. Puis, `addon_configs`
+monté dans le Finder, depuis le dossier `Rappels` :
+
+    uv run homeassistant/scripts/courrier_autoriser.py ~/Downloads/client_secret_XXXX.json --tout
+
+(`--tout` = Gmail + agenda + Drive ; cocher les trois accès ; sans la case Drive ou agenda, rien n'est écrit et
+l'autorisation actuelle reste). L'agent relit `aiguillage_courrier_google.json` dès qu'il change (pas de
+redémarrage). Tant que la portée manque (champ `scope` du jeton), les outils Drive répondent « Google Drive n'est
+pas autorisé » et l'agent le dit sans rien proposer.
+
+### Limite de l'API (29/10)
+
+Premier essai réel refusé (`BadRequestError`, 0 tour) : l'API accepte au plus **16 paramètres en union** (`anyOf`,
+types nullables) sur l'ensemble des outils `strict` ; il y en avait 18. Les paramètres Drive ne sont pas nullables
+(`""` et `[]` = absent) ; `test_schemas_strict_sous_la_limite_des_unions` le surveille (13 aujourd'hui).
+
+### Journal
+
+« Drive (Courrier, iPhone) : 2 pièce(s) jointe(s) enregistrée(s) (1.3 Mo), dossier existant » ou « … : rien
+d'enregistré (fichiers non proposés) » : **jamais** le contenu, ni les noms de fichiers ou de dossiers.
+
+Essai réel du 29/10 à 18 h 10 (question écrite à la main dans l'espace, sans consentement Drive) : « Enregistre les
+pièces jointes de la dernière facture Free dans mon Drive » → `chercher_mails`, `chercher_dossiers_drive`, 2 tours,
+**0,0276 $** ; réponse : il faut d'abord l'accord Google pour Drive, rien de proposé.
+
+Tests : `tests/test_aiguillage_drive.py` (15 : pièces jointes sans contenu, rien sans accord, proposition sans
+écriture, refus de toute confirmation qui ne correspond pas, dossiers créés et réutilisés, multipart et resumable,
+session d'envoi hors Drive refusée, journal sans contenu ni noms, garde-fou, limite des unions, portée du script).

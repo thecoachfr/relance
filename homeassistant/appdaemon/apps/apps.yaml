@@ -102,7 +102,8 @@ aiguillage_courrier:
 # Assistant de l'app Courrier (29/10/2026, module aiguillage_assistant) : questions par l'espace « courrier »
 # (ia_question / ia_reponse), brouillons Gmail (drafts.create seulement), listes d'actions à confirmer dans l'app,
 # agenda Google perso publié dans agenda:<jour> (portée calendar.readonly). Facultatif : assistant_courrier: false,
-# agenda: false, agenda_secondes: 1800.
+# agenda: false, agenda_secondes: 1800. Pièces jointes vers Google Drive (29/10, module aiguillage_drive, portée drive) :
+# l'agent propose, Alexandre touche « Enregistrer » dans l'app (ia_drive_confirmation), le NUC dépose et répond.
 aiguillage_agent:
   module: aiguillage_agent
   class: AiguillageAgent

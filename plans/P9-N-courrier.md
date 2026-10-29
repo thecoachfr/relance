@@ -25,16 +25,20 @@ Décision du 26/10 : plutôt qu'une section « Courrier » dans Aiguillage, un *
 `donnees_apps` : résumés et urgence, « Plus tard », corrections de classement, notifications APNs directes, pastille
 de l'icône, fiche de l'expéditeur (mémo d'Aiguillage, `memo_uid` depuis le 29/10), tâches 📧 vers Aiguillage et liens
 `relance://`. **Refonte façon Dove** branchée le 29/10 (dossiers et recherche Gmail, carte « Aujourd'hui »,
-« Demander à l'IA » relié à `aiguillage_agent` : brouillons Gmail, actions à confirmer, agenda du jour).
+« Demander à l'IA » relié à `aiguillage_agent` : brouillons Gmail, actions à confirmer, agenda du jour) ; **pièces
+jointes vers Google Drive** le 29/10 au soir (proposition de l'IA, « Enregistrer » d'Alexandre, dépôt par le NUC,
+module `aiguillage_drive`, décision 80 de Courrier).
 
 Règle permanente (décision d'Alexandre du 24/10, imposée par le code) : **aucun envoi, archivage ni suppression de
 mail sans son geste explicite pour ce mail** ; brouillons permis.
 
 ## Reste ouvert
 
-1. **Agenda perso** : consentement Google `calendar.readonly` à donner par Alexandre
-   (`uv run homeassistant/scripts/courrier_autoriser.py <JSON client> --agenda`, API Google Calendar à activer) ;
-   d'ici là, Programme de Courrier sans l'agenda.
+1. **Un seul consentement Google pour l'agenda et Drive** à donner par Alexandre : APIs Google Calendar et Google
+   Drive à activer dans le projet « Relance », portées `calendar.readonly` et `drive` à ajouter à l'écran de
+   consentement, puis `uv run homeassistant/scripts/courrier_autoriser.py <JSON client> --tout` (Gmail + agenda +
+   Drive ; le jeton est relu par le NUC sans redémarrage). D'ici là, Programme de Courrier sans l'agenda, et
+   « Demander à l'IA » répond qu'il faut l'accord pour Drive sans rien proposer.
 2. **Coût de l'IA** à suivre : tri (budget 15 $/mois), agent (5 $), « Aujourd'hui » (6 $, choisi par Alexandre le 28/10,
    `aujourdhui_budget_mensuel: 6` sur le NUC).
 3. **Qualité d'« Aujourd'hui »** à juger à l'usage (lignes justes, relances utiles, lignes masquées respectées).
