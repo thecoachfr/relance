@@ -143,6 +143,9 @@ def attributs(player, ls50_visible, nom_contexte, maintenant_iso):
             "lien": ((contexte.get("external_urls") or {}).get("spotify") or lien_ouvert(*ref))
             if ref and etat != "rien" else None,
         },
+        # Aléatoire (29/10/2026, LECTURE-SOURCE.md) : `shuffle_state` de Spotify, repris par sensor.lecture_source.
+        "aleatoire": player.get("shuffle_state") if etat != "rien" and isinstance(player.get("shuffle_state"), bool)
+        else None,
         "duree_s": duree,
         "position_s": position,
         "position_le": maintenant_iso if position is not None else None,

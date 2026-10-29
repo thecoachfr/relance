@@ -106,8 +106,11 @@ def test_attributs_autre_appareil_pause_et_rien():
     assert etat == "rien" and a["appareil"] is None and a["titre"] is None and a["sur_ls50"] is False
     assert a["position_le"] is None and a["ls50_visible"] is False
     # Toutes les clés du contrat, toujours présentes (publiées par l'API REST, nulls compris).
-    assert set(a) == {"appareil", "sur_ls50", "titre", "artistes", "album", "image", "lien", "contexte", "duree_s",
-                      "position_s", "position_le", "ls50_visible", "maj"}
+    assert set(a) == {"appareil", "sur_ls50", "titre", "artistes", "album", "image", "lien", "contexte", "aleatoire",
+                      "duree_s", "position_s", "position_le", "ls50_visible", "maj"}
+    assert a["aleatoire"] is None
+    _, a = L.attributs(dict(player(), shuffle_state=True), True, None, ISO)
+    assert a["aleatoire"] is True
 
 
 def test_nom_ls50_tolere_casse_et_accents():

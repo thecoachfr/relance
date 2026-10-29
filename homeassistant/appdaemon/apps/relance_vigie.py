@@ -27,6 +27,7 @@ from appdaemon.plugins.hass import Hass
 import aiguillage_actions
 import aiguillage_agenda
 import aiguillage_lecteur
+import aiguillage_lecture_source
 import aiguillage_photos
 import aiguillage_radio
 import aiguillage_spotify
@@ -208,6 +209,20 @@ class RelanceVigie(Hass):
         self.listen_event(self.on_spotify_sur_ls50, "spotify_sur_ls50")
         self.listen_event(self.on_spotify_reprendre, "spotify_reprendre")
         self.listen_event(lambda *_a, **_kw: self._lecture.demander(time.monotonic()), "spotify_lecture_demande")
+        # Source de la lecture pour le Hub (29/10/2026, homeassistant/LECTURE-SOURCE.md) : sensor.lecture_source.
+        # Dernier lancement Music Assistant vers les LS50 (appels de service écoutés), gardé sur disque.
+        self._source_path = Path(self.args.get("lecture_source_file", "/config/lecture_source.json"))
+        self._source_lock = threading.Lock()
+        self._source_memo = self._source_charger()
+        self._source_publie = None   # ((état, attributs), instant)
+        self._source_file = None     # (réponse de get_queue, instant)
+        self._source_handle = None
+        self.listen_event(self.on_source_appel, "call_service", domain="music_assistant", service="play_media")
+        self.listen_event(self.on_source_appel, "call_service", domain="media_player", service="play_media")
+        for entite in (aiguillage_lecture_source.ENTITE_MA, aiguillage_lecture_source.ENTITE_KEF,
+                       aiguillage_lecture_source.ENTITE_SPOTIFY):
+            self.listen_state(self.on_source_etat, entite, attribute="all")
+        self.run_every(self._source_passage, "now+8", 30)
         # Activité en direct « En lecture sur les LS50 » du Hub iPad (23/10/2026) : jetons envoyés par l'app
         # (script.hub_ipad_activite → événement hub_ipad_activite), lecteur surveillé, push APNs `liveactivity`.
         self._lecteur_path = Path(self.args.get("hub_ipad_activite_file", "/config/hub_ipad_activite.json"))
@@ -1008,6 +1023,120 @@ class RelanceVigie(Hass):
                            headers={"Authorization": f"Bearer {os.environ['SUPERVISOR_TOKEN']}"},
                            json={"state": etat, "attributes": dict(attributs, friendly_name="Spotify : lecture",
                                                                     icon="mdi:spotify")})
+        reply.raise_for_status()
+
+    # MARK: - Source de la lecture pour le Hub (29/10/2026, LECTURE-SOURCE.md)
+
+    def _source_charger(self):
+        try:
+            donnees = json.loads(self._source_path.read_text())
+        except (FileNotFoundError, ValueError):
+            return None
+        return aiguillage_lecture_source.memo_charge(donnees, time.monotonic())
+
+    def _source_sauver(self):
+        try:
+            self._source_path.write_text(json.dumps(
+                aiguillage_lecture_source.memo_disque(self._source_memo), ensure_ascii=False, indent=2))
+        except OSError as error:
+            self.log(f"Source de lecture : mémo non écrit : {error!r}", level="WARNING")
+
+    def on_source_appel(self, event_name, data, **kwargs):
+        """music_assistant.play_media / media_player.play_media vers les LS50 : nouveau contexte de la file."""
+        t = time.monotonic()
+        lancement = aiguillage_lecture_source.lancement_depuis_appel(
+            data, datetime.now(PARIS).isoformat(timespec="seconds"), t)
+        if lancement is None:
+            return
+        with self._source_lock:
+            self._source_memo = aiguillage_lecture_source.appliquer(self._source_memo, lancement)
+            self._source_file = None
+            self._source_sauver()
+        quoi = "ajout à la file" if lancement.get("ajout") else f"{lancement.get('media_type')} {lancement.get('media_id')}"
+        self.log(f"Source de lecture : lancement vu ({quoi})")
+        self._source_bientot(4)
+
+    def on_source_etat(self, entity, attribute, old, new, **kwargs):
+        self._source_bientot(1)
+
+    def _source_bientot(self, delai):
+        """Plusieurs changements d'affilée (titre, position, KEF) : un seul calcul."""
+        if self._source_handle is None:
+            self._source_handle = self.run_in(self._source_passage, delai)
+
+    def _source_ma_jeton(self):
+        try:
+            return self._ma_token_path.read_text().strip()
+        except FileNotFoundError:
+            return ""
+
+    def _source_passage(self, **kwargs):
+        self._source_handle = None
+        if not self._source_lock.acquire(blocking=False):
+            self._source_bientot(2)
+            return
+        try:
+            t = time.monotonic()
+            maintenant = datetime.now(PARIS).isoformat(timespec="seconds")
+            L = aiguillage_lecture_source
+            try:
+                etats = {e: self.get_state(e, attribute="all") for e in (L.ENTITE_MA, L.ENTITE_KEF, L.ENTITE_SPOTIFY)}
+                ma = etats.get(L.ENTITE_MA)
+                memo, file = self._source_memo, None
+                if memo and ma and ma.get("state") in L.JOUE:
+                    # File active lue au plus une fois par minute (identifiant, taille, index).
+                    if self._source_file and t - self._source_file[1] < 60:
+                        file = self._source_file[0]
+                    else:
+                        try:
+                            reponse = self._service("music_assistant", "get_queue", {"entity_id": L.ENTITE_MA})
+                            file = (reponse or {}).get(L.ENTITE_MA)
+                        except Exception as error:  # noqa: BLE001 - sans file, le nom reste celui du lancement
+                            self.log(f"Source de lecture : file MA illisible : {error!r}", level="WARNING")
+                        self._source_file = (file, t)
+                    appris = L.apprendre(memo, ma, file, t)
+                    if L.a_resoudre(appris, t):
+                        item = None
+                        jeton = self._source_ma_jeton()
+                        if jeton and self._ma_url:
+                            try:
+                                reply = httpx.post(f"{self._ma_url}/api", timeout=15,
+                                                   headers={"Authorization": f"Bearer {jeton}"},
+                                                   json={"command": "music/item_by_uri",
+                                                         "args": {"uri": appris["media_id"]}})
+                                reply.raise_for_status()
+                                item = reply.json()
+                            except Exception as error:  # noqa: BLE001
+                                self.log(f"Source de lecture : nom de {appris['media_id']} illisible : {error!r}",
+                                         level="WARNING")
+                        appris = L.nom_resolu(appris, item, t)
+                    if appris != memo:
+                        self._source_memo = appris
+                        self._source_sauver()
+                    memo = appris
+                ajoutees = self.get_state(aiguillage_radio.ENTITE, attribute="radios") or []
+                resultat = L.calculer(etats, memo, L.valide(memo, ma, file), ajoutees, maintenant)
+            except Exception as error:  # noqa: BLE001 - une erreur ne casse rien : capteur indisponible
+                self.log(f"Source de lecture : calcul en échec : {error!r}", level="WARNING")
+                resultat = L.indisponible(type(error).__name__, maintenant)
+            ancien = self._source_publie
+            if ancien and not L.a_publier(ancien[0], resultat, ancien[1], t):
+                return
+            try:
+                self._publier_source(*resultat)
+                self._source_publie = (resultat, t)
+            except Exception as error:  # noqa: BLE001 - HA injoignable : on republiera au prochain passage
+                self._source_publie = None
+                self.log(f"Source de lecture : capteur non publié : {error!r}", level="WARNING")
+        finally:
+            self._source_lock.release()
+
+    def _publier_source(self, etat, attributs):
+        """Par l'API REST et non `set_state` : AppDaemon 4.5 retire les 0 / null des attributs (voir hub_meteo)."""
+        reply = httpx.post(f"{CORE_API}/states/{aiguillage_lecture_source.ENTITE}", timeout=15,
+                           headers={"Authorization": f"Bearer {os.environ['SUPERVISOR_TOKEN']}"},
+                           json={"state": etat, "attributes": dict(attributs, friendly_name="Source de la lecture",
+                                                                    icon="mdi:music-box-multiple")})
         reply.raise_for_status()
 
     def on_spotify_sur_ls50(self, event_name, data, **kwargs):
