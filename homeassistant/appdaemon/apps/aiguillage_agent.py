@@ -30,6 +30,7 @@ import unicodedata
 import uuid
 
 import aiguillage_courrier as courrier
+import aiguillage_assistant as assistant
 
 PARIS = courrier.PARIS
 MODELE = "claude-sonnet-5-5"
@@ -219,7 +220,8 @@ def _date_locale(r):
 
 
 def _vue(r, extrait=False):
-    out = {"id": r["id"], "date": _date_locale(r), "de": courrier._qui(dict(r)) or r["de"], "adresse": r["de"],
+    out = {"id": r["id"], "fil": r["fil"], "date": _date_locale(r), "de": courrier._qui(dict(r)) or r["de"],
+           "adresse": r["de"],
            "sujet": r["sujet"], "categorie": r["categorie"], "resume": r["resume"], "demande": r["demande"],
            "echeance": r["echeance"], "fait": r["categorie"] == "fait"}
     if extrait:
@@ -301,7 +303,8 @@ def vue_gmail(meta, noms=None, tri=None):
     except (KeyError, TypeError, ValueError, OSError):
         date = _en_tete(meta, "Date")
     apercu = " ".join(html.unescape(meta.get("snippet") or "").split())
-    out = {"id": meta.get("id"), "date": date, "de": _en_tete(meta, "From"), "a": _en_tete(meta, "To"),
+    out = {"id": meta.get("id"), "fil": meta.get("threadId"), "date": date, "de": _en_tete(meta, "From"),
+           "a": _en_tete(meta, "To"),
            "objet": _en_tete(meta, "Subject"), "apercu": apercu[:APERCU_MAX],
            "libelles": libelles_lisibles(meta.get("labelIds"), noms), "dans_le_tri": bool(tri)}
     if tri:
@@ -491,14 +494,14 @@ def entete(maintenant):
     return f"[{JOURS[local.weekday()]} {local:%d/%m/%Y %H:%M}] "
 
 
-def messages_initiaux(fil, question, maintenant):
+def messages_initiaux(fil, question, maintenant, datee=False):
     """Le fil (questions et réponses précédentes, texte seul), puis la question du jour, datée (la date reste hors du
-    `system`, pour le cache)."""
+    `system`, pour le cache). `datee` : la question porte déjà sa date (Courrier, `aiguillage_assistant`)."""
     messages = []
     for e in fil:
         messages.append({"role": "user", "content": e["question"]})
         messages.append({"role": "assistant", "content": e["reponse"]})
-    messages.append({"role": "user", "content": entete(maintenant) + question})
+    messages.append({"role": "user", "content": question if datee else entete(maintenant) + question})
     return messages
 
 
@@ -538,12 +541,16 @@ def _texte(reponse):
 
 
 def repondre(client, question, outils, memo=None, fil=(), maintenant=None, modele=MODELE, effort=EFFORT,
-             tours_max=TOURS_MAX, delai=DELAI_TOTAL_S, horloge=time.monotonic):
+             tours_max=TOURS_MAX, delai=DELAI_TOTAL_S, horloge=time.monotonic, definitions=None, blocs_systeme=None,
+             datee=False):
     """Boucle d'outils bornée (`tours_max` appels, `delai` secondes). Renvoie (texte brut ou None, coût en dollars,
     raison de l'échec ou None, nombre de tours). Un appel qui lève (réseau, 4xx) remonte : le coût déjà compté est
-    perdu pour ce compteur, l'app répond par un échec."""
+    perdu pour ce compteur, l'app répond par un échec. `definitions` / `blocs_systeme` : autres outils et consigne
+    (assistant de Courrier, 29/10) ; par défaut ceux de Signal."""
     debut = horloge()
-    messages = messages_initiaux(list(fil), question, maintenant)
+    definitions = definitions or OUTILS
+    blocs_systeme = blocs_systeme or systeme(memo)
+    messages = messages_initiaux(list(fil), question, maintenant, datee=datee)
     cout, tours = 0.0, 0
     while True:
         if tours >= tours_max:
@@ -551,7 +558,7 @@ def repondre(client, question, outils, memo=None, fil=(), maintenant=None, model
         if horloge() - debut > delai:
             return None, cout, "trop long", tours
         reponse = client.messages.create(
-            model=modele, max_tokens=MAX_TOKENS, system=systeme(memo), tools=OUTILS,
+            model=modele, max_tokens=MAX_TOKENS, system=blocs_systeme, tools=definitions,
             messages=_avec_point_de_cache(messages), output_config={"effort": effort})
         tours += 1
         cout += courrier.cout(reponse.usage, modele)
@@ -633,6 +640,15 @@ if hass is not None:
             self._gmail = None
             self.listen_event(self._message, "aiguillage_agent_message")
             self._verrou = threading.Lock()
+            # Assistant de Courrier (29/10, refonte façon Dove) : questions par l'espace `courrier`, agenda du jour.
+            self._jeton_google = None
+            self._agenda_empreintes, self._agenda_refus_le = {}, None
+            if bool(self.args.get("assistant_courrier", True)):
+                self.listen_event(self._espace_modifie, "donnees_apps_modifie", espace=assistant.ESPACE)
+                self.run_in(self._rattraper, 30)
+                self.run_every(self._purger_ia, "now+120", 3600)
+            if bool(self.args.get("agenda", True)):
+                self.run_every(self._publier_agenda, "now+60", int(self.args.get("agenda_secondes", 1800)))
 
         def _lire_etat(self):
             try:
@@ -741,3 +757,172 @@ if hass is not None:
             self._ecrire_etat(etat)
             self.log(journal(question, outils.appels, cout_, tours, etat, raison))
             self._envoyer(envoi)
+
+        # MARK: - Assistant de Courrier (29/10, `aiguillage_assistant`)
+
+        def _jeton(self):
+            """Jeton Google de l'autorisation du courrier (brouillons, agenda) ; None si elle est absente."""
+            if self._jeton_google is None:
+                if not self._auth_path.exists():
+                    return None
+                self._jeton_google = assistant.JetonGoogle(json.loads(self._auth_path.read_text(encoding="utf-8")))
+            return self._jeton_google
+
+        def _brouillons(self):
+            jeton = self._jeton()
+            return assistant.BrouillonsGmail(jeton) if jeton else None
+
+        def _agenda(self):
+            jeton = self._jeton()
+            return assistant.ClientAgenda(jeton) if jeton else None
+
+        def _lire_espace(self, cle=None):
+            data = {"espace": assistant.ESPACE}
+            if cle:
+                data["cle"] = cle
+            return self._service("donnees_apps", "lire", data) or {}
+
+        def _lire_cle(self, cle):
+            e = self._lire_espace(cle).get("enregistrement") or {}
+            return None if not e or e.get("supprime") else e.get("valeur")
+
+        def _ecrire_cle(self, cle, valeur):
+            return self._service("donnees_apps", "ecrire", {
+                "espace": assistant.ESPACE, "cle": cle, "valeur": valeur,
+                "modifie_le": datetime.now(timezone.utc).isoformat(), "modifie_par": assistant.EMETTEUR,
+                "op_id": str(uuid.uuid4())})
+
+        def _supprimer(self, cles):
+            if not cles:
+                return
+            quand = datetime.now(timezone.utc).isoformat()
+            ops = [{"type": "supprimer", "cle": k, "modifie_le": quand, "modifie_par": assistant.EMETTEUR,
+                    "op_id": str(uuid.uuid4())} for k in cles]
+            self._service("donnees_apps", "lot", {"espace": assistant.ESPACE, "operations": ops})
+
+        def _espace_modifie(self, event_name, data, **kwargs):
+            """Une clé de l'espace `courrier` a changé : une question de l'app part dans un fil à part (comme Signal)."""
+            cle = str((data or {}).get("cle") or "")
+            ident = cle[len(assistant.PREFIXE_QUESTION):] if cle.startswith(assistant.PREFIXE_QUESTION) else ""
+            if assistant._UUID.match(ident):
+                threading.Thread(target=self._courrier_seul, args=(ident,), name="agent-courrier-app",
+                                 daemon=True).start()
+
+        def _courrier_seul(self, ident):
+            with self._verrou:
+                try:
+                    self._courrier(ident)
+                except Exception as exc:  # noqa: BLE001 - jamais le contenu au journal : le type d'erreur seul
+                    self.log(f"Agent (Courrier) : erreur inattendue ({type(exc).__name__})", level="WARNING")
+                    try:
+                        self._ecrire_cle(assistant.PREFIXE_REPONSE + ident, assistant.valeur_reponse(
+                            "echec", datetime.now(PARIS), raison=type(exc).__name__))
+                    except Exception:  # noqa: BLE001
+                        pass
+
+        def _courrier(self, ident):
+            maintenant = datetime.now(PARIS)
+            cle_q, cle_m, cle_r = (p + ident for p in (assistant.PREFIXE_QUESTION, assistant.PREFIXE_MAIL,
+                                                       assistant.PREFIXE_REPONSE))
+            question = assistant.lire_question(self._lire_cle(cle_q), maintenant)
+            if question is None or self._lire_cle(cle_r) is not None:
+                return   # vide, trop ancienne, ou déjà traitée (événement reçu deux fois)
+            self._ecrire_cle(cle_r, assistant.valeur_reponse("en_cours", maintenant))
+            mail_cite = None
+            if question["mail_joint"]:
+                try:
+                    mail_cite = assistant.lire_mail_cite(self._lire_cle(cle_m), question["mail"])
+                finally:
+                    try:
+                        self._supprimer([cle_m])   # lu une fois, effacé aussitôt : jamais gardé sur le NUC
+                    except Exception:  # noqa: BLE001 - la purge horaire le reprendra
+                        self.log("Agent (Courrier) : mail cité non effacé, repris par la purge", level="WARNING")
+            joint = mail_cite is not None
+            etat = courrier.etat_du_mois(self._lire_etat(), maintenant)
+            if budget_atteint(etat, self._budget, maintenant):
+                raison = f"budget du mois atteint ({etat['cout_mois']:.2f} $ sur {self._budget:.2f} $)"
+                self._ecrire_cle(cle_r, assistant.valeur_reponse("echec", maintenant, raison=raison))
+                self.log(f"Agent (Courrier) : {raison}, pas d'appel", level="WARNING")
+                return
+            base = Outils(self._base, self._service, maintenant,
+                          questions=[question["texte"]] + [e["question"] for e in question["fil"][-1:]],
+                          espace_taches=self._espace, gmail=self._client_gmail)
+            outils = assistant.OutilsCourrier(base, brouillons=self._brouillons, agenda=self._agenda,
+                                              mail_cite=mail_cite)
+            memo = self._contexte_memo()
+            texte, cout_, raison, tours = None, 0.0, None, 0
+            try:
+                texte, cout_, raison, tours = repondre(
+                    self._client(), assistant.question_pour_ia(question, maintenant, mail_cite), outils, memo=memo,
+                    fil=question["fil"], maintenant=maintenant, modele=self._modele, effort=self._effort,
+                    definitions=OUTILS + assistant.OUTILS_COURRIER, blocs_systeme=assistant.systeme(memo), datee=True)
+            except Exception as exc:  # noqa: BLE001 - réseau, clé, API
+                raison = type(exc).__name__
+            mail_cite = outils.mail_cite = None   # le texte du mail cité n'est gardé nulle part
+            etat = courrier.compter(etat, cout_, maintenant)
+            self._ecrire_etat(etat)
+            if texte or outils.blocs_brouillon or outils.blocs_actions:
+                valeur = assistant.valeur_reponse("ok", datetime.now(PARIS), assistant.blocs_reponse(texte or "", outils))
+                raison = None
+            else:
+                valeur = assistant.valeur_reponse("echec", datetime.now(PARIS), raison=raison or "réponse vide")
+            self._ecrire_cle(cle_r, valeur)
+            self.log(assistant.journal(question["appareil"], question["texte"], outils.appels, cout_, tours, etat,
+                                       raison, mail_joint=joint))
+
+        def _rattraper(self, kwargs):
+            """Au démarrage : les questions récentes restées sans réponse (NUC redémarré pendant l'attente)."""
+            try:
+                enr = self._lire_espace().get("enregistrements") or []
+            except Exception as exc:  # noqa: BLE001
+                self.log(f"Agent (Courrier) : espace illisible au démarrage ({type(exc).__name__})", level="WARNING")
+                return
+            repondues = {e["cle"][len(assistant.PREFIXE_REPONSE):] for e in enr
+                         if str(e.get("cle", "")).startswith(assistant.PREFIXE_REPONSE)}
+            for e in enr:
+                cle = str(e.get("cle") or "")
+                ident = cle[len(assistant.PREFIXE_QUESTION):]
+                if cle.startswith(assistant.PREFIXE_QUESTION) and ident not in repondues and assistant._UUID.match(ident):
+                    threading.Thread(target=self._courrier_seul, args=(ident,), daemon=True).start()
+
+        def _purger_ia(self, kwargs):
+            """Toutes les heures : échanges de plus de 7 jours, mails cités oubliés (10 min), agenda des jours passés."""
+            try:
+                enr = self._lire_espace().get("enregistrements") or []
+                maintenant = datetime.now(PARIS)
+                cles = assistant.cles_a_purger(enr, maintenant) + assistant.cles_agenda_perimees(
+                    [str(e.get("cle") or "") for e in enr], maintenant)
+                for i in range(0, len(cles), 100):
+                    self._supprimer(cles[i:i + 100])
+                if cles:
+                    self.log(f"Agent (Courrier) : {len(cles)} clé(s) ia_* / agenda purgée(s)")
+            except Exception as exc:  # noqa: BLE001
+                self.log(f"Agent (Courrier) : purge impossible ({type(exc).__name__})", level="WARNING")
+
+        def _publier_agenda(self, kwargs):
+            """Toutes les 30 minutes de 6 h à 23 h : l'agenda d'aujourd'hui et de demain dans `agenda:<jour>`, seulement
+            s'il a changé. Sans la portée `calendar.readonly` : un avertissement par jour, rien de publié."""
+            maintenant = datetime.now(PARIS)
+            if not 6 <= maintenant.hour < 23:
+                return
+            client = self._agenda()
+            if client is None:
+                return
+            try:
+                for jour in (maintenant.date(), maintenant.date() + timedelta(days=1)):
+                    evts = assistant.evenements_du_jour(client, jour)
+                    empreinte = assistant.empreinte_agenda(evts)
+                    cle = assistant.PREFIXE_AGENDA + jour.isoformat()
+                    if self._agenda_empreintes.get(cle) == empreinte:
+                        continue
+                    rep = self._ecrire_cle(cle, assistant.valeur_agenda(evts, maintenant)) or {}
+                    if rep.get("statut") == "ok":
+                        self._agenda_empreintes[cle] = empreinte
+                        self.log(f"Agenda : {len(evts)} événement(s) publié(s) pour le {jour:%d/%m}")
+            except assistant.PorteeManquante:
+                if self._agenda_refus_le != maintenant.date():
+                    self._agenda_refus_le = maintenant.date()
+                    self.log("Agenda : accès refusé par Google (portée calendar.readonly ou API Google Calendar à "
+                             "activer) : relancer courrier_autoriser.py --agenda sur le Mac", level="WARNING")
+            except Exception as exc:  # noqa: BLE001
+                self.log(f"Agenda : lecture impossible ({type(exc).__name__})", level="WARNING")

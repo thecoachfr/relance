@@ -13,9 +13,9 @@ Finder (`smb://homeassistant.local/addon_configs`). AppDaemon voit ce dossier co
 
 N'affiche jamais le secret ni les jetons. Rien n'est écrit dans un dépôt.
 
-    uv run homeassistant/scripts/courrier_autoriser.py ~/Downloads/client_secret_XXXX.json
+    uv run homeassistant/scripts/courrier_autoriser.py ~/Downloads/client_secret_XXXX.json [--agenda]
 
-Le JSON client se télécharge dans la console Google Cloud (projet « Relance ») : API et services › Identifiants ›
+`--agenda` (29/10) : ajoute `calendar.readonly` (API Google Calendar à activer dans le projet « Relance »). Le JSON client se télécharge dans la console Google Cloud (projet « Relance ») : API et services › Identifiants ›
 ID client OAuth de type « Application de bureau » › Télécharger le JSON.
 """
 
@@ -38,6 +38,9 @@ AUTORISATION_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 JETON_URL = "https://oauth2.googleapis.com/token"
 PROFIL_URL = "https://gmail.googleapis.com/gmail/v1/users/me/profile"
 PORTEE = "https://www.googleapis.com/auth/gmail.modify"
+# Agenda Google perso en lecture seule (29/10, assistant de Courrier : Programme du jour, outil `agenda`), demandé avec
+# --agenda dans le MÊME consentement : le jeton écrit couvre alors Gmail et l'agenda.
+PORTEE_AGENDA = "https://www.googleapis.com/auth/calendar.readonly"
 COMPTE = "alexandre.fau@gmail.com"
 SORTIE = "/Volumes/addon_configs/a0d7b954_appdaemon/aiguillage_courrier_google.json"
 
@@ -116,6 +119,8 @@ def main():
     parser.add_argument("client_json", help="JSON client OAuth (« Application de bureau ») téléchargé de la console")
     parser.add_argument("sortie", nargs="?", default=SORTIE, help=f"fichier écrit (défaut : {SORTIE})")
     parser.add_argument("--compte", default=COMPTE, help=f"compte attendu (défaut : {COMPTE})")
+    parser.add_argument("--agenda", action="store_true",
+                        help="ajoute la lecture de l'agenda Google (calendar.readonly) à l'accès Gmail")
     args = parser.parse_args()
 
     sortie = Path(args.sortie).expanduser()
@@ -128,7 +133,8 @@ def main():
     verificateur, defi = pkce()
     etat = secrets.token_urlsafe(24)
     url = AUTORISATION_URL + "?" + urllib.parse.urlencode({
-        "client_id": client_id, "redirect_uri": redirection, "response_type": "code", "scope": PORTEE,
+        "client_id": client_id, "redirect_uri": redirection, "response_type": "code",
+        "scope": " ".join([PORTEE] + ([PORTEE_AGENDA] if args.agenda else [])),
         "access_type": "offline", "prompt": "consent", "login_hint": args.compte, "state": etat,
         "code_challenge": defi, "code_challenge_method": "S256",
     })
@@ -144,8 +150,12 @@ def main():
     if not jetons.get("refresh_token"):
         raise SystemExit("Google n'a pas donné de jeton de rafraîchissement : retirer l'accès de l'app dans "
                          "myaccount.google.com › Sécurité › Applications tierces, puis relancer.")
-    if PORTEE not in (jetons.get("scope") or "").split():
+    accordees = (jetons.get("scope") or "").split()
+    if PORTEE not in accordees:
         raise SystemExit(f"Portée accordée inattendue ({jetons.get('scope')}) : cocher l'accès à Gmail, relancer.")
+    if args.agenda and PORTEE_AGENDA not in accordees:
+        raise SystemExit("L'accès à l'agenda n'a pas été coché : relancer et cocher « Afficher vos agendas ». "
+                         "Rien n'est écrit (l'autorisation Gmail actuelle reste en place).")
     email = (profil(jetons["access_token"]).get("emailAddress") or "").lower()
     if email != args.compte.lower():
         raise SystemExit(f"Compte autorisé : {email}, attendu : {args.compte}. Rien n'est écrit.")
@@ -159,7 +169,7 @@ def main():
         os.chmod(sortie, 0o600)
     except OSError:
         pass  # partage SMB : les droits suivent ceux du montage
-    print(f"OK : accès à Gmail autorisé pour {email}, écrit dans {sortie} (AppDaemon : /config/{sortie.name}).")
+    print(f"OK : accès à Gmail{' et à l’agenda' if args.agenda else ''} autorisé pour {email}, écrit dans {sortie} (AppDaemon : /config/{sortie.name}).")
 
 
 if __name__ == "__main__":

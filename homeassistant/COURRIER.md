@@ -715,3 +715,96 @@ Tests : `test_envoye_du_fil`, `test_lire_envoyes_lecture_bornee`, `test_candidat
 - Tests : `test_masques_lus_puis_annules`, `test_masques_purges_apres_30_jours`, `test_candidats_sans_masques_ni_faits`
   (339 tests Python verts). Déployé le 28/10 à 22 h 15 (sauvegarde `aiguillage_courrier.py.avant-aujourdhui2-20261028`).
   App : `../courrier`, décisions 63 à 65.
+
+## Assistant de Courrier et agenda du jour (29/10, refonte façon Dove de l'app, plan validé par Alexandre)
+
+Le panneau « Demander à l'IA » de l'app Courrier parle au **même agent** que Signal (`aiguillage_agent`, Sonnet 5.5,
+mêmes outils, même mémo, **même budget** `agent_budget_mensuel` et même fichier d'état), par l'espace `courrier`.
+Nouveau module `apps/aiguillage_assistant.py` (consigne, outils en plus, échange, agenda, brouillons) ; l'agent Signal
+ne change pas. Déployé le 29/10 à 15 h 12 (sauvegarde `aiguillage_agent.py.avant-dove-20261029` à la racine du
+dossier AppDaemon ; `apps.yaml` inchangé : réglages facultatifs `assistant_courrier: false`, `agenda: false`,
+`agenda_secondes` (1 800)).
+
+### Échange (choisi le 29/10 : le plus fiable, déjà synchronisé et versionné, la réponse survit à la fermeture de l'app)
+
+    ia_question:<uuid> = {v: 1, texte, appareil, quand, mail: id | null, mail_joint: bool, fil: [{question, reponse}] ≤ 3}
+    ia_mail:<uuid>     = {v: 1, id, fil, de, a, objet, date, texte ≤ 8 000}     (seulement pour un brouillon)
+    ia_reponse:<uuid>  = {v: 1, statut: en_cours | ok | echec, raison, blocs, repondu_le}
+
+1. L'app écrit `ia_mail` (si besoin) puis `ia_question` (`version_attendue: 0`).
+2. Le NUC écoute l'événement **`donnees_apps_modifie`** (espace `courrier`, clé `ia_question:*`) : traitement immédiat
+   dans un fil à part, une question à la fois (même verrou que Signal). Question vide, d'une autre version ou de plus
+   de **5 minutes** : ignorée ; réponse déjà là : ignorée (événement reçu deux fois).
+3. Il écrit `ia_reponse = {statut: en_cours}`, lit `ia_mail` puis **l'efface aussitôt** (tombstone sans valeur).
+4. Réponse : `{statut: ok, blocs}` ou `{statut: echec, raison}` (budget atteint, trop d'étapes, erreur…).
+5. L'app relit `ia_reponse` (3 s, puis toutes les 2 s, puis 3 s ; 180 s au plus ; sans « en cours » après 25 s :
+   « le NUC ne répond pas », et elle efface elle-même `ia_mail`).
+6. Purge toutes les heures : `ia_question` / `ia_reponse` de plus de **7 jours**, `ia_mail` oublié de plus de
+   **10 minutes**, `agenda:<jour>` d'avant-hier. Au démarrage, les questions récentes sans réponse sont reprises.
+
+**Mail cité (décision 77)** : son texte ne part que pour un **brouillon** (l'app le joint quand la question parle de
+répondre, rédiger, écrire, préparer, brouillon, et qu'un mail vient d'être lu). Il n'est **jamais stocké ni
+journalisé** sur le NUC : ni base, ni fichier d'état, ni journal, ni réponse ; il ne fait que transiter quelques
+secondes dans l'espace `courrier` (`ia_mail`, effacé dès sa lecture). Dans la question à Claude, il est balisé
+`<mail_cite>` comme une DONNÉE.
+
+### Blocs de la réponse
+
+- `{type: texte, texte}` (sans gras ni titres, 4 000 caractères au plus) ;
+- `{type: mails, mails: [{id, fil, de, adresse, objet, date ISO, resume}]}` : les mails cités, **seulement parmi ceux
+  rendus par les outils** (l'agent termine par une ligne `MAILS: id1, id2`, retirée du texte ; un id inventé est
+  écarté ; 8 au plus) ;
+- `{type: brouillon, mail, fil, a, objet, texte, brouillon_gmail}` : voir `preparer_brouillon` ;
+- `{type: actions, intro, actions: [{mail, geste: archiver | lu | plus_tard | tache, raison}]}`.
+
+### Outils en plus (Courrier seulement)
+
+- **`preparer_brouillon(id?, a?, objet?, texte)`** : un **brouillon Gmail** (`drafts.create`, **jamais `send`**) :
+  réponse au mail `id` (Répondre-à sinon De, « Re: » + objet, `In-Reply-To` / `References`, même conversation) ou
+  nouveau mail (`a` et `objet` obligatoires). Classe `BrouillonsGmail` : `en_tetes` (`format=metadata`, jamais le
+  corps) et `creer` ; `test_brouillons_garde_fou` vérifie qu'aucun envoi, suppression, corbeille ni changement de
+  libellé n'existe dans le module. Gmail refuse : le bloc part sans `brouillon_gmail`, l'app crée le brouillon à
+  l'ouverture. Dans l'app : « Ouvrir dans la rédaction » reprend ce brouillon ; seul le bouton Envoyer (et ses 5 s)
+  l'envoie.
+- **`proposer_actions(intro, actions)`** : **rien n'est exécuté ici** ; l'app montre la liste (cases cochées d'office),
+  Alexandre décoche, confirme d'un geste, et c'est l'app qui agit (mêmes gestes qu'à la main).
+- **`agenda(jour?, jours ≤ 14)`** : l'agenda Google perso (titre, début, fin, lieu ; jamais la description).
+- `creer_tache` et `reporter` gardent leur comportement (décision 77 : sans confirmation, annulables) ; le garde-fou
+  `action_permise` porte sur la question tapée.
+
+Consigne à part (`CONSIGNE` d'`aiguillage_assistant`) : tutoiement, 10 lignes au plus, ligne `MAILS:`, pas d'action
+sur les mails sans liste à confirmer, brouillon signé « Alexandre » sans inventer ni date ni prix (`[à compléter]`).
+
+### Agenda du jour (Programme de la carte « Aujourd'hui »)
+
+Toutes les 30 minutes de 6 h à 23 h : `agenda:<AAAA-MM-JJ>` = `{v: 1, maj, evenements: [{id, titre, debut, fin,
+lieu, journee}]}` pour aujourd'hui et demain, écrit seulement s'il a changé ; journées entières d'abord, annulés
+écartés, ni description ni participants. Lecture `calendar/v3/calendars/primary/events` (`singleEvents`), même
+autorisation Google que le courrier.
+
+**À faire par Alexandre (une fois)** : pas d'intégration Google Agenda dans HA ; il faut la portée
+`calendar.readonly`. Console Google Cloud, projet « Relance » : activer **Google Calendar API** et ajouter la portée
+`…/auth/calendar.readonly` à l'écran de consentement ; puis, `addon_configs` monté dans le Finder :
+
+    uv run homeassistant/scripts/courrier_autoriser.py ~/Downloads/client_secret_XXXX.json --agenda
+
+(cocher Gmail **et** « Afficher vos agendas » ; le fichier `aiguillage_courrier_google.json` est remplacé par un
+jeton qui couvre les deux ; sans la case agenda, rien n'est écrit). D'ici là, le journal dit une fois par jour
+« Agenda : accès refusé par Google… » et Programme ne montre que les « À venir » des mails.
+
+### Journal et coût
+
+« Agent (Courrier, iPad) : question de 46 caractères[, mail cité joint] → répondu ; outils : … ; 2 tour(s), 0.0246 $
+(mois : … $) » : **jamais** le texte de la question, du mail cité ni de la réponse.
+
+**Essais réels du 29/10** (questions écrites à la main dans l'espace, comme l'app) : « Quels mails attendent une
+réponse de ma part ? » → `chercher_mails`, 2 tours, **0,0246 $**, réponse en 10 s avec le mail cité (Le Grand
+Dressing) ; « Prépare une réponse pour demander quelles données ont été exposées » avec mail cité → `preparer_brouillon`,
+2 tours, **0,0115 $**, brouillon créé dans Gmail (`r-3265306266489745037`, à supprimer ou garder par Alexandre),
+`ia_mail` effacé dans la seconde. Ordre de grandeur : **0,01 à 0,03 $ par question** (5 $/mois partagés avec Signal :
+~200 questions).
+
+Tests : `tests/test_aiguillage_assistant.py` (question bornée et périmée, mail cité seulement celui de la question,
+brouillon dans la conversation et jamais envoyé, Gmail qui refuse, actions qui ne font rien, agenda et portée
+manquante, jeton rafraîchi sur 401, garde-fou du module, boucle complète avec mails cités, purge, journal sans
+contenu) ; 361 tests Python verts.

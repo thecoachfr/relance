@@ -82,7 +82,7 @@ def test_chercher_mails_sans_extrait(base):
     res = json.loads(texte)
     assert [m["id"] for m in res["mails"]] == ["m1", "m2"]          # plus récent d'abord
     m1 = res["mails"][0]
-    assert set(m1) == {"id", "date", "de", "adresse", "sujet", "categorie", "resume", "demande", "echeance", "fait"}
+    assert set(m1) == {"id", "fil", "date", "de", "adresse", "sujet", "categorie", "resume", "demande", "echeance", "fait"}
     assert "extrait" not in m1 and m1["date"] == "2026-10-27 12:05" and m1["fait"] is False
 
 
@@ -261,7 +261,7 @@ def test_chercher_gmail_entetes_apercu_et_fusion_avec_le_tri(base):
     rep = json.loads(texte)
     assert rep["nombre"] == 2
     g1, m1 = rep["mails"]
-    assert g1 == {"id": "g1", "date": "2026-09-14 10:30", "de": "Malt <hello@malt.com>",
+    assert g1 == {"id": "g1", "fil": "tg1", "date": "2026-09-14 10:30", "de": "Malt <hello@malt.com>",
                   "a": "alexandre.fau@gmail.com", "objet": "Votre facture de septembre",
                   "apercu": "Bonjour Alexandre, votre facture 'Septembre' est disponible",
                   "libelles": ["Archivé", "Notifications", "Freelance"], "dans_le_tri": False}

@@ -99,6 +99,10 @@ aiguillage_courrier:
 # l'historique d'avant le 22/10 ; même autorisation que le tri, réglage autorisation_file), créer une tâche Aiguillage depuis un mail, reporter un mail (« Plus tard »).
 # Ni brouillon, ni envoi, ni archivage, ni suppression. Réponse « 🤖 … » dans la même note. Contrat :
 # homeassistant/COURRIER.md, section « Agent sur Signal ». État (coût du mois, fil) : /config/aiguillage_agent_etat.json.
+# Assistant de l'app Courrier (29/10/2026, module aiguillage_assistant) : questions par l'espace « courrier »
+# (ia_question / ia_reponse), brouillons Gmail (drafts.create seulement), listes d'actions à confirmer dans l'app,
+# agenda Google perso publié dans agenda:<jour> (portée calendar.readonly). Facultatif : assistant_courrier: false,
+# agenda: false, agenda_secondes: 1800.
 aiguillage_agent:
   module: aiguillage_agent
   class: AiguillageAgent
