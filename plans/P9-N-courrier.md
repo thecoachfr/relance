@@ -35,7 +35,7 @@ mail sans son geste explicite pour ce mail** ; brouillons permis.
 1. **Agenda perso** : consentement Google `calendar.readonly` à donner par Alexandre
    (`uv run homeassistant/scripts/courrier_autoriser.py <JSON client> --agenda`, API Google Calendar à activer) ;
    d'ici là, Programme de Courrier sans l'agenda.
-2. **Coût de l'IA** à suivre : tri (budget 15 $/mois), agent (5 $), « Aujourd'hui » (3 $, pouvant être atteint en fin
-   de mois au rythme du 28/10).
+2. **Coût de l'IA** à suivre : tri (budget 15 $/mois), agent (5 $), « Aujourd'hui » (6 $, choisi par Alexandre le 28/10,
+   `aujourdhui_budget_mensuel: 6` sur le NUC).
 3. **Qualité d'« Aujourd'hui »** à juger à l'usage (lignes justes, relances utiles, lignes masquées respectées).
 4. Essais sur les appareils notés dans `SUIVI.md` (N2) et `../courrier/docs/STATUT.md` (Courrier).
