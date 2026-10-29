@@ -288,10 +288,13 @@ class Memo:
     """Contexte du mémo pour l'IA (`texte`, stable d'un appel à l'autre pour le cache) et noms des fiches, pour
     reconnaître un expéditeur (`noms` : (clé normalisée, sujet de la fiche)). `extraits` : {sujet : détails nettoyés,
     sans téléphone ni rue, `EXTRAIT_FICHE_MAX` caractères au plus}, pour la fiche de l'expéditeur de l'app (27/10) ;
-    toutes les fiches de personnes et de sociétés y sont, même celles que la borne du contexte a laissées de côté."""
+    toutes les fiches de personnes et de sociétés y sont, même celles que la borne du contexte a laissées de côté.
+    `uids` : {sujet : `uid` de l'élément de `todo.aiguillage_memo`} (29/10), pour que l'app ouvre la fiche dans
+    Aiguillage par `relance://memo/<uid>` plutôt que par son sujet."""
 
-    def __init__(self, texte="", noms=(), extraits=None):
+    def __init__(self, texte="", noms=(), extraits=None, uids=None):
         self.texte, self.noms, self.extraits = texte, list(noms), dict(extraits or {})
+        self.uids = dict(uids or {})
 
     def __bool__(self):
         return bool(self.texte)
@@ -376,18 +379,23 @@ def construire_memo(fiches, lieux, limite=MEMO_MAX):
             gardees.add(i)
             reste -= len(ligne) + 1
     l_fiches = [ligne for i, ligne, _, _ in candidates if i in gardees]
-    noms, extraits = [], {}
+    noms, extraits, uids = [], {}, {}
     for i, _, prioritaire, sujet in candidates:
         cle = _jetons(re.sub(r"\([^)]*\)", " ", sujet))
         if prioritaire and cle and not (cle[0] in ("alexandre", "moi") or "moi" in cle):
             noms.append((cle, sujet))
             extraits[sujet] = _couper(nettoyer_fiche(fiches[i].get("description")), EXTRAIT_FICHE_MAX)
+            uid = fiches[i].get("uid")
+            if isinstance(uid, str) and uid.strip():
+                uids[sujet] = uid.strip()
+            else:
+                uids.pop(sujet, None)        # même élément que l'extrait (le dernier d'un sujet en double)
     parties = []
     if l_fiches:
         parties.append("Fiches du mémo :\n" + "\n".join(l_fiches))
     if l_lieux:
         parties.append("Mes lieux (groupes de l'app Aiguillage) :\n" + "\n".join(l_lieux))
-    return Memo("\n\n".join(parties), noms, extraits)
+    return Memo("\n\n".join(parties), noms, extraits, uids)
 
 
 def _couper(texte, limite):
@@ -1395,15 +1403,18 @@ def operations_courrier(db, limite=ECRITURES_PAR_PASSE):
 #
 # Dans l'app, toucher l'expéditeur d'un mail ouvre sa fiche : ce que le mémo d'Aiguillage dit de lui, sa règle de tri,
 # ses tâches et ses derniers mails. La reconnaissance mémo ↔ expéditeur reste ici (une seule règle,
-# `fiches_de_l_expediteur`) : le NUC publie `fiche:<adresse>` = `{v, nom_memo, extrait, regle, maj}` pour chaque
-# expéditeur des 90 derniers jours reconnu dans le mémo ou qui a une règle (apprise ou manuelle). Même différentiel que
-# les « à traiter » (table `publies`, empreinte sans `maj`), dans la même passe et sous le même plafond, après eux.
+# `fiches_de_l_expediteur`) : le NUC publie `fiche:<adresse>` = `{v, nom_memo, memo_uid, extrait, regle, maj}`
+# (`memo_uid` depuis le 29/10) pour chaque expéditeur des 90 derniers jours reconnu dans le mémo ou qui a une règle
+# (apprise ou manuelle). Même différentiel que les « à traiter » (table `publies`, empreinte sans `maj`), dans la
+# même passe et sous le même plafond, après eux.
 # Jamais le corps ni l'extrait d'un mail : seulement le texte du mémo, déjà nettoyé (sans téléphone ni rue).
 
 
 def valeur_fiche(sujets, memo, regle, maintenant):
-    """Ce que l'app reçoit pour un expéditeur. Plusieurs fiches du mémo : « Sujet : détails » par ligne."""
+    """Ce que l'app reçoit pour un expéditeur. Plusieurs fiches du mémo : « Sujet : détails » par ligne.
+    `memo_uid` (29/10) : `uid` de la première fiche (celle que l'app ouvre dans Aiguillage), ou None."""
     extraits = memo.extraits if memo else {}
+    uids = getattr(memo, "uids", None) or {}
     if len(sujets) == 1:
         extrait = extraits.get(sujets[0]) or None
     elif sujets:
@@ -1411,7 +1422,8 @@ def valeur_fiche(sujets, memo, regle, maintenant):
                           EXTRAIT_FICHE_MAX) or None
     else:
         extrait = None
-    return {"v": 1, "nom_memo": " · ".join(sujets) or None, "extrait": extrait,
+    return {"v": 1, "nom_memo": " · ".join(sujets) or None, "memo_uid": uids.get(sujets[0]) if sujets else None,
+            "extrait": extrait,
             "regle": {"categorie": regle[0], "source": regle[1]} if regle else None,
             "maj": maintenant.isoformat(timespec="seconds")}
 

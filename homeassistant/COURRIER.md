@@ -2,8 +2,8 @@
 
 Calculé par l'app AppDaemon `aiguillage_courrier` (`appdaemon/apps/aiguillage_courrier.py`, plan
 `plans/P9-N-courrier.md`, lot N3). Tri de la boîte **perso** `alexandre.fau@gmail.com` façon Dove (Canary Mail).
-Lot N3 = le cerveau seul, **en ombre** : rien n'est affiché ni notifié ; Aiguillage (N4) et le résumé du matin (N6)
-liront ce capteur plus tard.
+Lot N3 = le cerveau, déployé le 24/10 (d'abord en ombre, notifications validées le 26/10). L'affichage se fait dans
+l'app Courrier (`../courrier`), qui a remplacé la section « Courrier » prévue dans Aiguillage (N4) ; voir le plan.
 
 ## Garde-fous (règle d'Alexandre du 24/10, permanente)
 
@@ -459,8 +459,9 @@ Dans l'app Courrier, toucher l'expéditeur d'un mail ouvre sa **fiche** (mémo, 
 règle de tri, contact iOS ; décision 40 de `../courrier/docs/CADRAGE.md`). La reconnaissance mémo ↔ expéditeur reste
 ici, avec **la même règle que le tri** (`fiches_de_l_expediteur`, dont `expediteur_du_memo` prend la première).
 
-- **Clé** `fiche:<adresse en minuscules>` dans l'espace `courrier`, **valeur** `{v: 1, nom_memo, extrait, regle, maj}` :
-  `nom_memo` = sujet de la fiche du mémo (plusieurs : séparés par « · »), `extrait` = ses détails nettoyés comme le
+- **Clé** `fiche:<adresse en minuscules>` dans l'espace `courrier`, **valeur** `{v: 1, nom_memo, memo_uid, extrait, regle, maj}` :
+  `nom_memo` = sujet de la fiche du mémo (plusieurs : séparés par « · »), `memo_uid` (depuis le 29/10) = `uid` de la
+  première fiche dans `todo.aiguillage_memo` (null sans fiche du mémo), `extrait` = ses détails nettoyés comme le
   contexte de l'IA (**sans téléphone ni rue**, ville gardée), **600 caractères au plus** (plusieurs fiches : « Sujet :
   détails » par ligne), `regle` = `{categorie, source: manuel | appris}` ou null, `maj` = ISO de l'écriture.
 - **Qui** : chaque expéditeur des 90 derniers jours (table `messages`, sauf Alexandre) **reconnu dans le mémo ou qui a
@@ -474,7 +475,11 @@ ici, avec **la même règle que le tri** (`fiches_de_l_expediteur`, dont `expedi
 - Journal : « Courrier : fiches des expéditeurs, N publiée(s), M retirée(s) ».
 - **Tâches** : l'app lit elle-même l'espace `aiguillage` (`donnees_apps.lire`) et filtre les tâches non faites qui
   citent le nom, l'adresse ou la ligne `📧 Mail de X` ; rien de plus côté NUC.
-- Aiguillage s'ouvre sur la bonne fiche ou tâche depuis le 28/10 : `relance://memo/<sujet>` (le NUC ne publie pas encore l'`uid` de la fiche : ajouter `memo_uid` à `fiche:<adresse>` serait plus robuste) et `relance://tache/<clé>` (voir README, « Liens »).
+- Aiguillage s'ouvre sur la bonne fiche ou tâche depuis le 28/10 : `relance://memo/<memo_uid>` (depuis le 29/10 ;
+  `relance://memo/<sujet>` pour une fiche publiée sans `memo_uid`, compatibilité) et `relance://tache/<clé>` (voir
+  README, « Liens »). Ajout de `memo_uid` déployé le 29/10 à 17 h 03 (sauvegarde
+  `aiguillage_courrier.py.avant-memo-uid-20261029`) : les 8 fiches réécrites à la première passe, `memo_uid` lu dans
+  l'espace (Seven Portage, Swile).
 
 Première passe vérifiée le 27/10 à 13 h 49 : 5 fiches publiées (Seven Portage et Swile reconnues dans le mémo ; Enedis,
 LinkedIn, Claude par leur règle manuelle), lues par `donnees_apps.lire`.

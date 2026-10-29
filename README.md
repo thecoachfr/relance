@@ -188,9 +188,10 @@ Lieu de travail (plan P9-N, lots N1 et N2) : app AppDaemon `aiguillage_lieu_trav
 écran « Lieu de travail » (Réglages, ou toucher le bandeau) qui écrit `config:lieu_travail`, champ de tâche `contexte`
 (« Où la faire » : au bureau, à la maison) et libellé du jour sur la montre.
 
-Courrier (plan P9-N, lot N3, en ombre) : app AppDaemon `aiguillage_courrier` → `sensor.aiguillage_courrier`, tri de la
-boîte perso Gmail (à traiter, lettres d'info, bruit, fait) par règles apprises, règles sûres et Haiku 5.5 ; Gmail en
-lecture seule ; contrat, autorisation et déploiement dans [homeassistant/COURRIER.md](homeassistant/COURRIER.md).
+Courrier (plan P9-N, lot N3, en service depuis le 24/10) : app AppDaemon `aiguillage_courrier` →
+`sensor.aiguillage_courrier`, tri de la boîte perso Gmail (à traiter, lettres d'info, bruit, fait) par règles apprises,
+règles sûres et Haiku 5.5, publié pour l'app Courrier (`../courrier`) dans l'espace `courrier` ; aucun envoi,
+archivage ni suppression ; contrat, autorisation et déploiement dans [homeassistant/COURRIER.md](homeassistant/COURRIER.md).
 
 Pièces jointes (plan P9-K) : les fichiers d'une tâche (photo, PDF, scan) sont rangés dans Home Assistant par
 l'API `fichiers` de `ha-donnees-apps` 0.3.0 (`/api/donnees_apps/fichiers/aiguillage`, même jeton) ; la tâche garde leurs

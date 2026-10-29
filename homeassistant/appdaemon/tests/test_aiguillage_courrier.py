@@ -174,13 +174,14 @@ def test_classer_ia_appel():
 # MARK: - Mémo d'Aiguillage (27/10)
 
 FICHES = [
-    {"summary": "Camille Martin", "description": "+33600000001 — copropriétaire 119 PVC, catégorie Syndic"},
+    {"summary": "Camille Martin", "description": "+33600000001 — copropriétaire 119 PVC, catégorie Syndic",
+     "uid": "uid-camille"},
     {"summary": "Kiné", "description": "Jean Kiné — kiné — 1 quai de l'Exemple — 06 00 00 00 03 (direct ; "
                                        "cabinet : 09 00 00 00 04) — https://www.doctolib.fr/kine"},
     {"summary": "Mon numéro de téléphone", "description": "06 00 00 00 05"},
     {"summary": "Tag SCI", "description": "Ce que c'est : SCI Exemple\nIndices : parking, L'Aurore"},
     {"summary": "Paul Exemple", "description": "+33 6 00 00 00 02 — ami, catégorie Perso, anniversaire le 19/11"},
-    {"summary": "Seven Portage", "description": "employeur (portage salarial, CDI) — Travail"},
+    {"summary": "Seven Portage", "description": "employeur (portage salarial, CDI) — Travail", "uid": "uid-seven"},
     {"summary": "Swile", "description": "CESU, titres-resto, chèques vacances — Administratif"},
     {"summary": "Alexandre FAU - Moi", "description": "Date de naissance : 01/01/1970"},
 ]
@@ -1380,11 +1381,13 @@ def test_publication_des_fiches_differentiel_et_retrait():
     assert (r["fiches_ecrites"], r["fiches_retirees"], r["ecrits"]) == (3, 0, 0)
     assert set(ha.espace) == {"fiche:erika@seven-portage.fr", "fiche:hello@swile.co", "fiche:promo@boutique.fr"}
     erika = ha.espace["fiche:erika@seven-portage.fr"]
-    assert erika == {"v": 1, "nom_memo": "Seven Portage", "extrait": "employeur (portage salarial, CDI) — Travail",
+    assert erika == {"v": 1, "nom_memo": "Seven Portage", "memo_uid": "uid-seven",
+                     "extrait": "employeur (portage salarial, CDI) — Travail",
                      "regle": None, "maj": "2026-10-24T18:00:00+02:00"}
     assert ha.espace["fiche:hello@swile.co"]["regle"] == {"categorie": "bruit", "source": "appris"}
     boutique = ha.espace["fiche:promo@boutique.fr"]
-    assert boutique["nom_memo"] is None and boutique["extrait"] is None
+    assert boutique["nom_memo"] is None and boutique["extrait"] is None and boutique["memo_uid"] is None
+    assert ha.espace["fiche:hello@swile.co"]["memo_uid"] is None              # fiche du mémo sans `uid`
     assert boutique["regle"] == {"categorie": "bruit", "source": "manuel"}
     # Jamais le corps ni l'extrait d'un mail.
     assert all("Tu es dispo" not in json.dumps(v, ensure_ascii=False) for v in ha.espace.values())
@@ -1751,3 +1754,21 @@ def test_candidats_sans_masques_ni_faits():
     assert {x["id"] for x in k["a_venir"]} == {"v1"} and {x["id"] for x in k["a_faire"]} == set()
     # Le masque change l'empreinte : recalcul au plus tôt dans la limite habituelle (pas de calcul forcé).
     assert c.empreinte_candidats(k, MERCREDI) != c.empreinte_candidats(avant, MERCREDI)
+
+
+def test_memo_uid_de_la_premiere_fiche():
+    """29/10 : `memo_uid` = `uid` de la première fiche (celle que l'app ouvre dans Aiguillage) ; l'empreinte en
+    dépend (un `uid` qui change fait réécrire la fiche)."""
+    m = c.construire_memo(FICHES, LIEUX)
+    assert m.uids["Seven Portage"] == "uid-seven" and "Swile" not in m.uids and "Kiné" not in m.uids
+    v = c.valeur_fiche(["Camille Martin", "Seven Portage"], m, None, MAINTENANT)
+    assert v["memo_uid"] == "uid-camille" and v["nom_memo"] == "Camille Martin · Seven Portage"
+    assert c.valeur_fiche([], m, ("bruit", "manuel"), MAINTENANT)["memo_uid"] is None
+    assert c.valeur_fiche(["Seven Portage"], None, None, MAINTENANT)["memo_uid"] is None
+    autre = c.construire_memo([dict(f, uid="uid-neuf") if f["summary"] == "Seven Portage" else f for f in FICHES],
+                              LIEUX)
+    assert c.empreinte_fiche(c.valeur_fiche(["Seven Portage"], m, None, MAINTENANT)) != \
+        c.empreinte_fiche(c.valeur_fiche(["Seven Portage"], autre, None, MAINTENANT))
+    # `uid` vide ou absent : pas de `memo_uid` (l'app passe alors le sujet).
+    vide = c.construire_memo([{"summary": "Seven Portage", "description": "x", "uid": "  "}], None)
+    assert vide.uids == {} and c.valeur_fiche(["Seven Portage"], vide, None, MAINTENANT)["memo_uid"] is None
