@@ -13,9 +13,14 @@ Finder (`smb://homeassistant.local/addon_configs`). AppDaemon voit ce dossier co
 
 N'affiche jamais le secret ni les jetons. Rien n'est écrit dans un dépôt.
 
-    uv run homeassistant/scripts/courrier_autoriser.py ~/Downloads/client_secret_XXXX.json [--agenda]
+    uv run homeassistant/scripts/courrier_autoriser.py ~/Downloads/client_secret_XXXX.json [--agenda] [--drive] [--tout]
 
-`--agenda` (29/10) : ajoute `calendar.readonly` (API Google Calendar à activer dans le projet « Relance »). Le JSON client se télécharge dans la console Google Cloud (projet « Relance ») : API et services › Identifiants ›
+`--agenda` (29/10) : ajoute `calendar.readonly` (API Google Calendar à activer dans le projet « Relance »).
+`--drive` (29/10) : ajoute `drive` (API Google Drive à activer) : les pièces jointes enregistrées dans Google Drive
+depuis « Demander à l'IA » de Courrier ; le NUC n'y fait que lister des dossiers, en créer et déposer des fichiers,
+seulement sur le geste d'Alexandre (`aiguillage_drive`). `--tout` = Gmail + agenda + Drive dans UN consentement
+(conseillé : chaque nouveau consentement remplace le jeton précédent, il doit donc tout demander à la fois).
+Le JSON client se télécharge dans la console Google Cloud (projet « Relance ») : API et services › Identifiants ›
 ID client OAuth de type « Application de bureau » › Télécharger le JSON.
 """
 
@@ -41,6 +46,10 @@ PORTEE = "https://www.googleapis.com/auth/gmail.modify"
 # Agenda Google perso en lecture seule (29/10, assistant de Courrier : Programme du jour, outil `agenda`), demandé avec
 # --agenda dans le MÊME consentement : le jeton écrit couvre alors Gmail et l'agenda.
 PORTEE_AGENDA = "https://www.googleapis.com/auth/calendar.readonly"
+# Google Drive (29/10, pièces jointes enregistrées depuis Courrier), demandé avec --drive dans le MÊME consentement.
+# Portée complète : seule à permettre de lister ses dossiers existants ET d'y déposer un fichier (`drive.file` ne
+# voit que ce que l'app a créé ; `drive.metadata.readonly` ne permet pas d'écrire). Voir `aiguillage_drive.py`.
+PORTEE_DRIVE = "https://www.googleapis.com/auth/drive"
 COMPTE = "alexandre.fau@gmail.com"
 SORTIE = "/Volumes/addon_configs/a0d7b954_appdaemon/aiguillage_courrier_google.json"
 
@@ -121,7 +130,12 @@ def main():
     parser.add_argument("--compte", default=COMPTE, help=f"compte attendu (défaut : {COMPTE})")
     parser.add_argument("--agenda", action="store_true",
                         help="ajoute la lecture de l'agenda Google (calendar.readonly) à l'accès Gmail")
+    parser.add_argument("--drive", action="store_true",
+                        help="ajoute Google Drive (pièces jointes enregistrées depuis Courrier) à l'accès Gmail")
+    parser.add_argument("--tout", action="store_true", help="Gmail, agenda et Drive dans un seul consentement")
     args = parser.parse_args()
+    if args.tout:
+        args.agenda = args.drive = True
 
     sortie = Path(args.sortie).expanduser()
     if not sortie.parent.exists():
@@ -134,7 +148,7 @@ def main():
     etat = secrets.token_urlsafe(24)
     url = AUTORISATION_URL + "?" + urllib.parse.urlencode({
         "client_id": client_id, "redirect_uri": redirection, "response_type": "code",
-        "scope": " ".join([PORTEE] + ([PORTEE_AGENDA] if args.agenda else [])),
+        "scope": " ".join([PORTEE] + ([PORTEE_AGENDA] if args.agenda else []) + ([PORTEE_DRIVE] if args.drive else [])),
         "access_type": "offline", "prompt": "consent", "login_hint": args.compte, "state": etat,
         "code_challenge": defi, "code_challenge_method": "S256",
     })
@@ -156,6 +170,10 @@ def main():
     if args.agenda and PORTEE_AGENDA not in accordees:
         raise SystemExit("L'accès à l'agenda n'a pas été coché : relancer et cocher « Afficher vos agendas ». "
                          "Rien n'est écrit (l'autorisation Gmail actuelle reste en place).")
+    if args.drive and PORTEE_DRIVE not in accordees:
+        raise SystemExit("L'accès à Google Drive n'a pas été coché : relancer et cocher « Afficher, modifier, créer "
+                         "et supprimer tous vos fichiers Google Drive ». Rien n'est écrit (l'autorisation actuelle "
+                         "reste en place).")
     email = (profil(jetons["access_token"]).get("emailAddress") or "").lower()
     if email != args.compte.lower():
         raise SystemExit(f"Compte autorisé : {email}, attendu : {args.compte}. Rien n'est écrit.")
@@ -169,7 +187,10 @@ def main():
         os.chmod(sortie, 0o600)
     except OSError:
         pass  # partage SMB : les droits suivent ceux du montage
-    print(f"OK : accès à Gmail{' et à l’agenda' if args.agenda else ''} autorisé pour {email}, écrit dans {sortie} (AppDaemon : /config/{sortie.name}).")
+    en_plus = [n for n, oui in (("l’agenda", args.agenda), ("Google Drive", args.drive)) if oui]
+    print(f"OK : accès à Gmail{''.join(', ' + n for n in en_plus[:-1])}{' et à ' + en_plus[-1] if en_plus else ''} "
+          f"autorisé pour {email}, écrit dans {sortie} (AppDaemon : /config/{sortie.name}). "
+          "L'agent du NUC le relit tout seul (pas de redémarrage).")
 
 
 if __name__ == "__main__":

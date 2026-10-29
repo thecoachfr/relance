@@ -13,7 +13,9 @@ Pouvoirs en plus de ceux de l'agent Signal (règle absolue d'Alexandre : aucun e
 - `preparer_brouillon` : un BROUILLON Gmail (`drafts.create`, jamais `send`), que l'app rouvre dans la rédaction ;
 - `proposer_actions` : une LISTE d'actions sur des mails (archiver, lu, plus tard, tâche) que l'app montre ; rien
   n'est exécuté ici : Alexandre coche et confirme d'un geste dans l'app, et c'est l'app qui agit ;
-- `agenda` : l'agenda Google perso (`calendar.readonly`), aussi publié dans `agenda:<AAAA-MM-JJ>` pour Programme.
+- `agenda` : l'agenda Google perso (`calendar.readonly`), aussi publié dans `agenda:<AAAA-MM-JJ>` pour Programme ;
+- `chercher_dossiers_drive` / `proposer_enregistrement_drive` (29/10, module `aiguillage_drive`) : une PROPOSITION
+  d'enregistrer des pièces jointes dans Google Drive ; rien n'est écrit avant « Enregistrer » touché dans l'app.
 `creer_tache` et `reporter` restent permis sans confirmation (décision 77 : sans risque, annulables).
 
 Fonctions pures et clients testés hors Home Assistant par `tests/test_aiguillage_assistant.py`.
@@ -28,6 +30,7 @@ import re
 import time
 
 import aiguillage_courrier as courrier
+import aiguillage_drive as drive_
 
 PARIS = courrier.PARIS
 ESPACE = courrier.ESPACE_COURRIER
@@ -66,7 +69,8 @@ Tes outils : chercher_mails et lire_mail (base du tri, le plus riche : d'abord) 
 Gmail, en-têtes et aperçu : pour l'historique d'avant le 22/10 ou ce qui manque dans la base) ; creer_tache (tâche \
 de son app Aiguillage depuis un mail trié) ; reporter (« Plus tard » d'un mail trié) ; preparer_brouillon (un \
 brouillon Gmail, jamais envoyé) ; proposer_actions (une liste d'actions qu'il confirmera dans l'app) ; agenda (son \
-agenda Google perso) ; date_du_jour.
+agenda Google perso) ; chercher_dossiers_drive et proposer_enregistrement_drive (pièces jointes vers son Google \
+Drive, sur sa confirmation) ; date_du_jour.
 
 Règles :
 - Réponds en français, court (10 lignes au plus), texte simple : sans titres, sans tableaux, sans gras ; des tirets \
@@ -82,7 +86,7 @@ confirme lui-même. Dis-le en une phrase (« je te propose… »), ne dis jamais
 - Pour répondre à un mail ou écrire un mail, appelle preparer_brouillon avec le texte complet (salutation, corps, \
 « Alexandre » en signature), dans le ton du mail d'origine (tutoiement si on le tutoie). Le brouillon n'est jamais \
 envoyé : il le relit et l'envoie lui-même. Si le texte du mail cité est fourni (<mail_cite>), appuie-toi dessus ; \
-sinon lis l'extrait par lire_mail. N'invente ni date, ni prix, ni engagement : laisse « [à compléter] ».
+sinon lis l'extrait par lire_mail. N'invente ni date, ni prix, ni engagement : laisse « [à compléter] ».""" + drive_.CONSIGNE_DRIVE + """
 - Quand ta réponse ne s'appuie que sur l'aperçu Gmail, dis-le en quelques mots. N'invente rien : si rien ne \
 correspond, dis-le. Ne recopie pas le mémo (ni adresse, ni téléphone)."""
 
@@ -146,7 +150,7 @@ OUTILS_COURRIER = [
             "jours": {**_nul("integer"), "description": "nombre de jours, 14 au plus (1 si null)"},
         }),
     },
-]
+] + drive_.OUTILS_DRIVE
 
 
 # MARK: - Brouillons Gmail (drafts.create SEULEMENT)
@@ -171,6 +175,8 @@ class JetonGoogle:
             http = httpx.Client(timeout=30)
         self.http, self._horloge = http, horloge
         self._jeton, self._expire = None, 0.0
+        # Portées accordées par le consentement (champ `scope` de la réponse de Google), None si Google ne le dit pas.
+        self.portees = None
 
     def entete(self, neuf=False):
         if neuf or not self._jeton or self._horloge() >= self._expire:
@@ -183,12 +189,20 @@ class JetonGoogle:
                 raise courrier.ErreurGmail(f"jeton : HTTP {r.status_code}")
             d = r.json()
             self._jeton, self._expire = d["access_token"], self._horloge() + int(d.get("expires_in", 3600)) - 60
+            if d.get("scope"):
+                self.portees = set(str(d["scope"]).split())
         return {"Authorization": f"Bearer {self._jeton}"}
 
-    def appeler(self, methode, url, **kwargs):
-        """GET ou POST avec un nouvel essai sur 401 (jeton expiré). 403 de portée → `PorteeManquante`."""
+    def a_la_portee(self, portee):
+        """Vrai si le consentement couvre `portee` (Drive, 29/10) ; inconnu (Google muet) : vrai, le 403 tranchera."""
+        self.entete()
+        return self.portees is None or portee in self.portees
+
+    def requete(self, methode, url, entetes=None, **kwargs):
+        """La réponse brute (en-têtes compris), avec un nouvel essai sur 401 (jeton expiré). 403 de portée →
+        `PorteeManquante` ; 404 → `Introuvable` ; autre échec → `ErreurGmail`."""
         for essai in range(2):
-            r = getattr(self.http, methode)(url, headers=self.entete(neuf=essai > 0), **kwargs)
+            r = getattr(self.http, methode)(url, headers={**self.entete(neuf=essai > 0), **(entetes or {})}, **kwargs)
             if r.status_code == 401 and essai == 0:
                 continue
             if r.status_code == 403:
@@ -197,11 +211,15 @@ class JetonGoogle:
                         or "has not been used" in texte or "disabled" in texte:
                     raise PorteeManquante("accès refusé (portée ou API non activée)")
             if r.status_code == 404:
-                raise courrier.Introuvable(url.rsplit("/", 1)[-1])
+                raise courrier.Introuvable(url.split("?", 1)[0].rsplit("/", 1)[-1])
             if r.status_code not in (200, 201):
                 raise courrier.ErreurGmail(f"HTTP {r.status_code}")
-            return r.json()
+            return r
         raise courrier.ErreurGmail("jeton refusé")
+
+    def appeler(self, methode, url, **kwargs):
+        """GET ou POST, réponse JSON (voir `requete`)."""
+        return self.requete(methode, url, **kwargs).json()
 
 
 class BrouillonsGmail:
@@ -316,8 +334,11 @@ class OutilsCourrier:
 
     NOMS = tuple(o["name"] for o in OUTILS_COURRIER)
 
-    def __init__(self, base_outils, brouillons=None, agenda=None, moi=courrier.ADRESSE_PERSO, mail_cite=None):
+    def __init__(self, base_outils, brouillons=None, agenda=None, moi=courrier.ADRESSE_PERSO, mail_cite=None,
+                 drive=None, pieces=None):
         self.base = base_outils
+        # Pièces jointes vers Google Drive (29/10) : `drive` / `pieces` rendent `ClientDrive` / `PiecesGmail`.
+        self.drive = drive_.OutilsDrive(drive, pieces)
         self.brouillons, self.agenda_client, self.moi = brouillons, agenda, moi
         self.mail_cite = mail_cite
         self.vus = {}
@@ -340,7 +361,8 @@ class OutilsCourrier:
         self.base.appels.append(nom)
         import aiguillage_agent as agent
         try:
-            return json.dumps(getattr(self, nom)(**(entree or {})), ensure_ascii=False), False
+            cible = self.drive if nom in drive_.NOMS_OUTILS else self
+            return json.dumps(getattr(cible, nom)(**(entree or {})), ensure_ascii=False), False
         except agent.ErreurOutil as exc:
             return str(exc), True
         except courrier.ErreurGmail as exc:
@@ -512,14 +534,14 @@ def blocs_reponse(texte, outils):
         if i in outils.vus and i not in vus and len(cites) < MAILS_CITES_MAX:
             vus.add(i)
             cites.append(outils.vus[i])
-    # Le brouillon répond à un mail : il est cité aussi, pour l'ouvrir.
-    for b in outils.blocs_brouillon:
+    # Le brouillon répond à un mail, la proposition Drive en vient : il est cité aussi, pour l'ouvrir.
+    for b in outils.blocs_brouillon + outils.drive.blocs:
         if b.get("mail") and b["mail"] in outils.vus and b["mail"] not in vus and len(cites) < MAILS_CITES_MAX:
             vus.add(b["mail"])
             cites.append(outils.vus[b["mail"]])
     if cites:
         blocs.append({"type": "mails", "mails": cites})
-    return blocs + outils.blocs_brouillon + outils.blocs_actions
+    return blocs + outils.blocs_brouillon + outils.blocs_actions + outils.drive.blocs
 
 
 def valeur_reponse(statut, maintenant, blocs=None, raison=None):

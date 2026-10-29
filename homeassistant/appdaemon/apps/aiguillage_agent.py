@@ -31,6 +31,7 @@ import uuid
 
 import aiguillage_courrier as courrier
 import aiguillage_assistant as assistant
+import aiguillage_drive as drive_
 
 PARIS = courrier.PARIS
 MODELE = "claude-sonnet-5-5"
@@ -640,8 +641,10 @@ if hass is not None:
             self._gmail = None
             self.listen_event(self._message, "aiguillage_agent_message")
             self._verrou = threading.Lock()
+            # Pièces jointes vers Drive (29/10) : exécutées à part, sans attendre une question en cours.
+            self._verrou_drive = threading.Lock()
             # Assistant de Courrier (29/10, refonte façon Dove) : questions par l'espace `courrier`, agenda du jour.
-            self._jeton_google = None
+            self._jeton_google, self._jeton_lu = None, None
             self._agenda_empreintes, self._agenda_refus_le = {}, None
             if bool(self.args.get("assistant_courrier", True)):
                 self.listen_event(self._espace_modifie, "donnees_apps_modifie", espace=assistant.ESPACE)
@@ -762,10 +765,15 @@ if hass is not None:
 
         def _jeton(self):
             """Jeton Google de l'autorisation du courrier (brouillons, agenda) ; None si elle est absente."""
-            if self._jeton_google is None:
-                if not self._auth_path.exists():
-                    return None
+            # Relu quand le fichier change (29/10) : un nouveau consentement (agenda, Drive) sert sans redémarrage.
+            try:
+                date = self._auth_path.stat().st_mtime
+            except OSError:
+                self._jeton_google = None
+                return None
+            if self._jeton_google is None or date != self._jeton_lu:
                 self._jeton_google = assistant.JetonGoogle(json.loads(self._auth_path.read_text(encoding="utf-8")))
+                self._jeton_lu = date
             return self._jeton_google
 
         def _brouillons(self):
@@ -775,6 +783,14 @@ if hass is not None:
         def _agenda(self):
             jeton = self._jeton()
             return assistant.ClientAgenda(jeton) if jeton else None
+
+        def _drive(self):
+            jeton = self._jeton()
+            return drive_.ClientDrive(jeton) if jeton else None
+
+        def _pieces(self):
+            jeton = self._jeton()
+            return drive_.PiecesGmail(jeton) if jeton else None
 
         def _lire_espace(self, cle=None):
             data = {"espace": assistant.ESPACE}
@@ -807,6 +823,9 @@ if hass is not None:
             if assistant._UUID.match(ident):
                 threading.Thread(target=self._courrier_seul, args=(ident,), name="agent-courrier-app",
                                  daemon=True).start()
+            ident = cle[len(drive_.PREFIXE_CONFIRMATION):] if cle.startswith(drive_.PREFIXE_CONFIRMATION) else ""
+            if drive_._UUID.match(ident):
+                threading.Thread(target=self._drive_seul, args=(ident,), name="agent-drive", daemon=True).start()
 
         def _courrier_seul(self, ident):
             with self._verrou:
@@ -848,7 +867,7 @@ if hass is not None:
                           questions=[question["texte"]] + [e["question"] for e in question["fil"][-1:]],
                           espace_taches=self._espace, gmail=self._client_gmail)
             outils = assistant.OutilsCourrier(base, brouillons=self._brouillons, agenda=self._agenda,
-                                              mail_cite=mail_cite)
+                                              mail_cite=mail_cite, drive=self._drive, pieces=self._pieces)
             memo = self._contexte_memo()
             texte, cout_, raison, tours = None, 0.0, None, 0
             try:
@@ -861,7 +880,14 @@ if hass is not None:
             mail_cite = outils.mail_cite = None   # le texte du mail cité n'est gardé nulle part
             etat = courrier.compter(etat, cout_, maintenant)
             self._ecrire_etat(etat)
-            if texte or outils.blocs_brouillon or outils.blocs_actions:
+            # La proposition Drive est gardée AVANT la réponse : l'app ne peut confirmer que ce que le NUC a proposé.
+            for b in list(outils.drive.blocs):
+                try:
+                    self._ecrire_cle(drive_.PREFIXE_PROPOSITION + b["id"], drive_.valeur_proposition(b, maintenant))
+                except Exception:  # noqa: BLE001 - sans proposition gardée, pas de bouton « Enregistrer » utile
+                    outils.drive.blocs.remove(b)
+                    self.log("Agent (Courrier) : proposition Drive non gardée", level="WARNING")
+            if texte or outils.blocs_brouillon or outils.blocs_actions or outils.drive.blocs:
                 valeur = assistant.valeur_reponse("ok", datetime.now(PARIS), assistant.blocs_reponse(texte or "", outils))
                 raison = None
             else:
@@ -879,11 +905,71 @@ if hass is not None:
                 return
             repondues = {e["cle"][len(assistant.PREFIXE_REPONSE):] for e in enr
                          if str(e.get("cle", "")).startswith(assistant.PREFIXE_REPONSE)}
+            # Confirmations Drive sans résultat (NUC redémarré) : `_drive` ne les fait que si elles sont récentes.
+            faites = {e["cle"][len(drive_.PREFIXE_RESULTAT):] for e in enr
+                      if str(e.get("cle", "")).startswith(drive_.PREFIXE_RESULTAT)}
+            for e in enr:
+                cle = str(e.get("cle") or "")
+                ident = cle[len(drive_.PREFIXE_CONFIRMATION):]
+                if cle.startswith(drive_.PREFIXE_CONFIRMATION) and ident not in faites and drive_._UUID.match(ident) \
+                        and not e.get("supprime"):
+                    threading.Thread(target=self._drive_seul, args=(ident,), daemon=True).start()
             for e in enr:
                 cle = str(e.get("cle") or "")
                 ident = cle[len(assistant.PREFIXE_QUESTION):]
                 if cle.startswith(assistant.PREFIXE_QUESTION) and ident not in repondues and assistant._UUID.match(ident):
                     threading.Thread(target=self._courrier_seul, args=(ident,), daemon=True).start()
+
+        # MARK: - Pièces jointes vers Google Drive (29/10, `aiguillage_drive`)
+
+        def _drive_seul(self, ident):
+            with self._verrou_drive:
+                appareil = ""
+                try:
+                    appareil = self._drive_executer(ident)
+                except Exception as exc:  # noqa: BLE001 - jamais le contenu au journal : le type d'erreur seul
+                    self.log(drive_.journal(appareil, raison=type(exc).__name__), level="WARNING")
+                    try:
+                        self._ecrire_cle(drive_.PREFIXE_RESULTAT + ident, drive_.valeur_resultat(
+                            "echec", datetime.now(PARIS), raison="erreur inattendue"))
+                    except Exception:  # noqa: BLE001
+                        pass
+
+        def _drive_executer(self, ident):
+            """La confirmation d'Alexandre (« Enregistrer » touché dans l'app) : vérifiée contre la proposition du NUC,
+            puis exécutée. Rien sans proposition correspondante ; une seule exécution par confirmation."""
+            maintenant = datetime.now(PARIS)
+            cle_r = drive_.PREFIXE_RESULTAT + ident
+            confirmation = self._lire_cle(drive_.PREFIXE_CONFIRMATION + ident)
+            if confirmation is None or self._lire_cle(cle_r) is not None:
+                return ""   # effacée, ou déjà faite / en cours (événement reçu deux fois)
+            appareil = str((confirmation or {}).get("appareil") or "")[:40]
+            try:
+                plan = drive_.plan(self._lire_cle(drive_.PREFIXE_PROPOSITION + ident), confirmation, maintenant)
+            except drive_.Refus as exc:
+                self._ecrire_cle(cle_r, drive_.valeur_resultat("echec", maintenant, raison=str(exc)))
+                self.log(drive_.journal(appareil, raison=str(exc)), level="WARNING")
+                return appareil
+            self._ecrire_cle(cle_r, drive_.valeur_resultat("en_cours", maintenant))
+            drive, pieces = self._drive(), self._pieces()
+            try:
+                if drive is None or pieces is None:
+                    raise drive_.Refus("autorisation Google absente")
+                resultat = drive_.executer(plan, drive, pieces)
+            except (drive_.Refus, assistant.PorteeManquante) as exc:
+                raison = str(exc) if isinstance(exc, drive_.Refus) else \
+                    "Google Drive n'est pas autorisé (accord Google à donner sur le Mac)"
+                self._ecrire_cle(cle_r, drive_.valeur_resultat("echec", datetime.now(PARIS), raison=raison))
+                self.log(drive_.journal(appareil, raison=raison), level="WARNING")
+                return appareil
+            except courrier.ErreurGmail as exc:
+                raison = f"Google a refusé ({exc})"
+                self._ecrire_cle(cle_r, drive_.valeur_resultat("echec", datetime.now(PARIS), raison=raison))
+                self.log(drive_.journal(appareil, raison=raison), level="WARNING")
+                return appareil
+            self._ecrire_cle(cle_r, drive_.valeur_resultat("ok", datetime.now(PARIS), resultat))
+            self.log(drive_.journal(appareil, resultat))
+            return appareil
 
         def _purger_ia(self, kwargs):
             """Toutes les heures : échanges de plus de 7 jours, mails cités oubliés (10 min), agenda des jours passés."""

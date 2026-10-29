@@ -241,7 +241,9 @@ def test_boucle_courrier_avec_mails_cites_et_blocs(base):
         definitions=a.OUTILS + s.OUTILS_COURRIER, blocs_systeme=s.systeme(), datee=True)
     assert raison is None and tours == 2
     req = client.requetes[0]
-    assert [t["name"] for t in req["tools"]][-3:] == ["preparer_brouillon", "proposer_actions", "agenda"]
+    assert [t["name"] for t in req["tools"]][-5:] == ["preparer_brouillon", "proposer_actions", "agenda",
+                                                      "chercher_dossiers_drive", "proposer_enregistrement_drive"]
+    assert "Google Drive" in req["system"][0]["text"]
     assert req["system"][0]["text"].startswith("Tu es l'assistant de Courrier")
     assert req["messages"][0] == {"role": "user", "content": "a"}
     assert req["messages"][-1]["content"][0]["text"].startswith("[mardi 27/10/2026 14:05] Prépare")
