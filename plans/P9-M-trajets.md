@@ -147,6 +147,11 @@ iOS ne l'affiche que si l'app la demande ; seule reste la petite flèche près d
 Alexandre voit pourtant encore la flèche bleue app en arrière-plan (« Toujours » confirmé, c'est bien Aiguillage) : cause
 non comprise (règle d'iOS 26 ?). Ajouté une sécurité : sans 50 m parcourus en 5 min, l'app éteint le GPS elle-même
 (la pause automatique d'iOS peut tarder). À observer : la flèche ne devrait plus rester à l'arrêt.
+**Cause trouvée (30/10)** : défaut connu d'iOS (Apple Developer Forums, fil 783585) : après une mise à jour d'une app qui
+utilisait `CLBackgroundActivitySession` / `CLServiceSession`, l'indicateur reste bloqué dans l'île dynamique même une fois
+les sessions invalidées ; seul un redémarrage (ou la désinstallation) le retire. **La flèche a disparu après le redémarrage
+de l'iPhone d'Alexandre.** Ne plus utiliser ces sessions pour le tracé ; l'API classique permet de ne pas afficher
+l'indicateur avec « Toujours ».
 
 ## 5. Stockage et agrégation (à décider avec Alexandre)
 
