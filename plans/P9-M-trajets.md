@@ -144,6 +144,9 @@ GPS `startUpdatingLocation` (`.fitness`, 10 m, filtre 25 m, indicateur visible) 
 l'arrêt, où l'app l'éteint. Prix : les 300 à 500 premiers mètres d'un trajet ne sont pas tracés finement.
 Puis, même jour : `showsBackgroundLocationIndicator = false` (Pacer ne montre pas la flèche bleue : avec « Toujours »,
 iOS ne l'affiche que si l'app la demande ; seule reste la petite flèche près de l'heure).
+Alexandre voit pourtant encore la flèche bleue app en arrière-plan (« Toujours » confirmé, c'est bien Aiguillage) : cause
+non comprise (règle d'iOS 26 ?). Ajouté une sécurité : sans 50 m parcourus en 5 min, l'app éteint le GPS elle-même
+(la pause automatique d'iOS peut tarder). À observer : la flèche ne devrait plus rester à l'arrêt.
 
 ## 5. Stockage et agrégation (à décider avec Alexandre)
 

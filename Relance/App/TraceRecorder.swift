@@ -40,6 +40,9 @@ final class TraceRecorder: NSObject, CLLocationManagerDelegate {
     /// Le GPS tourne (entre un départ et l'arrêt suivant).
     private(set) var enMouvement = false
     private var dernier: CLLocation?
+    /// Sécurité (30/10) : la pause automatique d'iOS peut tarder ; sans 50 m parcourus en 5 min, on éteint le GPS.
+    private var veille: Task<Void, Never>?
+    static let delaiArret: Duration = .seconds(5 * 60)
     private var envoiEnCours = false
 
     static var mode: Mode {
@@ -114,10 +117,23 @@ final class TraceRecorder: NSObject, CLLocationManagerDelegate {
         location.allowsBackgroundLocationUpdates = true
         location.startUpdatingLocation()
         enMouvement = true
+        surveillerArret()
         SyncLog.add("Tracé précis : départ, GPS allumé")
     }
 
+    /// Relancée à chaque point gardé : 5 min sans point (moins de 50 m parcourus) éteignent le GPS.
+    private func surveillerArret() {
+        veille?.cancel()
+        veille = Task { [weak self] in
+            try? await Task.sleep(for: Self.delaiArret)
+            guard !Task.isCancelled else { return }
+            self?.arreterSuivi()
+        }
+    }
+
     private func arreterSuivi() {
+        veille?.cancel()
+        veille = nil
         guard enMouvement else { return }
         location.stopUpdatingLocation()
         location.allowsBackgroundLocationUpdates = false
@@ -149,6 +165,7 @@ final class TraceRecorder: NSObject, CLLocationManagerDelegate {
     private func recevoir(_ position: CLLocation) async {
         guard let point = Self.garder(position, apres: dernier) else { return }
         dernier = position
+        surveillerArret()
         Self.file = Self.file + [point]
         await envoyer(force: false)
     }
