@@ -142,14 +142,18 @@ struct SyncLogView: View {
 /// Bouton Réglages (roue dentée) en haut à gauche de chaque onglet : avant le 16/10, il n'était que sur « À faire »
 /// et on ne le trouvait pas ailleurs (retour d'Alexandre).
 struct SettingsToolbarButton: ViewModifier {
+    /// Grand écran d'À faire (30/10) : les réglages sont dans son menu « ⋯ », pas de roue dentée à part.
+    var visible = true
     /// `-reglages 1` au lancement (debug) : Réglages ouverts d'emblée, pour les captures d'écran.
     @State private var showSettings = UserDefaults.standard.bool(forKey: "reglages")
 
     func body(content: Content) -> some View {
         content
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Réglages", systemImage: "gearshape") { showSettings = true }
+                if visible {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button("Réglages", systemImage: "gearshape") { showSettings = true }
+                    }
                 }
             }
             .sheet(isPresented: $showSettings) { SettingsView() }
@@ -157,7 +161,7 @@ struct SettingsToolbarButton: ViewModifier {
 }
 
 extension View {
-    func settingsButton() -> some View { modifier(SettingsToolbarButton()) }
+    func settingsButton(visible: Bool = true) -> some View { modifier(SettingsToolbarButton(visible: visible)) }
 }
 
 /// Même bouton, flottant, pour les écrans sans barre de navigation (la carte).

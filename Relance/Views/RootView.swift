@@ -49,7 +49,9 @@ struct MainTabs: View {
             }
             // « Fait » n'a plus d'onglet : il s'ouvre depuis le bas de « À faire ».
         }
-        .tabViewStyle(.sidebarAdaptable)
+        // Onglets en barre, aussi sur iPad (30/10, remarque d'Alexandre) : la colonne d'onglets à gauche serrait la liste
+        // d'À faire entre elle et la fiche, pour seulement quatre onglets.
+        .tabViewStyle(.tabBarOnly)
         .sheet(isPresented: $store.showQuickAdd) { QuickAddSheet() }
         #if DEBUG
         // `-fiche <début du titre>` au lancement : la fiche de cette tâche ouverte d'emblée (captures d'écran).

@@ -15,6 +15,7 @@ struct TodoView: View {
 
     @State private var showAdd = false
     @State private var showDone = false
+    @State private var showSettings = false
     @State private var editing: TaskItem?
     @State private var justDone: TaskItem?
     /// iPad : tâche affichée dans la colonne de droite.
@@ -35,7 +36,7 @@ struct TodoView: View {
                 list
                     // Un seul bouton de panneau latéral (celui des onglets) : la liste reste toujours visible.
                     .toolbar(removing: .sidebarToggle)
-                    .navigationSplitViewColumnWidth(min: 320, ideal: 380, max: 460)
+                    .navigationSplitViewColumnWidth(min: 380, ideal: 440, max: 520)
                     // Grand écran : la colonne de droite montre d'emblée la tâche la plus urgente.
                     .onAppear {
                         #if DEBUG
@@ -102,7 +103,8 @@ struct TodoView: View {
             }
         }
         .navigationTitle("À faire")
-        .settingsButton()
+        .settingsButton(visible: sizeClass != .regular)
+        .sheet(isPresented: $showSettings) { SettingsView() }
         .refreshable { await store.sync() }
         .toolbar {
             // Liste ou Agenda (30/10) : à la place du titre.
@@ -114,21 +116,36 @@ struct TodoView: View {
                 .pickerStyle(.segmented)
                 .fixedSize()
             }
-            ToolbarItem(placement: .topBarTrailing) {
-                CategoryFilterMenu(filter: $categoryFilter)
-            }
-            // Tirer pour actualiser ne se devine pas au trackpad : bouton visible sur grand écran.
             if sizeClass == .regular {
+                // Grand écran (30/10) : trois entrées seulement (⋯, Liste/Agenda, +) ; synchro, réglages et filtre dans
+                // le menu « ⋯ » (sept boutons se chevauchaient dans la colonne).
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Synchroniser", systemImage: "arrow.clockwise") { Task { await store.sync() } }
-                        .keyboardShortcut("r", modifiers: .command)
-                        .disabled(store.isSyncing)
+                    Menu {
+                        Button("Synchroniser", systemImage: "arrow.clockwise") { Task { await store.sync() } }
+                            .disabled(store.isSyncing)
+                        CategoryFilterMenu(filter: $categoryFilter)
+                        Divider()
+                        Button("Réglages", systemImage: "gearshape") { showSettings = true }
+                    } label: {
+                        Label("Plus", systemImage: categoryFilter.isEmpty ? "ellipsis.circle" : "line.3.horizontal.decrease.circle.fill")
+                    }
+                }
+            } else {
+                ToolbarItem(placement: .topBarTrailing) {
+                    CategoryFilterMenu(filter: $categoryFilter)
                 }
             }
             // La barre d'onglets d'iOS 26 masque la barre d'outils du bas : l'ajout va en haut à droite.
             AddTaskToolbarButton(context: .today, isPresented: $showAdd)
         }
         .safeAreaInset(edge: .bottom) { undoBanner }
+        // ⌘R : synchroniser, même menu fermé (le bouton est rangé dans « ⋯ » sur grand écran).
+        .background {
+            Button("Synchroniser") { Task { await store.sync() } }
+                .keyboardShortcut("r", modifiers: .command)
+                .opacity(0)
+                .accessibilityHidden(true)
+        }
         .sheet(isPresented: $showAdd) { QuickAddSheet() }
         .sheet(item: $ajoutAgenda) { QuickAddSheet(jour: $0.jour, minutes: $0.minutes) }
         .sheet(isPresented: $showDone) { DoneView() }
