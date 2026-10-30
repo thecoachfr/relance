@@ -127,16 +127,19 @@ final class WatchSync: NSObject, WCSessionDelegate {
             let priority = (message[WatchLink.priorityKey] as? String).flatMap(TaskPriority.init(rawValue:)) ?? .normal
             _ = store.add(title: title, day: due.map { calendar.startOfDay(for: $0) }, minutes: minutes, priority: priority)
         case .position:
-            // Position marquée sur la montre (30/10) : une tâche « Position du … » avec l'adresse et le lien Plans,
-            // dans À trier ; la routine de tri la range.
+            // Position marquée sur la montre (30/10) : un spot photo (Envies) avec l'adresse et le lien Plans ; nommé
+            // d'après le lieu trouvé par Plans, sinon « Spot du … » (d'abord une tâche à trier, changé à la demande
+            // d'Alexandre le même jour).
             guard let lat = message[WatchLink.latKey] as? Double, let lon = message[WatchLink.lonKey] as? Double else { return }
             let quand = message[WatchLink.dueKey] as? Date ?? .now
             let point = CLLocationCoordinate2D(latitude: lat, longitude: lon)
             let lieu = await PointPickerView.reverseGeocode(point)
             let contact = PointPickerView.contact(name: lieu.name ?? lieu.address ?? "Position marquée", address: lieu.address, at: point)
-            let titre = "Position du " + quand.formatted(.dateTime.day().month(.abbreviated)) + " à "
-                + ReminderPlanner.formatTime(Calendar.current.component(.hour, from: quand) * 60 + Calendar.current.component(.minute, from: quand))
-            _ = store.add(title: titre, day: nil, minutes: nil, notes: TaskContact.notes("", setting: contact))
+            let heure = ReminderPlanner.formatTime(Calendar.current.component(.hour, from: quand) * 60
+                                                   + Calendar.current.component(.minute, from: quand))
+            let titre = lieu.name ?? ("Spot du " + quand.formatted(.dateTime.day().month(.abbreviated)) + " à " + heure)
+            let notes = TaskContact.notes(ToSee.notes("", setting: ToSee(.photoSpot)), setting: contact)
+            _ = store.add(title: titre, day: nil, minutes: nil, notes: notes)
         }
         await store.sync()
     }
