@@ -142,6 +142,8 @@ l'indicateur tant qu'elle vit, même à l'arrêt. Remplacé par le mécanisme cl
 importants seulement (aucun indicateur), qui réveillent l'app au départ, comme le départ d'une visite (`TrajetsRecorder`) ;
 GPS `startUpdatingLocation` (`.fitness`, 10 m, filtre 25 m, indicateur visible) jusqu'à la pause automatique d'iOS à
 l'arrêt, où l'app l'éteint. Prix : les 300 à 500 premiers mètres d'un trajet ne sont pas tracés finement.
+Puis, même jour : `showsBackgroundLocationIndicator = false` (Pacer ne montre pas la flèche bleue : avec « Toujours »,
+iOS ne l'affiche que si l'app la demande ; seule reste la petite flèche près de l'heure).
 
 ## 5. Stockage et agrégation (à décider avec Alexandre)
 

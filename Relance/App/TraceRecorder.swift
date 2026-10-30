@@ -6,8 +6,8 @@ import UIKit
 /// on bouge. Depuis le 30/10 (la flèche de localisation restait affichée en permanence avec `CLBackgroundActivitySession`),
 /// mécanisme classique : au repos, seuls les « changements de position importants » d'iOS sont surveillés (aucun
 /// indicateur, presque rien sur la batterie) et réveillent l'app au départ, comme le départ d'une visite ; le GPS
-/// (`startUpdatingLocation`, flèche visible) tourne alors jusqu'à ce qu'iOS le mette en pause à l'arrêt
-/// (`pausesLocationUpdatesAutomatically`) : l'app l'arrête et la flèche disparaît. Les 300 à 500 premiers mètres d'un
+/// (`startUpdatingLocation`, sans la flèche bleue de l'île dynamique) tourne alors jusqu'à ce qu'iOS le mette en
+/// pause à l'arrêt (`pausesLocationUpdatesAutomatically`) : l'app l'arrête. Les 300 à 500 premiers mètres d'un
 /// trajet ne sont pas tracés finement (le temps qu'iOS signale le départ). Coupé par défaut ; « pendant 24 h » ou
 /// « toujours ». Les points attendent dans l'App Group et partent par lots dans l'espace `trajets` de `donnees_apps`
 /// (`lot:<id>`), rangés par `aiguillage_trajets` (source « precis »). Batterie : mesurée par MetricKit (temps de GPS).
@@ -80,7 +80,9 @@ final class TraceRecorder: NSObject, CLLocationManagerDelegate {
         location.desiredAccuracy = kCLLocationAccuracyNearestTenMeters
         location.distanceFilter = 25
         location.pausesLocationUpdatesAutomatically = true
-        location.showsBackgroundLocationIndicator = true
+        // Pas de flèche bleue dans l'île dynamique (30/10, remarque d'Alexandre : Pacer n'en montre pas) : avec la
+        // localisation « Toujours », iOS ne l'affiche que si l'app la demande ; reste la petite flèche près de l'heure.
+        location.showsBackgroundLocationIndicator = false
         NotificationCenter.default.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil,
                                                queue: .main) { _ in
             Task { @MainActor in await TraceRecorder.shared.envoyer(force: true) }

@@ -50,7 +50,7 @@ struct TrajetsView: View {
                     }
                 }
             } footer: {
-                Text("Un point tous les 50 m à pied, 100 m en voiture, seulement quand tu bouges : iOS coupe le GPS à l'arrêt. La flèche de localisation reste visible pendant le tracé. Quelques % de batterie par jour selon tes déplacements : à mesurer dans Diagnostic batterie. Les points partent vers ton Home Assistant et nulle part ailleurs.")
+                Text("Un point tous les 50 m à pied, 100 m en voiture, seulement quand tu bouges : le GPS ne tourne que pendant tes déplacements. Il faut la localisation « Toujours ». Quelques % de batterie par jour selon tes déplacements : à mesurer dans Diagnostic batterie. Les points partent vers ton Home Assistant et nulle part ailleurs.")
             }
             Section("Envoi") {
                 LabeledContent("En attente", value: "\(enAttente) arrêt(s)")
