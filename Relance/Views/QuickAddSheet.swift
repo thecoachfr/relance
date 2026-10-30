@@ -47,9 +47,19 @@ struct QuickAddSheet: View {
     @State private var scanPDF: Data?
     @State private var scanMessage: String?
 
-    init(context: QuickAddContext = .today, category: String? = nil) {
+    /// `jour` et `minutes` : une plage touchée dans la vue Agenda (30/10), date et heure déjà remplies.
+    init(context: QuickAddContext = .today, category: String? = nil, jour: Date? = nil, minutes: Int? = nil) {
         self.context = context
-        _day = State(initialValue: context == .today ? Calendar.current.startOfDay(for: .now) : nil)
+        _day = State(initialValue: jour.map { Calendar.current.startOfDay(for: $0) }
+                     ?? (context == .today ? Calendar.current.startOfDay(for: .now) : nil))
+        if let minutes {
+            _hasTime = State(initialValue: true)
+            _time = State(initialValue: Calendar.current.date(bySettingHour: minutes / 60, minute: minutes % 60, second: 0, of: .now)!)
+            _manual = State(initialValue: true)
+        }
+        if let jour, !Calendar.current.isDateInToday(jour), !Calendar.current.isDateInTomorrow(jour) {
+            _pickOther = State(initialValue: true)
+        }
         if case .toSee(let kind) = context {
             _notes = State(initialValue: ToSee.notes("", setting: ToSee(kind)))
         } else {

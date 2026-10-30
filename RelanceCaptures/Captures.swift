@@ -45,5 +45,10 @@ nonisolated final class Captures: XCTestCase {
         try? XCUIScreen.main.screenshot().pngRepresentation.write(to: dossier.appendingPathComponent("ipad-fiche.png"))
         _ = app
     }
+    /// Vue Agenda d'À faire (30/10).
+    @MainActor func testAgenda() {
+        _ = ouvrir(["-todoAffichage", "agenda"])
+        try? XCUIScreen.main.screenshot().pngRepresentation.write(to: dossier.appendingPathComponent("agenda.png"))
+    }
     @MainActor func testEnvies() { defiler(ouvrir(["-reglages", "1", "-sousreglage", "envies"]), "envies") }
 }

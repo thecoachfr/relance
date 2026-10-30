@@ -20,6 +20,13 @@ struct TodoView: View {
     /// iPad : tâche affichée dans la colonne de droite.
     @State private var selectedID: UUID?
     @AppStorage("categoryFilter") private var categoryFilter = ""
+    /// Liste ou Agenda (30/10) : mémorisé.
+    @AppStorage("todoAffichage") private var affichage = Affichage.liste
+    /// Plage touchée dans l'agenda : saisie rapide à ce jour et cette heure.
+    @State private var ajoutAgenda: AjoutAgenda?
+
+    enum Affichage: String { case liste, agenda }
+    private struct AjoutAgenda: Identifiable { let id = UUID(); let jour: Date; let minutes: Int? }
     @Environment(\.horizontalSizeClass) private var sizeClass
 
     var body: some View {
@@ -64,6 +71,11 @@ struct TodoView: View {
         TimelineView(.everyMinute) { context in
             let now = context.date
             let groups = group(now: now)
+            if affichage == .agenda {
+                AgendaView(taches: dated.filter { $0.matches(categoryFilter: categoryFilter) }, now: now,
+                           onOpen: open, onDone: markDone,
+                           onAdd: { jour, minutes in ajoutAgenda = AjoutAgenda(jour: jour, minutes: minutes) })
+            } else {
             // Sélection native sur grand écran : flèches ↑ ↓ au clavier, surlignage système.
             List(selection: sizeClass == .regular ? $selectedID : .constant(nil)) {
                 // Bureau ou télétravail (P9-N2) : la phrase du capteur, en tête.
@@ -87,11 +99,21 @@ struct TodoView: View {
                                            description: Text("Change de filtre pour voir les autres tâches."))
                 }
             }
+            }
         }
         .navigationTitle("À faire")
         .settingsButton()
         .refreshable { await store.sync() }
         .toolbar {
+            // Liste ou Agenda (30/10) : à la place du titre.
+            ToolbarItem(placement: .principal) {
+                Picker("Affichage", selection: $affichage) {
+                    Text("Liste").tag(Affichage.liste)
+                    Text("Agenda").tag(Affichage.agenda)
+                }
+                .pickerStyle(.segmented)
+                .fixedSize()
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 CategoryFilterMenu(filter: $categoryFilter)
             }
@@ -108,6 +130,7 @@ struct TodoView: View {
         }
         .safeAreaInset(edge: .bottom) { undoBanner }
         .sheet(isPresented: $showAdd) { QuickAddSheet() }
+        .sheet(item: $ajoutAgenda) { QuickAddSheet(jour: $0.jour, minutes: $0.minutes) }
         .sheet(isPresented: $showDone) { DoneView() }
         .sheet(item: $editing) { TaskEditor(item: $0) }
         .sensoryFeedback(.success, trigger: justDone)

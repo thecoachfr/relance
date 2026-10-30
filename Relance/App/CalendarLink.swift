@@ -23,6 +23,15 @@ final class CalendarLink {
     /// Agenda qui recevra l'événement : l'agenda par défaut d'iOS (Réglages › Calendrier › Calendrier par défaut).
     var defaultCalendarName: String? { isAuthorized ? store.defaultCalendarForNewEvents?.title : nil }
 
+    /// Événements d'un jour, tous agendas confondus (vue Agenda d'À faire, 30/10), triés par début.
+    func evenements(du jour: Date, calendar: Calendar = .current) -> [EKEvent] {
+        guard isAuthorized else { return [] }
+        let debut = calendar.startOfDay(for: jour)
+        let fin = calendar.date(byAdding: .day, value: 1, to: debut)!
+        let predicat = store.predicateForEvents(withStart: debut, end: fin, calendars: nil)
+        return store.events(matching: predicat).sorted { $0.startDate < $1.startDate }
+    }
+
     func requestAccess() async -> Bool {
         (try? await store.requestFullAccessToEvents()) ?? false
     }

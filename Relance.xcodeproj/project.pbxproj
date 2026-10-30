@@ -132,6 +132,7 @@
 		473D512C7BA222A224D6CE94 /* HASyncTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BB210515A561BDDE66887DD /* HASyncTests.swift */; };
 		47578604A035E3A5CC3A3B23 /* ContexteTache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AB2FEFE59B34E343869478D /* ContexteTache.swift */; };
 		477300362673693C83EF14FE /* DueText.swift in Sources */ = {isa = PBXBuildFile; fileRef = 666C8CA69B643438FA2EC7C2 /* DueText.swift */; };
+		477E3658B86FB1CF2FCDA4FF /* AgendaView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BCC2360AA32B5C7DF09E4F1 /* AgendaView.swift */; };
 		49371094B35A54ABB18B1134 /* TriageRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 856B480B3D562813D03F3EC2 /* TriageRequest.swift */; };
 		49A4C207454C37D9F756CAA5 /* TaskActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7D24B2FA7C99714EB6FC0BD /* TaskActions.swift */; };
 		4B922851E215DB46EB0F866B /* TraceRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5876C0AAE9BD484C6D7CAA94 /* TraceRecorder.swift */; };
@@ -599,6 +600,7 @@
 		4839CCA69FBABCA6821B8333 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		48475C1CB9617CFB41F59012 /* TrajetsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrajetsService.swift; sourceTree = "<group>"; };
 		4AF54CF05DEFFF16CB11D50D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		4BCC2360AA32B5C7DF09E4F1 /* AgendaView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgendaView.swift; sourceTree = "<group>"; };
 		4C1A6DFA58B95CA60075943E /* RendezVousTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RendezVousTests.swift; sourceTree = "<group>"; };
 		4DCCE35813EA2892D8D3C8B7 /* SharedMessageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedMessageTests.swift; sourceTree = "<group>"; };
 		51E76C6EB4ADDD641DA38896 /* TacheHA+TaskItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TacheHA+TaskItem.swift"; sourceTree = "<group>"; };
@@ -979,6 +981,7 @@
 			isa = PBXGroup;
 			children = (
 				F7DBE3DA8E8AC20FAB30C99D /* ActionsSection.swift */,
+				4BCC2360AA32B5C7DF09E4F1 /* AgendaView.swift */,
 				595289CE4264CBC8CBE2415D /* CalendarSection.swift */,
 				9E8C4B98CC17E47DEB59005B /* CategoryViews.swift */,
 				7E7598AD45ABC35C0448C201 /* ContactSection.swift */,
@@ -1464,6 +1467,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				9F57C32AEB673C86586CD243 /* ActionsSection.swift in Sources */,
+				477E3658B86FB1CF2FCDA4FF /* AgendaView.swift in Sources */,
 				4FF5B1E0BB1083E64764515D /* AppDelegate.swift in Sources */,
 				B62C6C5D2C7AD96BC26CF840 /* AppGroup.swift in Sources */,
 				9F2FD77B335B89B63523B34C /* AppVersion.swift in Sources */,
