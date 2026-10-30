@@ -11,11 +11,22 @@ struct MacTaskList: View {
     let section: MacSection
     let search: String
     @Binding var selection: UUID?
+    /// Liste ou Agenda pour « À faire » (30/10, comme sur l'iPhone et l'iPad) : mémorisé.
+    @AppStorage("macTodoAffichage") private var agenda = false
+    /// Plage touchée dans l'agenda : saisie rapide à ce jour et cette heure.
+    @State private var ajoutAgenda: AjoutAgenda?
+    private struct AjoutAgenda: Identifiable { let id = UUID(); let jour: Date; let minutes: Int? }
 
     var body: some View {
         TimelineView(.everyMinute) { context in
             let now = context.date
             let items = filtered
+            if section == .todo && agenda {
+                AgendaView(taches: items.filter { $0.dueDay != nil }, now: now,
+                           onOpen: { selection = $0.localID }, onDone: complete,
+                           onAdd: { jour, minutes in ajoutAgenda = AjoutAgenda(jour: jour, minutes: minutes) })
+                    .navigationTitle(section.title)
+            } else {
             List(selection: $selection) {
                 if section == .done {
                     ForEach(items.prefix(200)) { doneRow($0) }
@@ -45,7 +56,21 @@ struct MacTaskList: View {
             .overlay { if items.isEmpty { empty } }
             .navigationTitle(section.title)
             .navigationSubtitle(subtitle(items, now: now))
+            }
         }
+        .toolbar {
+            if section == .todo {
+                ToolbarItem(placement: .automatic) {
+                    Picker("Affichage", selection: $agenda) {
+                        Text("Liste").tag(false)
+                        Text("Agenda").tag(true)
+                    }
+                    .pickerStyle(.segmented)
+                    .help("Liste ou agenda de la journée")
+                }
+            }
+        }
+        .sheet(item: $ajoutAgenda) { QuickAddSheet(jour: $0.jour, minutes: $0.minutes) }
     }
 
     // MARK: - Contenu

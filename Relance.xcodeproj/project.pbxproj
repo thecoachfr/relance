@@ -341,6 +341,7 @@
 		BFFE554EE27060EC4A0E1671 /* Recurrence.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57E018902DF086E23048C8AE /* Recurrence.swift */; };
 		C00AC755247DC8A1AD49583A /* ToSee.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A3B053B5BF69150A21C6DA2 /* ToSee.swift */; };
 		C02518197010D9F59634E764 /* Reseau.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65817F3183341A8C7C9D9383 /* Reseau.swift */; };
+		C04CD2AB50DB664DEDDB7F11 /* AgendaView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BCC2360AA32B5C7DF09E4F1 /* AgendaView.swift */; };
 		C1A1082B5D5B76493F38050E /* LieuTravail.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2B3A9EA92BEBF53F81BA1B1 /* LieuTravail.swift */; };
 		C281C4319DC1D8B48972AF47 /* PushRegistration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C1E3FCC309390331F7A6DDF /* PushRegistration.swift */; };
 		C38E9F276262E68B0C4FB011 /* TacheHA+Liste.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E11A76CCDBFE02F27DDC707 /* TacheHA+Liste.swift */; };
@@ -1604,6 +1605,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				7017AB893472EE48C6DD4F57 /* ActionsSection.swift in Sources */,
+				C04CD2AB50DB664DEDDB7F11 /* AgendaView.swift in Sources */,
 				4B9576648ACF89C848961140 /* AppGroup.swift in Sources */,
 				0EEAC2D3D1162A9B1937FEC9 /* AppVersion.swift in Sources */,
 				3D5E9A6C58E227587722DF17 /* CalendarLink.swift in Sources */,

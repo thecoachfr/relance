@@ -131,6 +131,7 @@ targets:
       - Relance/Views/PourInfoViews.swift
       - Relance/Views/MagasinViews.swift
       - Relance/Views/EnviesSettingsView.swift
+      - Relance/Views/AgendaView.swift
       - Relance/Views/RecurrenceViews.swift
       - Relance/Views/TaskEditor.swift
       - Relance/Views/HASettingsSection.swift
