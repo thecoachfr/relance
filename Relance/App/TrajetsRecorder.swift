@@ -111,7 +111,10 @@ final class TrajetsRecorder: NSObject, CLLocationManagerDelegate {
         guard let arret = VisiteTrajet(arrivee: visit.arrivalDate, depart: visit.departureDate, lat: c.latitude,
                                        lon: c.longitude, precision: visit.horizontalAccuracy) else { return }
         EnergyMetrics.count(.visite)
+        let depart = visit.departureDate != .distantFuture
         Task { @MainActor in
+            // On repart d'un lieu (P9-M4) : le tracé précis, s'il est actif, rallume le GPS.
+            if depart { TraceRecorder.shared.reveiller() }
             Self.file = TrajetsFile.ajout(Self.file, arret)
             await envoyer(force: false)
         }

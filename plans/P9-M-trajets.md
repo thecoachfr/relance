@@ -137,6 +137,11 @@ retour au premier plan) ; `aiguillage_trajets` les range (source `precis`), supp
 restés là. Sur la carte, là où le tracé précis existe, les points des autres sources sont retirés
 (`priorite_au_trace_precis`). Batterie : temps de GPS par MetricKit, compteur « tracé » dans Diagnostic batterie.
 Tests : Swift `TraceTests`, Python 2 de plus.
+*30/10, remarque d'Alexandre (flèche de localisation affichée en permanence)* : `CLBackgroundActivitySession` garde
+l'indicateur tant qu'elle vit, même à l'arrêt. Remplacé par le mécanisme classique : au repos, changements de position
+importants seulement (aucun indicateur), qui réveillent l'app au départ, comme le départ d'une visite (`TrajetsRecorder`) ;
+GPS `startUpdatingLocation` (`.fitness`, 10 m, filtre 25 m, indicateur visible) jusqu'à la pause automatique d'iOS à
+l'arrêt, où l'app l'éteint. Prix : les 300 à 500 premiers mètres d'un trajet ne sont pas tracés finement.
 
 ## 5. Stockage et agrégation (à décider avec Alexandre)
 

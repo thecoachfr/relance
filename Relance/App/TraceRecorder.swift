@@ -3,13 +3,16 @@ import DonneesHA
 import UIKit
 
 /// Tracé précis en mouvement (P9-M4, 29/10/2026) : un point tous les 50 m à pied, 100 m en voiture, seulement quand
-/// on bouge. iOS (`CLLocationUpdate.liveUpdates`, iOS 17+) suspend lui-même les positions à l'arrêt et les reprend au
-/// départ ; une session d'activité en arrière-plan garde l'app éligible (flèche de localisation visible, exigence
-/// d'iOS) et iOS relance l'app quand il y a de nouvelles positions. Coupé par défaut ; « pendant 24 h » ou « toujours ».
-/// Les points attendent dans l'App Group et partent par lots dans l'espace `trajets` de `donnees_apps`
+/// on bouge. Depuis le 30/10 (la flèche de localisation restait affichée en permanence avec `CLBackgroundActivitySession`),
+/// mécanisme classique : au repos, seuls les « changements de position importants » d'iOS sont surveillés (aucun
+/// indicateur, presque rien sur la batterie) et réveillent l'app au départ, comme le départ d'une visite ; le GPS
+/// (`startUpdatingLocation`, flèche visible) tourne alors jusqu'à ce qu'iOS le mette en pause à l'arrêt
+/// (`pausesLocationUpdatesAutomatically`) : l'app l'arrête et la flèche disparaît. Les 300 à 500 premiers mètres d'un
+/// trajet ne sont pas tracés finement (le temps qu'iOS signale le départ). Coupé par défaut ; « pendant 24 h » ou
+/// « toujours ». Les points attendent dans l'App Group et partent par lots dans l'espace `trajets` de `donnees_apps`
 /// (`lot:<id>`), rangés par `aiguillage_trajets` (source « precis »). Batterie : mesurée par MetricKit (temps de GPS).
 @MainActor
-final class TraceRecorder {
+final class TraceRecorder: NSObject, CLLocationManagerDelegate {
     static let shared = TraceRecorder()
 
     enum Mode: String, CaseIterable, Identifiable {
@@ -33,9 +36,9 @@ final class TraceRecorder {
     static let maximum = 20_000
     static let intervalleEnvoi: TimeInterval = 15 * 60
 
-    private var activite: CLBackgroundActivitySession?
-    private var service: CLServiceSession?
-    private var suivi: Task<Void, Never>?
+    private let location = CLLocationManager()
+    /// Le GPS tourne (entre un départ et l'arrêt suivant).
+    private(set) var enMouvement = false
     private var dernier: CLLocation?
     private var envoiEnCours = false
 
@@ -72,6 +75,12 @@ final class TraceRecorder {
 
     /// Au lancement (y compris quand iOS relance l'app pour de nouvelles positions) et à chaque changement de mode.
     func start() {
+        location.delegate = self
+        location.activityType = .fitness
+        location.desiredAccuracy = kCLLocationAccuracyNearestTenMeters
+        location.distanceFilter = 25
+        location.pausesLocationUpdatesAutomatically = true
+        location.showsBackgroundLocationIndicator = true
         NotificationCenter.default.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil,
                                                queue: .main) { _ in
             Task { @MainActor in await TraceRecorder.shared.envoyer(force: true) }
@@ -82,47 +91,56 @@ final class TraceRecorder {
     func choisir(_ mode: Mode) {
         Self.mode = mode
         Self.fin = mode == .jour ? Date.now.addingTimeInterval(24 * 3600) : nil
+        if mode != .coupe, location.authorizationStatus != .authorizedAlways { location.requestAlwaysAuthorization() }
         appliquer()
+        reveiller()
     }
 
     private func appliquer() {
         if Self.mode == .jour, !Self.actif { Self.mode = .coupe }
-        if Self.actif { demarrer() } else { arreter() }
-    }
-
-    private func demarrer() {
-        guard suivi == nil else { return }
-        activite = CLBackgroundActivitySession()
-        service = CLServiceSession(authorization: .always)
-        suivi = Task { [weak self] in
-            do {
-                for try await update in CLLocationUpdate.liveUpdates(.fitness) {
-                    guard let self else { return }
-                    if !Self.actif {
-                        self.arreter()
-                        return
-                    }
-                    // À l'arrêt, iOS ne livre plus rien jusqu'au départ : rien à garder.
-                    guard !update.stationary, let position = update.location else { continue }
-                    await self.recevoir(position)
-                }
-            } catch {
-                SyncLog.add("Tracé précis interrompu : \(error.localizedDescription)")
-            }
+        if Self.actif, location.authorizationStatus == .authorizedAlways {
+            location.startMonitoringSignificantLocationChanges()
+        } else {
+            location.stopMonitoringSignificantLocationChanges()
+            arreterSuivi()
         }
-        SyncLog.add("Tracé précis : démarré (\(Self.mode.titre.lowercased()))")
     }
 
-    private func arreter() {
-        guard suivi != nil || activite != nil else { return }
-        suivi?.cancel()
-        suivi = nil
-        activite?.invalidate()
-        activite = nil
-        service?.invalidate()
-        service = nil
-        SyncLog.add("Tracé précis : arrêté")
+    /// Départ détecté (changement de position important, départ d'une visite, ouverture de l'app) : GPS allumé.
+    func reveiller() {
+        guard Self.actif, location.authorizationStatus == .authorizedAlways, !enMouvement else { return }
+        location.allowsBackgroundLocationUpdates = true
+        location.startUpdatingLocation()
+        enMouvement = true
+        SyncLog.add("Tracé précis : départ, GPS allumé")
+    }
+
+    private func arreterSuivi() {
+        guard enMouvement else { return }
+        location.stopUpdatingLocation()
+        location.allowsBackgroundLocationUpdates = false
+        enMouvement = false
+        dernier = nil
+        SyncLog.add("Tracé précis : arrêt, GPS éteint")
         Task { await envoyer(force: true) }
+    }
+
+    nonisolated func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        Task { @MainActor in
+            guard Self.actif else { return appliquer() }
+            // Réveil par un changement de position important : le GPS prend le relais.
+            if !enMouvement { reveiller() }
+            for position in locations { await recevoir(position) }
+        }
+    }
+
+    /// iOS a vu qu'on ne bouge plus : on éteint complètement (la flèche disparaît) jusqu'au prochain départ.
+    nonisolated func locationManagerDidPauseLocationUpdates(_ manager: CLLocationManager) {
+        Task { @MainActor in arreterSuivi() }
+    }
+
+    nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        Task { @MainActor in appliquer() }
     }
 
     /// Garde le point s'il est assez précis et assez loin du précédent (50 m à pied, 100 m au-delà de 30 km/h).
