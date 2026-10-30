@@ -11,6 +11,13 @@ struct ComplicationEntry: TimelineEntry {
 
     /// « 🏢 Bureau », « 🏠 Télétravail »… le jour de l'entrée s'il est travaillé ; `nil` sinon (rien d'affiché).
     var lieu: String? { WatchLink.libelleDuJour(lieux, date: date) }
+    /// Seulement l'icône du lieu (« 🏠 », « 🏢? ») : sur la montre, « 🏠 Télétravail » coupait le titre (30/10, remarque
+    /// d'Alexandre). Un libellé sans icône reste en toutes lettres.
+    var lieuIcone: String? {
+        guard let lieu, let premier = lieu.first,
+              premier.unicodeScalars.first?.properties.isEmojiPresentation == true else { return lieu }
+        return String(premier) + (lieu.contains("?") ? "?" : "")
+    }
 
     var late: [WatchTask] {
         tasks.filter { $0.isLate(at: date) && ($0.snoozedUntil ?? .distantPast) <= date }
@@ -125,7 +132,7 @@ struct ComplicationView: View {
                 .widgetLabel(late > 0 ? "en retard" : "à jour")
         case .accessoryInline:
             // Lieu de travail du jour en tête (jours travaillés seulement), puis le reste.
-            let lieu = entry.lieu.map { $0 + " · " } ?? ""
+            let lieu = entry.lieuIcone.map { $0 + " " } ?? ""
             if let next = entry.next {
                 Text(lieu + (late > 0 ? "\(late) en retard · \(next.title)" : next.title))
             } else {
@@ -136,8 +143,8 @@ struct ComplicationView: View {
                 HStack(spacing: 4) {
                     Text(late > 0 ? "\(late) en retard" : "Aiguillage").font(.headline).widgetAccentable()
                     Spacer(minLength: 2)
-                    if let lieu = entry.lieu {
-                        Text(lieu).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                    if let icone = entry.lieuIcone, let lieu = entry.lieu {
+                        Text(icone).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
                             .accessibilityLabel("Aujourd'hui : \(lieu)")
                     }
                 }
@@ -180,8 +187,8 @@ struct TodayView: View {
                     .widgetAccentable()
                 Spacer(minLength: 4)
                 // Lieu de travail du jour (P9-N2), jours travaillés seulement : discret, à droite du titre.
-                if let lieu = entry.lieu {
-                    Text(lieu).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                if let icone = entry.lieuIcone, let lieu = entry.lieu {
+                    Text(icone).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
                         .accessibilityLabel("Aujourd'hui : \(lieu)")
                 }
                 if tasks.count > 3 {
