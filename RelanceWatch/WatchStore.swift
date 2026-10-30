@@ -169,6 +169,12 @@ final class WatchStore: NSObject, WCSessionDelegate {
         }
     }
 
+    /// Position marquée (30/10) : toujours par l'iPhone, qui y ajoute l'adresse (Plans) ; file d'attente s'il est loin.
+    func sendPosition(latitude: Double, longitude: Double, precision: Double, at date: Date) {
+        send([WatchLink.actionKey: WatchLink.Action.position.rawValue, WatchLink.latKey: latitude,
+              WatchLink.lonKey: longitude, WatchLink.precisionKey: precision, WatchLink.dueKey: date])
+    }
+
     private func sendAdd(title: String, due: Date?, hasTime: Bool, priority: TaskPriority = .normal) {
         var message: [String: Any] = [
             WatchLink.actionKey: WatchLink.Action.add.rawValue,

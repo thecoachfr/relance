@@ -3,6 +3,7 @@ import SwiftUI
 struct WatchTaskList: View {
     @Environment(WatchStore.self) private var store
     @State private var showAdd = false
+    @State private var showPosition = false
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
@@ -67,10 +68,14 @@ struct WatchTaskList: View {
                 }
             }
             .sheet(isPresented: $showAdd) { NavigationStack { WatchAddView() } }
+            // Complication et commande « Marquer ma position » (30/10).
+            .sheet(isPresented: $showPosition) { WatchPositionView() }
             // Complication « + » et commande « Nouvelle tâche » : ouvrent directement la saisie.
             .onOpenURL { url in
                 WatchQuickAdd.defaults.removeObject(forKey: WatchQuickAdd.pendingKey)
+                WatchQuickAdd.defaults.removeObject(forKey: WatchQuickAdd.pendingPositionKey)
                 showAdd = url == WatchQuickAdd.url
+                showPosition = url == WatchQuickAdd.positionURL
             }
             .onReceive(NotificationCenter.default.publisher(for: WatchQuickAdd.notification)) { _ in openPendingAdd() }
             .onChange(of: scenePhase) { _, phase in if phase == .active { openPendingAdd() } }
@@ -79,6 +84,11 @@ struct WatchTaskList: View {
     }
 
     private func openPendingAdd() {
+        let position = WatchQuickAdd.defaults.double(forKey: WatchQuickAdd.pendingPositionKey)
+        if position > 0 {
+            WatchQuickAdd.defaults.removeObject(forKey: WatchQuickAdd.pendingPositionKey)
+            if Date.now.timeIntervalSince1970 - position < 10 { showPosition = true }
+        }
         let requested = WatchQuickAdd.defaults.double(forKey: WatchQuickAdd.pendingKey)
         guard requested > 0 else { return }
         WatchQuickAdd.defaults.removeObject(forKey: WatchQuickAdd.pendingKey)

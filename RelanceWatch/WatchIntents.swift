@@ -87,5 +87,14 @@ struct RelanceWatchShortcuts: AppShortcutsProvider {
             ],
             shortTitle: "Ajouter au mémo",
             systemImageName: "text.book.closed")
+        AppShortcut(
+            intent: WatchMarkPositionIntent(),
+            phrases: [
+                "Marque ma position dans \(.applicationName)",
+                "Marquer ma position dans \(.applicationName)",
+                "\(.applicationName) ma position",
+            ],
+            shortTitle: "Marquer ma position",
+            systemImageName: "mappin.and.ellipse")
     }
 }

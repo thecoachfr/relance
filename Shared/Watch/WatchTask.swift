@@ -82,8 +82,13 @@ nonisolated enum WatchLink {
         case article
         /// Fiche du mémo de tri (tâches dans Home Assistant) : l'iPhone l'enregistre et répond `outcomeKey`.
         case memo
+        /// Position marquée sur la montre (30/10) : `latKey`, `lonKey`, `precisionKey`, `dueKey` = instant du point.
+        case position
     }
     static let detailsKey = "details"
+    static let latKey = "lat"
+    static let lonKey = "lon"
+    static let precisionKey = "precision"
     static let articleKey = "article"
     static let cocheKey = "coche"
     /// Réponse de l'iPhone à une fiche du mémo : `added`, `completed`, `unchanged` ou `failed`.

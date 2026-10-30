@@ -46,6 +46,8 @@
 			<string>Relances</string>
 		</dict>
 	</array>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Pour marquer l'endroit où tu es (complication « Marquer ma position »). La position part vers ton iPhone et ton Home Assistant.</string>
 	<key>WKApplication</key>
 	<true/>
 	<key>WKCompanionAppBundleIdentifier</key>

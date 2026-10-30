@@ -272,12 +272,48 @@ struct WatchNewTaskControl: ControlWidget {
     }
 }
 
+/// « Marquer ma position » (30/10) : une épingle sur le cadran ; un toucher, la position est marquée.
+struct PositionComplication: Widget {
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: "fr.alexandrefau.relance.position", provider: AddProvider()) { _ in
+            PositionView()
+                .containerBackground(.background, for: .widget)
+                .widgetURL(WatchQuickAdd.positionURL)
+        }
+        .configurationDisplayName("Marquer ma position")
+        .description("Note l'endroit où tu es, avec son adresse.")
+        .supportedFamilies([.accessoryCircular, .accessoryCorner])
+    }
+}
+
+struct PositionView: View {
+    @Environment(\.widgetFamily) private var family
+
+    var body: some View {
+        switch family {
+        case .accessoryCorner:
+            Image(systemName: "mappin.and.ellipse").font(.title2.bold())
+                .widgetAccentable()
+                .widgetLabel("Ma position")
+                .accessibilityLabel("Marquer ma position")
+        default:
+            ZStack {
+                AccessoryWidgetBackground()
+                Image(systemName: "mappin.and.ellipse").font(.title3.bold())
+            }
+            .widgetAccentable()
+            .accessibilityLabel("Marquer ma position")
+        }
+    }
+}
+
 @main
 struct RelanceWatchWidgets: WidgetBundle {
     var body: some Widget {
         RelanceComplication()
         TodayWidget()
         AddComplication()
+        PositionComplication()
         if #available(watchOS 26.0, *) {
             WatchNewTaskControl()
         }

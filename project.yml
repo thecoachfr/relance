@@ -298,6 +298,7 @@ targets:
         CFBundleShortVersionString: "0.3"
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         WKApplication: true
+        NSLocationWhenInUseUsageDescription: Pour marquer l'endroit où tu es (complication « Marquer ma position »). La position part vers ton iPhone et ton Home Assistant.
         CFBundleURLTypes:
           - CFBundleURLName: fr.alexandrefau.relance.watch
             CFBundleURLSchemes: [relance]

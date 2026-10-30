@@ -360,6 +360,7 @@
 		CB7FB1123F4B6504E127FE88 /* ReminderProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8FDF7A0D1D79E016D9F07AA /* ReminderProfile.swift */; };
 		CBA09203626EF1F615D5E69F /* DonneesHA in Frameworks */ = {isa = PBXBuildFile; productRef = AA371ED7E345598FD293A5BA /* DonneesHA */; };
 		CBAFE55704F5C1DBAA548A8D /* NotesTimeCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05822D2ACADE5BC42570E7F5 /* NotesTimeCodec.swift */; };
+		CC7C3BE8114E9EDFE77B4791 /* WatchPosition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 864B8D53E502E6B87067C025 /* WatchPosition.swift */; };
 		CD14AB719C3C74C632F62B26 /* TaskIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B19813EA3F6E02B516AA5F8 /* TaskIntents.swift */; };
 		CDA70C1DA890F13BFF53DB9A /* EnviesSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91FB744F65CB739C1A9D708C /* EnviesSettingsView.swift */; };
 		CE329A4A40F4563A8BC93AC6 /* TacheHA+Pieces.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40DD2C385881420D28FCE64D /* TacheHA+Pieces.swift */; };
@@ -648,6 +649,7 @@
 		7FF5E09A3FBE2EE46DFEB2E0 /* RelanceWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = RelanceWidgets.entitlements; sourceTree = "<group>"; };
 		8555DED2FCAE370EC74B8CB9 /* TaskStore+LieuTravail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TaskStore+LieuTravail.swift"; sourceTree = "<group>"; };
 		856B480B3D562813D03F3EC2 /* TriageRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TriageRequest.swift; sourceTree = "<group>"; };
+		864B8D53E502E6B87067C025 /* WatchPosition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchPosition.swift; sourceTree = "<group>"; };
 		872C697E4B3BBE1FAA635C5C /* ContexteRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContexteRow.swift; sourceTree = "<group>"; };
 		87AC073D86B6A0B75EDB8E72 /* EnergyMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnergyMetrics.swift; sourceTree = "<group>"; };
 		87BBA1DB8D8D2DF9BA98DDCF /* SiriCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SiriCapture.swift; sourceTree = "<group>"; };
@@ -1146,6 +1148,7 @@
 				FF7D59A852003D569866B8C8 /* WatchAddView.swift */,
 				7E526C5D9F0B04CD181AE51F /* WatchDiagnostic.swift */,
 				F221CBA28304261FF1D09E34 /* WatchIntents.swift */,
+				864B8D53E502E6B87067C025 /* WatchPosition.swift */,
 				FC00912BDF3BB70B789A18F5 /* WatchStore.swift */,
 				412F18AC79776A3000826C83 /* WatchTaskList.swift */,
 			);
@@ -1840,6 +1843,7 @@
 				EACD7A26CDE728DACD37189D /* WatchAddView.swift in Sources */,
 				D2980DE7904DDC494DF1D79C /* WatchDiagnostic.swift in Sources */,
 				4E9091608C543191CA1D7B55 /* WatchIntents.swift in Sources */,
+				CC7C3BE8114E9EDFE77B4791 /* WatchPosition.swift in Sources */,
 				5AFCF7DFF64F6862DF44F094 /* WatchQuickAdd.swift in Sources */,
 				349BC19B237A6CEC02A88CFD /* WatchStore.swift in Sources */,
 				8ED4503F2019E2A275CD180A /* WatchTask.swift in Sources */,
