@@ -79,15 +79,18 @@ def test_ordre_envie_genre_prime_chaine_annee():
              prog(409, "Film d'avant-soirée", h=20, m=45, annee=2025),
              prog(282, "Mon envie", "Série", "Série policière")]
     assert titres(bruts, envies={c.cle_titre("Mon envie")}) == [
-        "Mon envie", "Film d'Arte", "Film récent", "Film ancien", "Film d'avant-soirée", "Docu", "Série"]
+        "Film d'Arte", "Film récent", "Film ancien", "Film d'avant-soirée", "Mon envie", "Série", "Docu"]
 
 
-def test_quotas_par_genre():
-    films = [prog(o, f"Film {i}", annee=2000 + i) for i, (_, _, o, _) in enumerate(CHAINES[:9])]
-    series = [prog(o, f"Série {i}", "Série", "Série dramatique") for i, (_, _, o, _) in enumerate(CHAINES[9:13])]
-    resultat = titres(films + series)
-    assert sum(r.startswith("Film") for r in resultat) == c.QUOTAS["film"]
-    assert sum(r.startswith("Série") for r in resultat) == c.QUOTAS["serie"]
+def test_dix_par_genre_et_boutons():
+    films = [prog(o, f"Film {i}", annee=2000 + i) for i, (_, _, o, _) in enumerate(CHAINES[:12])]
+    series = [prog(o, f"Série {i}", "Série", "Série dramatique") for i, (_, _, o, _) in enumerate(CHAINES[12:16])]
+    envie = [prog(CHAINES[16][2], "Mon film", annee=1950)]
+    a = c.calculer(films + series + envie, CHAINES, {c.cle_titre("Mon film")}, SOIR)[1]
+    assert sum(p["famille"] == "film" for p in a["programmes"]) == c.PAR_GENRE  # l'envie en tête, dans les 10
+    assert a["programmes"][0]["titre"] == "Mon film"
+    assert a["genres"] == [{"code": "film", "nom": "Films", "nombre": 10}, {"code": "serie", "nom": "Séries", "nombre": 4}]
+    assert [p["famille"] for p in a["programmes"]] == ["film"] * 10 + ["serie"] * 4
 
 
 def test_chaines_d_alexandre():

@@ -15,9 +15,13 @@ Attributs (exemple : `HUB-CE-SOIR-exemple.json`) :
 - `maj` : ISO 8601, heure du calcul.
 - `soiree` : `AAAA-MM-JJ`.
 - `source` : `oqee` (guide d'OQEE) ou `freebox` (repli, sans sous-genre ni année ; `genre_texte` = « Film »…).
-- `programmes` : au plus 12, dans l'ordre d'affichage : [{
+- `genres` (01/11/2026) : les boutons, dans l'ordre, seulement les familles qui ont des programmes : [{`code` (`film`,
+  `serie`, `documentaire`, `telefilm`), `nom` (« Films », « Séries », « Docs et reportages », « Téléfilms »), `nombre`}].
+- `programmes` : rangés par famille dans l'ordre de `genres`, 10 au plus par famille (`PAR_GENRE`), dans l'ordre
+  d'affichage : [{
   `titre` (sans « - S03E06 »), `episode` (« S3 · É6 » ou null), `genre` (`film`, `documentaire`, `reportage`,
-  `serie`, `telefilm`), `genre_texte` (sous-genre d'OQEE, « Thriller », « Série policière »…), `annee` (ou null),
+  `serie`, `telefilm`), `famille` (01/11/2026 : le bouton, `code` de `genres` ; un reportage est de la famille
+  `documentaire`), `genre_texte` (sous-genre d'OQEE, « Thriller », « Série policière »…), `annee` (ou null),
   `chaine` (nom affiché), `numero` (numéro Free), `oqee_id` (identifiant de chaîne qu'ouvre le Hub TV, comme
   `Applis.CHAINES`), `logo` (logo d'OQEE pour fond sombre, ou null : afficher alors le nom), `debut` et `fin`
   (ISO 8601 à la minute), `heure_texte` (« 21 h 10 »), `fin_texte` (« 23 h 20 »), `duree_texte` (« 2 h 10 », « 50 min »), `en_cours` (booléen, au moment du calcul), `image` (image
@@ -26,14 +30,21 @@ Attributs (exemple : `HUB-CE-SOIR-exemple.json`) :
   vue), `imdb_id` (« tt0119174 » ou null), `note_imdb` (7.7 ou null), `note_texte` (« 7,7 » ou null ; null aussi
   sous 100 votes), `votes_imdb` (entier, null sans note) }]. Notes IMDb ajoutées le 28/10/2026 au soir (films, séries et téléfilms).
 
-Ordre : d'abord les envies ; puis par genre (films, documentaires et reportages, séries, téléfilms) ; à genre égal,
+Ordre, dans chaque famille : d'abord les envies ; puis (chez les docs) les documentaires avant les reportages ;
 ce qui commence à partir de 20 h 50 avant l'avant-soirée, puis la note IMDb (sans note : après), puis les grandes chaînes (TF1, France 2, France 3,
-France 5, M6, Arte) et CANAL+, puis le plus récent (année), puis l'heure. Places par genre : 6 films, 3 documentaires
-ou reportages, 3 séries, 2 téléfilms (une envie passe toujours).
+France 5, M6, Arte) et CANAL+, puis le plus récent (année), puis l'heure. 10 programmes au plus par famille (une envie passe toujours). Jusqu'au
+01/11/2026 : une seule rangée de 12 au plus, avec des places par genre (6 films, 3 docs, 3 séries, 2 téléfilms), qui
+cachait par exemple les films de TF1 et de France 2 ; remplacée par les boutons à la demande d'Alexandre (maquette
+validée le 01/11/2026).
 
 ## Règles d'affichage communes (revues le 28/10/2026 au soir, après la photo d'Alexandre : trop petit, note coupée)
 
 1. **Rangée « Ce soir »** dans Vidéo, après « À regarder ». Rien du tout si `programmes` est vide ou le capteur absent.
+   **Boutons par genre (01/11/2026)** sous le titre « Ce soir » : un par entrée de `genres`, « `nom` `nombre` » (pastille ;
+   choisie : fond craie, texte nuit ; les autres : fond surface, texte ballast). Le premier est choisi d'office. La
+   rangée de tuiles dessous ne montre que les programmes dont `famille` = le bouton choisi. Hub TV : Gauche / Droite
+   sur les boutons changent de genre (la rangée suit tout de suite), Bas descend aux tuiles, Haut remonte aux boutons.
+   Hub iPad : toucher un bouton. Un seul genre : les boutons restent (ils disent ce que c'est et combien).
 2. **Tuile** : `image` (sinon fond ardoise), `logo` de la chaîne en haut à gauche (sinon `chaine`), « En cours » (vert) si
    `en_cours`, sinon « Envie » (jaune) si `envie`, en haut à droite ; **pastille « IMDb `note_texte` » en bas à droite
    de l'image** (jaune IMDb, texte sombre), toujours lisible ; dessous, `titre` (et `episode`), puis

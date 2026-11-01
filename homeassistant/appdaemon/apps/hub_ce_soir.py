@@ -32,7 +32,7 @@ DEBUT_MIN = time(20, 40)
 DEBUT_MAX = time(21, 20)
 PRIME = time(20, 50)  # avant : courts programmes d'avant-soirée (sitcoms, feuilletons), mis après à genre égal
 DUREE_MIN = 20 * 60  # écarte les pastilles (« Scènes de ménages », météo…)
-MAX_PROGRAMMES = 12
+PAR_GENRE = 10  # boutons par genre (01/11/2026) : jusqu'à 10 programmes par famille (avant : 12 en tout, quotas)
 RESUME_MAX = 600  # la fiche détaillée l'affiche en entier (220 jusqu'au 28/10/2026 au soir)
 HAUTEUR_IMAGE = 480
 HAUTEUR_GRANDE = 1080  # image de la fiche
@@ -74,9 +74,9 @@ LOGOS = {536: (2, 789), 270: (2, 1045), 321: (2, 2073), 272: (1, 790), 537: (2, 
 GENRES = {"film": "Film", "documentaire": "Documentaire", "reportage": "Reportage", "serie": "Série",
           "telefilm": "Téléfilm"}
 ORDRE = ["film", "documentaire", "reportage", "serie", "telefilm"]
-# Places par famille de genres, pour qu'un soir chargé en films laisse voir séries et documentaires.
-QUOTAS = {"film": 6, "documentaire": 3, "reportage": 3, "serie": 3, "telefilm": 2}
+# Familles de genres = boutons des vues (01/11/2026), dans l'ordre d'affichage ; les reportages vont avec les documentaires.
 FAMILLE = {"reportage": "documentaire"}
+FAMILLES = [("film", "Films"), ("serie", "Séries"), ("documentaire", "Docs et reportages"), ("telefilm", "Téléfilms")]
 EXCLUS = ("pornographique", "érotique", "animation", "dessin animé", "jeunesse", "marionnettes", "téléréalité",
           "féerique", "charme")
 
@@ -305,17 +305,20 @@ def calculer(bruts, chaines, envies, maintenant, source="oqee", notes=None):
     # À genre égal : le vrai début de soirée, puis la note IMDb (sans note : après), puis grandes chaînes, puis le plus récent.
     retenus.sort(key=lambda r: (not r["envie"], ORDRE.index(r["genre"]), r["debut"] < prime, -(r["note_imdb"] or 0),
                                 r["numero"] not in PRIORITAIRES, -(r["annee"] or 0), r["debut"], r["numero"]))
-    places, gardes = dict(QUOTAS), []
-    for r in retenus:
-        famille = FAMILLE.get(r["genre"], r["genre"])
-        if r["envie"] or places[famille] > 0:  # une envie passe toujours
-            places[famille] -= 1
-            gardes.append(r)
-    retenus = gardes[:MAX_PROGRAMMES]
+    # Par famille (bouton des vues), dans l'ordre des boutons : PAR_GENRE au plus ; une envie passe toujours.
+    gardes, genres = [], []
+    for code, nom in FAMILLES:
+        famille = [dict(r, famille=code) for r in retenus if FAMILLE.get(r["genre"], r["genre"]) == code]
+        famille = [r for i, r in enumerate(famille) if r["envie"] or i < PAR_GENRE]
+        if famille:
+            genres.append({"code": code, "nom": nom, "nombre": len(famille)})
+            gardes += famille
+    retenus = gardes
     return len(retenus), {
         "maj": maintenant.isoformat(timespec="seconds"),
         "soiree": maintenant.date().isoformat(),
         "source": source,
+        "genres": genres,
         "programmes": retenus,
     }
 

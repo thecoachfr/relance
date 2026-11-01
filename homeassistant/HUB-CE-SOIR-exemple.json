@@ -5,6 +5,18 @@
     "maj": "2026-10-28T18:00:00+01:00",
     "soiree": "2026-10-28",
     "source": "oqee",
+    "genres": [
+      {
+        "code": "film",
+        "nom": "Films",
+        "nombre": 1
+      },
+      {
+        "code": "serie",
+        "nom": "Séries",
+        "nombre": 1
+      }
+    ],
     "programmes": [
       {
         "titre": "The Game",
@@ -29,7 +41,8 @@
         "imdb_id": "tt0119174",
         "note_imdb": 7.7,
         "votes_imdb": 420000,
-        "note_texte": "7,7"
+        "note_texte": "7,7",
+        "famille": "film"
       },
       {
         "titre": "Tracker",
@@ -54,10 +67,9 @@
         "imdb_id": "tt13875494",
         "note_imdb": 7.2,
         "votes_imdb": 25000,
-        "note_texte": "7,2"
+        "note_texte": "7,2",
+        "famille": "serie"
       }
-    ],
-    "friendly_name": "Ce soir à la TV",
-    "icon": "mdi:television-classic"
+    ]
   }
 }
