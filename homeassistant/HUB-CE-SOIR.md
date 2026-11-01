@@ -57,7 +57,7 @@ Code : `homeassistant/appdaemon/apps/hub_ce_soir.py` (fonctions pures, puis la c
 - **Capteur** recalculé toutes les 15 min (`en_cours`, programmes finis, envies), publié par l'API REST de HA (comme
   `hub_meteo`).
 - **Chaînes** : table `CHAINES` (numéro Free, nom, identifiant OQEE, uuid Freebox), **liste fixe** des chaînes
-  d'Alexandre (42, validée par lui le 28/10/2026 ; info, sport, musique et jeunesse laissées de côté). Pas de filtre
+  d'Alexandre (42, validée par lui le 28/10/2026 ; info, sport, musique et jeunesse laissées de côté ; **Gulli (12) ajoutée le 01/11/2026** à sa demande, 43 chaînes : *Beetlejuice* y passait le 31/10 et manquait). Pas de filtre
   par la Freebox (retiré le 28/10 au soir) : son `has_abo` veut dire « chaîne payante », pas « dans l'abonnement »
   (CANAL+ Cinéma(s) 47 et CANAL+ Docs 48 marquées oui alors qu'Alexandre ne les a pas, CANAL+ Box Office 45 marquée
   non alors qu'il l'a). Changement d'abonnement : modifier la table à la main.

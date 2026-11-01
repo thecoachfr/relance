@@ -44,12 +44,13 @@ A_NOTER = ("film", "serie", "telefilm")
 # Numéro Free, nom affiché, identifiant OQEE, uuid de la Freebox (sans « uuid-webtv- »). Correspondance
 # Freebox ↔ OQEE établie le 28/10/2026 en recoupant 24 h des deux guides (titre et début à 15 min près) ; France 2
 # et France 3 reprises de `Applis.CHAINES` du Hub TV (relevées en zappant). Chaînes d'info, de sport, de musique et
-# de jeunesse laissées de côté ; CANAL+ : seulement les options d'Alexandre (40, 45, 46). Pour une nouvelle chaîne :
+# de jeunesse laissées de côté, sauf Gulli (ajoutée le 01/11/2026 : films du soir, *Beetlejuice* manqué le 31/10) ; CANAL+ : seulement les options d'Alexandre (40, 45, 46). Pour une nouvelle chaîne :
 # même recoupement (voir HUB-CE-SOIR.md).
 CHAINES = [
     (1, "TF1", 536, "612"), (2, "France 2", 270, "201"), (3, "France 3", 321, "202"),
     (4, "France 4", 412, "376"), (5, "France 5", 272, "203"), (6, "M6", 537, "613"), (7, "Arte", 273, "204"),
     (8, "LCP", 294, "226"), (9, "W9", 409, "373"), (10, "TMC", 517, "497"), (11, "TFX", 410, "374"),
+    (12, "Gulli", 557, "677"),
     (17, "CStar", 558, "678"), (18, "T18", 1304, "1751"), (19, "Novo19", 1333, "1797"),
     (20, "TF1 Séries Films", 843, "993"), (22, "6ter", 845, "995"), (23, "RMC Story", 846, "996"),
     (24, "RMC Découverte", 847, "997"), (25, "RMC Life", 848, "998"), (27, "TV5 Monde", 275, "206"),
