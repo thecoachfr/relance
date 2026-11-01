@@ -41,7 +41,7 @@ d'un resto à tester qui devient favori tombe) ; groupe unique « Mes favoris »
 = Fait (section « Anciens favoris », « Remettre » possible). HA : `envie.type = resto` + `envie.statut = favori`
 (champ connu de `TacheHA.Envie`), sans statut = à tester. « Testé » (ligne, menu, fiche iPhone, Mac) sur un à
 tester demande « Garder en favori ? » (Garder en favori / Testé, sans plus / Annuler) ; menu « Garder en favori »
-direct. Phrase « … en favori » / « aux favoris : … » dans la saisie. Vigie : `⭐` reconnu comme ligne d'envie par
+direct. Phrase « … en favori » / « aux favoris : … » dans la saisie. La sorte de lieu (`· bar`, `· restaurant`, note de la ligne et `envie.note`) est gardée quand un resto devient favori, et depuis le partage Plans / Google Maps quand on choisit « Favori » (corrigé le 01/11). Vigie : `⭐` reconnu comme ligne d'envie par
 le tri (`statut` ajouté), les recettes (`envie_type` = resto) et l'agenda (ligne technique). Tests :
 `EnvieFieldTests.favoriteRestaurant`, `EnviesTests.favorites`, `test_resto_favori`.
 **Déployé sur le NUC le 01/11 à 9 h 06** (`aiguillage_tri`, `aiguillage_actions`, `aiguillage_agenda` et consigne réelle du tri, règle K complétée comme ci-dessous ; sauvegardes `*.avant-favoris-20261101`), vigie relancée sans erreur. Reste :

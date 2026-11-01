@@ -398,7 +398,9 @@ struct ShareComposeView: View {
             notes = TaskContact.notes(notes, setting: place.contact(link: placeLink))
         }
         if let kind {
-            notes = ToSee.notes(notes, setting: ToSee(kind, note: suggestion?.kind == kind ? suggestion?.label : nil))
+            // La sorte de lieu proposée par Plans (« bar ») suit aussi un resto rangé en favori (P9-S).
+            let sameSort = suggestion?.kind == kind || (suggestion?.kind.isRestaurant == true && kind.isRestaurant)
+            notes = ToSee.notes(notes, setting: ToSee(kind, note: sameSort ? suggestion?.label : nil))
             day = nil
         }
         if asList, kind == nil {
