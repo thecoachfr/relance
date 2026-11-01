@@ -44,7 +44,7 @@ tester demande « Garder en favori ? » (Garder en favori / Testé, sans plus / 
 direct. Phrase « … en favori » / « aux favoris : … » dans la saisie. Vigie : `⭐` reconnu comme ligne d'envie par
 le tri (`statut` ajouté), les recettes (`envie_type` = resto) et l'agenda (ligne technique). Tests :
 `EnvieFieldTests.favoriteRestaurant`, `EnviesTests.favorites`, `test_resto_favori`.
-Reste : vigie à déployer sur le NUC ; paragraphe de la règle K à mettre dans la consigne du tri (ci-dessous) ;
+**Déployé sur le NUC le 01/11 à 9 h 06** (`aiguillage_tri`, `aiguillage_actions`, `aiguillage_agenda` et consigne réelle du tri, règle K complétée comme ci-dessous ; sauvegardes `*.avant-favoris-20261101`), vigie relancée sans erreur. Reste :
 notification « Testé » à l'approche d'un resto (bouton de la notification) : passe en Fait sans poser la question.
 
 Paragraphe à ajouter à la règle K de la consigne du tri : « « ⭐ Favori » pour un restaurant, un bar, un café
