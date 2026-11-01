@@ -9,7 +9,8 @@ struct EnviesTests {
 
     @Test func kindsRoundTrip() {
         for kind in ToSee.Kind.allCases {
-            let envie = ToSee(kind, end: day(31, 1, 2027))
+            // Un favori n'a pas de période (P9-S).
+            let envie = ToSee(kind, end: kind == .favorite ? nil : day(31, 1, 2027))
             let notes = ToSee.notes("Conseillé par Paul", setting: envie)
             #expect(ToSee(notes: notes) == envie)
             #expect(NoteLines.visible(notes) == "Conseillé par Paul")
@@ -38,7 +39,7 @@ struct EnviesTests {
         #expect(ToSee(.photoSpot, note: "").lines == ["📷 Spot photo"])
         #expect(ToSee(.photoSpot, note: "brume\nmatin").lines == ["📷 Spot photo · brume matin"])
         #expect(ToSee(notes: "📷 Spot photo ·  ")?.note == nil)
-        #expect(ToSee.Kind.allCases.filter(\.isPlace) == [.outing, .event, .restaurant, .shop, .photoSpot])
+        #expect(ToSee.Kind.allCases.filter(\.isPlace) == [.outing, .event, .restaurant, .favorite, .shop, .photoSpot])
         #expect(ToSee.Kind.restaurant.doneTitle == "Testé" && ToSee.Kind.photoSpot.doneTitle == "Photographié")
         #expect(ToSee.kind(in: "le resto italien de la rue de Lyon à tester")?.kind == .restaurant)
     }
@@ -98,5 +99,21 @@ struct EnviesTests {
         #expect(read.map(\.title) == ["Quand tu veux"])
         #expect(read.first?.items.map(\.title) == ["L'Anomalie"])
         #expect(!film.needsTriage)
+    }
+
+    /// Favori (P9-S) : pas de période (celle d'un resto à tester qui devient favori tombe), un seul groupe trié par nom.
+    @Test func favorites() {
+        var toSee = ToSee(.restaurant, end: day(31, 12, 2026), note: "bar")
+        toSee.kind = .favorite
+        #expect(toSee.lines == ["⭐ Favori · bar"])
+        #expect(ToSee(notes: "Super accueil\n⭐️ Favori · bar")?.kind == .favorite)
+        #expect(!ToSee.Kind.favorite.hasPeriod && ToSee.Kind.favorite.isPlace && ToSee.Kind.favorite.isRestaurant)
+        let b = TaskItem(title: "Le Baratin", notes: "⭐ Favori")
+        let a = TaskItem(title: "Chez Gladines", notes: "⭐ Favori")
+        let groups = ToSeeListView.groups([b, a], kind: .favorite, now: day(15, 10, 2026))
+        #expect(groups.map(\.title) == ["Mes favoris"] && groups.first?.items.map(\.title) == ["Chez Gladines", "Le Baratin"])
+        let text = "Chez Gladines en favori"
+        let found = ToSee.kind(in: text)
+        #expect(found?.kind == .favorite && found.map { String(text[..<$0.range.lowerBound]) } == "Chez Gladines")
     }
 }

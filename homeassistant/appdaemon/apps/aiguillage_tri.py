@@ -29,8 +29,10 @@ TYPES_ENVIE = ("voir", "sortie", "resto", "magasin", "spot_photo", "lire", "ecou
 RAYONS = ("fruits_legumes", "frais", "epicerie", "boissons", "hygiene", "maison", "placard", "autre")
 # Lignes que le tri peut ajouter à la fin des notes, dans l'ordre où il les ajoute.
 LIGNE_LIEU, LIGNE_A_PRENDRE = "📍", "🎒"
-LIGNES_ENVIE = {"👀": "voir", "🎟": "sortie", "🍽": "resto", "🛍": "magasin", "📷": "spot_photo", "📖": "lire", "🎧": "ecouter",
-                "🎬": "regarder"}
+LIGNES_ENVIE = {"👀": "voir", "🎟": "sortie", "🍽": "resto", "⭐": "resto", "🛍": "magasin", "📷": "spot_photo", "📖": "lire",
+                "🎧": "ecouter", "🎬": "regarder"}
+# Resto favori (P9-S, 01/11) : ligne « ⭐ Favori », envie `resto` au statut `favori`.
+FAVORI = "⭐"
 ORDRE_FIN = [LIGNE_LIEU, LIGNE_A_PRENDRE, *LIGNES_ENVIE, "🗓", "🔄", "💡", "➕"]
 DICTE = "🎙 Dicté : "
 # Contexte d'une tâche (P9-N2, 24/10) : le champ `contexte` fait foi, la ligne des notes en est la copie.
@@ -348,9 +350,11 @@ def appliquer(valeur, ch, aujourdhui, maintenant, tags_ok, jours_lieu=None):
             ajout.pop(envie_ligne)
         else:
             t["envie"] = {"type": e["type"]} | {k: e[k] for k in ("note", "plateforme") if e.get(k)}
+            if envie_ligne == FAVORI:
+                t["envie"]["statut"] = "favori"
             v2 = True
     elif envie_ligne and absent("envie") and not t.get("liste"):
-        t["envie"] = {"type": LIGNES_ENVIE[envie_ligne]}
+        t["envie"] = {"type": LIGNES_ENVIE[envie_ligne]} | ({"statut": "favori"} if envie_ligne == FAVORI else {})
         v2 = True
 
     lignes += [ajout[p] for p in ORDRE_FIN if p in ajout]

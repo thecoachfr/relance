@@ -69,7 +69,7 @@ struct ToSeeSection: View {
                     if billetAbsent {
                         Text("Billet pas encore disponible sur cet appareil.").font(.footnote).foregroundStyle(.secondary)
                     }
-                } else {
+                } else if toSee.kind.hasPeriod {
                     dateRow("Début", date: toSee.start) { var t = toSee; t.start = $0; set(t) }
                     dateRow("Fin", date: toSee.end) { var t = toSee; t.end = $0; set(t) }
                 }
@@ -92,6 +92,8 @@ struct ToSeeSection: View {
                     Text("Date et heure dans Échéance, billet en pièce jointe (PDF, capture) ou en lien dans les notes. Rappel une semaine avant, la veille au soir et 2 h avant.")
                 } else if toSee.kind.isPlace && toSee.kind != .outing && TaskContact(notes: notes) == nil {
                     Text("Ajoute le lieu (section Lieu) pour le retrouver sur la carte et être prévenu en passant à côté.")
+                } else if toSee.kind == .favorite {
+                    Text("Gardé dans Envies › Restos favoris, sans fin. « Retirer des favoris » le range dans Fait.")
                 } else if toSee.end == nil && toSee.start == nil {
                     Text(toSee.kind == .outing
                          ? "Gardée dans Envies, sans relance. Ajoute une période (expo, festival…) pour être prévenu au bon moment."
@@ -142,6 +144,8 @@ struct ToSeeListView: View {
     private var completed: [TaskItem]
     @State private var editing: TaskItem?
     @State private var adding = false
+    /// Resto qu'on vient de marquer « Testé » : on demande s'il faut le garder en favori.
+    @State private var tested: TaskItem?
     /// Type affiché ; vide = tout.
     @AppStorage("enviesFilter") private var filterRaw = ""
     var selection: Binding<UUID?>?
@@ -164,6 +168,11 @@ struct ToSeeListView: View {
         }
         let today = Calendar.current.startOfDay(for: now)
         let mine = seen.filter { $0.1.kind == kind }
+        // Les favoris n'ont pas de période (P9-S) : un seul groupe, par ordre alphabétique.
+        if kind == .favorite {
+            let sorted = mine.map(\.0).sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
+            return sorted.isEmpty ? [] : [("Mes favoris", sorted)]
+        }
         let over = mine.filter { $0.1.isOver(now: now) }
         let current = mine.filter { !$0.1.isOver(now: now) && ($0.1.start.map { $0 <= today } ?? true) && $0.1.end != nil }
             .sorted { $0.1.end! < $1.1.end! }
@@ -210,7 +219,7 @@ struct ToSeeListView: View {
             ForEach(groups, id: \.title) { group in
                 Section(group.title) {
                     ForEach(group.items) { item in
-                        TaskRow(item: item, isSelected: selection?.wrappedValue == item.localID) { store.complete($0) }
+                        TaskRow(item: item, isSelected: selection?.wrappedValue == item.localID) { markDone($0) }
                             .tag(item.localID)
                             .contentShape(Rectangle())
                             .onTapGesture { open(item) }
@@ -243,6 +252,7 @@ struct ToSeeListView: View {
         .settingsButton()
         #endif
         .sheet(item: $editing) { TaskEditor(item: $0) }
+        .keepAsFavorite($tested)
         #if os(iOS)
         // Sur Mac, le « + » de la colonne suit déjà la section.
         .toolbar { AddTaskToolbarButton(context: .toSee(filter ?? .outing), isPresented: $adding) }
@@ -254,9 +264,17 @@ struct ToSeeListView: View {
         if selection == nil { editing = item } else { selection?.wrappedValue = item.localID }
     }
 
+    /// « Testé » sur un resto à tester demande d'abord s'il faut le garder en favori (P9-S).
+    private func markDone(_ item: TaskItem) {
+        if item.toSee?.kind == .restaurant { tested = item } else { store.complete(item) }
+    }
+
     @ViewBuilder private func menu(for item: TaskItem) -> some View {
         let kind = item.toSee?.kind ?? .outing
-        Button(kind.doneTitle, systemImage: "checkmark") { store.complete(item) }
+        Button(kind.doneTitle, systemImage: kind == .favorite ? "star.slash" : "checkmark") { markDone(item) }
+        if kind == .restaurant {
+            Button("Garder en favori", systemImage: "star") { store.setKind(item, .favorite) }
+        }
         if let link = ToSee.link(in: item.notes) {
             Link(destination: link) { Label("Ouvrir", systemImage: "arrow.up.right.square") }
         }
@@ -291,6 +309,9 @@ struct ToSeeListView: View {
         case .restaurant?:
             ContentUnavailableView("Aucun resto à tester", systemImage: ToSee.Kind.restaurant.symbol,
                                    description: Text("Un restaurant ou un bar repéré : touche +, puis ajoute son lieu."))
+        case .favorite?:
+            ContentUnavailableView("Aucun resto favori", systemImage: ToSee.Kind.favorite.symbol,
+                                   description: Text("Un resto testé et aimé : « Garder en favori », ou partage-le depuis Plans."))
         case .shop?:
             ContentUnavailableView("Aucun magasin", systemImage: ToSee.Kind.shop.symbol,
                                    description: Text("Une boutique où passer un jour : touche +, puis ajoute son lieu."))
@@ -456,5 +477,29 @@ struct DoneRow: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)
+    }
+}
+
+/// « Garder en favori ? » après « Testé » sur un resto à tester (P9-S) : favori (gardé sans fin) ou Fait.
+private struct KeepAsFavorite: ViewModifier {
+    @Environment(TaskStore.self) private var store
+    @Binding var item: TaskItem?
+    var onDone: () -> Void
+
+    func body(content: Content) -> some View {
+        content.confirmationDialog("Garder en favori ?", isPresented: Binding(get: { item != nil }, set: { if !$0 { item = nil } }),
+                                   titleVisibility: .visible, presenting: item) { item in
+            Button("Garder en favori") { store.setKind(item, .favorite); onDone() }
+            Button("Testé, sans plus") { store.complete(item); onDone() }
+            Button("Annuler", role: .cancel) {}
+        } message: { item in
+            Text("« \(item.title) » reste alors dans Envies › Restos favoris et sur la carte, sans fin.")
+        }
+    }
+}
+
+extension View {
+    func keepAsFavorite(_ item: Binding<TaskItem?>, onDone: @escaping () -> Void = {}) -> some View {
+        modifier(KeepAsFavorite(item: item, onDone: onDone))
     }
 }

@@ -1,7 +1,7 @@
 import Foundation
 
 /// Une envie, gardée sans échéance : une sortie « À voir » (expo, lieu, festival), un resto à tester, un magasin,
-/// un spot photo, ou quelque chose « À lire », « À écouter », « À regarder », éventuellement avec une période
+/// un resto favori (« ⭐ Favori », gardé sans fin, P9-S), un spot photo, ou quelque chose « À lire », « À écouter », « À regarder », éventuellement avec une période
 /// (« du 10/09/2026 au 31/01/2027 »). Deux lignes des notes, cachées du champ Notes : le type (« 👀 À voir »,
 /// « 🍽 À tester », « 🛍 Magasin », « 📷 Spot photo », « 📖 À lire », « 🎧 À écouter », « 🎬 À regarder »), suivi
 /// d'une note facultative (« 📷 Spot photo · au couchant »), et « 🗓 Du 10/09/2026 au 31/01/2027 »
@@ -12,7 +12,7 @@ import Foundation
 nonisolated struct ToSee: Equatable, Sendable {
     enum Kind: String, CaseIterable, Identifiable, Sendable {
         // Les envies qui se passent quelque part d'abord (carte), puis les autres.
-        case outing, event, restaurant, shop, photoSpot, read, listen, watch
+        case outing, event, restaurant, favorite, shop, photoSpot, read, listen, watch
 
         var id: Self { self }
 
@@ -21,6 +21,7 @@ nonisolated struct ToSee: Equatable, Sendable {
             case .outing: "👀 À voir"
             case .event: "🎟 Sortie"
             case .restaurant: "🍽 À tester"
+            case .favorite: "⭐ Favori"
             case .shop: "🛍 Magasin"
             case .photoSpot: "📷 Spot photo"
             case .read: "📖 À lire"
@@ -34,6 +35,7 @@ nonisolated struct ToSee: Equatable, Sendable {
             switch self {
             case .event: "Sorties"
             case .restaurant: "Restos à tester"
+            case .favorite: "Restos favoris"
             case .shop: "Magasins"
             case .photoSpot: "Spots photo"
             default: String(marker.drop { $0 != " " }.dropFirst())
@@ -46,6 +48,7 @@ nonisolated struct ToSee: Equatable, Sendable {
             case .outing: "Voir"
             case .event: "Sorties"
             case .restaurant: "Restos"
+            case .favorite: "Favoris"
             case .shop: "Magasins"
             case .photoSpot: "Spots"
             case .read: "Lire"
@@ -59,6 +62,7 @@ nonisolated struct ToSee: Equatable, Sendable {
             case .outing: "ticket"
             case .event: "theatermasks"
             case .restaurant: "fork.knife"
+            case .favorite: "star"
             case .shop: "bag"
             case .photoSpot: "camera"
             case .read: "book"
@@ -68,7 +72,13 @@ nonisolated struct ToSee: Equatable, Sendable {
         }
 
         /// Une envie qui a sa place sur la carte (avec un lieu).
-        var isPlace: Bool { [.outing, .event, .restaurant, .shop, .photoSpot].contains(self) }
+        var isPlace: Bool { [.outing, .event, .restaurant, .favorite, .shop, .photoSpot].contains(self) }
+
+        /// Un resto, à tester ou favori.
+        var isRestaurant: Bool { self == .restaurant || self == .favorite }
+
+        /// Un favori n'a pas de fin (P9-S) : ni période, ni « Testé », seulement « Retirer des favoris ».
+        var hasPeriod: Bool { self != .favorite && !isDated }
 
         /// Une sortie réservée garde l'échéance de la tâche (sa date et son heure) ; les autres envies n'en ont pas.
         var isDated: Bool { self == .event }
@@ -78,6 +88,7 @@ nonisolated struct ToSee: Equatable, Sendable {
             switch self {
             case .outing, .event, .watch, .shop: "Vu"
             case .restaurant: "Testé"
+            case .favorite: "Retirer des favoris"
             case .photoSpot: "Photographié"
             case .read: "Lu"
             case .listen: "Écouté"
@@ -90,6 +101,7 @@ nonisolated struct ToSee: Equatable, Sendable {
             case .outing, .watch, .shop: "Déjà vu"
             case .event: "Déjà vues"
             case .restaurant: "Déjà testé"
+            case .favorite: "Anciens favoris"
             case .photoSpot: "Déjà photographié"
             case .read: "Déjà lu"
             case .listen: "Déjà écouté"
@@ -102,6 +114,7 @@ nonisolated struct ToSee: Equatable, Sendable {
             case .outing: "Expo photo à la MEP"
             case .event: "Concert de Feist à l'Olympia"
             case .restaurant: "Le petit italien de la rue de Lyon"
+            case .favorite: "La cantine du marché d'Aligre"
             case .shop: "La boutique de papeterie du Marais"
             case .photoSpot: "Le pont Marie au couchant"
             case .read: "L'Anomalie, Hervé Le Tellier"
@@ -163,6 +176,14 @@ nonisolated struct ToSee: Equatable, Sendable {
                 return (range, kind)
             }
         }
+        // « Chez Gladines en favori », « aux favoris : Chez Gladines » (P9-S).
+        for pattern in [#"[\s,;:–-]*\b(?:en|aux?)\s+favoris?\s*[.!]?\s*$"#, #"^\s*(?:en|aux?)\s+favoris?\s*[:,–-]\s*"#] {
+            guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
+                  let m = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
+                  let range = Range(m.range, in: text), range.lowerBound > text.startIndex || range.upperBound < text.endIndex
+            else { continue }
+            return (range, .favorite)
+        }
         return nil
     }
 
@@ -178,7 +199,8 @@ nonisolated struct ToSee: Equatable, Sendable {
     var lines: [String] {
         let note = note?.replacingOccurrences(of: "\n", with: " ").trimmingCharacters(in: .whitespaces)
         var lines = [kind.marker + (note.map { $0.isEmpty ? "" : " · " + $0 } ?? "")]
-        switch (start, end) {
+        // Un favori n'a pas de période : celle d'un resto à tester qui devient favori tombe.
+        switch kind == .favorite ? (nil, nil) : (start, end) {
         case let (s?, e?): lines.append("\(Self.periodMarker) Du \(Self.format(s)) au \(Self.format(e))")
         case let (nil, e?): lines.append("\(Self.periodMarker) Jusqu'au \(Self.format(e))")
         case let (s?, nil): lines.append("\(Self.periodMarker) À partir du \(Self.format(s))")

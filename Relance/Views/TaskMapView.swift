@@ -281,6 +281,7 @@ extension ToSee.Kind {
         case .outing: .purple
         case .event: .pink
         case .restaurant: .orange
+        case .favorite: .yellow
         case .shop: .teal
         case .photoSpot: .indigo
         case .read, .listen, .watch: .gray

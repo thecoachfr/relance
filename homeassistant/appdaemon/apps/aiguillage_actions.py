@@ -36,7 +36,7 @@ RECETTES_PAR_DEFAUT = [
 ]
 
 LIGNES_ENVIE = {"🎬 À regarder": "regarder", "🎧 À écouter": "ecouter", "📖 À lire": "lire", "👀 À voir": "voir",
-                "🍽 À tester": "resto", "🛍 Magasin": "magasin", "📷 Spot photo": "spot_photo"}
+                "🍽 À tester": "resto", "⭐ Favori": "resto", "🛍 Magasin": "magasin", "📷 Spot photo": "spot_photo"}
 
 
 def _lignes(notes):

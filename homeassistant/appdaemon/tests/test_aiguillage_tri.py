@@ -188,6 +188,19 @@ def test_envie():
     assert nv5 is None and refus5
 
 
+def test_resto_favori():
+    # Ligne « ⭐ Favori » (P9-S) : envie resto au statut favori ; un favori n'a pas de seconde ligne d'envie.
+    nv, refus = t.appliquer({"titre": "Chez Gladines, mon resto préféré", "fait": False},
+                            ch(titre="Chez Gladines", notes_a_la_fin=["⭐️ Favori"],
+                               envie={"type": "resto", "note": None, "plateforme": None}), AUJ, NOW, TAGS)
+    assert refus == [] and nv["envie"] == {"type": "resto", "statut": "favori"}
+    assert nv["notes"].endswith("⭐ Favori")
+    nv2, refus2 = t.appliquer(nv, ch(notes_a_la_fin=["🍽 À tester"]), AUJ, NOW, TAGS)
+    assert nv2 is None and refus2
+    nv3, _ = t.appliquer({"titre": "Le Baratin", "fait": False}, ch(notes_a_la_fin=["⭐ Favori · bar"]), AUJ, NOW, TAGS)
+    assert nv3["envie"] == {"type": "resto", "statut": "favori"}
+
+
 def test_radio_et_jour_mis_par_l_app():
     # Tâche créée dans « À faire » (jour du jour mis par l'app) : devient une radio, le jour est retiré (22/10).
     v = {"titre": "Écouter radio tsugi", "fait": False, "jour": "2026-10-17"}

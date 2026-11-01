@@ -3,7 +3,8 @@
 *Plan du 01/11/2026, demandé par Alexandre. Lire d'abord `P9-00-INDEX.md` et `P9-A-lieux.md` (envies de lieu,
 carte, partage depuis Plans). Dépôt : relance (app iPhone, iPad, Mac ; consigne du tri).*
 
-**État au 01/11** : plan validé dans ses choix, rien de codé.
+**État au 01/11** : choix validés ; **S1 codé le 01/11** (voir la fin de S1), à essayer sur l'iPhone. S5 attend le
+fichier Takeout d'Alexandre.
 
 ## 1. Le besoin et les décisions d'Alexandre (01/11)
 
@@ -33,6 +34,22 @@ en Fait et sort de la carte. On veut aussi des **favoris** :
   « resto favori », « à garder » pour un lieu où manger ou boire → ligne `⭐ Favori`, `envie` {"type": "resto",
   "statut": "favori"}.
 - Le Nest Hub et l'app TV ignorent déjà les envies de lieu : rien à changer sur les trois vues du Hub (à vérifier).
+
+**Fait le 01/11** : type d'envie `ToSee.Kind.favorite` (« ⭐ Favori », titre « Restos favoris », filtre « Favoris »,
+symbole étoile, couleur jaune sur la carte, d'où un filtre « Favoris » sur la carte dès S1) ; pas de période (celle
+d'un resto à tester qui devient favori tombe) ; groupe unique « Mes favoris » trié par nom ; « Retirer des favoris »
+= Fait (section « Anciens favoris », « Remettre » possible). HA : `envie.type = resto` + `envie.statut = favori`
+(champ connu de `TacheHA.Envie`), sans statut = à tester. « Testé » (ligne, menu, fiche iPhone, Mac) sur un à
+tester demande « Garder en favori ? » (Garder en favori / Testé, sans plus / Annuler) ; menu « Garder en favori »
+direct. Phrase « … en favori » / « aux favoris : … » dans la saisie. Vigie : `⭐` reconnu comme ligne d'envie par
+le tri (`statut` ajouté), les recettes (`envie_type` = resto) et l'agenda (ligne technique). Tests :
+`EnvieFieldTests.favoriteRestaurant`, `EnviesTests.favorites`, `test_resto_favori`.
+Reste : vigie à déployer sur le NUC ; paragraphe de la règle K à mettre dans la consigne du tri (ci-dessous) ;
+notification « Testé » à l'approche d'un resto (bouton de la notification) : passe en Fait sans poser la question.
+
+Paragraphe à ajouter à la règle K de la consigne du tri : « « ⭐ Favori » pour un restaurant, un bar, un café
+qu'Alexandre aime et veut garder (« mon resto préféré », « resto favori », « en favori ») ; champ « envie » :
+{"type": "resto"} (la vigie ajoute le statut favori). Une tâche qui a déjà « ⭐ » a déjà une ligne d'envie. »
 
 ### S2 — Carte
 

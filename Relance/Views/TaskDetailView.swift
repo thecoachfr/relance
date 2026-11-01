@@ -21,6 +21,8 @@ struct TaskDetailView: View {
     /// État de la tâche au chargement : sert à ne renvoyer que ce que l'utilisateur a changé.
     @State private var base: TaskFields?
     @State private var confirmDelete = false
+    /// Resto à tester qu'on vient de marquer « Testé » : garder en favori ? (P9-S)
+    @State private var tested: TaskItem?
     @State private var searchingPlace = false
     /// Réglages rares (priorité, relances, catégorie, tags, agenda, tri) : repliés par défaut, mémorisé.
     @AppStorage("ficheOptionsOuvertes") private var showMore = false
@@ -142,6 +144,7 @@ struct TaskDetailView: View {
         }
         .quickLookPreview($apercu)
         .deleteTaskConfirmation(item, isPresented: $confirmDelete) { onClose?() }
+        .keepAsFavorite($tested) { onClose?() }
         .placeSearch(isPresented: $searchingPlace, notes: $notes)
         #if os(macOS)
         .toolbar { macActions }
@@ -192,7 +195,7 @@ struct TaskDetailView: View {
         ToolbarItemGroup {
             Button(item.isCompleted ? "Remettre à faire" : "Marquer fait",
                    systemImage: item.isCompleted ? "arrow.uturn.backward.circle" : "checkmark.circle") {
-                item.isCompleted ? store.reopen(item) : store.complete(item)
+                if !askFavorite() { item.isCompleted ? store.reopen(item) : store.complete(item) }
             }
             .help(item.isCompleted ? "Remettre à faire (⌘↩)" : "Marquer fait (⌘↩)")
             if !item.isCompleted {
@@ -216,6 +219,7 @@ struct TaskDetailView: View {
     @ToolbarContentBuilder private var bottomBar: some ToolbarContent {
         ToolbarItemGroup(placement: .bottomBar) {
             Button {
+                guard !askFavorite() else { return }
                 item.isCompleted ? store.reopen(item) : store.complete(item)
                 onClose?()
             } label: {
@@ -333,6 +337,14 @@ struct TaskDetailView: View {
     private var hasPendingEdits: Bool {
         guard let base else { return false }
         return entered.merged(base: base, current: base) != base
+    }
+
+    /// « Fait » sur un resto à tester : on enregistre, puis on demande s'il faut le garder en favori (P9-S).
+    private func askFavorite() -> Bool {
+        guard !item.isCompleted, ToSee(notes: notes)?.kind == .restaurant else { return false }
+        save()
+        tested = item
+        return true
     }
 
     private func save() {

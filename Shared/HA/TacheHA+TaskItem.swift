@@ -41,7 +41,7 @@ extension TacheHA {
         item.notes = lieu.map { TaskContact.notes(notes, setting: $0.contact) } ?? notes
         item.placeRaw = lieu.flatMap { try? JSONEncoder().encode($0) }.map { String(decoding: $0, as: UTF8.self) }
         // L'envie fait foi aussi : sa ligne de type (avec la note) est réécrite d'après elle ; la période 🗓 reste.
-        if let envie, let kind = ToSee.Kind(haType: envie.type) {
+        if let envie, let kind = ToSee.Kind(haType: envie.type, statut: envie.statut) {
             var toSee = ToSee(notes: item.notes) ?? ToSee(kind)
             toSee.kind = kind
             toSee.note = envie.note
@@ -130,7 +130,7 @@ nonisolated extension ToSee.Kind {
         switch self {
         case .outing: "voir"
         case .event: "sortie"
-        case .restaurant: "resto"
+        case .restaurant, .favorite: "resto"
         case .shop: "magasin"
         case .photoSpot: "spot_photo"
         case .read: "lire"
@@ -139,9 +139,10 @@ nonisolated extension ToSee.Kind {
         }
     }
 
-    init?(haType: String) {
+    /// Un favori est un `resto` au `statut` `favori` (P9-S) : la vigie, les recettes et le tri le voient en resto.
+    init?(haType: String, statut: String? = nil) {
         guard let kind = Self.allCases.first(where: { $0.haType == haType }) else { return nil }
-        self = kind
+        self = kind == .restaurant && statut == "favori" ? .favorite : kind
     }
 }
 
@@ -175,6 +176,7 @@ extension TaskItem {
     func envie() -> TacheHA.Envie? {
         guard let toSee = ToSee(notes: notes) else { return nil }
         var envie = TacheHA.Envie(type: toSee.kind.haType, note: toSee.note)
+        envie.statut = toSee.kind == .favorite ? "favori" : nil
         if let previous = envieRaw.flatMap({ try? JSONDecoder().decode(TacheHA.Envie.self, from: Data($0.utf8)) }),
            previous.type == envie.type {
             (envie.plateforme, envie.idTitre, envie.lien, envie.autres)

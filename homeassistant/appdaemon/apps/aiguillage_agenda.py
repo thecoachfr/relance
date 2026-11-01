@@ -15,7 +15,7 @@ NOM = "Sorties"
 DUREE_DEFAUT = 180  # minutes : un concert, un spectacle
 SORTIE = "\U0001F39F"
 # Lignes techniques des notes (lieu, type d'envie, pièces, dictée…), retirées de la description.
-TECHNIQUES = ("📍", "🎟", "👀", "🍽", "🛍", "📷", "📖", "🎧", "🎬", "🗓", "🔄", "🔔", "🔕", "📅", "📎", "🎙", "📩",
+TECHNIQUES = ("📍", "🎟", "👀", "🍽", "⭐", "🛍", "📷", "📖", "🎧", "🎬", "🗓", "🔄", "🔔", "🔕", "📅", "📎", "🎙", "📩",
               "➕", "💡", "🛒", "🍳", "💶", "↪", "🎒", "📣")
 _CLE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.I)
 

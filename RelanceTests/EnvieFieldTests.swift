@@ -52,7 +52,7 @@ struct EnvieFieldTests {
         let toSee = try #require(ToSee(notes: item.notes))
         #expect(toSee.kind == .photoSpot && toSee.note == "au couchant" && toSee.end != nil)
         #expect(!item.notes.contains("👀"))
-        #expect(ToSee.Kind.allCases.allSatisfy { ToSee.Kind(haType: $0.haType) == $0 })
+        #expect(ToSee.Kind.allCases.allSatisfy { ToSee.Kind(haType: $0.haType, statut: $0 == .favorite ? "favori" : nil) == $0 })
     }
 
     @Test func platformsFromLinks() {
@@ -157,5 +157,22 @@ struct SubscriptionsTests {
         #expect(Subscriptions.included(in: availability, mine: ["apple_tv"]).isEmpty)
         #expect(Subscriptions.included(in: availability, mine: []).isEmpty)
         #expect(Subscriptions.haKey.contains(":") && UUID(uuidString: Subscriptions.haKey) == nil)
+    }
+
+    /// Resto favori (P9-S) : `resto` au statut `favori` dans HA, ligne « ⭐ Favori » dans l'app, et retour.
+    @Test func favoriteRestaurant() throws {
+        let item = TaskItem(title: "Chez Gladines", notes: ToSee(.favorite).lines.joined(separator: "\n"))
+        let envie = try #require(TacheHA(item).envie)
+        #expect(envie.type == "resto" && envie.statut == "favori")
+        let json = String(decoding: try JSONEncoder().encode(TacheHA(item)), as: UTF8.self)
+        #expect(json.contains(#""statut":"favori""#))
+        // Reçu de HA : la ligne suit le statut ; sans statut, c'est un resto à tester.
+        let other = TaskItem(title: "")
+        try JSONDecoder().decode(TacheHA.self, from: Data(#"{"titre":"Le Baratin","notes":"🍽 À tester · restaurant","envie":{"type":"resto","note":"restaurant","statut":"favori"}}"#.utf8))
+            .apply(to: other)
+        #expect(other.toSee?.kind == .favorite && other.notes == "⭐ Favori · restaurant")
+        try JSONDecoder().decode(TacheHA.self, from: Data(#"{"titre":"Le Baratin","notes":"⭐ Favori","envie":{"type":"resto"}}"#.utf8)).apply(to: other)
+        #expect(other.toSee?.kind == .restaurant)
+        #expect(TacheHA(TaskItem(title: "x", notes: "🍽 À tester")).envie?.statut == nil)
     }
 }

@@ -32,6 +32,8 @@ nonisolated struct TacheHA: Codable, Equatable, Sendable {
         var plateforme: String?
         var idTitre: String?
         var lien: String?
+        /// `favori` pour un resto favori (P9-S) ; absent = à tester.
+        var statut: String?
         /// Champs écrits par d'autres (vigie, routine), recopiés sans y toucher.
         var autres: [String: JSONValeur] = [:]
 
@@ -47,7 +49,7 @@ nonisolated struct TacheHA: Codable, Equatable, Sendable {
             init?(intValue: Int) { nil }
         }
 
-        private static let known = ["type", "note", "plateforme", "id_titre", "lien"]
+        private static let known = ["type", "note", "plateforme", "id_titre", "lien", "statut"]
 
         init(from decoder: Decoder) throws {
             let c = try decoder.container(keyedBy: Key.self)
@@ -56,6 +58,7 @@ nonisolated struct TacheHA: Codable, Equatable, Sendable {
             plateforme = try c.decodeIfPresent(String.self, forKey: Key("plateforme"))
             idTitre = try c.decodeIfPresent(String.self, forKey: Key("id_titre"))
             lien = try c.decodeIfPresent(String.self, forKey: Key("lien"))
+            statut = try c.decodeIfPresent(String.self, forKey: Key("statut"))
             for key in c.allKeys where !Self.known.contains(key.stringValue) {
                 autres[key.stringValue] = try c.decode(JSONValeur.self, forKey: key)
             }
@@ -68,6 +71,7 @@ nonisolated struct TacheHA: Codable, Equatable, Sendable {
             try c.encodeIfPresent(plateforme, forKey: Key("plateforme"))
             try c.encodeIfPresent(idTitre, forKey: Key("id_titre"))
             try c.encodeIfPresent(lien, forKey: Key("lien"))
+            try c.encodeIfPresent(statut, forKey: Key("statut"))
             for (key, value) in autres where !Self.known.contains(key) { try c.encode(value, forKey: Key(key)) }
         }
     }
