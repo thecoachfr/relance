@@ -57,6 +57,8 @@ struct MainTabs: View {
         // `-fiche <début du titre>` au lancement : la fiche de cette tâche ouverte d'emblée (captures d'écran).
         .task {
             // Grand écran : la tâche s'ouvre dans la colonne de droite d'À faire (voir `TodoView`), pas en feuille.
+            // `-resto 1` : « Un resto près de… » ouvert d'emblée (P9-S4, captures).
+            if UserDefaults.standard.bool(forKey: "resto") { store.restoDemande = true }
             if UIDevice.current.userInterfaceIdiom == .phone, let titre = UserDefaults.standard.string(forKey: "fiche") {
                 store.openedTaskID = active.first { $0.title.hasPrefix(titre) }?.localID
             }
@@ -70,5 +72,6 @@ struct MainTabs: View {
         }
         // Lien `relance://memo/<id>` (28/10) : la fiche du mémo en feuille.
         .memoDemandeSheet(store)
+        .restoDemandeSheet(store)
     }
 }

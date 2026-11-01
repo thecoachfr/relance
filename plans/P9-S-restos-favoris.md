@@ -107,6 +107,17 @@ source `google`), ligne 📍 avec lien Plans, sorte de lieu et ligne « Liste Go
 9 h 18 sans rien changer. Pas de doublon avec les envies resto existantes. L'écran d'import dans l'app (S5
 ci-dessus) reste à faire si d'autres listes (Amiens, Chartres) doivent suivre.
 
+**Fait le 01/11 (S4)** : écran « Un resto près de… » (`RestoSuggestionView`, iPhone, iPad, Mac), ouvert par le
+bouton de la barre d'Envies (filtres Restos et Favoris), le bouton rond de la carte (sous Mes trajets), Siri (« Un
+resto près de moi dans Aiguillage », « Où manger avec Aiguillage », `RestoNearbyIntent`) et le lien `relance://resto`.
+Point de départ : ma position (une fois, 10 s au plus ; sur Mac, le domicile de Mes lieux) ou un lieu choisi
+(recherche de lieu existante). Mes restos : favoris puis à tester, du plus proche au plus loin, rayon 1 km élargi à
+3 puis 10 km s'il y en a moins de trois (`RestoSuggestions`, testé) ; toucher = fiche, bouton Itinéraire. Puis
+« Autour, d'après Plans » : restaurants, cafés, boulangeries, bars et brasseries à 2 km (20 au plus, sans ceux que
+j'ai déjà, même à l'écriture près), « Garder » → À tester ou Favori (lieu avec point exact et sorte de lieu) ou
+Itinéraire. Pas d'horaires d'ouverture. Vu dans le simulateur (démo, position Bastille, argument `-resto 1`).
+Constat : Plans range aussi des visites guidées en « bar » (« Paris Bar Crawl »).
+
 ## 3. Ordre et essais
 
 S1 → S5 → S2 → S4 → S3 (S3 dépend des droits du Mac, le plus incertain). Tests unitaires du modèle (lecture et écriture

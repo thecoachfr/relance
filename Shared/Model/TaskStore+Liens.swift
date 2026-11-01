@@ -11,6 +11,8 @@ extension TaskStore {
         switch lien {
         case .nouvelle:
             showQuickAdd = true
+        case .resto:
+            restoDemande = true
         case .memo(let id):
             memoDemande = id
         case .tache(let cle):

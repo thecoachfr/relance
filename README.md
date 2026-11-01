@@ -97,6 +97,7 @@ Aiguillage au bon endroit :
 | `relance://tache/<clé>` | La fiche de la tâche (iPhone, iPad : en feuille ; Mac : sélectionnée dans sa liste, détail à droite). `<clé>` = clé de la tâche dans Home Assistant (UUID en minuscules, espace `aiguillage` de `donnees_apps`), ou identifiant Google Tasks en mode Google. Tâche pas encore arrivée : synchro, puis ouverture. |
 | `relance://memo/<id>` | La fiche du mémo pour le tri, en feuille (modifiable). `<id>` = `uid` de l'élément de `todo.aiguillage_memo` (mode HA) ou identifiant Google (liste « Relance · mémo ») ; à défaut, le sujet de la fiche (`relance://memo/Dentiste`, sans tenir compte des majuscules ni des accents). Identifiant encodé pour l'URL (`%20`…). |
 | `relance://nouvelle` | La saisie rapide. |
+| `relance://resto` | « Un resto près de… » : mes restos favoris puis à tester autour de ma position, puis ceux de Plans (P9-S4). |
 
 Code : `Shared/Model/LienAiguillage.swift` (lecture et fabrication des liens, testé dans `ResteN2Tests`),
 `Shared/Model/TaskStore+Liens.swift` (ouverture). La montre garde ses propres liens (`relance://add`, `relance://list`).
@@ -119,7 +120,7 @@ Code : `Shared/Model/LienAiguillage.swift` (lecture et fabrication des liens, te
 | `RelanceWatch/`, `RelanceWatchWidgets/` | App et complications Apple Watch | ; écran Diagnostic de la montre (`WatchDiagnostic.swift`) |
 | `homeassistant/` | Vigie AppDaemon (phase 3) : push, tri, boîte d'entrée Google → Home Assistant |
 | `RelanceTests/` | Tests (Swift Testing) |
-| `RelanceCaptures/` | Captures d'écran pour les revues d'ergonomie (28/10) : test d'interface en mode démo qui ouvre les Réglages, les pages Relances et Envies et des fiches, fait défiler et écrit les PNG dans `/tmp/captures-relance`. Schéma à part, jamais lancé avant un envoi : `xcodebuild -scheme RelanceCaptures -destination 'platform=iOS Simulator,name=iPhone 17 Pro Max' test`. Arguments de lancement (debug) : `-reglages 1`, `-sousreglage relances\|envies`, `-fiche <début du titre>`, `-onboardingDone YES` |
+| `RelanceCaptures/` | Captures d'écran pour les revues d'ergonomie (28/10) : test d'interface en mode démo qui ouvre les Réglages, les pages Relances et Envies et des fiches, fait défiler et écrit les PNG dans `/tmp/captures-relance`. Schéma à part, jamais lancé avant un envoi : `xcodebuild -scheme RelanceCaptures -destination 'platform=iOS Simulator,name=iPhone 17 Pro Max' test`. Arguments de lancement (debug) : `-reglages 1`, `-sousreglage relances\|envies`, `-fiche <début du titre>`, `-resto 1` (« Un resto près de… »), `-onboardingDone YES` |
 
 ## Vigie Home Assistant (phase 3)
 

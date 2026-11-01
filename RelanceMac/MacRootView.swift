@@ -102,6 +102,7 @@ struct MacMainView: View {
         .onChange(of: section) { selectedID = nil }
         // Lien `relance://memo/<id>` (28/10) : la fiche du mémo en feuille.
         .memoDemandeSheet(store)
+        .restoDemandeSheet(store)
         // Clic sur une notification ou sur une tâche de la barre des menus.
         .onChange(of: store.openedTaskID, initial: true) { _, id in
             guard let id, let item = store.task(id) else { return }

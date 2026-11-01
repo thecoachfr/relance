@@ -295,6 +295,17 @@ struct TaskMapView: View {
                     .padding(.top, 64)
             }
         }
+        // « Un resto près de… » (P9-S4) : sous Mes trajets (ou sous le « + » sans Home Assistant).
+        .overlay(alignment: .topTrailing) {
+            Button("Un resto près de…", systemImage: "fork.knife") { store.restoDemande = true }
+                .labelStyle(.iconOnly)
+                .font(.title3.weight(.semibold))
+                .frame(width: 48, height: 48)
+                .background(.regularMaterial, in: .circle)
+                .shadow(radius: 3, y: 1)
+                .padding(.trailing, 16)
+                .padding(.top, HAConfig.isConfigured ? 120 : 64)
+        }
         .sheet(isPresented: $trajets) {
             NavigationStack {
                 TrajetsCarteView()

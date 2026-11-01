@@ -28,6 +28,16 @@ struct RelanceShortcuts: AppShortcutsProvider {
             shortTitle: "Ajouter au mémo",
             systemImageName: "text.book.closed")
         AppShortcut(
+            intent: RestoNearbyIntent(),
+            phrases: [
+                "Un resto près de moi dans \(.applicationName)",
+                "Trouve un resto avec \(.applicationName)",
+                "Où manger avec \(.applicationName)",
+                "\(.applicationName) resto",
+            ],
+            shortTitle: "Un resto près de moi",
+            systemImageName: "fork.knife")
+        AppShortcut(
             intent: CompleteTaskByNameIntent(),
             phrases: [
                 "Marque \(\.$task) comme fait dans \(.applicationName)",

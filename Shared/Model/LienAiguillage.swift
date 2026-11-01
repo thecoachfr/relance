@@ -4,10 +4,12 @@ import Foundation
 /// - `relance://tache/<clé>` : la fiche d'une tâche. Clé = celle de la tâche dans Home Assistant (UUID en minuscules,
 ///   espace `aiguillage` de `donnees_apps`), ou son identifiant Google Tasks en mode Google ;
 /// - `relance://memo/<id>` : une fiche du mémo pour le tri (identifiant de l'élément de la liste) ;
-/// - `relance://nouvelle` : la saisie rapide (déjà utilisé par la commande du Centre de contrôle).
+/// - `relance://nouvelle` : la saisie rapide (déjà utilisé par la commande du Centre de contrôle) ;
+/// - `relance://resto` : « Un resto près de… » (P9-S4, 01/11/2026).
 /// Documenté dans le README (section « Liens »). Code pur, testé (`LienAiguillageTests`).
 nonisolated enum LienAiguillage: Equatable, Sendable {
     case nouvelle
+    case resto
     case tache(String)
     case memo(String)
 
@@ -20,6 +22,7 @@ nonisolated enum LienAiguillage: Equatable, Sendable {
             .removingPercentEncoding?.trimmingCharacters(in: .whitespaces) ?? ""
         switch hote {
         case "nouvelle": self = .nouvelle
+        case "resto": self = .resto
         case "tache" where !morceau.isEmpty: self = .tache(morceau)
         case "memo" where !morceau.isEmpty: self = .memo(morceau)
         default: return nil
@@ -33,6 +36,7 @@ nonisolated enum LienAiguillage: Equatable, Sendable {
         }
         switch self {
         case .nouvelle: return URL(string: "\(Self.schema)://nouvelle")!
+        case .resto: return URL(string: "\(Self.schema)://resto")!
         case .tache(let cle): return URL(string: "\(Self.schema)://tache/\(encode(cle))")!
         case .memo(let id): return URL(string: "\(Self.schema)://memo/\(encode(id))")!
         }

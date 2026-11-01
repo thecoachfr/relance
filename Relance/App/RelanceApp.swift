@@ -35,6 +35,10 @@ struct RelanceApp: App {
                     AppGroup.defaults.removeObject(forKey: NewTaskIntent.pendingKey)
                     delegate.store.showQuickAdd = true
                 }
+                if AppGroup.defaults.bool(forKey: RestoNearbyIntent.pendingKey) {
+                    AppGroup.defaults.removeObject(forKey: RestoNearbyIntent.pendingKey)
+                    delegate.store.restoDemande = true
+                }
                 SyncLog.add("Ouverture de l'app")
                 Task { await delegate.store.sync() }
             case .background: Self.scheduleRefresh()

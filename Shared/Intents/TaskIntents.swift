@@ -139,6 +139,20 @@ struct OverdueTasksIntent: AppIntent {
 /// Commande « Nouvelle tâche » (Centre de contrôle, bouton Action, écran verrouillé).
 /// L'intent peut s'exécuter dans l'extension : il ne touche pas au magasin, il laisse une marque
 /// dans l'App Group que l'app lit en passant au premier plan.
+/// « Un resto près de moi » (P9-S4) : ouvre Aiguillage sur les restos autour de ma position.
+struct RestoNearbyIntent: AppIntent {
+    static let title: LocalizedStringResource = "Un resto près de moi"
+    static let description = IntentDescription("Ouvre Aiguillage sur tes restos favoris et à tester autour de toi.")
+    static let openAppWhenRun = true
+
+    static let pendingKey = "pendingResto"
+
+    func perform() async throws -> some IntentResult {
+        AppGroup.defaults.set(true, forKey: Self.pendingKey)
+        return .result()
+    }
+}
+
 struct NewTaskIntent: AppIntent {
     static let title: LocalizedStringResource = "Nouvelle tâche"
     static let description = IntentDescription("Ouvre Aiguillage sur la saisie d'une nouvelle tâche.")

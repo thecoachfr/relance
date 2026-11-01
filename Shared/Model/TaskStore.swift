@@ -19,6 +19,8 @@ final class TaskStore {
     var openedTaskID: UUID?
     /// Fiche du mémo à ouvrir (lien `relance://memo/<id>`, 28/10/2026).
     var memoDemande: String?
+    /// « Un resto près de… » demandé par Siri ou le lien `relance://resto` (P9-S4).
+    var restoDemande = false
     /// Ouvre la saisie rapide (commande du Centre de contrôle).
     var showQuickAdd = false
     /// Appelé après chaque changement des tâches (activité en direct, côté app).

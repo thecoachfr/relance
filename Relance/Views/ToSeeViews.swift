@@ -253,6 +253,14 @@ struct ToSeeListView: View {
         #endif
         .sheet(item: $editing) { TaskEditor(item: $0) }
         .keepAsFavorite($tested)
+        // « Un resto près de… » (P9-S4) : sous Restos ou Favoris.
+        .toolbar {
+            if filter?.isRestaurant == true {
+                ToolbarItem(placement: .primaryAction) {
+                    Button("Un resto près de…", systemImage: "location.magnifyingglass") { store.restoDemande = true }
+                }
+            }
+        }
         #if os(iOS)
         // Sur Mac, le « + » de la colonne suit déjà la section.
         .toolbar { AddTaskToolbarButton(context: .toSee(filter ?? .outing), isPresented: $adding) }
