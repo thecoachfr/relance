@@ -60,8 +60,18 @@ en Fait et sort de la carte. On veut aussi des **favoris** :
   « Favori » en un geste.
 - Pas d'horaires d'ouverture au départ (**à vérifier** ce que MapKit donne en France).
 
+### S5 — Import de la liste Google Maps « Restaurant » (demande du 01/11)
+
+- Google n'ouvre pas ses listes enregistrées aux autres apps : import **ponctuel** par Google Takeout
+  (« Enregistrés » / Saved : un CSV par liste, nom, note, lien Google Maps ; **colonnes et forme des liens à
+  vérifier sur le vrai fichier d'Alexandre**). Pas de synchro : réimporter (doublons sautés) ou partager un par un.
+- Fichier partagé à Aiguillage (iPhone, iPad) ou ouvert dans l'app Mac ; chaque ligne est cherchée dans Plans
+  (même voie que le partage d'un lien Google, sans coordonnées) : adresse, point, sorte de lieu.
+- Écran de revue (choix d'Alexandre, 01/11) : tout en **Favori** par défaut, « À tester » à cocher ligne par
+  ligne ; doublons avec les envies existantes repérés, lieux non trouvés signalés ; la note Google va dans les notes.
+
 ## 3. Ordre et essais
 
-S1 → S2 → S4 → S3 (S3 dépend des droits du Mac, le plus incertain). Tests unitaires du modèle (lecture et écriture
+S1 → S5 → S2 → S4 → S3 (S3 dépend des droits du Mac, le plus incertain). Tests unitaires du modèle (lecture et écriture
 de `statut`, ligne `⭐`, compatibilité des envies existantes) ; essais réels par Alexandre : un favori ajouté depuis
 Plans, filtre de la carte, suggestion dans la rue, note Apple après un ajout.
