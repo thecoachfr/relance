@@ -57,6 +57,12 @@ qu'Alexandre aime et veut garder (« mon resto préféré », « resto favori »
 - Filtre Resto en deux niveaux : Tous / À tester / Favoris (iPhone, iPad, Mac). Le garde-fou actuel (filtre qui ne
   correspond plus à rien) reste.
 
+**Fait le 01/11 (S2)** : sur la carte, une seule pastille « Restos » (à tester et favoris ensemble) ; quand elle
+est choisie et qu'il y a des deux, seconde rangée Tous / À tester / Favoris (filtre gardé, `mapFilter` = `restos`,
+`restaurant` ou `favorite`). Épingle d'un favori : étoile pleine (`star.fill`) sur fond ambre (le jaune rendait
+l'étoile blanche illisible). Que des restos sur la carte : pas de pastilles (une seule sorte de lieu). Test
+`EnviesTests.mapRestoFilter`. L'onglet Envies garde deux pastilles séparées (Restos, Favoris).
+
 ### S3 — Note Apple « 🍽 Restaurants favoris » (app Mac)
 
 - L'app Mac réécrit une seule note quand la liste des favoris change (et au lancement) : une rubrique par ville

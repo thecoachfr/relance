@@ -29,31 +29,64 @@ struct TaskMapView: View {
     private var locator: PlaceLocator { .shared }
 
     private static let tasksFilter = "taches"
+    /// Tous les restos, à tester et favoris (P9-S2) ; « À tester » et « Favoris » ont l'identifiant de leur type.
+    static let restosFilter = "restos"
 
     /// Type d'envie montré sur la carte avec son épingle propre (`nil` = tâche ordinaire).
     static func placeKind(_ item: TaskItem) -> ToSee.Kind? {
         item.toSee.map(\.kind).flatMap { $0.isPlace ? $0 : nil }
     }
 
-    /// Pastilles : Tout, Tâches, puis les types d'envie présents ; rien s'il n'y a qu'une sorte de lieu.
-    private var filterOptions: [FilterChips.Option] {
-        let kinds = Set(allPlaced.map { Self.placeKind($0.item) })
-        guard kinds.count > 1 else { return [] }
+    /// Pastilles : Tout, Tâches, puis les types d'envie présents (une seule « Restos » pour les à tester et les
+    /// favoris) ; rien s'il n'y a qu'une sorte de lieu.
+    static func filterOptions(kinds: Set<ToSee.Kind?>) -> [FilterChips.Option] {
+        let sorts = Set(kinds.map { $0?.isRestaurant == true ? .restaurant : $0 })
+        guard sorts.count > 1 else { return [] }
         var options = [FilterChips.Option(id: "", title: "Tout", symbol: nil)]
-        if kinds.contains(nil) { options.append(.init(id: Self.tasksFilter, title: "Tâches", symbol: "checklist")) }
-        for kind in ToSee.Kind.allCases where kinds.contains(kind) {
-            options.append(.init(id: kind.rawValue, title: kind == .outing ? "À voir" : kind.shortTitle, symbol: kind.symbol))
+        if kinds.contains(nil) { options.append(.init(id: tasksFilter, title: "Tâches", symbol: "checklist")) }
+        for kind in ToSee.Kind.allCases where sorts.contains(kind) {
+            options.append(kind == .restaurant
+                ? .init(id: restosFilter, title: "Restos", symbol: kind.symbol)
+                : .init(id: kind.rawValue, title: kind == .outing ? "À voir" : kind.shortTitle, symbol: kind.symbol))
         }
         return options
     }
 
-    private var placed: [Entry] {
-        // Un filtre qui ne correspond plus à rien (dernier resto testé) ne doit pas vider la carte.
-        guard !filterRaw.isEmpty, filterOptions.contains(where: { $0.id == filterRaw }) else { return allPlaced }
-        return allPlaced.filter { entry in
-            let kind = Self.placeKind(entry.item)
-            return filterRaw == Self.tasksFilter ? kind == nil : kind?.rawValue == filterRaw
+    /// Seconde rangée sous « Restos » : Tous, À tester, Favoris, quand il y a des deux.
+    static func restoOptions(kinds: Set<ToSee.Kind?>) -> [FilterChips.Option] {
+        guard kinds.contains(.restaurant), kinds.contains(.favorite) else { return [] }
+        return [.init(id: restosFilter, title: "Tous", symbol: nil),
+                .init(id: ToSee.Kind.restaurant.rawValue, title: "À tester", symbol: ToSee.Kind.restaurant.symbol),
+                .init(id: ToSee.Kind.favorite.rawValue, title: "Favoris", symbol: ToSee.Kind.favorite.symbol)]
+    }
+
+    /// Le filtre est-il un des filtres de restos (tous, à tester, favoris) ?
+    static func isRestoFilter(_ id: String) -> Bool {
+        [restosFilter, ToSee.Kind.restaurant.rawValue, ToSee.Kind.favorite.rawValue].contains(id)
+    }
+
+    /// Le lieu passe-t-il le filtre ? Un filtre qui ne correspond plus à rien (dernier resto testé) montre tout.
+    static func matches(_ kind: ToSee.Kind?, filter: String, valid: Bool) -> Bool {
+        guard !filter.isEmpty, valid else { return true }
+        switch filter {
+        case tasksFilter: return kind == nil
+        case restosFilter: return kind?.isRestaurant == true
+        default: return kind?.rawValue == filter
         }
+    }
+
+    private var placedKinds: Set<ToSee.Kind?> { Set(allPlaced.map { Self.placeKind($0.item) }) }
+    private var filterOptions: [FilterChips.Option] { Self.filterOptions(kinds: placedKinds) }
+    private var restoOptions: [FilterChips.Option] { Self.restoOptions(kinds: placedKinds) }
+
+    /// La rangée principale garde « Restos » choisi quand on est sur « À tester » ou « Favoris ».
+    private var mainFilter: Binding<String> {
+        Binding(get: { Self.isRestoFilter(filterRaw) ? Self.restosFilter : filterRaw }, set: { filterRaw = $0 })
+    }
+
+    private var placed: [Entry] {
+        let valid = (filterOptions + restoOptions).contains { $0.id == filterRaw }
+        return allPlaced.filter { Self.matches(Self.placeKind($0.item), filter: filterRaw, valid: valid) }
     }
 
     private var allPlaced: [Entry] {
@@ -188,14 +221,19 @@ struct TaskMapView: View {
         }
         .safeAreaInset(edge: .top) {
             if !filterOptions.isEmpty {
-                FilterChips(selection: $filterRaw, options: filterOptions, overMap: true)
-                    .contentMargins(.horizontal, 16, for: .scrollContent)
-                    #if os(iOS)
-                    // Place laissée aux boutons flottants (Réglages à gauche, « + » à droite).
-                    .padding(.leading, 64)
-                    .padding(.trailing, 64)
-                    #endif
-                    .shadow(color: .black.opacity(0.12), radius: 3, y: 1)
+                VStack(spacing: 6) {
+                    FilterChips(selection: mainFilter, options: filterOptions, overMap: true)
+                    if Self.isRestoFilter(filterRaw), !restoOptions.isEmpty {
+                        FilterChips(selection: $filterRaw, options: restoOptions, overMap: true)
+                    }
+                }
+                .contentMargins(.horizontal, 16, for: .scrollContent)
+                #if os(iOS)
+                // Place laissée aux boutons flottants (Réglages à gauche, « + » à droite).
+                .padding(.leading, 64)
+                .padding(.trailing, 64)
+                #endif
+                .shadow(color: .black.opacity(0.12), radius: 3, y: 1)
             }
         }
         .safeAreaInset(edge: .bottom) {
@@ -281,7 +319,8 @@ extension ToSee.Kind {
         case .outing: .purple
         case .event: .pink
         case .restaurant: .orange
-        case .favorite: .yellow
+        // Ambre plutôt que jaune : l'étoile blanche reste lisible.
+        case .favorite: Color(red: 0.85, green: 0.6, blue: 0.05)
         case .shop: .teal
         case .photoSpot: .indigo
         case .read, .listen, .watch: .gray

@@ -62,7 +62,7 @@ nonisolated struct ToSee: Equatable, Sendable {
             case .outing: "ticket"
             case .event: "theatermasks"
             case .restaurant: "fork.knife"
-            case .favorite: "star"
+            case .favorite: "star.fill"
             case .shop: "bag"
             case .photoSpot: "camera"
             case .read: "book"

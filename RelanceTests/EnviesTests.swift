@@ -116,4 +116,20 @@ struct EnviesTests {
         let found = ToSee.kind(in: text)
         #expect(found?.kind == .favorite && found.map { String(text[..<$0.range.lowerBound]) } == "Chez Gladines")
     }
+
+    /// Carte (P9-S2) : une pastille « Restos » pour les à tester et les favoris, puis Tous / À tester / Favoris.
+    @Test func mapRestoFilter() {
+        let both: Set<ToSee.Kind?> = [nil, .restaurant, .favorite]
+        #expect(TaskMapView.filterOptions(kinds: both).map(\.id) == ["", "taches", "restos"])
+        #expect(TaskMapView.restoOptions(kinds: both).map(\.title) == ["Tous", "À tester", "Favoris"])
+        // Que des restos : à tester et favoris ne font qu'une sorte de lieu, pas de pastilles en haut.
+        #expect(TaskMapView.filterOptions(kinds: [.restaurant, .favorite]).isEmpty)
+        #expect(TaskMapView.restoOptions(kinds: [nil, .restaurant]).isEmpty)
+        #expect(TaskMapView.matches(.favorite, filter: "restos", valid: true))
+        #expect(TaskMapView.matches(.restaurant, filter: "restos", valid: true))
+        #expect(!TaskMapView.matches(.restaurant, filter: "favorite", valid: true))
+        #expect(!TaskMapView.matches(nil, filter: "restos", valid: true))
+        #expect(TaskMapView.matches(nil, filter: "favorite", valid: false))
+        #expect(TaskMapView.isRestoFilter("restaurant") && !TaskMapView.isRestoFilter("shop"))
+    }
 }
