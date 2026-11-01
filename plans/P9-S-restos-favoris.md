@@ -87,6 +87,20 @@ qu'Alexandre aime et veut garder (« mon resto préféré », « resto favori »
 - Écran de revue (choix d'Alexandre, 01/11) : tout en **Favori** par défaut, « À tester » à cocher ligne par
   ligne ; doublons avec les envies existantes repérés, lieux non trouvés signalés ; la note Google va dans les notes.
 
+**Import ponctuel fait le 01/11 à 9 h 16 (Claude Code, sans écran d'import)**. Fichiers reçus : un CSV par liste
+(`Bars.csv`, `Restaurants.csv`), colonnes `Titre, Note, URL, Tags, Commentaire`, une 2ᵉ ligne vide, Note et
+Commentaire vides ; URL `https://www.google.com/maps/place/<nom>/data=!4m2!3m1!1s0x<hex>:0x<hex>`, **sans adresse
+ni coordonnées**. Constat : le premier nombre hexadécimal, lu comme une cellule S2, donne un point **approché**
+(souvent à quelques mètres, parfois à 4-8 km) : assez pour chercher le nom dans Plans (`MKLocalSearch`, rayon
+15 km) ; nom coupé avant « - » si rien n'est trouvé. Sur 43 lieux (Paris, Amiens, Chartres, Rouen) : 37 trouvés
+avec le bon nom, 2 introuvables avant la coupe du nom, quelques homonymes douteux (« La Fabrique » : cookies,
+écartée). Choix d'Alexandre : **Paris et proche banlieue seulement** (16 lieux, La Fabrique oubliée), 5 favoris
+(Presto Fresco, Beyit Jedo, Butte aux Thaï, Takesan Donabe Ramen, Chez Miki), 11 à tester. Écrits par
+`donnees_apps.lot` (`modifie_par: claude-import-google-maps`), avec lieu (adresse, téléphone, point, lien Google,
+source `google`), ligne 📍 avec lien Plans, sorte de lieu et ligne « Liste Google Maps « … » » ; tri passé à
+9 h 18 sans rien changer. Pas de doublon avec les envies resto existantes. L'écran d'import dans l'app (S5
+ci-dessus) reste à faire si d'autres listes (Amiens, Chartres) doivent suivre.
+
 ## 3. Ordre et essais
 
 S1 → S5 → S2 → S4 → S3 (S3 dépend des droits du Mac, le plus incertain). Tests unitaires du modèle (lecture et écriture
