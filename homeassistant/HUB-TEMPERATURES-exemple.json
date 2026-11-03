@@ -1,0 +1,28 @@
+{
+  "state": "9",
+  "attributes": {
+    "maj": "2026-11-03T17:00:00+01:00",
+    "fenetre_min": 60,
+    "seuil": 0.3,
+    "pieces": {
+      "salon": {"tendance": "monte", "ecart_1h": 0.5, "sondes": [
+        {"nom": "Netatmo", "entite": "sensor.salon_temperature", "temperature": 19.0, "ecart_1h": 0.5, "tendance": "monte"},
+        {"nom": "Thermomètre", "entite": "sensor.thermometree_salon_temperature", "temperature": 18.3, "ecart_1h": 0.1, "tendance": "stable"}]},
+      "chambre": {"tendance": "stable", "ecart_1h": 0.0, "sondes": [
+        {"nom": "Netatmo", "entite": "sensor.chambre_temperature", "temperature": 18.9, "ecart_1h": 0.0, "tendance": "stable"},
+        {"nom": "Thermomètre", "entite": "sensor.thermometre_chambre_temperature", "temperature": 18.2, "ecart_1h": -0.1, "tendance": "stable"}]},
+      "bureau": {"tendance": "baisse", "ecart_1h": -0.4, "sondes": [
+        {"nom": "Thermomètre", "entite": "sensor.bureau_temperature", "temperature": 19.6, "ecart_1h": -0.4, "tendance": "baisse"}]},
+      "sdb": {"tendance": "stable", "ecart_1h": 0.1, "sondes": [
+        {"nom": "Thermomètre", "entite": "sensor.salon_canape_temperature", "temperature": 19.7, "ecart_1h": 0.1, "tendance": "stable"}]},
+      "entree": {"tendance": "stable", "ecart_1h": 0.0, "sondes": [
+        {"nom": "Couloir", "entite": "sensor.temperature_couloir_temperature", "temperature": 19.3, "ecart_1h": 0.0, "tendance": "stable"}]},
+      "terrasse": {"tendance": "baisse", "ecart_1h": -0.8, "sondes": [
+        {"nom": "Thermomètre", "entite": "sensor.thermometre_terrasse_temperature", "temperature": 9.9, "ecart_1h": -0.8, "tendance": "baisse"}]},
+      "jardin": {"tendance": null, "ecart_1h": null, "sondes": [
+        {"nom": "Thermomètre", "entite": "sensor.thermometre_exterieur_cote_jardin_temperature", "temperature": 9.5, "ecart_1h": null, "tendance": null}]}
+    },
+    "friendly_name": "Températures du Hub",
+    "icon": "mdi:home-thermometer-outline"
+  }
+}

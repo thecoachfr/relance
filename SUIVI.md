@@ -266,6 +266,12 @@ Code fait et fusionné dans `main` (désactivé tant qu'on ne bascule pas dans l
 9. **Suggestions d'envies, à essayer en vrai** : recevoir une suggestion (régler un créneau quelques minutes plus tard), « Ouvrir » ouvre bien YouTube / Spotify, « Pas maintenant » propose une autre envie au créneau suivant.
 8. **Envies (15/10), à essayer en vrai** : partager une vidéo YouTube, un album Spotify, un article Safari (type deviné, titre de la page) ; « Dis Siri, nouvelle Relance » → « Dune à regarder » ; même phrase à la montre (le tri doit ranger « Dune » dans À regarder et retirer « (à regarder) ») ; dictée Google Home « … à lire » ; vérifier qu'une envie n'apparaît pas sur le Nest Hub.
 
+- **Températures du Hub, `sensor.hub_temperatures`** (03/11, déployée à 17 h 13) : app AppDaemon `hub_temperatures`
+  (`homeassistant/appdaemon/apps/hub_temperatures.py`, 8 tests), thermomètres de chaque pièce (sans les sondes des
+  appareils) et tendance sur 1 h lue dans l'historique de HA, seuil ±0,3 °C. Contrat :
+  [homeassistant/HUB-TEMPERATURES.md](homeassistant/HUB-TEMPERATURES.md). Vérifiée à 17 h 13 : 9 thermomètres lus,
+  intérieur stable, terrasse −1,7 (baisse), jardin −0,4 (baisse). Sauvegarde : `apps.yaml.avant-temperatures-20261103`.
+
 - **Météo du Hub, `sensor.hub_meteo`** (24/10, déployée vers 8 h 55, retouchée à 9 h 03) : app AppDaemon `hub_meteo`
   (`homeassistant/appdaemon/apps/hub_meteo.py`, 39 tests dans `tests/test_hub_meteo.py`), source unique de la Météo
   des trois vues. Contrat et règles : [homeassistant/HUB-METEO.md](homeassistant/HUB-METEO.md). Mesure de la terrasse
