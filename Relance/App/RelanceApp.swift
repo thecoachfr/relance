@@ -11,6 +11,7 @@ struct RelanceApp: App {
     var body: some Scene {
         WindowGroup {
             RootView()
+                .suiviEcran()
                 .environment(delegate.store)
                 .environment(delegate.auth)
                 .modelContainer(delegate.store.container)

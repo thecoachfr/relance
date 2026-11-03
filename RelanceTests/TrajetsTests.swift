@@ -95,3 +95,42 @@ struct TraceTests {
         #expect(TraceRecorder.garder(position(48.82, 2.42, precision: 80), apres: depart) == nil)
     }
 }
+
+/// File du tracé précis dans un fichier (03/11) et faux départs ignorés.
+struct FileTraceTests {
+    func file(maximum: Int = 100) -> FileTrace {
+        FileTrace(url: URL.temporaryDirectory.appendingPathComponent("trace-\(UUID().uuidString).csv"), maximum: maximum)
+    }
+
+    @Test func ajoutPuisRetraitDesPremiers() throws {
+        let f = file()
+        #expect(f.compte == 0 && f.lire().isEmpty)
+        try f.ajouter([[1_800_000_000, 48.856613, 2.352222, 5, 1.4], [1_800_000_060, 48.857, 2.353, 8, -1]])
+        try f.ajouter([[1_800_000_120, 48.858, 2.354, 10, 12.5]])
+        #expect(f.compte == 3)
+        #expect(f.lire()[0] == [1_800_000_000, 48.856613, 2.352222, 5, 1.4] && f.lire()[1][4] == -1)
+        try f.retirerPremiers(2)
+        #expect(f.compte == 1 && f.lire() == [[1_800_000_120, 48.858, 2.354, 10, 12.5]])
+        // Relu depuis le disque par une autre instance (relance de l'app).
+        #expect(FileTrace(url: f.url, maximum: 100).compte == 1)
+    }
+
+    @Test func tailleeAuMaximum() throws {
+        let f = file(maximum: 10)
+        try f.ajouter((0..<12).map { [Double($0), 48, 2, 5, 0] })
+        #expect(f.compte == 10 && f.lire().first?[0] == 2)
+    }
+
+    @Test func fauxDepartIgnore() {
+        let repos = CLLocation(latitude: 48.8566, longitude: 2.3522)
+        func point(_ dLat: Double, vitesse: Double = -1, precision: Double = 100) -> CLLocation {
+            CLLocation(coordinate: .init(latitude: 48.8566 + dLat, longitude: 2.3522), altitude: 0,
+                       horizontalAccuracy: precision, verticalAccuracy: -1, course: -1, speed: vitesse, timestamp: .now)
+        }
+        #expect(!TraceRecorder.estDepart(point(0.002), repos: repos))          // ~220 m : antenne
+        #expect(TraceRecorder.estDepart(point(0.006), repos: repos))           // ~670 m
+        #expect(!TraceRecorder.estDepart(point(0.006, precision: 1000), repos: repos))  // position trop floue
+        #expect(TraceRecorder.estDepart(point(0.001, vitesse: 3), repos: repos))
+        #expect(TraceRecorder.estDepart(point(0), repos: nil))
+    }
+}

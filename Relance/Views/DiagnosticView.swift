@@ -5,9 +5,31 @@ struct DiagnosticView: View {
     @State private var reports: [EnergyMetrics.Report] = []
     @State private var wakes: [(day: String, counts: [String: Int])] = []
     @State private var exportURL: URL?
+    @State private var actuelMo = Empreinte.megaoctets()
+    @State private var sessions = JournalSessions()
 
     var body: some View {
+        let maintenant = Date.now
+        let jour = sessions.bilan(depuis: Calendar.current.startOfDay(for: maintenant))
+        let semaine = sessions.bilan(depuis: maintenant.addingTimeInterval(-7 * 86_400))
+        let arrets = sessions.arrets(depuis: maintenant.addingTimeInterval(-7 * 86_400))
         Form {
+            Section {
+                LabeledContent("Maintenant", value: Self.mo(actuelMo))
+                LabeledContent("Pic du jour", value: Self.mo(jour.picMo))
+                LabeledContent("Pic sur 7 jours", value: Self.mo(semaine.picMo))
+                LabeledContent("À l'écran sur 7 jours", value: SessionEcran.texteDuree(semaine.tempsEcran))
+                LabeledContent("Arrêts inattendus à l'écran", value: arrets.isEmpty ? "Aucun" : "\(arrets.count)")
+                ForEach(arrets.prefix(5), id: \.debut) { s in
+                    Text("\(s.debut, format: .dateTime.day().month().hour().minute()) : pic \(Self.mo(s.picMo)), \(SessionEcran.texteDuree(s.duree))")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
+            } header: {
+                Text("Mémoire")
+            } footer: {
+                Text("Empreinte mesurée toutes les 10 s, seulement app à l'écran. Un arrêt inattendu : l'app a été arrêtée à l'écran (limite de mémoire ou plantage).")
+            }
+
             Section {
                 if wakes.isEmpty {
                     Text("Aucun réveil compté").foregroundStyle(.secondary)
@@ -61,6 +83,9 @@ struct DiagnosticView: View {
         .navigationTitle("Diagnostic batterie")
         .inlineNavigationTitle()
         .task {
+            SuiviEcran.shared.mesurer()
+            actuelMo = Empreinte.megaoctets()
+            sessions = SuiviEcran.shared.journal
             reports = EnergyMetrics.reports()
             wakes = EnergyMetrics.wakes().sorted { $0.key > $1.key }.map { (day: $0.key, counts: $0.value) }
             exportURL = EnergyMetrics.exportFile()
@@ -94,6 +119,8 @@ struct DiagnosticView: View {
     private static func duration(_ seconds: Double) -> String {
         Duration.seconds(seconds).formatted(.units(allowed: [.hours, .minutes, .seconds], width: .narrow, maximumUnitCount: 2))
     }
+
+    private static func mo(_ valeur: Double) -> String { valeur > 0 ? "\(Int(valeur.rounded())) Mo" : "—" }
 
     private static func megabytes(_ value: Double) -> String {
         value.formatted(.number.precision(.fractionLength(value < 10 ? 1 : 0))) + " Mo"

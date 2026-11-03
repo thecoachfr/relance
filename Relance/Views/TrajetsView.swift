@@ -9,7 +9,7 @@ struct TrajetsView: View {
     @State private var dernierEnvoi = TrajetsRecorder.dernierEnvoi
     @State private var envoi = false
     @State private var trace = TraceRecorder.mode
-    @State private var pointsEnAttente = TraceRecorder.file.count
+    @State private var pointsEnAttente = TraceRecorder.fileTrace.compte
 
     var body: some View {
         Form {
@@ -81,6 +81,6 @@ struct TrajetsView: View {
         enAttente = TrajetsRecorder.file.count
         dernierEnvoi = TrajetsRecorder.dernierEnvoi
         trace = TraceRecorder.mode
-        pointsEnAttente = TraceRecorder.file.count
+        pointsEnAttente = TraceRecorder.fileTrace.compte
     }
 }

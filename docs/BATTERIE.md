@@ -13,6 +13,15 @@
 - **Vigie** : `/config/relance_push_stats.json` dans l'add-on AppDaemon (partage `addon_configs/a0d7b954_appdaemon/`), avec par jour les **salves** par cause (`modification_ha`, `liste_google`, `apres_tri`, `test`) et les **envois** (une salve = un push à chaque appareil enregistré). Gardé 31 jours ; le total de la veille est écrit dans le journal d'AppDaemon à 0 h 00 min 30 s.
 - **Réglages › Batterie de l'iPhone** : part d'Aiguillage sur 24 h et sur 10 jours, à l'écran et en arrière-plan. Relevé à la main par Alexandre, avec une capture datée.
 
+## Revue du 03/11/2026
+
+Revue batterie, mémoire et réseau des apps (checklist `bonnes-pratiques-apps-apple`). Corrigé :
+
+- **Tracé précis** (premier poste probable de « position en arrière-plan ») : faux départs ignorés (changement de position important à moins de 400 m du dernier arrêt, sans vitesse), GPS éteint après 2 min sans bouger (5 min avant), file des points en ajout de ligne dans un fichier (avant : jusqu'à 1 Mo de JSON relu et réécrit à chaque point).
+- **Mémoire de l'iPhone et de l'iPad** mesurée (`phys_footprint`, sessions à l'écran, arrêts inattendus) : Réglages › Diagnostic batterie › Mémoire.
+
+Restent, repérés mais pas faits : au-delà de 20 lieux de rappel, iOS suit aussi les changements de position importants en continu, et les adresses introuvables sont recherchées dans Plans à chaque réveil (échecs oubliés à la fermeture, `PlaceLocator`) ; boucle de 60 s sur le Mac même fenêtre fermée ; `DriveCopie` sur `URLSession.shared` (60 s) ; `MKLocalSearch` sans délai de garde.
+
 ## E1 — Mesure de référence
 
 **Protocole** : installer le build qui contient le diagnostic, puis une semaine d'usage normal sans fonction P9. À J+7 :

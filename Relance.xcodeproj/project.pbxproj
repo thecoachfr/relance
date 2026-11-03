@@ -27,6 +27,7 @@
 		08A47C199369637298B82C8E /* TacheHA+Liste.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E11A76CCDBFE02F27DDC707 /* TacheHA+Liste.swift */; };
 		0904323CC74724D286F7CE53 /* PourInfoTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6183CF967BD95275D52B559 /* PourInfoTests.swift */; };
 		092960B2E85CCE39F272B33A /* GoogleAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BC7FD887AB3B53D2F6D6148 /* GoogleAuth.swift */; };
+		099B107BB993C5259EB82762 /* SuiviEcran.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A3225117C01DB4E73EDF12F /* SuiviEcran.swift */; };
 		09A9D13D9B7E48F4CA6DE691 /* PushRegistration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C1E3FCC309390331F7A6DDF /* PushRegistration.swift */; };
 		09AB56850DCA0F64F41FF3E1 /* MemoShareDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF29C342D7BB3A0E61FDF60D /* MemoShareDraft.swift */; };
 		0A3BBCE2D27F24143F4CF621 /* GoogleRefreshSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D9F2F47AFB8AE35410E0899 /* GoogleRefreshSession.swift */; };
@@ -65,6 +66,7 @@
 		222F32FBA6221F72C83CE3A4 /* PlatformCompat.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7926432BD1ECAC69B112A06 /* PlatformCompat.swift */; };
 		227ABF719CFAEC738B5D9B2A /* Groupes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 950A03316412CBC5F27C5479 /* Groupes.swift */; };
 		228D62C2B5808AC281A2E867 /* WatchTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECE60A54F2DC6987A632676A /* WatchTask.swift */; };
+		22C295E9CDF646222CAEB57C /* SuiviEcran.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A3225117C01DB4E73EDF12F /* SuiviEcran.swift */; };
 		23121BD3A8B1F6561B0B8FDE /* DriveCopie.swift in Sources */ = {isa = PBXBuildFile; fileRef = 308AC798B0C5F67DE15CB0A5 /* DriveCopie.swift */; };
 		247C32763E86A8C9B4EA4D2B /* PriorityViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = C668853F8DA6D5749B17B534 /* PriorityViews.swift */; };
 		257B9AB2824CB698FD0CA93B /* SiriCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87BBA1DB8D8D2DF9BA98DDCF /* SiriCapture.swift */; };
@@ -107,6 +109,7 @@
 		39CE665B4156CE3572A9A060 /* TaskActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4710CF61EBFBFD1A1472103A /* TaskActivityAttributes.swift */; };
 		39F505037B3E41C6D41BF52F /* SharedPhoto.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31B339A2445E0E4BF2299831 /* SharedPhoto.swift */; };
 		3AF8D452831C55597249EDD0 /* PourInfoViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54BDD61864671C94B1F89897 /* PourInfoViews.swift */; };
+		3B8BABA0BBD663EB7BCCC79D /* SuiviEcran.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A3225117C01DB4E73EDF12F /* SuiviEcran.swift */; };
 		3BE40C9DBDE64A6F5F2546B3 /* TaskMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 428A54223E0ADAC3553B38D1 /* TaskMapView.swift */; };
 		3BF62A937CF51886691DBBD9 /* ContexteTache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AB2FEFE59B34E343869478D /* ContexteTache.swift */; };
 		3C5894C10DB3D57440186753 /* SharedRecipe.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31F39EE343F9F1163673585 /* SharedRecipe.swift */; };
@@ -189,6 +192,7 @@
 		67B127B18E5CC48E3A37338B /* ShareRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8DD169C267E52E75DD38AAD /* ShareRootView.swift */; };
 		68BB883966A2910F6A6B2879 /* NotesTimeCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05822D2ACADE5BC42570E7F5 /* NotesTimeCodec.swift */; };
 		6AA5932FC7F3E572A6671008 /* SharedLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761FC1F3864FB766BF0A6485 /* SharedLink.swift */; };
+		6B477872D29A2813388FCC8E /* SuiviEcran.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A3225117C01DB4E73EDF12F /* SuiviEcran.swift */; };
 		6C347CDDC471D2DA7774E38D /* MemoMerge.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8DEDB1DC8F3AC484AE105AB /* MemoMerge.swift */; };
 		6C7478733E97564534724799 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 95845BE823BDEEB575973A70 /* GoogleSignIn */; };
 		6CBF0AB2624E635CC93C5C3D /* TrajetsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFBBE64C8D80EF4353AB4BD6 /* TrajetsView.swift */; };
@@ -585,6 +589,7 @@
 		356BC2CE21D14CF0CBA3C9B6 /* TasksProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksProvider.swift; sourceTree = "<group>"; };
 		38FFE8E011E8F28D1AB69AF0 /* Captures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Captures.swift; sourceTree = "<group>"; };
 		394F54E0EF2B79881E9F3836 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		3A3225117C01DB4E73EDF12F /* SuiviEcran.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuiviEcran.swift; sourceTree = "<group>"; };
 		3C1E3FCC309390331F7A6DDF /* PushRegistration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushRegistration.swift; sourceTree = "<group>"; };
 		3CB106E929FD91C07948C23D /* TravelTimes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelTimes.swift; sourceTree = "<group>"; };
 		3D82D35DFB589C1E996F8CBC /* ReminderPlannerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderPlannerTests.swift; sourceTree = "<group>"; };
@@ -891,6 +896,7 @@
 				AB7B1C9078E359F88724ACDF /* Journal.swift */,
 				65817F3183341A8C7C9D9383 /* Reseau.swift */,
 				27E7252FBE54D4D20377051A /* SessionsEcran.swift */,
+				3A3225117C01DB4E73EDF12F /* SuiviEcran.swift */,
 			);
 			path = Divers;
 			sourceTree = "<group>";
@@ -1567,6 +1573,7 @@
 				068F783DA9C57E563BACCE02 /* SharedRecipe.swift in Sources */,
 				257B9AB2824CB698FD0CA93B /* SiriCapture.swift in Sources */,
 				93C7E60D472124C74A6B30B3 /* Subscriptions.swift in Sources */,
+				22C295E9CDF646222CAEB57C /* SuiviEcran.swift in Sources */,
 				43C8AFEDD5A2B15E0EB802CC /* SyncLog.swift in Sources */,
 				5222D45415F281A5D35D80CE /* TVRemote.swift in Sources */,
 				08A47C199369637298B82C8E /* TacheHA+Liste.swift in Sources */,
@@ -1698,6 +1705,7 @@
 				8F2A44E8EC03E81EF967FA5A /* SharedPlace.swift in Sources */,
 				5A005023B4A1F2FC9D988FF2 /* SharedRecipe.swift in Sources */,
 				F2DDC97BAAFE99B2B5BEABB8 /* Subscriptions.swift in Sources */,
+				6B477872D29A2813388FCC8E /* SuiviEcran.swift in Sources */,
 				614FCED5DB203287B10A9376 /* SyncLog.swift in Sources */,
 				D51C6FDA1B60603EDDF4FF0E /* TVRemote.swift in Sources */,
 				C38E9F276262E68B0C4FB011 /* TacheHA+Liste.swift in Sources */,
@@ -1858,6 +1866,7 @@
 				EDB5F27D6769756E65EA3640 /* Reseau.swift in Sources */,
 				C6E06821E264AB03D370D5D8 /* SessionsEcran.swift in Sources */,
 				767CC71D6A133DF412183BED /* SiriCapture.swift in Sources */,
+				3B8BABA0BBD663EB7BCCC79D /* SuiviEcran.swift in Sources */,
 				BD466D85F1E88D48BD93B04C /* TaskCategory.swift in Sources */,
 				53CC6591A755483FCD8A01EE /* TaskPriority.swift in Sources */,
 				E49EE1CC985FCC5FDCA27A09 /* TaskTag.swift in Sources */,
@@ -1930,6 +1939,7 @@
 				3C5894C10DB3D57440186753 /* SharedRecipe.swift in Sources */,
 				9CA8D9FF92184B04154BC2B1 /* SiriCapture.swift in Sources */,
 				2E64B536067BD74047C00CD9 /* Subscriptions.swift in Sources */,
+				099B107BB993C5259EB82762 /* SuiviEcran.swift in Sources */,
 				8D23FD08D27F1D9D42DCA1CA /* SyncLog.swift in Sources */,
 				5E5E3776B7E9803FCAE9C080 /* TVRemote.swift in Sources */,
 				50FBE51BBA763E1517CEE822 /* TacheHA+Liste.swift in Sources */,

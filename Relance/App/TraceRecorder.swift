@@ -1,4 +1,5 @@
 import CoreLocation
+import os
 import DonneesHA
 import UIKit
 
@@ -29,7 +30,9 @@ final class TraceRecorder: NSObject, CLLocationManagerDelegate {
 
     private static let modeKey = "trace.mode"
     private static let finKey = "trace.fin"
+    /// Ancienne file dans les préférences (avant le 03/11) : reprise une fois dans `FileTrace`.
     private static let fileKey = "trace.file"
+    private static let reposKey = "trace.repos"
     private static let envoiKey = "trace.dernierEnvoi"
     /// Lot envoyé : 400 points au plus (un enregistrement de `donnees_apps` tient en 64 Ko).
     static let parLot = 400
@@ -40,9 +43,13 @@ final class TraceRecorder: NSObject, CLLocationManagerDelegate {
     /// Le GPS tourne (entre un départ et l'arrêt suivant).
     private(set) var enMouvement = false
     private var dernier: CLLocation?
-    /// Sécurité (30/10) : la pause automatique d'iOS peut tarder ; sans 50 m parcourus en 5 min, on éteint le GPS.
+    /// Sécurité (30/10) : la pause automatique d'iOS peut tarder ; sans 50 m parcourus en 2 min, on éteint le GPS
+    /// (5 min avant le 03/11, revue batterie : le GPS précis restait allumé 5 min après chaque arrivée).
     private var veille: Task<Void, Never>?
-    static let delaiArret: Duration = .seconds(5 * 60)
+    static let delaiArret: Duration = .seconds(2 * 60)
+    /// Un changement de position important à moins de 400 m du dernier arrêt n'est pas un départ (changement
+    /// d'antenne, position du réseau qui saute) : le GPS reste éteint (03/11).
+    nonisolated static let ecartDepart: CLLocationDistance = 400
     private var envoiEnCours = false
 
     static var mode: Mode {
@@ -56,13 +63,42 @@ final class TraceRecorder: NSObject, CLLocationManagerDelegate {
         set { AppGroup.defaults.set(newValue, forKey: finKey) }
     }
 
-    /// Points en attente : `[t, lat, lon, précision, vitesse]`.
-    static var file: [[Double]] {
-        get {
-            guard let data = AppGroup.defaults.data(forKey: fileKey) else { return [] }
-            return (try? JSONDecoder().decode([[Double]].self, from: data)) ?? []
+    /// Points en attente : `[t, lat, lon, précision, vitesse]`, dans un fichier de l'App Group (`FileTrace`).
+    /// Avant le 03/11, toute la file (jusqu'à 20 000 points, environ 1 Mo de JSON dans les préférences) était relue
+    /// et réécrite à chaque point gardé, sur le fil principal, GPS allumé.
+    static let fileTrace: FileTrace = {
+        let dossier = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: Groupes.app)?
+            .appendingPathComponent("Library", isDirectory: true) ?? URL.temporaryDirectory
+        let f = FileTrace(url: dossier.appendingPathComponent("trace-en-attente.csv"), maximum: maximum)
+        if let data = AppGroup.defaults.data(forKey: fileKey) {
+            if let anciens = try? JSONDecoder().decode([[Double]].self, from: data), !anciens.isEmpty {
+                Journal.essayer(.stockage, "Reprise de la file du tracé") { try f.ajouter(anciens) }
+            }
+            AppGroup.defaults.removeObject(forKey: fileKey)
         }
-        set { AppGroup.defaults.set(try? JSONEncoder().encode(Array(newValue.suffix(maximum))), forKey: fileKey) }
+        return f
+    }()
+
+    static var file: [[Double]] { fileTrace.lire() }
+
+    /// Dernier arrêt (`[lat, lon]`), pour reconnaître un faux départ.
+    static var repos: CLLocation? {
+        get {
+            guard let c = AppGroup.defaults.array(forKey: reposKey) as? [Double], c.count == 2 else { return nil }
+            return CLLocation(latitude: c[0], longitude: c[1])
+        }
+        set {
+            if let c = newValue?.coordinate { AppGroup.defaults.set([c.latitude, c.longitude], forKey: reposKey) }
+            else { AppGroup.defaults.removeObject(forKey: reposKey) }
+        }
+    }
+
+    /// Un changement de position important ressemble-t-il à un départ ? Oui s'il va vite, s'il est loin du dernier
+    /// arrêt, ou si l'arrêt n'est pas connu.
+    nonisolated static func estDepart(_ p: CLLocation, repos: CLLocation?) -> Bool {
+        if p.speed > 1 { return true }
+        guard let repos else { return true }
+        return p.distance(from: repos) > max(ecartDepart, p.horizontalAccuracy)
     }
 
     static var dernierEnvoi: Date? { AppGroup.defaults.object(forKey: envoiKey) as? Date }
@@ -138,6 +174,7 @@ final class TraceRecorder: NSObject, CLLocationManagerDelegate {
         location.stopUpdatingLocation()
         location.allowsBackgroundLocationUpdates = false
         enMouvement = false
+        if let ici = dernier ?? location.location { Self.repos = ici }
         dernier = nil
         SyncLog.add("Tracé précis : arrêt, GPS éteint")
         Task { await envoyer(force: true) }
@@ -146,8 +183,11 @@ final class TraceRecorder: NSObject, CLLocationManagerDelegate {
     nonisolated func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         Task { @MainActor in
             guard Self.actif else { return appliquer() }
-            // Réveil par un changement de position important : le GPS prend le relais.
-            if !enMouvement { reveiller() }
+            // Réveil par un changement de position important : le GPS prend le relais, sauf faux départ.
+            if !enMouvement {
+                guard let position = locations.last, Self.estDepart(position, repos: Self.repos) else { return }
+                reveiller()
+            }
             for position in locations { await recevoir(position) }
         }
     }
@@ -166,7 +206,7 @@ final class TraceRecorder: NSObject, CLLocationManagerDelegate {
         guard let point = Self.garder(position, apres: dernier) else { return }
         dernier = position
         surveillerArret()
-        Self.file = Self.file + [point]
+        Journal.essayer(.stockage, "Point du tracé") { try Self.fileTrace.ajouter([point]) }
         await envoyer(force: false)
     }
 
@@ -183,11 +223,11 @@ final class TraceRecorder: NSObject, CLLocationManagerDelegate {
 
     /// Lots de 400 points vers Home Assistant ; sans `force`, au plus tous les quarts d'heure (ou dès 400 points).
     func envoyer(force: Bool) async {
-        let file = Self.file
-        guard !envoiEnCours, !file.isEmpty, let url = HAConfig.url, let jeton = HAConfig.token, !jeton.isEmpty else { return }
-        if !force, file.count < Self.parLot, let d = Self.dernierEnvoi, Date.now.timeIntervalSince(d) < Self.intervalleEnvoi { return }
+        guard !envoiEnCours, Self.fileTrace.compte > 0, let url = HAConfig.url, let jeton = HAConfig.token, !jeton.isEmpty else { return }
+        if !force, Self.fileTrace.compte < Self.parLot, let d = Self.dernierEnvoi, Date.now.timeIntervalSince(d) < Self.intervalleEnvoi { return }
         envoiEnCours = true
         defer { envoiEnCours = false }
+        let file = Self.file
         let tache = UIApplication.shared.beginBackgroundTask(withName: "trace")
         defer { if tache != .invalid { UIApplication.shared.endBackgroundTask(tache) } }
         let client = HAClient(url: url, jeton: jeton, delai: 20)
@@ -212,9 +252,71 @@ final class TraceRecorder: NSObject, CLLocationManagerDelegate {
             return
         }
         // Les points reçus pendant l'envoi restent dans la file.
-        Self.file = Array(Self.file.dropFirst(envoyes))
+        Journal.essayer(.stockage, "File du tracé après l'envoi") { try Self.fileTrace.retirerPremiers(envoyes) }
         AppGroup.defaults.set(Date.now, forKey: Self.envoiKey)
         EnergyMetrics.count(.trace)
         SyncLog.add("Tracé précis : \(envoyes) point(s) envoyé(s) à Home Assistant")
+    }
+}
+
+/// File des points du tracé en attente d'envoi : une ligne par point (`t,lat,lon,précision,vitesse`), ajoutée en fin
+/// de fichier ; réécrite seulement après un envoi, ou pour la tailler à `maximum` points (03/11).
+nonisolated final class FileTrace: Sendable {
+    let url: URL
+    let maximum: Int
+    /// Nombre de points dans le fichier, tenu à jour sans le relire (nil : pas encore compté).
+    private let nombre = OSAllocatedUnfairLock<Int?>(initialState: nil)
+
+    init(url: URL, maximum: Int) {
+        self.url = url
+        self.maximum = maximum
+    }
+
+    var compte: Int {
+        if let n = nombre.withLock({ $0 }) { return n }
+        let n = lire().count
+        nombre.withLock { $0 = n }
+        return n
+    }
+
+    func lire() -> [[Double]] {
+        guard let texte = try? String(contentsOf: url, encoding: .utf8) else { return [] }
+        // Une ligne abîmée (écriture interrompue) est ignorée, pas le fichier.
+        return texte.split(separator: "\n").compactMap { ligne in
+            let v = ligne.split(separator: ",").compactMap { Double($0) }
+            return v.count == 5 ? v : nil
+        }
+    }
+
+    func ajouter(_ points: [[Double]]) throws {
+        guard !points.isEmpty else { return }
+        let lignes = Data(points.map { $0.map { Self.texte($0) }.joined(separator: ",") + "\n" }.joined().utf8)
+        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        if FileManager.default.fileExists(atPath: url.path) {
+            let handle = try FileHandle(forWritingTo: url)
+            defer { try? handle.close() }
+            try handle.seekToEnd()
+            try handle.write(contentsOf: lignes)
+        } else {
+            try lignes.write(to: url, options: .atomic)
+        }
+        let total = compte + points.count
+        nombre.withLock { $0 = total }
+        if total > maximum + maximum / 10 { try ecrire(Array(lire().suffix(maximum))) }
+    }
+
+    func retirerPremiers(_ n: Int) throws {
+        try ecrire(Array(lire().dropFirst(n)))
+    }
+
+    private func ecrire(_ points: [[Double]]) throws {
+        let texte = points.map { $0.map { Self.texte($0) }.joined(separator: ",") + "\n" }.joined()
+        try Data(texte.utf8).write(to: url, options: .atomic)
+        nombre.withLock { $0 = points.count }
+    }
+
+    /// Sans « .0 » pour les entiers (heure, précision) : la file reste courte.
+    static func texte(_ v: Double) -> String {
+        v == v.rounded() && abs(v) < 1e15 ? String(Int64(v)) : String(v)
     }
 }
