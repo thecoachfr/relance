@@ -266,6 +266,7 @@ Code fait et fusionné dans `main` (désactivé tant qu'on ne bascule pas dans l
 9. **Suggestions d'envies, à essayer en vrai** : recevoir une suggestion (régler un créneau quelques minutes plus tard), « Ouvrir » ouvre bien YouTube / Spotify, « Pas maintenant » propose une autre envie au créneau suivant.
 8. **Envies (15/10), à essayer en vrai** : partager une vidéo YouTube, un album Spotify, un article Safari (type deviné, titre de la page) ; « Dis Siri, nouvelle Relance » → « Dune à regarder » ; même phrase à la montre (le tri doit ranger « Dune » dans À regarder et retirer « (à regarder) ») ; dictée Google Home « … à lire » ; vérifier qu'une envie n'apparaît pas sur le Nest Hub.
 
+- **Chauffage et clim, état réel** (03/11, 17 h 45) : « Chauffage et clim » = ce que l'appareil fait vraiment, pas son mode (03/11/2026, signalé par Alexandre : tout affichait « Chauffe » alors que seul le mode était `heat`). « Arrêté », « Hors-gel » (`preset_mode` frost), « En chauffe · 16,0° » (orange `#FF9F43`), « Refroidit · 16,0° » (bleu `#7CC0FF`), « Au repos · 16,0° » (gris) ; d'après `hvac_action`, sinon (clim du salon, qui ne le donne pas) d'après la mesure et la consigne (choix d'Alexandre). Nest Hub `?v=14e0b242`, Hub iPad, Hub TV (H55).
 - **Températures du Hub, `sensor.hub_temperatures`** (03/11, déployée à 17 h 13) : app AppDaemon `hub_temperatures`
   (`homeassistant/appdaemon/apps/hub_temperatures.py`, 8 tests), thermomètres de chaque pièce (sans les sondes des
   appareils) et tendance sur 1 h lue dans l'historique de HA, seuil ±0,3 °C. Contrat :
