@@ -79,3 +79,36 @@ def test_exemple_du_contrat_a_les_memes_cles():
     assert set(exemple["attributes"]["pieces"]) == set(a["pieces"])
     assert set(exemple["attributes"]["pieces"]["salon"]) == set(a["pieces"]["salon"])
     assert set(exemple["attributes"]["pieces"]["salon"]["sondes"][0]) == set(a["pieces"]["salon"]["sondes"][0])
+
+
+def releve(valeur, quand):
+    return {"state": str(valeur), "last_changed": quand.isoformat()}
+
+
+DEBUT = MAINTENANT - timedelta(hours=6)
+
+
+def test_clim_qui_chauffe_d_apres_sa_conso():
+    # Relevés réels du 03/11/2026 : +0,28 kWh entre 15 h 09 et 17 h 09, soit 140 W.
+    h = [releve(351.236, DEBUT), releve(351.411, MAINTENANT - timedelta(minutes=245)),
+         releve(351.501, MAINTENANT - timedelta(minutes=125)), releve(351.781, MAINTENANT - timedelta(minutes=5))]
+    assert t.action_par_conso(h, "heat", MAINTENANT, DEBUT) == ("heating", 140)
+    assert t.action_par_conso(h, "cool", MAINTENANT, DEBUT) == ("cooling", 140)
+
+
+def test_clim_au_repos_ou_inconnue():
+    faible = [releve(351.0, MAINTENANT - timedelta(minutes=150)), releve(351.06, MAINTENANT - timedelta(minutes=30))]
+    assert t.action_par_conso(faible, "heat", MAINTENANT, DEBUT) == ("idle", 30)
+    fige = [releve(351.0, DEBUT), releve(351.5, MAINTENANT - timedelta(minutes=200))]
+    assert t.action_par_conso(fige, "heat", MAINTENANT, DEBUT) == ("idle", 0)
+    assert t.action_par_conso([releve(351.0, DEBUT)], "heat", MAINTENANT, DEBUT) == (None, None)
+    assert t.action_par_conso(faible, "off", MAINTENANT, DEBUT) == (None, None)
+    assert t.action_par_conso(faible, "fan_only", MAINTENANT, DEBUT) == (None, None)
+
+
+def test_climats_dans_le_capteur():
+    etats = {"climate.clim_sejour": {"state": "heat"}}
+    h = {"sensor.sejour_energy_consumption": [releve(351.5, MAINTENANT - timedelta(minutes=130)),
+                                               releve(351.78, MAINTENANT - timedelta(minutes=10))]}
+    _, a = t.calculer(etats, h, MAINTENANT)
+    assert a["climats"] == {"climate.clim_sejour": {"action": "heating", "puissance_w": 140}}

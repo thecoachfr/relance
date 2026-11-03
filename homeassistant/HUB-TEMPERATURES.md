@@ -28,6 +28,13 @@ Thermomètres (principal d'abord) :
 - Écartés : `sensor.temperature_clim_sejour`, `sensor.ventilateur_temperature`, `sensor.vt_chauffage_*_ema_temperature`,
   le capteur de particules (ESP, 31 °C), la Freebox.
 
+- `climats` (ajouté le 03/11/2026 vers 17 h 46) : clim sans `hvac_action` → { `action` : "heating" | "cooling" |
+  "idle" | null, `puissance_w` (entier ou null) }. Aujourd'hui `climate.clim_sejour` (Hitachi AirCloud), d'après
+  `sensor.sejour_energy_consumption` (kWh, relevé toutes les 2 h environ) : puissance moyenne entre ses deux derniers
+  changements (fenêtre de 6 h) > 50 W → "heating" en mode chaud, "cooling" en mode froid, sinon "idle" ; compteur figé
+  depuis plus de 2 h 30 → "idle" ; clim arrêtée ou autre mode → null. Les vues prennent `hvac_action` s'il existe,
+  sinon cette action, sinon « En marche ». Premier calcul : "heating", 140 W (+0,28 kWh de 15 h 09 à 17 h 09).
+
 Règles d'affichage communes :
 - **Plan** : à droite de la température d'une pièce, une flèche ↑ orange `#FF9F43` si `tendance` = "monte", ↓ bleue
   `#7CC0FF` si "baisse", rien si "stable" ou null. La température affichée reste celle du principal (entité de la
