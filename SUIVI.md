@@ -271,6 +271,8 @@ Code fait et fusionné dans `main` (désactivé tant qu'on ne bascule pas dans l
   appareils) et tendance sur 1 h lue dans l'historique de HA, seuil ±0,3 °C. Contrat :
   [homeassistant/HUB-TEMPERATURES.md](homeassistant/HUB-TEMPERATURES.md). Vérifiée à 17 h 13 : 9 thermomètres lus,
   intérieur stable, terrasse −1,7 (baisse), jardin −0,4 (baisse). Sauvegarde : `apps.yaml.avant-temperatures-20261103`.
+  Vues : Hub iPad (commit `91cf858`), Hub TV (H54, `b1e2d3a`, installé), Nest Hub (`nest-hub-leger-card.js` `?v=cb9fa046`
+  le 03/11 vers 17 h 35, flèche sur le plan, Entrée sur le couloir ; copie de `/config/claude` à remettre à jour).
 
 - **Météo du Hub, `sensor.hub_meteo`** (24/10, déployée vers 8 h 55, retouchée à 9 h 03) : app AppDaemon `hub_meteo`
   (`homeassistant/appdaemon/apps/hub_meteo.py`, 39 tests dans `tests/test_hub_meteo.py`), source unique de la Météo
