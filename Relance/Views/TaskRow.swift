@@ -31,7 +31,8 @@ struct TaskRow: View {
                     .overlay {
                         Image(systemName: "pin.fill")
                             .font(.body)
-                            .foregroundStyle(.tint)
+                            // Sur le fond d'accent d'une ligne sélectionnée, la teinte disparaît : comme le titre.
+                            .foregroundStyle(isSelected || prominence == .increased ? AnyShapeStyle(.primary) : AnyShapeStyle(.tint))
                             .offset(y: -capCenter)
                             .accessibilityLabel("Rendez-vous")
                     }

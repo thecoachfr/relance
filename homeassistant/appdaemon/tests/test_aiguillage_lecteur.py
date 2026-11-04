@@ -7,7 +7,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "apps"))
 import aiguillage_lecteur as l  # noqa: E402
 
-HA = "http://192.168.1.71:8123"
+HA = "http://192.168.1.73:8123"
 # États réels du 23/10 vers 10 h (Sunshine Radio par Music Assistant ; l'enceinte KEF la suit).
 MA = {"entity_id": l.ENTITE_MA, "state": "playing", "attributes": {
     "media_title": "VAMOS A LA PLAYA", "media_artist": "Righeira", "media_album_name": "Sunshine Radio",

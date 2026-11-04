@@ -139,3 +139,5 @@ réglage `tri_natures` (`essai` / `actif`) : en `essai`, les natures proposées 
   « Répondre à … » renommés. Relecture : 9 enregistrements changés sur 178, rien d'autre. Sauvegarde sur le Mac, hors dépôt :
   `~/ha-sauvegardes/aiguillage-avant-r6-20261104.json`. Le titre « Pendaison de randonnées solene » reste à corriger
   par Alexandre. **Reste du plan** : relecture de l'essai de R4 vers le 11/11, puis `tri_natures: actif`.
+- 04/11 : **Correctif** vu par Alexandre sur l'iPad : l'épingle orange disparaissait sur une ligne sélectionnée ; elle prend
+  la couleur du titre (`TaskRow`). Compilé, pas revu à l'écran. Première preuve que l'épingle s'affiche sur un vrai appareil.
