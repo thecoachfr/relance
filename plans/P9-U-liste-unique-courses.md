@@ -129,5 +129,6 @@ Prix, stock à la maison, drive, partage de la liste avec d'autres personnes, ra
   « Pas aujourd'hui » coupe tous les magasins jusqu'à demain), notification « Courses · Tu es près de … » avec les
   articles de ce magasin (quatre, puis « et N autres »), ouverture filtrée sur ce magasin. Testé sans notification
   réelle : les rappels ne se déclenchent que sur un appareil en passant devant un lieu.
+- 04/11 : U1 à U4 poussés sur `main` (`120a6c1`). Reste U6, puis U5 une fois le build installé partout.
 - À traiter plus tard : **U5** seulement quand tous les appareils ont un build avec
   U1 (un ancien build passerait la liste en « Fait » une fois tout coché).
