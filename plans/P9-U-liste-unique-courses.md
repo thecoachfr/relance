@@ -1,6 +1,6 @@
 # P9-U — Une seule liste de courses, le magasin porté par chaque article
 
-*Étude et plan du 04/11/2026, demandés par Alexandre. **U1, U2, U3, U4 et U6 faits le 04/11**, sans effet visible (voir section 7) ; ses
+*Étude et plan du 04/11/2026, demandés par Alexandre. **U1 à U6 faits le 04/11, liste créée dans HA** (voir section 7) ; ses
 décisions du jour sont en section 5. Lire d'abord `P9-00-INDEX.md`, `P9-G-listes-courses.md`, `P9-Q-magasins-des-listes.md` et
 `P9-R-photo-vers-liste.md`. Dépôt : relance (public : aucune adresse ni donnée personnelle ici).*
 
@@ -39,7 +39,7 @@ changement, chaque magasin proche du domicile ou du trajet quotidien sonnerait �
   montre et vigie à refaire. Non retenu.
 - C. Garder plusieurs listes et mettre le magasin sur l'article : le problème des listes reste. Non retenu.
 
-Les listes hors Achats (valise, matériel de shooting) ne changent pas. Un achat daté ou urgent reste une tâche normale.
+Les listes hors Achats (valise, matériel de shooting) ne changent pas. Une tâche d'achat sans liste, datée ou urgente, reste une tâche normale ; une liste d'achats datée est versée comme les autres (décision du 04/11).
 
 ### Modèle (proposition A)
 
@@ -135,6 +135,10 @@ Prix, stock à la maison, drive, partage de la liste avec d'autres personnes, ra
   l'iPhone ; la montre ne sait pas de quel magasin on est proche, d'où les sections plutôt qu'un filtre. Widgets et
   activité en direct : rien à changer, ils ne montrent que des tâches datées. Hubs : les trois vues ne montrent que les
   tâches du jour et les tâches Maison sans date (code lu) : la liste n'y apparaît pas, donc rien ne peut la cocher.
-  Reste U5, une fois le build installé partout.
-- À traiter plus tard : **U5** seulement quand tous les appareils ont un build avec
-  U1 (un ancien build passerait la liste en « Fait » une fois tout coché).
+- 04/11 vers 21 h 45 : **U5** : build 126 installé, groupes Droguerie et Pharmacies créés par Alexandre, sauvegarde
+  hors dépôt. Liste unique créée dans HA avec les trois articles restants de l'ancienne liste, fermée à la main
+  (`versee_le`) : elle était datée, la vigie ne l'aurait pas versée. Premier appel réel à Claude : réussi, trois
+  articles classés, mémoire `config:articles` créée. **Ancien code gardé** (ligne « Magasin », `destination`,
+  `_photos_deplacer`) : à retirer à part, les listes versées passent encore par lui pendant leurs 10 minutes.
+- À surveiller : le bruit des magasins très proches du domicile (un groupe a un lieu pratiquement à la porte, dans la
+  zone de 150 m).

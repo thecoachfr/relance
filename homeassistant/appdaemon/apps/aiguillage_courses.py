@@ -4,7 +4,8 @@ Sans dépendance à AppDaemon ; `relance_vigie.py` fait la lecture, l'appel à C
 unique n'existe pas dans HA (clé `CLE_LISTE`), rien ne se passe.
 
 1. **Versement** : une liste d'achats ouverte (recette préparée, photo lue, liste créée à la main) verse ses articles
-   dans la liste unique et passe en « Fait » ; les listes datées restent des tâches à part.
+   dans la liste unique et passe en « Fait », même datée (décision d'Alexandre, 04/11 : tous les achats au même
+   endroit).
 2. **Mémoire** (`config:articles`) : le magasin d'un article, gardé par produit. Une correction d'Alexandre
    (un article avec `magasins` sans la marque `magasins_claude`) l'emporte toujours sur un choix de Claude.
 3. **Claude** : seuls les articles que la mémoire ne connaît pas lui sont demandés, par groupes de Mes lieux.
@@ -84,7 +85,7 @@ def a_verser(enregistrements, maintenant):
     for e in photos.listes_ouvertes(enregistrements):
         v, liste = e["valeur"], e["valeur"]["liste"]
         recettes = liste.get("recettes") or []
-        if (e["cle"] == CLE_LISTE or liste.get("permanente") or liste.get("versee_le") or v.get("jour")
+        if (e["cle"] == CLE_LISTE or liste.get("permanente") or liste.get("versee_le")
                 or not liste.get("articles") or any(isinstance(r, dict) and r.get("a_preparer") for r in recettes)
                 or photos.photos_a_lire(v)):
             continue

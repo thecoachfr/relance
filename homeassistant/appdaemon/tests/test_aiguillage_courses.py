@@ -50,10 +50,12 @@ def test_groupes_magasins_sans_domicile_ni_travail():
 def test_quelles_listes_sont_versees():
     prete = liste(art("Pain"))
     assert c.a_verser([unique(), prete], INSTANT) == ([prete], False)
+    datee = liste(art("Pain"), jour="2026-11-08")  # décision du 04/11 : versée aussi
+    assert c.a_verser([unique(), datee], INSTANT) == ([datee], False)
     # Trop récente : attend ; le passage devra revenir.
     assert c.a_verser([unique(), liste(art("Pain"), modifie=RECENT)], INSTANT) == ([], True)
-    # Datée, vide, recette à préparer, photo à lire, déjà versée, hors Achats : ne bougent pas.
-    for autre in (liste(art("Pain"), jour="2026-11-08"), liste(),
+    # Vide, recette à préparer, photo à lire, déjà versée, hors Achats : ne bougent pas.
+    for autre in (liste(),
                   liste(art("Pain"), liste={"recettes": [{"titre": "Risotto", "a_preparer": True}]}),
                   liste(art("Pain"), liste={"photos": [{"piece": "p", "a_lire": True}]}),
                   liste(art("Pain"), liste={"versee_le": ANCIEN})):
