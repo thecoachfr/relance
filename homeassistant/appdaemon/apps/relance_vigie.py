@@ -263,6 +263,8 @@ class RelanceVigie(Hass):
         # Tri par l'API Messages (P9-I) : `routine` (la routine claude.ai, comme avant), `ombre` (la routine trie,
         # l'API propose sans écrire, journal dans aiguillage_tri_ombre.jsonl) ou `api` (la vigie trie, la routine en secours).
         self._tri_mode = self.args.get("tri_mode", "routine")
+        # Natures Rendez-vous et Info (P9-T) : `essai` (proposées dans le journal, rien d'écrit) ou `actif`.
+        self._tri_natures = self.args.get("tri_natures", "essai")
         self._tri_lock = threading.Lock()
         self._tri_etat_path = Path(self.args.get("tri_etat_file", "/config/aiguillage_tri_etat.json"))
         self._tri_manque_logged = False
@@ -1637,9 +1639,11 @@ class RelanceVigie(Hass):
                 continue
             nouvelle, refus = aiguillage_tri.appliquer(record["valeur"], changement, aujourdhui,
                                                        datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"), tags,
-                                                       jours_lieu)
+                                                       jours_lieu, self._tri_natures == "actif")
             trace = {"cle": record["cle"], "titre": record["valeur"].get("titre"), "raison": changement.get("raison"),
                      "changements": self._tri_diff(record["valeur"], nouvelle), "refus": refus}
+            if changement.get("nature"):
+                trace["nature"] = {"proposee": changement["nature"], "mode": self._tri_natures}
             if ecrire and nouvelle is not None:
                 statut = self._tri_ecrire(record, nouvelle)
                 if statut == "conflit":
@@ -1654,7 +1658,7 @@ class RelanceVigie(Hass):
                         if ch2:
                             nouvelle, refus2 = aiguillage_tri.appliquer(
                                 relu["valeur"], ch2, aujourdhui, datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"), tags,
-                                jours_lieu)
+                                jours_lieu, self._tri_natures == "actif")
                             trace["refus"] += refus2
                             statut = self._tri_ecrire(relu, nouvelle) if nouvelle is not None else "rien"
                         self._tri_etat(etat)

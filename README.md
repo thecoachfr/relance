@@ -167,6 +167,8 @@ Plusieurs appareils (23/10, le Hub tourne aussi sur l'iPhone) : un jeton push-to
 Spotify pilote » (champ `masquer_spotify`, vrai par défaut), fin de celle en cours. Pushs comptés par jour et par
 appareil dans `/config/hub_ipad_push_stats.json` (31 jours, suivi batterie du Hub).
 
+Natures (plan P9-T) : réglage `tri_natures` : `essai` par défaut (Rendez-vous et Info proposés dans le journal du tri, rien d'écrit) ou `actif`.
+
 Tri par l'API Messages (plan P9-I, [plans/P9-I-tri-par-api.md](plans/P9-I-tri-par-api.md)) : réglage `tri_mode`
 (`routine` par défaut, `ombre`, `api`). Module `aiguillage_tri.py` : la vigie choisit les tâches à trier, fait **un**
 appel à sortie structurée (Sonnet 5.5, sans outil), puis applique elle-même les changements avec les règles absolues

@@ -325,3 +325,65 @@ def test_contexte_garde_l_existant():
                          ch(contexte="maison"), AUJ, NOW, TAGS, JOURS_LIEU)
     assert "jour" not in nv4
     assert t.jour_pour_contexte("bureau", [{"date": "abc", "lieu": "bureau"}, None], AUJ) is None
+
+
+# MARK: - Natures (P9-T)
+
+def nature(valeur, poser=True, **kw):
+    return t.appliquer(valeur, ch(**kw), AUJ, NOW, TAGS, poser_nature=poser)
+
+
+NEUVE = {"titre": "Dentiste", "fait": False, "jour": "2026-10-20", "heure": "14:00"}
+
+
+def test_nature_dans_le_schema():
+    item = t.SCHEMA["properties"]["taches"]["items"]
+    assert item["properties"]["nature"]["enum"] == ["", "rendez_vous", "info"]
+    assert "nature" in item["required"]
+
+
+def test_rendez_vous_pose_a_la_fin():
+    v, refus = nature(NEUVE | {"notes": "Apporter la radio"}, categorie="Santé", nature="rendez_vous")
+    assert v["notes"] == "Apporter la radio\n📌 Rendez-vous"
+    assert refus == []
+
+
+def test_info_pose_avec_le_jour_de_ce_passage():
+    v, refus = nature({"titre": "Coupure", "fait": False}, categorie="Maison", jour="2026-10-20", nature="info")
+    assert v["notes"] == "📣 Pour info" and v["jour"] == "2026-10-20"
+    assert refus == []
+
+
+def test_en_essai_rien_n_est_ecrit():
+    v, refus = nature(NEUVE, poser=False, categorie="Santé", nature="rendez_vous", notes_a_la_fin=["💡 Suggestion : x"])
+    assert "📌" not in v.get("notes", "") and "💡" in v["notes"]
+    assert refus == []
+
+
+def test_tache_deja_triee_jamais_reclassee():
+    # Une correction à la main reste : la tâche a déjà sa catégorie.
+    v, refus = nature(NEUVE | {"categorie": "Santé"}, nature="rendez_vous")
+    assert v is None
+    assert refus == ["nature (tâche déjà triée)"]
+
+
+def test_nature_refusee():
+    assert nature(NEUVE | {"heure": ""}, categorie="Santé", nature="rendez_vous")[1] == ["nature rendez_vous (sans heure)"]
+    assert nature({"titre": "x", "fait": False}, categorie="Perso", nature="info")[1] == ["nature (sans date)"]
+    assert nature(NEUVE | {"liste": {"articles": [{"id": "1", "texte": "a"}]}}, categorie="Achats", nature="info")[1] == ["nature (la tâche a une liste)"]
+    assert nature(NEUVE | {"notes": "📣 Pour info"}, categorie="Perso", nature="rendez_vous")[1] == ["nature (la tâche en a déjà une)"]
+    assert nature(NEUVE | {"notes": "🎬 À regarder"}, categorie="Perso", nature="info")[1] == ["nature (la tâche en a déjà une)"]
+    assert nature(NEUVE, categorie="Perso", nature="autre")[1] == ["nature inconnue 'autre'"]
+
+
+def test_pas_de_suggestion_ni_priorite_avec_une_nature():
+    v, refus = nature(NEUVE, categorie="Santé", nature="rendez_vous", priorite="Urgente", notes_a_la_fin=["💡 Suggestion : x"])
+    assert v["notes"] == "📌 Rendez-vous" and "priorite" not in v
+    assert refus == []
+
+
+def test_pas_de_suggestion_sur_une_nature_existante():
+    for ligne in ("📣 Pour info", "📣\ufe0f Pour info", "📌 Rendez-vous"):
+        v, refus = nature(NEUVE | {"categorie": "Maison", "notes": ligne}, notes_a_la_fin=["💡 Suggestion : x"])
+        assert v is None
+        assert refus == ["suggestion sur un rendez-vous ou une info"]

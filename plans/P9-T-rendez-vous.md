@@ -126,3 +126,9 @@ réglage `tri_natures` (`essai` / `actif`) : en `essai`, les natures proposées 
   (`d718a8b`) et Aiguillage (R1, R2, et les 7 commits d'avant) poussés : TestFlight par Xcode Cloud, build non vérifié.
   Nest Hub déployé vers 14 h 20 (`?v=05b6f309`, copie vérifiée, cast relancé, capture de l'accueil normale).
   **R3 déployé. À voir au premier vrai rendez-vous** : l'épingle sur les trois vues, jamais vue à l'écran.
+- 04/11 : **R4 codé, en essai à blanc.** `SCHEMA` et `appliquer` : champ `nature`, gardes Python (`nature_acceptee`),
+  plus de 💡 sur `📌` et `📣` (actif dès maintenant, même en essai). Plus strict que prévu : un `rendez_vous` sans heure
+  est refusé, car l'app pose la date du jour sur les tâches créées dans À faire. Réglage `tri_natures: essai` : le
+  journal `/config/aiguillage_tri_ombre.jsonl` note `nature` à chaque proposition, rien n'est écrit. Consigne réelle :
+  règle V ; modèle `docs/TRI-CONSIGNE.md` remis à jour (règle T, `🎟`). Relecture prévue vers le 11/11, puis `actif`
+  avec Alexandre.

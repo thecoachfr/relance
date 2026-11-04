@@ -19,6 +19,8 @@ relance_vigie:
   # Tri par l'API Messages (P9-I) : routine (défaut) | ombre | api. Clé API Console dans /config/anthropic_api_key,
   # consigne dans /config/aiguillage_tri_consigne.md (hors dépôt, modèle dans docs/TRI-CONSIGNE.md).
   tri_mode: api
+  # Natures Rendez-vous et Info (P9-T) : essai (proposées dans le journal, défaut) | actif (écrites).
+  tri_natures: essai
   tri_budget_mensuel: 30
   # Radios (22/10) : instance de Music Assistant qui cherche les stations sur TuneIn (Paramètres › Appareils).
   # music_assistant_entry: 01K…

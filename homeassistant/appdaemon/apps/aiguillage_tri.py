@@ -39,6 +39,9 @@ DICTE = "🎙 Dicté : "
 LIGNES_CONTEXTE = {"bureau": "🏢 Au bureau", "maison": "🏠 À la maison"}
 # Lieux du jour (`sensor.aiguillage_lieu_travail`, attribut `jours`) qui conviennent à chaque contexte.
 LIEUX_CONTEXTE = {"bureau": ("bureau",), "maison": ("teletravail", "off", "ferie")}
+# Nature d'une tâche (P9-T, 04/11) : la ligne des notes fait foi, comme pour l'app (`RendezVous`, `PourInfo`).
+LIGNES_NATURE = {"rendez_vous": "📌 Rendez-vous", "info": "📣 Pour info"}
+SUGGESTION = "💡"
 PARTAGE, PARTAGE_A_REVOIR = "📩 Message partagé", "📩 Message partagé — titre à revoir"
 _JOUR = re.compile(r"\d{4}-\d{2}-\d{2}")
 _HEURE = re.compile(r"([01]\d|2[0-3]):[0-5]\d")
@@ -165,6 +168,7 @@ SCHEMA = _objet({
         "priorite": {"type": "string", "enum": ["", "Urgente", "Basse"]},
         "duree": {"type": "integer"},
         "contexte": {"type": "string", "enum": ["", *LIGNES_CONTEXTE]},
+        "nature": {"type": "string", "enum": ["", *LIGNES_NATURE]},
         "lieu": _ou_null(_objet({"nom": {"type": "string"}, "adresse": {"type": "string"},
                                  "telephone": {"type": "string"}, "lien": {"type": "string"}})),
         "envie": _ou_null(_objet({"type": {"type": "string", "enum": list(TYPES_ENVIE)},
@@ -233,12 +237,39 @@ def jour_pour_contexte(contexte, jours_lieu, aujourdhui):
     return None
 
 
-def appliquer(valeur, ch, aujourdhui, maintenant, tags_ok, jours_lieu=None):
+def a_une_nature(lignes):
+    """Rendez-vous ou info : rien à suggérer, ni à reclasser."""
+    return any(_sans_variante(l).strip().startswith(tuple(LIGNES_NATURE.values())) for l in lignes)
+
+
+def nature_acceptee(valeur, apres, ch, lignes):
+    """(nature retenue ou None, refus) pour `ch["nature"]`. Une tâche déjà triée n'est jamais reclassée : c'est ce qui
+    protège une correction à la main. `apres` : la tâche après ce passage (jour, heure et envie fraîchement posés)."""
+    nature = ch.get("nature")
+    if not nature:
+        return None, None
+    if nature not in LIGNES_NATURE:
+        return None, f"nature inconnue {nature!r}"
+    if not absent_avant(valeur, "categorie"):
+        return None, "nature (tâche déjà triée)"
+    if a_une_nature(lignes) or apres.get("envie") or any(_prefixe(_sans_variante(l)) in LIGNES_ENVIE for l in lignes):
+        return None, "nature (la tâche en a déjà une)"
+    if apres.get("liste"):
+        return None, "nature (la tâche a une liste)"
+    if not apres.get("jour"):
+        return None, "nature (sans date)"
+    if nature == "rendez_vous" and not apres.get("heure"):
+        return None, "nature rendez_vous (sans heure)"
+    return nature, None
+
+
+def appliquer(valeur, ch, aujourdhui, maintenant, tags_ok, jours_lieu=None, poser_nature=False):
     """Applique les changements `ch` (une entrée de `taches`) à la tâche lue `valeur`.
 
     Renvoie (nouvelle valeur, ou None si rien ne change ; liste des changements refusés). `aujourdhui` : date
     (Europe/Paris) ; `maintenant` : ISO 8601 UTC (« maj » des articles) ; `jours_lieu` : attribut `jours` de
-    `sensor.aiguillage_lieu_travail`, pour dater une tâche sans date à qui le tri donne un contexte."""
+    `sensor.aiguillage_lieu_travail`, pour dater une tâche sans date à qui le tri donne un contexte ; `poser_nature` :
+    écrire la nature retenue (réglage `tri_natures: actif`), sinon elle n'est que proposée (`nature_acceptee`)."""
     t = json.loads(json.dumps(valeur))  # copie profonde : tous les champs lus, même inconnus
     refus = []
     lignes = (t.get("notes") or "").split("\n") if t.get("notes") else []
@@ -357,6 +388,17 @@ def appliquer(valeur, ch, aujourdhui, maintenant, tags_ok, jours_lieu=None):
         t["envie"] = {"type": LIGNES_ENVIE[envie_ligne]} | ({"statut": "favori"} if envie_ligne == FAVORI else {})
         v2 = True
 
+    # Pas de suggestion sur un rendez-vous ni une info (P9-T).
+    if SUGGESTION in ajout and a_une_nature(lignes):
+        refus.append("suggestion sur un rendez-vous ou une info")
+        del ajout[SUGGESTION]
+    nature, refus_nature = nature_acceptee(valeur, t, ch, lignes + list(ajout.values()))
+    if refus_nature:
+        refus.append(refus_nature)
+    if nature and poser_nature:
+        ajout.pop(SUGGESTION, None)
+        if absent_avant(valeur, "priorite"):
+            t.pop("priorite", None)
     lignes += [ajout[p] for p in ORDRE_FIN if p in ajout]
     # Une envie n'a ni jour ni heure (règle K) : une échéance fixée dans ce passage est retirée. Sauf la sortie
     # réservée (règle T, P9-L1), datée par son échéance.
@@ -420,6 +462,8 @@ def appliquer(valeur, ch, aujourdhui, maintenant, tags_ok, jours_lieu=None):
                 if jour:
                     t["jour"] = jour
 
+    if nature and poser_nature:
+        lignes.append(LIGNES_NATURE[nature])
     notes = "\n".join(lignes)
     if notes != (valeur.get("notes") or ""):
         t["notes"] = notes
