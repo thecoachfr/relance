@@ -114,6 +114,20 @@ def test_purge_desactivee():
     assert m.purger_textes(db, date(2026, 10, 17), jours=0) == 0 and m.compter(db) == 1
 
 
+def test_pieces_de_toute_conversation():
+    groupe = {"envelope": {"sourceNumber": "+33699999999", "dataMessage": {
+        "groupInfo": {"groupId": "g"}, "attachments": [{"id": "g.m4a"}, {"contentType": "image/png"}]}}}
+    envoi = {"params": {"envelope": {"sourceNumber": "+33600000000", "syncMessage": {"sentMessage": {
+        "attachments": [{"id": "e.jpg"}]}}}}}
+    modif = {"envelope": {"editMessage": {"dataMessage": {"attachments": [{"id": "m.jpg"}]}}}}
+    assert m.ids_pieces(groupe) == ["g.m4a"] and m.ids_pieces(envoi) == ["e.jpg"] and m.ids_pieces(modif) == ["m.jpg"]
+    assert m.ids_pieces({"envelope": {"typingMessage": {}}}) == [] and m.ids_pieces("x") == []
+    db = m.ouvrir(":memory:")
+    m.noter_pieces(db, ["g.m4a"], TS - 40 * 86_400_000)
+    m.noter_pieces(db, ["g.m4a", "e.jpg"], TS)  # déjà connue : la première date reste
+    assert m.pieces_a_purger(db, TS) == ["g.m4a"]
+
+
 EXPORT = [
     {"date": "2024-03-02T09:15:00.120000", "sender": "Me", "body": "On mange où ?", "quote": "", "sticker": None,
      "attachments": [], "deleted": False, "call": False},

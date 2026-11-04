@@ -22,8 +22,11 @@ depuis l'app) : plus tard, le skill `memoire-signal` en tient lieu.
 - **Purges, chaque nuit** : texte brut retiré après `memoire.garder_textes_jours` jours quand son jour est résumé
   (0 : jamais, réglage actuel ; 365 par défaut) ; résumés du jour retirés de `donnees_apps` après 60 jours (ils restent
   dans SQLite et sortent dans la recherche) ;
-  pièces jointes de plus de 30 jours supprimées de l'add-on Signal (`DELETE /v1/attachments/<id>`). La mémoire ne
-  garde des pièces jointes que leur type (« photo », « note vocale »).
+  pièces jointes de plus de 30 jours supprimées de l'add-on Signal (`DELETE /v1/attachments/<id>`). Depuis le 04/11,
+  l'add-on télécharge toutes les pièces jointes (`JSON_RPC_IGNORE_ATTACHMENTS: false`, vocaux et photos) : la purge
+  couvre donc toutes les conversations, groupes compris, et un balayage de `GET /v1/attachments` rattrape chaque nuit
+  celles qu'AppDaemon n'a pas vues passer. La mémoire ne garde des pièces jointes que leur type (« photo », « note
+  vocale »).
 - **Journal** : lignes « Signal : mémoire, … » (comptes et coûts seulement, jamais le texte des messages) ; capteur
   `sensor.aiguillage_signal`, attribut `memoire` (nombre de messages).
 

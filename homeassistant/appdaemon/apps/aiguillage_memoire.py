@@ -229,6 +229,25 @@ def purger_textes(db, aujourdhui, jours=365):
     return cur.rowcount
 
 
+def ids_pieces(donnees):
+    """Identifiants des pièces jointes d'une notification signal-cli, de TOUTE conversation, groupes compris : signal-cli
+    les télécharge toutes, la purge doit donc toutes les connaître (04/11, vocaux)."""
+    params = donnees.get("params", donnees) if isinstance(donnees, dict) else None
+    env = (params.get("envelope") if isinstance(params, dict) else None) or {}
+    envoye = (env.get("syncMessage") or {}).get("sentMessage") or {}
+    ids = []
+    for data in (env.get("dataMessage"), (env.get("editMessage") or {}).get("dataMessage"), envoye,
+                 (envoye.get("editMessage") or {}).get("dataMessage")):
+        ids += [p["id"] for p in (data or {}).get("attachments") or [] if isinstance(p, dict) and p.get("id")]
+    return ids
+
+
+def noter_pieces(db, ids, ts):
+    """Note des pièces à purger ; une pièce déjà connue garde sa date."""
+    db.executemany("INSERT OR IGNORE INTO pieces (id, ts) VALUES (?, ?)", [(i, ts) for i in ids])
+    db.commit()
+
+
 def pieces_a_purger(db, maintenant_ms, jours=30):
     return [r[0] for r in db.execute("SELECT id FROM pieces WHERE purgee = 0 AND ts < ?",
                                      (maintenant_ms - jours * 86_400_000,))]

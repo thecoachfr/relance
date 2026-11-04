@@ -296,6 +296,12 @@ if hass is not None:
                 await self._memoriser(donnees, conf)
             except Exception as exc:  # noqa: BLE001 - la mémoire ne doit jamais bloquer les envies
                 self.log(f"Signal : mémoire, ERREUR {exc!r}", level="WARNING")
+            pieces = memoire.ids_pieces(donnees)
+            if pieces:
+                try:
+                    await self.run_in_executor(self._noter_pieces, pieces)
+                except Exception as exc:  # noqa: BLE001 - rattrapé par le balayage de la nuit
+                    self.log(f"Signal : mémoire, pièces non notées ({exc!r})", level="WARNING")
             retenu = message_retenu(donnees, conf["compte"], conf.get("sources") or {}, conf.get("note_a_soi", True))
             if not retenu:
                 return
@@ -416,6 +422,13 @@ if hass is not None:
             try:
                 memoire.appliquer(db, op)
                 return memoire.compter(db)
+            finally:
+                db.close()
+
+        def _noter_pieces(self, ids):
+            db = memoire.ouvrir(self._db_path)
+            try:
+                memoire.noter_pieces(db, ids, int(datetime.now(UTC).timestamp() * 1000))
             finally:
                 db.close()
 
@@ -659,8 +672,15 @@ if hass is not None:
 
         def _purger_pieces(self, db):
             base = self._hote.replace("ws://", "http://").replace("wss://", "https://")
+            maintenant = int(datetime.now(UTC).timestamp() * 1000)
+            try:  # Balayage : ce que l'add-on garde sans qu'on l'ait vu passer part 30 jours après ce constat.
+                r = httpx.get(f"{base}/v1/attachments", timeout=10)
+                r.raise_for_status()
+                memoire.noter_pieces(db, r.json() or [], maintenant)
+            except (httpx.HTTPError, ValueError) as exc:
+                self.log(f"Signal : mémoire, liste des pièces impossible ({exc!r})", level="WARNING")
             n = 0
-            for ident in memoire.pieces_a_purger(db, int(datetime.now(UTC).timestamp() * 1000)):
+            for ident in memoire.pieces_a_purger(db, maintenant):
                 try:
                     r = httpx.delete(f"{base}/v1/attachments/{ident}", timeout=10)
                 except httpx.HTTPError as exc:
