@@ -134,6 +134,7 @@
 		43C8AFEDD5A2B15E0EB802CC /* SyncLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 110B163FAF813ACD416300F7 /* SyncLog.swift */; };
 		442642452E8D69A9CE23E18F /* TacheHA+Pieces.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40DD2C385881420D28FCE64D /* TacheHA+Pieces.swift */; };
 		4598CE4BF7E9F333C1F3A268 /* RelanceWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = B5A30FBAE95AD10F86EA6D23 /* RelanceWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		46C97FEECB1999A9C8C90F49 /* RappelCourses.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33514863D7651B0531AD1D80 /* RappelCourses.swift */; };
 		47044A2618B68F53DF0280FF /* TaskEntity.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFB4D2440243DC69496203BA /* TaskEntity.swift */; };
 		473D512C7BA222A224D6CE94 /* HASyncTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BB210515A561BDDE66887DD /* HASyncTests.swift */; };
 		47578604A035E3A5CC3A3B23 /* ContexteTache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AB2FEFE59B34E343869478D /* ContexteTache.swift */; };
@@ -178,6 +179,7 @@
 		5E211E65AE023F62D9DE7DAD /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4839CCA69FBABCA6821B8333 /* ShareViewController.swift */; };
 		5E5E3776B7E9803FCAE9C080 /* TVRemote.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5115FA3B8E348E91F0DCFEF /* TVRemote.swift */; };
 		5EAC1A94052E8B1E3BBC6184 /* RelanceWidgetsBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FD7A3A536C16BA93AFF03B6 /* RelanceWidgetsBundle.swift */; };
+		5ED68BFA90682583DCA9E47F /* RappelCourses.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33514863D7651B0531AD1D80 /* RappelCourses.swift */; };
 		5F5B74011D0C3FD239A18D84 /* LieuTravailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D432C528091EA9B78F149769 /* LieuTravailView.swift */; };
 		5F64BB960DFE9DD3DB0766BC /* RelanceShare.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 886B747EA2AD882590B8C0FE /* RelanceShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		60069D6FE824F0929DFC25E4 /* EnvieSuggestions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EA131F7F608B2771AEC1E0B /* EnvieSuggestions.swift */; };
@@ -444,6 +446,7 @@
 		F368E7D601DD36224F23DB00 /* SessionsEcran.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27E7252FBE54D4D20377051A /* SessionsEcran.swift */; };
 		F41ADFAD5278668873EDC80C /* RecurrenceViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AC4D232F9F0F91D89576CCA /* RecurrenceViews.swift */; };
 		F466DFC049B305C9264C6E37 /* MemoShareDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF29C342D7BB3A0E61FDF60D /* MemoShareDraft.swift */; };
+		F46AEC42B3D466542C5CE751 /* RappelCourses.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33514863D7651B0531AD1D80 /* RappelCourses.swift */; };
 		F4C5EFBEC247872881CCA2E0 /* MenuBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DC34D75C86A2CDF47FB58F3 /* MenuBarView.swift */; };
 		F7D41FB95DF069E041518459 /* Journal.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB7B1C9078E359F88724ACDF /* Journal.swift */; };
 		F847DEC2C0528F3C8224E30E /* TaskTag.swift in Sources */ = {isa = PBXBuildFile; fileRef = B863B8DA8A7D1FFAE24BE87C /* TaskTag.swift */; };
@@ -593,6 +596,7 @@
 		308DD52AA5828E289963E4D4 /* ReseauTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReseauTests.swift; sourceTree = "<group>"; };
 		30CC842C8E9E1937E48E46CF /* DureeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DureeTests.swift; sourceTree = "<group>"; };
 		31B339A2445E0E4BF2299831 /* SharedPhoto.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedPhoto.swift; sourceTree = "<group>"; };
+		33514863D7651B0531AD1D80 /* RappelCourses.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RappelCourses.swift; sourceTree = "<group>"; };
 		338E60AF03F8238DB6FE2CEA /* RendezVousNatureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RendezVousNatureTests.swift; sourceTree = "<group>"; };
 		356BC2CE21D14CF0CBA3C9B6 /* TasksProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksProvider.swift; sourceTree = "<group>"; };
 		38FFE8E011E8F28D1AB69AF0 /* Captures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Captures.swift; sourceTree = "<group>"; };
@@ -1228,6 +1232,7 @@
 				B1E29734630D5E373BE6347B /* DiffRelances.swift */,
 				3EA131F7F608B2771AEC1E0B /* EnvieSuggestions.swift */,
 				72B30BDF848AF91385168C9F /* ProximityPlanner.swift */,
+				33514863D7651B0531AD1D80 /* RappelCourses.swift */,
 				41948BB9E52BE960048216FD /* ReminderDevice.swift */,
 				0CF4B1AF23ADE07B4C45F7D2 /* ReminderOverride.swift */,
 				9E48E67DBEFD62C7E6118390 /* ReminderPlanner.swift */,
@@ -1560,6 +1565,7 @@
 				74395098ACC31C3E3C79A423 /* ProximityReminders.swift in Sources */,
 				09A9D13D9B7E48F4CA6DE691 /* PushRegistration.swift in Sources */,
 				0FD58AD3F148C02CC851A2B9 /* QuickAddSheet.swift in Sources */,
+				F46AEC42B3D466542C5CE751 /* RappelCourses.swift in Sources */,
 				DA070F9C3B53340436E9AA5C /* Recettes.swift in Sources */,
 				CF45D31A0F12815CDB6B0934 /* RecettesView.swift in Sources */,
 				ACD3D16A96525F6F236691B5 /* Recurrence.swift in Sources */,
@@ -1698,6 +1704,7 @@
 				83AA6D4826CBE298DE49FE42 /* ProximityPlanner.swift in Sources */,
 				C281C4319DC1D8B48972AF47 /* PushRegistration.swift in Sources */,
 				BAF8EF5A4B0C929FE0261B7F /* QuickAddSheet.swift in Sources */,
+				5ED68BFA90682583DCA9E47F /* RappelCourses.swift in Sources */,
 				58E69E7F1E44129C0EA54A88 /* Recettes.swift in Sources */,
 				9E0906324AB60B065B4D19AC /* RecettesView.swift in Sources */,
 				BFFE554EE27060EC4A0E1671 /* Recurrence.swift in Sources */,
@@ -1939,6 +1946,7 @@
 				18D26DD5E7E329624D17DD1F /* PiecesJointes.swift in Sources */,
 				BFA8933B34631E2D64E69498 /* PourInfo.swift in Sources */,
 				A67F4FA45D6A0A7CBDF649FC /* ProximityPlanner.swift in Sources */,
+				46C97FEECB1999A9C8C90F49 /* RappelCourses.swift in Sources */,
 				05A02A506A9B049A2F603E36 /* Recettes.swift in Sources */,
 				6D2D64BDB84B7CC6C8504611 /* Recurrence.swift in Sources */,
 				5EAC1A94052E8B1E3BBC6184 /* RelanceWidgetsBundle.swift in Sources */,

@@ -155,6 +155,10 @@ final class ProximityReminders: NSObject, CLLocationManagerDelegate {
         let c = Calendar.current.dateComponents([.hour, .minute], from: now)
         let quiet = store.scheduler.settings.isQuiet(minuteOfDay: (c.hour ?? 0) * 60 + (c.minute ?? 0))
         for item in store.activeTasks() where item.groupesDeLieux(store.mesLieux).contains(groupe.id) {
+            if let liste = item.liste, liste.permanente {
+                await notifyCourses(item, liste, lieu: lieu, groupe: groupe, quiet: quiet, now: now)
+                continue
+            }
             let taskID = item.localID.uuidString
             let key = Self.groupKey(taskID: taskID, lieuID: lieuID)
             guard notified[key] == nil else { continue }
@@ -180,6 +184,32 @@ final class ProximityReminders: NSObject, CLLocationManagerDelegate {
             }
         }
         AppGroup.defaults.set(notified, forKey: Self.groupNotifiedKey)
+    }
+
+    /// Liste de courses unique (P9-U) : seulement ce qui se prend ici, au plus une fois par jour et par lieu, plus tôt
+    /// si un article est apparu (`RappelCourses`). Une notification par magasin : celle d'un autre groupe reste.
+    private func notifyCourses(_ item: TaskItem, _ liste: TacheHA.Liste, lieu: MesLieux.Lieu, groupe: MesLieux.Groupe,
+                               quiet: Bool, now: Date) async {
+        guard let store else { return }
+        let articles = store.mesLieux.articles(de: liste, dans: groupe.id)
+        var rappels = RappelCourses.charge()
+        guard rappels.doitPrevenir(lieu: lieu.id, articles: articles.map(\.id), now: now) else { return }
+        rappels.noter(lieu: lieu.id, articles: articles.map(\.id), now: now)
+        rappels.enregistre()
+        let taskID = item.localID.uuidString
+        let content = UNMutableNotificationContent()
+        content.title = "Courses"
+        content.subtitle = "Tu es près de \(lieu.nom)"
+        content.body = RappelCourses.texte(articles.map(\.texte))
+        content.sound = quiet ? nil : .default
+        content.interruptionLevel = quiet ? .passive : .timeSensitive
+        content.threadIdentifier = taskID
+        content.categoryIdentifier = ReminderScheduler.Category.courses
+        content.userInfo = ["taskID": taskID, "magasin": groupe.id]
+        await Journal.essayer(.notifications, "Rappel de courses") {
+            try await UNUserNotificationCenter.current().add(
+                UNNotificationRequest(identifier: "\(taskID)|courses|\(groupe.id)", content: content, trigger: nil))
+        }
     }
 
     /// « Tu es près de … » : une fois par jour et par tâche, discret pendant la plage silencieuse.

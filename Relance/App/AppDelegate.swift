@@ -125,7 +125,16 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
             store.scheduler.skipSuggestion(idString)
             await store.reschedule()
             return
+        case ReminderScheduler.Action.pasAujourdhui:
+            var rappels = RappelCourses.charge()
+            rappels.silence()
+            rappels.enregistre()
+            return
         case UNNotificationDefaultActionIdentifier:
+            // Rappel de courses (P9-U) : l'écran s'ouvre filtré sur ce magasin.
+            if let magasin = response.notification.request.content.userInfo["magasin"] as? String {
+                UserDefaults.standard.set(magasin, forKey: "coursesFiltre")
+            }
             store.openedTaskID = id
         default:
             break

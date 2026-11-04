@@ -418,6 +418,40 @@ struct ListeStoreTests {
         #expect(courses.liste?.articles.first?.magasins == ["drog"])
     }
 
+    /// Rappels de passage (décision du 04/11) : une fois par jour et par lieu, plus tôt si un article apparaît.
+    @Test func rappelsDePassage() {
+        let cal = Calendar(identifier: .gregorian)
+        let midi = cal.date(from: DateComponents(year: 2026, month: 11, day: 4, hour: 12))!
+        let soir = midi.addingTimeInterval(8 * 3600)
+        let demain = midi.addingTimeInterval(24 * 3600)
+        var r = RappelCourses()
+        #expect(!r.doitPrevenir(lieu: "m", articles: [], now: midi, calendar: cal))
+        #expect(r.doitPrevenir(lieu: "m", articles: ["a", "b"], now: midi, calendar: cal))
+        r.noter(lieu: "m", articles: ["a", "b"], now: midi, calendar: cal)
+        // Même jour : rien, même si un article a été pris ; un autre lieu sonne ; un nouvel article aussi.
+        #expect(!r.doitPrevenir(lieu: "m", articles: ["a", "b"], now: soir, calendar: cal))
+        #expect(!r.doitPrevenir(lieu: "m", articles: ["a"], now: soir, calendar: cal))
+        #expect(r.doitPrevenir(lieu: "f", articles: ["a"], now: soir, calendar: cal))
+        #expect(r.doitPrevenir(lieu: "m", articles: ["a", "c"], now: soir, calendar: cal))
+        r.noter(lieu: "m", articles: ["a", "c"], now: soir, calendar: cal)
+        #expect(!r.doitPrevenir(lieu: "m", articles: ["b", "c"], now: soir, calendar: cal))  // b reste connu du jour
+        // Lendemain : de nouveau, et les passages d'hier sont oubliés.
+        #expect(r.doitPrevenir(lieu: "m", articles: ["a"], now: demain, calendar: cal))
+        r.noter(lieu: "f", articles: ["a"], now: demain, calendar: cal)
+        #expect(r.passages.keys.sorted() == ["f"])
+        // « Pas aujourd'hui » : tous les lieux, nouveaux articles compris, jusqu'à demain.
+        r.silence(now: midi)
+        #expect(!r.doitPrevenir(lieu: "x", articles: ["z"], now: soir, calendar: cal))
+        #expect(r.doitPrevenir(lieu: "x", articles: ["z"], now: demain, calendar: cal))
+    }
+
+    @Test func texteDuRappel() {
+        #expect(RappelCourses.texte(["Lessive"]) == "Lessive")
+        #expect(RappelCourses.texte(["A", "B", "C", "D"]) == "A, B, C, D")
+        #expect(RappelCourses.texte(["A", "B", "C", "D", "E"]) == "A, B, C, D et 1 autre")
+        #expect(RappelCourses.texte(["A", "B", "C", "D", "E", "F"]) == "A, B, C, D et 2 autres")
+    }
+
     /// Fusion : choix du magasin et coche sur deux appareils, un article retiré des deux côtés sans conflit.
     @Test func fusionDeLaListeUnique() throws {
         var base = TacheHA.Liste(articles: [

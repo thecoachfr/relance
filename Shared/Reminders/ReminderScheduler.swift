@@ -21,6 +21,8 @@ final class ReminderScheduler {
         static let rendezVous = "RENDEZ_VOUS"
         /// Près du lieu d'une tâche (« Me le rappeler en passant à côté »).
         static let nearby = "NEARBY"
+        /// Liste de courses unique près d'un magasin (P9-U) : pas de « Fait », elle ne finit jamais.
+        static let courses = "COURSES"
         /// Envie proposée : une catégorie par type, pour « Lu », « Vu », « Écouté ».
         static func suggestion(_ kind: ToSee.Kind) -> String { "SUGGEST_" + kind.rawValue }
     }
@@ -36,6 +38,8 @@ final class ReminderScheduler {
         static let open = "OPEN"
         /// Envie : ne plus la proposer pendant une semaine.
         static let later = "LATER"
+        /// Courses (P9-U) : plus aucun rappel de magasin jusqu'à demain.
+        static let pasAujourdhui = "PAS_AUJOURDHUI"
     }
 
     static let askTimeChoices = [9 * 60, 12 * 60, 15 * 60, 18 * 60]
@@ -61,6 +65,8 @@ final class ReminderScheduler {
                                         icon: UNNotificationActionIcon(systemImageName: "arrow.up.right.square"))
         let later = UNNotificationAction(identifier: Action.later, title: "Pas maintenant",
                                          icon: UNNotificationActionIcon(systemImageName: "clock.arrow.circlepath"))
+        let pasAujourdhui = UNNotificationAction(identifier: Action.pasAujourdhui, title: "Pas aujourd'hui",
+                                                 icon: UNNotificationActionIcon(systemImageName: "moon.zzz"))
         let suggestions = EnvieSuggestions.kinds.map { kind in
             UNNotificationCategory(identifier: Category.suggestion(kind), actions: [
                 open,
@@ -75,6 +81,7 @@ final class ReminderScheduler {
             UNNotificationCategory(identifier: Category.digest, actions: [], intentIdentifiers: []),
             UNNotificationCategory(identifier: Category.early, actions: [done], intentIdentifiers: []),
             UNNotificationCategory(identifier: Category.nearby, actions: [done, tomorrow], intentIdentifiers: []),
+            UNNotificationCategory(identifier: Category.courses, actions: [pasAujourdhui], intentIdentifiers: []),
             UNNotificationCategory(identifier: Category.departure, actions: [
                 UNNotificationAction(identifier: Action.route, title: "Itinéraire", options: .foreground,
                                      icon: UNNotificationActionIcon(systemImageName: "map")),

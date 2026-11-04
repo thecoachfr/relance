@@ -1,6 +1,6 @@
 # P9-U — Une seule liste de courses, le magasin porté par chaque article
 
-*Étude et plan du 04/11/2026, demandés par Alexandre. **U1, U3 et U2 faits le 04/11**, sans effet visible (voir section 7) ; ses
+*Étude et plan du 04/11/2026, demandés par Alexandre. **U1, U3, U2 et U4 faits le 04/11**, sans effet visible (voir section 7) ; ses
 décisions du jour sont en section 5. Lire d'abord `P9-00-INDEX.md`, `P9-G-listes-courses.md`, `P9-Q-magasins-des-listes.md` et
 `P9-R-photo-vers-liste.md`. Dépôt : relance (public : aucune adresse ni donnée personnelle ici).*
 
@@ -125,6 +125,9 @@ Prix, stock à la maison, drive, partage de la liste avec d'autres personnes, ra
   mémorisé, section « Pris », feuille « Où l'acheter » (plusieurs magasins, Domicile et Travail exclus), ligne
   `CoursesLigne` dans À faire à la place d'un rond « Fait ». Un article ajouté pendant un filtre va à ce magasin. Vu au
   simulateur iPhone en mode `-demo` ; sur iPad la ligne est vue, l'ouverture non ; Mac compilé, pas ouvert.
-- À traiter plus tard : **U4** le
-  compteur de `notifyGroup` compte encore toute la liste ; **U5** seulement quand tous les appareils ont un build avec
+- 04/11 : **U4 fait** : `RappelCourses` (une fois par jour et par lieu, plus tôt si un article à y prendre apparaît ;
+  « Pas aujourd'hui » coupe tous les magasins jusqu'à demain), notification « Courses · Tu es près de … » avec les
+  articles de ce magasin (quatre, puis « et N autres »), ouverture filtrée sur ce magasin. Testé sans notification
+  réelle : les rappels ne se déclenchent que sur un appareil en passant devant un lieu.
+- À traiter plus tard : **U5** seulement quand tous les appareils ont un build avec
   U1 (un ancien build passerait la liste en « Fait » une fois tout coché).
