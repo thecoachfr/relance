@@ -86,7 +86,7 @@ final class WatchStore: NSObject, WCSessionDelegate {
         guard let i = tasks.firstIndex(where: { $0.id == task.id }),
               let j = tasks[i].articles?.firstIndex(where: { $0.id == article.id }) else { return }
         tasks[i].articles?[j].coche = coche
-        if let articles = tasks[i].articles, articles.allSatisfy(\.coche) { tasks.remove(at: i) }
+        if tasks[i].permanente != true, let articles = tasks[i].articles, articles.allSatisfy(\.coche) { tasks.remove(at: i) }
         save()
         send([WatchLink.actionKey: WatchLink.Action.article.rawValue, WatchLink.idKey: task.id,
               WatchLink.articleKey: article.id, WatchLink.cocheKey: coche, WatchLink.dueKey: Date.now])

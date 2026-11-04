@@ -21,6 +21,15 @@ final class WatchSync: NSObject, WCSessionDelegate {
     /// si le contexte complet diffère du dernier envoyé (B6, 23/10). Avant : renvoyé à chaque synchro, avec la connexion
     /// Google et le jeton HA, et un transfert de complication (budget quotidien) à chaque fois.
     /// `force` : activation de la session ou changement de montre (nouvelle montre, app montre réinstallée).
+    /// Les articles pour la montre ; ceux de la liste unique (P9-U) avec leurs magasins.
+    private func articles(_ liste: TacheHA.Liste) -> [WatchArticle] {
+        let lieux = store.mesLieux
+        return liste.articles.map { a in
+            WatchArticle(id: a.id, texte: a.texte, quantite: a.quantite, coche: a.coche,
+                         magasins: liste.permanente ? lieux.groupes(de: a).map(lieux.nom) : nil)
+        }
+    }
+
     func send(_ tasks: [TaskItem], force: Bool = false) {
         let session = WCSession.default
         guard WCSession.isSupported(), session.activationState == .activated,
@@ -32,9 +41,9 @@ final class WatchSync: NSObject, WCSessionDelegate {
             .map { WatchTask(id: store.isHAActive ? $0.localID.uuidString : ($0.googleID ?? $0.localID.uuidString), title: $0.title, due: $0.dueInstant(),
                              hasTime: $0.dueMinutes != nil, snoozedUntil: $0.snoozedUntil, priority: $0.priority,
                              category: $0.category, tags: $0.tags.isEmpty ? nil : $0.tags,
-                             articles: $0.liste.map { $0.articles.map {
-                                 WatchArticle(id: $0.id, texte: $0.texte, quantite: $0.quantite, coche: $0.coche) } },
-                             rendezVous: $0.estRendezVous ? true : nil) }
+                             articles: $0.liste.map(articles),
+                             rendezVous: $0.estRendezVous ? true : nil,
+                             permanente: $0.liste?.permanente == true ? true : nil) }
         var context: [String: Any] = [WatchLink.tasksKey: WatchLink.encode(payload),
                                       WatchLink.tasksInHAKey: store.isHAActive,
                                       // Libellé du jour (P9-N2), seulement en mode HA : données vides sinon.

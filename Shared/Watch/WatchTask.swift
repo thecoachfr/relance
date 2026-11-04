@@ -17,6 +17,26 @@ nonisolated struct WatchTask: Codable, Hashable, Identifiable, Sendable {
     var articles: [WatchArticle]?
     /// Rendez-vous (P9-T) : rien à cocher, jamais en retard. `nil` = tâche (et ancienne version de l'iPhone).
     var rendezVous: Bool?
+    /// Liste de courses unique (P9-U) : ni « Fait », ni report. `nil` = tâche (et ancienne version de l'iPhone).
+    var permanente: Bool?
+
+    var rienACocher: Bool { rendezVous == true || permanente == true }
+
+    /// Liste unique : un groupe par magasin, Supermarchés d'abord (un article à deux magasins est dans les deux), puis
+    /// ce qui est pris : en magasin, on va droit à sa section.
+    var sectionsCourses: [(nom: String, articles: [WatchArticle])] {
+        let tous = articles ?? []
+        let aPrendre = tous.filter { !$0.coche }
+        let noms = Set(aPrendre.flatMap { $0.magasins ?? [] }).sorted { a, b in
+            a == "Supermarchés" || (b != "Supermarchés" && a < b)
+        }
+        var sections = noms.map { nom in (nom: nom, articles: aPrendre.filter { $0.magasins?.contains(nom) == true }) }
+        let sansMagasin = aPrendre.filter { $0.magasins?.isEmpty != false }
+        if !sansMagasin.isEmpty { sections.append((nom: "À prendre", articles: sansMagasin)) }
+        let pris = tous.filter(\.coche)
+        if !pris.isEmpty { sections.append((nom: "Pris", articles: pris)) }
+        return sections
+    }
 
     var isUrgent: Bool { priority == .urgent }
 
@@ -29,6 +49,8 @@ nonisolated struct WatchArticle: Codable, Hashable, Identifiable, Sendable {
     var texte: String
     var quantite: String?
     var coche: Bool
+    /// Liste unique (P9-U) : les noms de ses magasins. `nil` ailleurs (et ancienne version de l'iPhone).
+    var magasins: [String]?
 }
 
 /// Messages échangés entre l'iPhone et la montre (WatchConnectivity).

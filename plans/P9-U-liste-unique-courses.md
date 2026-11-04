@@ -1,6 +1,6 @@
 # P9-U — Une seule liste de courses, le magasin porté par chaque article
 
-*Étude et plan du 04/11/2026, demandés par Alexandre. **U1, U3, U2 et U4 faits le 04/11**, sans effet visible (voir section 7) ; ses
+*Étude et plan du 04/11/2026, demandés par Alexandre. **U1, U2, U3, U4 et U6 faits le 04/11**, sans effet visible (voir section 7) ; ses
 décisions du jour sont en section 5. Lire d'abord `P9-00-INDEX.md`, `P9-G-listes-courses.md`, `P9-Q-magasins-des-listes.md` et
 `P9-R-photo-vers-liste.md`. Dépôt : relance (public : aucune adresse ni donnée personnelle ici).*
 
@@ -129,6 +129,12 @@ Prix, stock à la maison, drive, partage de la liste avec d'autres personnes, ra
   « Pas aujourd'hui » coupe tous les magasins jusqu'à demain), notification « Courses · Tu es près de … » avec les
   articles de ce magasin (quatre, puis « et N autres »), ouverture filtrée sur ce magasin. Testé sans notification
   réelle : les rappels ne se déclenchent que sur un appareil en passant devant un lieu.
-- 04/11 : U1 à U4 poussés sur `main` (`120a6c1`). Reste U6, puis U5 une fois le build installé partout.
+- 04/11 : U1 à U4 poussés sur `main` (`120a6c1`).
+- 04/11 : **U6 fait** : montre : ligne « N à prendre », ni « Fait » ni report, une section par magasin (Supermarchés
+  d'abord, puis « Pris »), la liste ne quitte plus la montre une fois tout coché. Les noms des magasins sont envoyés par
+  l'iPhone ; la montre ne sait pas de quel magasin on est proche, d'où les sections plutôt qu'un filtre. Widgets et
+  activité en direct : rien à changer, ils ne montrent que des tâches datées. Hubs : les trois vues ne montrent que les
+  tâches du jour et les tâches Maison sans date (code lu) : la liste n'y apparaît pas, donc rien ne peut la cocher.
+  Reste U5, une fois le build installé partout.
 - À traiter plus tard : **U5** seulement quand tous les appareils ont un build avec
   U1 (un ancien build passerait la liste en « Fait » une fois tout coché).

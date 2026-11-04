@@ -108,12 +108,12 @@ struct WatchTaskList: View {
                         }
                     }
                         .swipeActions(edge: .leading) {
-                            if task.rendezVous != true {
+                            if !task.rienACocher {
                                 Button("Fait", systemImage: "checkmark") { store.complete(task) }.tint(.green)
                             }
                         }
                         .swipeActions(edge: .trailing) {
-                            if task.rendezVous != true {
+                            if !task.rienACocher {
                                 Button("1 h", systemImage: "clock") { store.snooze(task) }.tint(.orange)
                             }
                         }
@@ -155,9 +155,14 @@ struct WatchTaskRow: View {
                     Text(status).font(.footnote).foregroundStyle(late ? .red : .secondary)
                 }
                 if let articles = task.articles, !articles.isEmpty {
-                    Label("\(articles.filter(\.coche).count)/\(articles.count)", systemImage: "checklist")
-                        .font(.footnote).foregroundStyle(.secondary)
-                        .accessibilityLabel("Liste : \(articles.filter(\.coche).count) cochés sur \(articles.count)")
+                    if task.permanente == true {
+                        Label("\(articles.filter { !$0.coche }.count) à prendre", systemImage: "cart")
+                            .font(.footnote).foregroundStyle(.secondary)
+                    } else {
+                        Label("\(articles.filter(\.coche).count)/\(articles.count)", systemImage: "checklist")
+                            .font(.footnote).foregroundStyle(.secondary)
+                            .accessibilityLabel("Liste : \(articles.filter(\.coche).count) cochés sur \(articles.count)")
+                    }
                 }
                 if let name = task.category {
                     let category = TaskCategory(name: name)
@@ -177,7 +182,7 @@ struct WatchTaskRow: View {
         .accessibilityElement(children: .combine)
         .accessibilityValue(task.priority.map { $0 == .normal ? "" : "Priorité \($0.rawValue)" } ?? "")
         .accessibilityActions {
-            if task.rendezVous != true {
+            if !task.rienACocher {
                 Button("Fait") { store.complete(task) }
                 Button("Reporter d'une heure") { store.snooze(task) }
             }
@@ -199,22 +204,15 @@ struct WatchListeView: View {
     var body: some View {
         if let task = store.tasks.first(where: { $0.id == taskID }), let articles = task.articles {
             List {
-                // Ce qui reste à prendre d'abord, ce qui est déjà dans le panier ensuite.
-                ForEach(articles.filter { !$0.coche } + articles.filter(\.coche)) { article in
-                    Button { store.setArticle(article, coche: !article.coche, of: task) } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: article.coche ? "checkmark.circle.fill" : "circle")
-                                .foregroundStyle(article.coche ? Color.accentColor : Color.secondary)
-                            Text(article.texte)
-                                .strikethrough(article.coche)
-                                .foregroundStyle(article.coche ? .secondary : .primary)
-                            Spacer(minLength: 0)
-                            if let quantite = article.quantite {
-                                Text(quantite).foregroundStyle(.secondary)
-                            }
+                if task.permanente == true {
+                    ForEach(task.sectionsCourses, id: \.nom) { section in
+                        Section(section.nom) {
+                            ForEach(section.articles) { ligne($0, of: task) }
                         }
                     }
-                    .accessibilityAddTraits(article.coche ? .isSelected : [])
+                } else {
+                    // Ce qui reste à prendre d'abord, ce qui est déjà dans le panier ensuite.
+                    ForEach(articles.filter { !$0.coche } + articles.filter(\.coche)) { ligne($0, of: task) }
                 }
             }
             .navigationTitle(task.title)
@@ -222,5 +220,22 @@ struct WatchListeView: View {
             ContentUnavailableView("Liste terminée", systemImage: "checkmark.circle",
                                    description: Text("Tout est coché : la tâche est faite."))
         }
+    }
+
+    private func ligne(_ article: WatchArticle, of task: WatchTask) -> some View {
+        Button { store.setArticle(article, coche: !article.coche, of: task) } label: {
+            HStack(spacing: 8) {
+                Image(systemName: article.coche ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(article.coche ? Color.accentColor : Color.secondary)
+                Text(article.texte)
+                    .strikethrough(article.coche)
+                    .foregroundStyle(article.coche ? .secondary : .primary)
+                Spacer(minLength: 0)
+                if let quantite = article.quantite {
+                    Text(quantite).foregroundStyle(.secondary)
+                }
+            }
+        }
+        .accessibilityAddTraits(article.coche ? .isSelected : [])
     }
 }

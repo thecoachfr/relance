@@ -452,6 +452,24 @@ struct ListeStoreTests {
         #expect(RappelCourses.texte(["A", "B", "C", "D", "E", "F"]) == "A, B, C, D et 2 autres")
     }
 
+    /// Montre : une section par magasin, Supermarchés d'abord, un article à deux magasins dans les deux, puis « Pris ».
+    @Test func coursesSurLaMontre() throws {
+        func article(_ id: String, _ magasins: [String]?, coche: Bool = false) -> WatchArticle {
+            WatchArticle(id: id, texte: id, coche: coche, magasins: magasins)
+        }
+        let tache = WatchTask(id: "c", title: "Courses", due: nil, hasTime: false, articles: [
+            article("Lessive", ["Droguerie", "Supermarchés"]), article("Colle", ["Bricolage"]),
+            article("Pain", ["Supermarchés"]), article("Sel", ["Supermarchés"], coche: true), article("Vieux", nil),
+        ], permanente: true)
+        let sections = tache.sectionsCourses
+        #expect(sections.map(\.nom) == ["Supermarchés", "Bricolage", "Droguerie", "À prendre", "Pris"])
+        #expect(sections[0].articles.map(\.id) == ["Lessive", "Pain"] && sections[2].articles.map(\.id) == ["Lessive"])
+        #expect(tache.rienACocher && !WatchTask(id: "t", title: "T", due: nil, hasTime: false).rienACocher)
+        // Une ancienne version de l'iPhone n'envoie ni l'un ni l'autre.
+        let ancien = try JSONDecoder().decode(WatchArticle.self, from: Data(#"{"id":"a","texte":"Pain","coche":false}"#.utf8))
+        #expect(ancien.magasins == nil)
+    }
+
     /// Fusion : choix du magasin et coche sur deux appareils, un article retiré des deux côtés sans conflit.
     @Test func fusionDeLaListeUnique() throws {
         var base = TacheHA.Liste(articles: [
