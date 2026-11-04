@@ -65,7 +65,7 @@ TacheHA, comme `📣`). Date obligatoire, heure attendue mais facultative.
 | **R2** | Sélecteur Tâche · RDV · Info · Envie (`NatureTache`, saisie rapide, fiche, date obligatoire) ; À faire, Agenda, Mac, widgets, montre : sans bouton Fait ni retard ; pas d'activité en direct | relance |
 | **R3** | Trois vues du Hub : pas de retard ni de coche, repère visuel ; contrat dans `homeassistant/` | relance (Nest Hub) + hub-tv + hub-ipad |
 | **R4** | Tri : champ `nature` (`""`, `rendez_vous`, `info`) dans `SCHEMA`, `appliquer` qui ajoute la ligne, gardes Python, plus de 💡 sur `📌` et `📣` ; consigne réelle, puis modèle remis à jour (règle T et `🎟` compris) ; essai à blanc | relance + NUC |
-| **R5** | Courrier : titre de repli neutre sans « Répondre à » ; `tache_du_mail` propose la nature d'après la `demande` et l'`echeance` | relance + NUC |
+| **R5** | Courrier : titre de repli neutre sans « Répondre à » (« Expéditeur : objet ») ; la nature reste au tri, guidé par la consigne | relance + NUC |
 | **R6** | Reprise des 6 tâches ouvertes qui sont des rendez-vous : liste validée par Alexandre, puis écriture en un lot, après sauvegarde | HA |
 
 **Ordre** : R1 → R2 → R3 → R4 → R5 → R6. **R3 doit être déployé avant R4** : sinon la vigie poserait des `📌` que les
@@ -132,3 +132,6 @@ réglage `tri_natures` (`essai` / `actif`) : en `essai`, les natures proposées 
   journal `/config/aiguillage_tri_ombre.jsonl` note `nature` à chaque proposition, rien n'est écrit. Consigne réelle :
   règle V ; modèle `docs/TRI-CONSIGNE.md` remis à jour (règle T, `🎟`). Relecture prévue vers le 11/11, puis `actif`
   avec Alexandre.
+- 04/11 : **R5 fait.** Sans `demande`, le titre devient « Expéditeur : objet ». Écart avec le plan : `tache_du_mail` ne
+  propose pas de nature. Une tâche créée depuis un mail n'a pas de catégorie, elle passe donc par le tri, qui voit le
+  résumé ; un mail sans demande peut être une vraie action (cas relevé : une exonération fiscale). Règle V complétée.

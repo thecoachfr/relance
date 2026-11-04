@@ -1331,8 +1331,10 @@ def marquer_fait(db, message_id, raison, maintenant):
 
 def tache_du_mail(r, maintenant):
     """(clé, valeur) de la tâche Aiguillage créée depuis un mail (format TacheHA v2, notes seulement : le champ
-    `courrier` viendra avec N4, après la consigne du tri). Datée de l'échéance du mail, sinon d'aujourd'hui."""
-    titre = r.get("demande") or f"Répondre à {_qui(r)} : {r.get('sujet') or ''}"
+    `courrier` viendra avec N4, après la consigne du tri). Datée de l'échéance du mail, sinon d'aujourd'hui.
+    Sans demande, le titre reste neutre (P9-T) : un avis d'expédition ou une promo n'attend pas de réponse. La nature
+    (tâche, info, rendez-vous) est laissée au tri, qui lit le résumé : une action prise pour une info ne relancerait plus."""
+    titre = r.get("demande") or " : ".join(x for x in (_qui(r), (r.get("sujet") or "").strip()) if x)
     notes = "\n".join(x for x in (LIEN_GMAIL.format(r["fil"]), r.get("resume") or "", f"📧 Mail de {_qui(r)}") if x)
     jour = r.get("echeance") or maintenant.astimezone(PARIS).date().isoformat()
     cle = str(uuid.uuid5(NAMESPACE_TACHES, f"courrier:{r['id']}"))

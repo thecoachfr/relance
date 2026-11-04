@@ -849,7 +849,7 @@ def test_actions_de_notification():
                  "notes": "https://mail.google.com/mail/u/0/#inbox/fA\nCoupure le 3/11.\n📧 Mail de Enedis"}
     assert cle == c.tache_du_mail(r, MAINTENANT)[0]  # même mail, même tâche (pas de doublon)
     t2 = c.tache_du_mail(dict(r, demande=None, echeance=None), MAINTENANT)[1]
-    assert t2["titre"] == "Répondre à Enedis : Coupure" and t2["jour"] == "2026-10-24"
+    assert t2["titre"] == "Enedis : Coupure" and t2["jour"] == "2026-10-24"
 
 
 # MARK: - Espace `courrier` de donnees_apps (lot C2 de l'app Courrier, 26/10)
