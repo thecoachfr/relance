@@ -33,7 +33,8 @@ final class WatchSync: NSObject, WCSessionDelegate {
                              hasTime: $0.dueMinutes != nil, snoozedUntil: $0.snoozedUntil, priority: $0.priority,
                              category: $0.category, tags: $0.tags.isEmpty ? nil : $0.tags,
                              articles: $0.liste.map { $0.articles.map {
-                                 WatchArticle(id: $0.id, texte: $0.texte, quantite: $0.quantite, coche: $0.coche) } }) }
+                                 WatchArticle(id: $0.id, texte: $0.texte, quantite: $0.quantite, coche: $0.coche) } },
+                             rendezVous: $0.estRendezVous ? true : nil) }
         var context: [String: Any] = [WatchLink.tasksKey: WatchLink.encode(payload),
                                       WatchLink.tasksInHAKey: store.isHAActive,
                                       // Libellé du jour (P9-N2), seulement en mode HA : données vides sinon.

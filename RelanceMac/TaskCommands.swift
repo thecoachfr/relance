@@ -20,7 +20,7 @@ struct TaskCommands: Commands {
                 task.isCompleted ? store.reopen(task) : store.complete(task)
             }
             .keyboardShortcut(.return)
-            .disabled(task == nil)
+            .disabled(task == nil || (task?.estRendezVous == true && task?.isCompleted == false))
 
             Button("Reporter d'une heure") {
                 if let task { store.snooze(task, until: .now.addingTimeInterval(3600)) }

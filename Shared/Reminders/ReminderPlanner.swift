@@ -28,6 +28,10 @@ nonisolated struct PlannableTask: Sendable, Equatable {
     /// Rappel « pour info » (P9-P) : les jours (début de jour) où il tombe, sur l'horizon ; `nil` = tâche ordinaire.
     /// Aucune relance : seulement nommé dans le résumé du matin de ces jours-là.
     var pourInfo: [Date]?
+    /// Rendez-vous (P9-T) : les jours (début de jour) où il tombe, sur l'horizon ; `nil` = pas un rendez-vous.
+    var rendezVous: [Date]?
+    /// Rendez-vous récurrent : seulement nommé dans le résumé du matin, plus « Prévenir » s'il est demandé.
+    var rendezVousRepete = false
     /// À faire au bureau ou à la maison (P9-N2) : passe en tête du résumé du matin d'un jour qui correspond.
     var contexte: ContexteTache?
 }
@@ -138,6 +142,9 @@ nonisolated struct PlannedReminder: Sendable, Equatable, Codable {
     var hasPlace = false
     /// Image jointe à montrer dans la notification (pièce de la tâche, P9-K).
     var imageID: String?
+
+    /// Sous-titre d'un rendez-vous (P9-T) : le programmateur y lit qu'il n'y a rien à cocher.
+    static let sousTitreRendezVous = "Rendez-vous"
 }
 
 /// Calcule toutes les relances à programmer. Fonction pure : mêmes tâches + même instant = même plan.
@@ -156,6 +163,10 @@ nonisolated struct ReminderPlanner: Sendable {
 
         for task in tasks {
             if task.pourInfo != nil { continue }
+            if task.rendezVous != nil {
+                reminders += rendezVousReminders(task, now: now, horizon: horizon)
+                continue
+            }
             if task.toSee?.kind.isDated == true {
                 reminders += eventReminders(task, now: now, horizon: horizon)
                 continue
@@ -288,19 +299,15 @@ nonisolated struct ReminderPlanner: Sendable {
 
             let overdue = tasks.filter { isOverdue($0, at: fire) }.count
             let dueToday = tasks.filter { task in
-                guard task.pourInfo == nil, let d = task.dueDay, let start = calendar.date(from: d) else { return false }
+                guard task.pourInfo == nil, task.rendezVous == nil, let d = task.dueDay,
+                      let start = calendar.date(from: d) else { return false }
                 return calendar.isDate(start, inSameDayAs: day) && !isOverdue(task, at: fire)
             }.count
             // Avec une heure d'abord (« Sport à 7 h 30 »), puis les autres : même ordre que le Hub.
-            var infos: [String] = []
-            let duJour = tasks.filter { $0.pourInfo?.contains(where: { calendar.isDate($0, inSameDayAs: day) }) == true }
-                .sorted { ($0.dueMinutes ?? Int.max, $0.title.lowercased()) < ($1.dueMinutes ?? Int.max, $1.title.lowercased()) }
-            for task in duJour {
-                let texte = task.title + (task.dueMinutes.map { " à " + Self.formatTime($0) } ?? "")
-                if !infos.contains(texte) { infos.append(texte) }
-            }
+            let infos = nommes(tasks.filter { $0.pourInfo?.contains(where: { calendar.isDate($0, inSameDayAs: day) }) == true })
+            let rendezVous = nommes(tasks.filter { $0.rendezVous?.contains(where: { calendar.isDate($0, inSameDayAs: day) }) == true })
             let contexte = tachesDuContexte(tasks, day: day, fire: fire)
-            guard overdue + dueToday + inboxCount + infos.count + contexte.taches.count > 0 else { continue }
+            guard overdue + dueToday + inboxCount + infos.count + rendezVous.count + contexte.taches.count > 0 else { continue }
 
             var parts: [String] = []
             // Reste de N2 (28/10) : un jour de bureau, « 🏢 Au bureau : Rendre le badge, … » en tête ; un jour de
@@ -312,6 +319,10 @@ nonisolated struct ReminderPlanner: Sendable {
             if overdue > 0 { parts.append("\(overdue) en retard") }
             if dueToday > 0 { parts.append("\(dueToday) aujourd'hui") }
             if inboxCount > 0 { parts.append("\(inboxCount) à trier") }
+            // P9-T : « Rendez-vous : Dentiste à 14 h » (deux noms, puis « … »).
+            if !rendezVous.isEmpty {
+                parts.append("Rendez-vous : " + rendezVous.prefix(2).joined(separator: ", ") + (rendezVous.count > 2 ? "…" : ""))
+            }
             // P9-P : « Pour info : Sport à 7 h 30, Poubelles » (deux noms, puis « … »).
             if !infos.isEmpty {
                 parts.append("Pour info : " + infos.prefix(2).joined(separator: ", ") + (infos.count > 2 ? "…" : ""))
@@ -330,6 +341,16 @@ nonisolated struct ReminderPlanner: Sendable {
         return digests
     }
 
+    /// « Sport à 7 h 30 », sans doublon : avec une heure d'abord, puis les autres.
+    private func nommes(_ tasks: [PlannableTask]) -> [String] {
+        var noms: [String] = []
+        for task in tasks.sorted(by: { ($0.dueMinutes ?? Int.max, $0.title.lowercased()) < ($1.dueMinutes ?? Int.max, $1.title.lowercased()) }) {
+            let texte = task.title + (task.dueMinutes.map { " à " + Self.formatTime($0) } ?? "")
+            if !noms.contains(texte) { noms.append(texte) }
+        }
+        return noms
+    }
+
     /// Tâches à faire dans le contexte du jour (`ContexteTache.lieuxDuJour` contient le lieu publié pour `day`) :
     /// celles du jour, en retard ou sans date, ni infos ni envies ; l'urgent d'abord, puis par échéance.
     /// Fonction pure : `lieuxDuJour` vide ou jour inconnu → aucune.
@@ -339,7 +360,7 @@ nonisolated struct ReminderPlanner: Sendable {
               let lieu = lieuxDuJour[String(format: "%04d-%02d-%02d", annee, mois, jour)],
               let contexte = ContexteTache.allCases.first(where: { $0.lieuxDuJour.contains(lieu) }) else { return (nil, []) }
         let retenues = tasks.filter { task in
-            guard task.contexte == contexte, task.pourInfo == nil, task.toSee == nil else { return false }
+            guard task.contexte == contexte, task.pourInfo == nil, task.rendezVous == nil, task.toSee == nil else { return false }
             guard let d = task.dueDay, let start = calendar.date(from: d) else { return true }
             return calendar.isDate(start, inSameDayAs: day) || isOverdue(task, at: fire)
         }
@@ -389,8 +410,9 @@ nonisolated struct ReminderPlanner: Sendable {
     private func eveningDigest(tasks: [PlannableTask], day: Date, now: Date, horizon: Date) -> PlannedReminder? {
         let fire = at(day, settings.eveningDigestTime)
         guard fire > now, fire <= horizon, let tomorrow = calendar.date(byAdding: .day, value: 1, to: day) else { return nil }
+        // Un rendez-vous de demain a déjà son rappel de la veille au soir.
         let planned = tasks.filter { task in
-            guard task.pourInfo == nil, let d = task.dueDay, let start = calendar.date(from: d) else { return false }
+            guard task.pourInfo == nil, task.rendezVous == nil, let d = task.dueDay, let start = calendar.date(from: d) else { return false }
             return calendar.isDate(start, inSameDayAs: tomorrow)
         }
         let overdue = tasks.filter { isOverdue($0, at: fire) }.count
@@ -460,14 +482,49 @@ nonisolated struct ReminderPlanner: Sendable {
             events.append((at(eve, settings.evening), .eventEve, "Demain\(time)."))
         }
         if let minutes = task.dueMinutes {
-            events.append((at(dayStart, minutes - 120), .eventSoon, "Dans 2 h\(time) · ton billet est dans la fiche."))
+            events.append((at(dayStart, minutes).addingTimeInterval(-2 * 3600), .eventSoon, "Dans 2 h\(time) · ton billet est dans la fiche."))
         } else {
             events.append((at(dayStart, settings.morning), .eventSoon, "Aujourd'hui · ton billet est dans la fiche."))
         }
-        return events.filter { $0.0 > now && $0.0 <= horizon && !isMuted($0.0, $0.1) }.map { date, kind, body in
+        return planifies(task, events, subtitle: ToSee.Kind.event.title, now: now, horizon: horizon)
+    }
+
+    /// Rendez-vous (P9-T) : la veille au soir et 2 h avant (le matin sans heure), avec le départ et « Prévenir ».
+    /// Récurrent : seulement « Prévenir », le résumé du matin le nomme. Rien après l'heure.
+    private func rendezVousReminders(_ task: PlannableTask, now: Date, horizon: Date) -> [PlannedReminder] {
+        guard let dueDay = task.dueDay, let dayStart = calendar.date(from: dueDay) else { return [] }
+        let time = task.dueMinutes.map { " à " + Self.formatTime($0) } ?? ""
+        var events: [(Date, ReminderKind, String)] = []
+        if !task.rendezVousRepete {
+            if let eve = calendar.date(byAdding: .day, value: -1, to: dayStart) {
+                events.append((at(eve, settings.evening), .eventEve, "Demain\(time)."))
+            }
+            if let minutes = task.dueMinutes {
+                events.append((at(dayStart, minutes).addingTimeInterval(-2 * 3600), .eventSoon, "Dans 2 h\(time)."))
+            } else {
+                events.append((at(dayStart, settings.morning), .eventSoon, "Aujourd'hui."))
+            }
+        }
+        if let minutes = task.dueMinutes {
+            let due = at(dayStart, minutes)
+            if case .minutes(let avant)? = task.reminders?.advance {
+                let date = due.addingTimeInterval(-Double(avant) * 60)
+                events.append((date, .advance, body(for: task, kind: .advance, at: date)))
+            }
+            if !task.rendezVousRepete, let travel = task.travelMinutes, settings.departure.enabled {
+                let date = due.addingTimeInterval(-Double(travel + settings.departure.marginMinutes) * 60)
+                events.append((date, .departure, body(for: task, kind: .departure, at: date)))
+            }
+        }
+        return planifies(task, events, subtitle: PlannedReminder.sousTitreRendezVous, now: now, horizon: horizon)
+    }
+
+    private func planifies(_ task: PlannableTask, _ events: [(Date, ReminderKind, String)], subtitle: String,
+                           now: Date, horizon: Date) -> [PlannedReminder] {
+        events.filter { $0.0 > now && $0.0 <= horizon && !isMuted($0.0, $0.1) }.map { date, kind, body in
             PlannedReminder(id: "\(task.id)|\(kind.rawValue)|\(Int(date.timeIntervalSince1970))", taskID: task.id,
                             fireDate: date, kind: kind, title: task.title, body: body,
-                            timeSensitive: kind == .eventSoon, badge: 0, subtitle: ToSee.Kind.event.title,
+                            timeSensitive: kind == .eventSoon || kind == .departure, badge: 0, subtitle: subtitle,
                             hasPlace: task.hasPlace, imageID: kind == .eventSoon ? task.imageID : nil)
         }
     }
@@ -480,7 +537,7 @@ nonisolated struct ReminderPlanner: Sendable {
     }
 
     func isOverdue(_ task: PlannableTask, at date: Date) -> Bool {
-        guard task.toSee?.kind.isDated != true, task.pourInfo == nil, let d = task.dueDay, let dayStart = calendar.date(from: d) else { return false }
+        guard task.toSee?.kind.isDated != true, task.pourInfo == nil, task.rendezVous == nil, let d = task.dueDay, let dayStart = calendar.date(from: d) else { return false }
         if let minutes = task.dueMinutes { return at(dayStart, minutes) < date }
         return calendar.date(byAdding: .day, value: 1, to: dayStart)! <= date
     }

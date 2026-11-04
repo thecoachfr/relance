@@ -15,10 +15,12 @@ nonisolated struct WatchTask: Codable, Hashable, Identifiable, Sendable {
     var tags: [String]?
     /// Liste d'articles (P9-G2) ; `nil` sans liste (et listes envoyées par une ancienne version de l'iPhone).
     var articles: [WatchArticle]?
+    /// Rendez-vous (P9-T) : rien à cocher, jamais en retard. `nil` = tâche (et ancienne version de l'iPhone).
+    var rendezVous: Bool?
 
     var isUrgent: Bool { priority == .urgent }
 
-    func isLate(at now: Date) -> Bool { due.map { $0 < now } ?? false }
+    func isLate(at now: Date) -> Bool { rendezVous != true && due.map { $0 < now } ?? false }
 }
 
 /// Article d'une liste, tel que la montre l'affiche et le coche.

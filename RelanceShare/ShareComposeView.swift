@@ -394,6 +394,8 @@ struct ShareComposeView: View {
         if !appointment, let dateLine = photo?.dateLine {
             notes = notes.isEmpty ? dateLine : notes + "\n" + dateLine
         }
+        // Un rendez-vous lu (P9-L4) prend sa nature (P9-T), sauf s'il a été rangé dans une envie ou que sa date est retirée.
+        if appointment, kind == nil, day != nil { notes = RendezVous.notes(notes, actif: true) }
         if let place {
             notes = TaskContact.notes(notes, setting: place.contact(link: placeLink))
         }

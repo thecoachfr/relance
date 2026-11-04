@@ -160,15 +160,15 @@ final class TaskStore {
         return next
     }
 
-    // MARK: - Pour info (P9-P)
+    // MARK: - Pour info et rendez-vous (P9-P, P9-T)
 
-    /// Une info passée (datée d'avant aujourd'hui) avance à sa prochaine occurrence si elle se répète, sinon elle
-    /// est rangée dans « Fait » sans « Suivante créée » (rien à recréer). Fait par l'appareil qui relance, comme
+    /// Une info ou un rendez-vous passé (daté d'avant aujourd'hui) avance à sa prochaine occurrence s'il se répète,
+    /// sinon il est rangé dans « Fait » sans « Suivante créée » (rien à recréer). Fait par l'appareil qui relance, comme
     /// `spawnNext`. Renvoie `true` si une tâche a changé.
     @discardableResult
-    func avancerInfosPassees(now: Date = .now) -> Bool {
+    func avancerPasses(now: Date = .now) -> Bool {
         var change = false
-        for item in activeTasks() where item.estPourInfo {
+        for item in activeTasks() where item.estPourInfo || item.estRendezVous {
             guard let due = item.dueDay else { continue }
             switch PourInfo.suite(echeance: due, repetition: Recurrence(notes: item.notes), aujourdhui: now) {
             case .inchangee:
@@ -347,7 +347,7 @@ final class TaskStore {
     func reschedule() async {
         guard schedulesReminders else { return }
         // Infos passées avancées ou rangées : `commit` relance ce calcul avec les nouvelles dates.
-        if avancerInfosPassees() {
+        if avancerPasses() {
             commit()
             return
         }

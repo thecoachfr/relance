@@ -71,6 +71,9 @@ struct QuickAddSheet: View {
     private var isToSee: Bool { ToSee(notes: notes) != nil }
     /// Rappel « pour info » (P9-P) : une date, ni heure, ni priorité, ni liste.
     private var isPourInfo: Bool { PourInfo.est(notes) }
+    /// Rendez-vous (P9-T) : une date, ni priorité, ni liste.
+    private var isRendezVous: Bool { RendezVous.est(notes) }
+    private var dateObligatoire: Bool { isPourInfo || isRendezVous }
     /// Une envie sans échéance (toutes sauf la sortie réservée, P9-L1, qui garde sa date et son heure).
     private var isUndated: Bool { ToSee(notes: notes).map { !$0.kind.isDated } ?? false }
     /// Type de l'envie en cours, ou celui de l'onglet.
@@ -104,11 +107,11 @@ struct QuickAddSheet: View {
                         .onSubmit(save)
                         .onChange(of: text) { detect() }
                 }
-                // Nature (28/10) : Tâche · Info · Envie, comme dans la fiche.
+                // Nature (28/10) : Tâche · Rendez-vous · Info · Envie, comme dans la fiche.
                 NatureSection(notes: $notes, kind: kind) { nature in
                     manual = true
                     switch nature {
-                    case .info: if day == nil { day = Calendar.current.startOfDay(for: .now) }
+                    case .info, .rendezVous: if day == nil { day = Calendar.current.startOfDay(for: .now) }
                     case .envie: if !(ToSee(notes: notes)?.kind.isDated ?? false) { day = nil }
                     case .tache: break
                     }
@@ -143,7 +146,7 @@ struct QuickAddSheet: View {
                         Text("Aujourd'hui").tag(DayChoice.today)
                         Text("Demain").tag(DayChoice.tomorrow)
                         Text("Autre").tag(DayChoice.other)
-                        if !isPourInfo { Text("Sans date").tag(DayChoice.none) }
+                        if !dateObligatoire { Text("Sans date").tag(DayChoice.none) }
                     }
                     .pickerStyle(.segmented)
 
@@ -161,7 +164,7 @@ struct QuickAddSheet: View {
                     }
                 }
                 }
-                if HAConfig.isActive, !isToSee, !isPourInfo {
+                if HAConfig.isActive, !isToSee, !dateObligatoire {
                     Section {
                         Toggle("Liste d'articles", systemImage: "checklist", isOn: $avecListe.animation())
                             .onChange(of: avecListe) { if avecListe { articleActif = true } }
@@ -197,7 +200,7 @@ struct QuickAddSheet: View {
                     }
                 }
                 if context != .map { ContactSection(notes: $notes, searching: $searchingPlace) }
-                if !isPourInfo {
+                if !dateObligatoire {
                     Section {
                         PriorityPicker(priority: Binding(get: { priority }, set: { priority = $0; manualPriority = true }))
                     } header: {
@@ -321,12 +324,12 @@ struct QuickAddSheet: View {
         // Sans date, une répétition n'a pas de point de départ : on la retire.
         let kept = day == nil ? Recurrence.notes(notes, setting: nil) : notes
         // Une info a toujours une date (aujourd'hui par défaut), une heure facultative (affichée, sans rappel), pas de priorité.
-        let jour = isPourInfo ? (day ?? Calendar.current.startOfDay(for: .now)) : (isUndated ? nil : day)
+        let jour = dateObligatoire ? (day ?? Calendar.current.startOfDay(for: .now)) : (isUndated ? nil : day)
         let item = store.add(title: titre, day: jour,
-                             minutes: hasTime && !isUndated && (day != nil || isPourInfo) ? (c.hour! * 60 + c.minute!) : nil,
-                             category: categorie, priority: isPourInfo ? .normal : priority,
-                             notes: isPourInfo ? notes : kept)
-        if avecListe, !isToSee, !isPourInfo {
+                             minutes: hasTime && !isUndated && (day != nil || dateObligatoire) ? (c.hour! * 60 + c.minute!) : nil,
+                             category: categorie, priority: dateObligatoire ? .normal : priority,
+                             notes: dateObligatoire ? notes : kept)
+        if avecListe, !isToSee, !dateObligatoire {
             let maintenant = TacheHA.timestamp(.now)
             let liste = (articles + [article]).compactMap(TaskStore.article).map {
                 var article = $0
@@ -367,6 +370,8 @@ struct QuickAddSheet: View {
         manual = true
         text = rdv.title
         day = rdv.day
+        // Un rendez-vous lu sur un scan (P9-L4) prend sa nature, sauf si une autre a été choisie.
+        if NatureTache(notes: notes) == .tache { notes = NatureTache.rendezVous.notes(notes) }
         pickOther = true
         if let m = rdv.minutes {
             hasTime = true

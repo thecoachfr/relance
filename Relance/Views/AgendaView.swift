@@ -146,12 +146,16 @@ struct AgendaView: View {
 
     private func puce(_ t: TaskItem) -> some View {
         HStack(spacing: 8) {
-            Button { onDone(t) } label: {
-                Image(systemName: t.priority == .urgent || t.isOverdue(now: now) ? "circle.circle" : "circle")
-                    .foregroundStyle(t.priority == .urgent || t.isOverdue(now: now) ? Color.red : .secondary)
+            if t.estRendezVous {
+                Image(systemName: "pin.fill").foregroundStyle(.tint).accessibilityLabel("Rendez-vous")
+            } else {
+                Button { onDone(t) } label: {
+                    Image(systemName: t.priority == .urgent || t.isOverdue(now: now) ? "circle.circle" : "circle")
+                        .foregroundStyle(t.priority == .urgent || t.isOverdue(now: now) ? Color.red : .secondary)
+                }
+                .buttonStyle(.borderless)
+                .accessibilityLabel("Marquer « \(t.title) » comme faite")
             }
-            .buttonStyle(.borderless)
-            .accessibilityLabel("Marquer « \(t.title) » comme faite")
             Button { onOpen(t) } label: {
                 Text(t.title).font(.subheadline).foregroundStyle(.primary).lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
@@ -271,11 +275,15 @@ struct AgendaView: View {
         if let t = b.tache {
             let rouge = t.priority == .urgent || t.isOverdue(now: now)
             HStack(alignment: .top, spacing: 6) {
-                Button { onDone(t) } label: {
-                    Image(systemName: "circle").foregroundStyle(rouge ? Color.red : Color.accentColor)
+                if t.estRendezVous {
+                    Image(systemName: "pin.fill").foregroundStyle(Color.accentColor).accessibilityLabel("Rendez-vous")
+                } else {
+                    Button { onDone(t) } label: {
+                        Image(systemName: "circle").foregroundStyle(rouge ? Color.red : Color.accentColor)
+                    }
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel("Marquer « \(t.title) » comme faite")
                 }
-                .buttonStyle(.borderless)
-                .accessibilityLabel("Marquer « \(t.title) » comme faite")
                 VStack(alignment: .leading, spacing: 1) {
                     Text(b.titre).font(.subheadline.weight(.semibold)).lineLimit(2)
                     if let s = b.sousTitre { Text(s).font(.caption).foregroundStyle(.secondary).lineLimit(1) }

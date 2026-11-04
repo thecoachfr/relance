@@ -36,10 +36,14 @@ struct PriorityFooter: View {
     var reminders: ReminderOverride?
     /// Sortie réservée (P9-L1) : ses propres rappels, pas ceux de la priorité.
     var isEvent = false
+    /// Rendez-vous (P9-T) : ses propres rappels aussi.
+    var isRendezVous = false
 
     var body: some View {
         let profile = store.scheduler.settings[priority]
-        if isEvent {
+        if isRendezVous {
+            Text("Rendez-vous : rappel la veille au soir et 2 h avant, rien après l'heure. Seul « Prévenir » s'y ajoute.")
+        } else if isEvent {
             Text("Sortie : rappel une semaine avant, la veille au soir et 2 h avant.")
         } else {
             Text(ReminderSummary.text(for: reminders?.applied(to: profile) ?? profile) + ".")

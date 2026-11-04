@@ -71,9 +71,10 @@ final class TaskItem {
         return calendar.date(byAdding: .day, value: 1, to: dueDay)
     }
 
-    /// Une sortie passée n'est pas en retard : elle attend « Vu » dans Envies (Passées).
+    /// Une sortie passée n'est pas en retard : elle attend « Vu » dans Envies (Passées). Un rendez-vous non plus :
+    /// il se range tout seul (`avancerPasses`).
     func isOverdue(now: Date = .now, calendar: Calendar = .current) -> Bool {
-        guard !isCompleted, toSee?.kind.isDated != true, !estPourInfo, let due = dueInstant(calendar: calendar) else { return false }
+        guard !isCompleted, !aHoraireFixe, !estPourInfo, let due = dueInstant(calendar: calendar) else { return false }
         return due < now
     }
 
@@ -110,6 +111,7 @@ final class TaskItem {
     func needsTriage(now: Date = .now, calendar: Calendar = .current) -> Bool {
         guard toSee == nil, !estPourInfo, !estListeDeCoursesSansDate else { return false }
         guard let dueDay else { return true }
+        if estRendezVous { return false }
         return dueMinutes == nil && calendar.startOfDay(for: dueDay) <= calendar.startOfDay(for: now) && groupesDeLieux.isEmpty
     }
 
@@ -135,6 +137,10 @@ final class TaskItem {
             pourInfo: estPourInfo ? dueDay.map {
                 PourInfo.jours(echeance: $0, repetition: Recurrence(notes: notes), debut: now, nombre: 9, calendar: calendar)
             } ?? [] : nil,
+            rendezVous: estRendezVous ? dueDay.map {
+                PourInfo.jours(echeance: $0, repetition: Recurrence(notes: notes), debut: now, nombre: 9, calendar: calendar)
+            } ?? [] : nil,
+            rendezVousRepete: Recurrence(notes: notes) != nil,
             contexte: contexte)
     }
 }
@@ -142,4 +148,14 @@ final class TaskItem {
 extension TaskItem {
     /// Contexte de la tâche (P9-N2), d'après la ligne des notes.
     var contexte: ContexteTache? { ContexteTache(notes: notes) }
+}
+
+extension TaskItem {
+    var estRendezVous: Bool { RendezVous.est(notes) }
+
+    /// Rendez-vous ou sortie réservée : l'échéance est un moment fixe, jamais un retard.
+    var aHoraireFixe: Bool { estRendezVous || toSee?.kind.isDated == true }
+
+    /// Texte de l'échéance sans « En retard » : info, rendez-vous, sortie.
+    var jamaisEnRetard: Bool { estPourInfo || aHoraireFixe }
 }

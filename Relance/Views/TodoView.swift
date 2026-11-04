@@ -187,9 +187,10 @@ struct TodoView: View {
     private func group(now: Date) -> (overdue: [TaskItem], today: [TaskItem], later: [TaskItem]) {
         let calendar = Calendar.current
         // Dans chaque section : les urgentes d'abord, puis par échéance.
-        // Une sortie passée (P9-L1) quitte À faire : elle attend « Vu » dans Envies (Passées).
+        // Une sortie passée (P9-L1) quitte À faire : elle attend « Vu » dans Envies (Passées). Un rendez-vous passé
+        // aussi : il se range à la prochaine synchro après minuit.
         let sorted = dated.filter { $0.matches(categoryFilter: categoryFilter) && !$0.estPourInfo }
-            .filter { $0.toSee?.kind.isDated != true || ($0.dueInstant() ?? .distantFuture) >= now }
+            .filter { !$0.aHoraireFixe || ($0.dueInstant() ?? .distantFuture) >= now }
             .sorted { a, b in
             if a.priority.rank != b.priority.rank { return a.priority.rank < b.priority.rank }
             return (a.dueInstant() ?? .distantFuture) < (b.dueInstant() ?? .distantFuture)

@@ -24,7 +24,19 @@ struct TaskRow: View {
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 12) {
-            if let onDone {
+            if onDone != nil, item.estRendezVous {
+                // Rien à cocher : une épingle à la place du rond, au même endroit.
+                Color.clear
+                    .frame(width: 44, height: 1)
+                    .overlay {
+                        Image(systemName: "pin.fill")
+                            .font(.body)
+                            .foregroundStyle(.tint)
+                            .offset(y: -capCenter)
+                            .accessibilityLabel("Rendez-vous")
+                    }
+                    .padding(.leading, -10)
+            } else if let onDone {
                 // Le rond ne compte pas dans la hauteur de la ligne : en grande taille, il ajoutait de l'espace
                 // au-dessus du titre. Il est posé sur la ligne de base du titre, puis centré sur ses majuscules.
                 Color.clear
@@ -190,12 +202,13 @@ struct TaskRow: View {
     /// Même texte que dans les widgets et l'activité en direct (`DueText`).
     private var status: (text: String, symbol: String, color: Color)? {
         guard let due = item.dueInstant() else { return nil }
-        var text = DueText.long(due: due, hasTime: item.dueMinutes != nil, now: now, jamaisEnRetard: item.estPourInfo)
+        var text = DueText.long(due: due, hasTime: item.dueMinutes != nil, now: now, jamaisEnRetard: item.jamaisEnRetard)
         if item.isOverdue(now: now) { return (text, "clock.fill", .red) }
-        // Sortie passée (P9-L1) : pas de retard, la date seulement, en attendant « Vu ».
-        if item.toSee?.kind.isDated == true, due < now {
-            return ("Passée · " + due.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated)),
-                    ToSee.Kind.event.symbol, .secondary)
+        // Sortie passée (P9-L1) : pas de retard, la date seulement, en attendant « Vu ». Rendez-vous passé : pareil,
+        // en attendant de se ranger.
+        if item.aHoraireFixe, due < now {
+            return ((item.estRendezVous ? "Passé · " : "Passée · ") + due.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated)),
+                    item.estRendezVous ? "pin" : ToSee.Kind.event.symbol, .secondary)
         }
         // Avec une durée (P9-H1) : la plage, « Aujourd'hui à 14:00 – 14:30 ».
         if let duree = item.dureeMinutes, item.dueMinutes != nil {
@@ -213,7 +226,22 @@ struct TaskActions: ViewModifier {
     var onDone: (TaskItem) -> Void
     var onEdit: (TaskItem) -> Void
 
-    func body(content: Content) -> some View {
+    @ViewBuilder func body(content: Content) -> some View {
+        if item.estRendezVous {
+            // Rien à cocher ni à reporter (P9-T) : on le modifie ou on le supprime.
+            content
+                .contentShape(Rectangle())
+                .onTapGesture { onEdit(item) }
+                .contextMenu {
+                    Button("Modifier", systemImage: "pencil") { onEdit(item) }
+                    Button("Supprimer", systemImage: "trash", role: .destructive) { store.delete(item) }
+                }
+        } else {
+            tache(content)
+        }
+    }
+
+    private func tache(_ content: Content) -> some View {
         content
             .contentShape(Rectangle())
             .onTapGesture { onEdit(item) }

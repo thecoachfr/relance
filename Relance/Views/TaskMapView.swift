@@ -144,7 +144,7 @@ struct TaskMapView: View {
         if let toSee = item.toSee, item.dueDay == nil {
             return toSee.start == nil && toSee.end == nil ? nil : toSee.text(now: now)
         }
-        return item.dueInstant().map { DueText.long(due: $0, hasTime: item.dueMinutes != nil, now: now, jamaisEnRetard: item.estPourInfo) }
+        return item.dueInstant().map { DueText.long(due: $0, hasTime: item.dueMinutes != nil, now: now, jamaisEnRetard: item.jamaisEnRetard) }
     }
 
     typealias Entry = (item: TaskItem, contact: TaskContact, coordinate: CLLocationCoordinate2D)
@@ -442,11 +442,13 @@ private struct MapTaskCard: View {
                 .joined(separator: " · "))
                 .font(.subheadline).foregroundStyle(.secondary).lineLimit(2)
             HStack {
-                Button("Fait", systemImage: "checkmark") {
-                    withAnimation { store.complete(item) }
-                    onDone()
+                if !item.estRendezVous {
+                    Button("Fait", systemImage: "checkmark") {
+                        withAnimation { store.complete(item) }
+                        onDone()
+                    }
+                    .tint(.green)
                 }
-                .tint(.green)
                 if let url = contact.destination.flatMap({ TravelTimes.mapsURL(to: $0, settings: store.scheduler.settings.departure) }) {
                     Button("Itinéraire", systemImage: "map") { openURL(url) }
                 }

@@ -5,7 +5,7 @@ struct TasksEntry: TimelineEntry {
     var date: Date
     var tasks: [WidgetTask]
 
-    var overdue: [WidgetTask] { tasks.filter { $0.due < date } }
+    var overdue: [WidgetTask] { tasks.filter { $0.enRetard(at: date) } }
     /// Pas encore en retard et prévues aujourd'hui (une tâche sans heure a pour échéance le minuit suivant).
     var today: [WidgetTask] {
         tasks.filter { task in

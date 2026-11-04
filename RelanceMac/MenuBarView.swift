@@ -140,13 +140,17 @@ private struct MenuTaskRow: View {
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Button { withAnimation { store.complete(item) } } label: {
-                PriorityCircle(priority: item.priority, late: item.isOverdue(now: now))
-                    .font(.title3)
+            if item.estRendezVous {
+                Image(systemName: "pin.fill").font(.title3).foregroundStyle(.tint).accessibilityLabel("Rendez-vous")
+            } else {
+                Button { withAnimation { store.complete(item) } } label: {
+                    PriorityCircle(priority: item.priority, late: item.isOverdue(now: now))
+                        .font(.title3)
+                }
+                .buttonStyle(.borderless)
+                .help("Marquer fait")
+                .accessibilityLabel("Marquer « \(item.title) » comme faite")
             }
-            .buttonStyle(.borderless)
-            .help("Marquer fait")
-            .accessibilityLabel("Marquer « \(item.title) » comme faite")
 
             Button { open(item) } label: {
                 HStack(alignment: .firstTextBaseline) {

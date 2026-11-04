@@ -6,17 +6,11 @@ import Foundation
 nonisolated enum PourInfo {
     static let ligne = "📣 Pour info"
 
-    static func est(_ notes: String) -> Bool {
-        notes.components(separatedBy: "\n").contains { propre($0) == ligne }
-    }
+    static func est(_ notes: String) -> Bool { LigneDeNature.presente(ligne, dans: notes) }
 
     /// Les notes avec la ligne (à la fin), ou sans. Inchangées si rien ne change.
     static func notes(_ notes: String, actif: Bool) -> String {
-        guard est(notes) != actif else { return notes }
-        let corps = notes.components(separatedBy: "\n").filter { propre($0) != ligne }
-            .joined(separator: "\n").trimmingCharacters(in: .newlines)
-        guard actif else { return corps }
-        return corps.isEmpty ? ligne : corps + "\n" + ligne
+        LigneDeNature.notes(notes, ligne: ligne, actif: actif)
     }
 
     /// L'info tombe ce jour-là : c'est sa date, ou sa date est passée et sa répétition tombe ce jour-là
@@ -36,7 +30,7 @@ nonisolated enum PourInfo {
             .filter { tombe(le: $0, echeance: echeance, repetition: repetition, calendar: calendar) }
     }
 
-    /// Ce que devient une info passée (date avant `aujourdhui`) : sa prochaine date (≥ aujourd'hui) si elle se
+    /// Ce que devient une info ou un rendez-vous passé (date avant `aujourdhui`) : sa prochaine date (≥ aujourd'hui) si elle se
     /// répète, rangée sinon ; inchangée si elle n'est pas passée.
     enum Suite: Equatable { case inchangee, avancee(Date), rangee }
 
@@ -51,10 +45,6 @@ nonisolated enum PourInfo {
     private static func prochaine(echeance: Date, repetition: Recurrence, aPartirDe jour: Date, calendar: Calendar) -> Date {
         let veille = calendar.date(byAdding: .day, value: -1, to: jour)!
         return calendar.startOfDay(for: repetition.nextDay(after: echeance, done: veille, calendar: calendar))
-    }
-
-    private static func propre(_ ligne: String) -> String {
-        ligne.replacingOccurrences(of: "\u{FE0F}", with: "").trimmingCharacters(in: .whitespaces)
     }
 }
 

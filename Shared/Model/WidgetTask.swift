@@ -11,16 +11,23 @@ nonisolated struct WidgetTask: Identifiable, Hashable, Sendable {
     var category: String?
     /// Liste d'articles (P9-G) : « 3/12 », `nil` sans liste.
     var liste: String?
+    /// Rendez-vous (P9-T) : rien à cocher, jamais en retard.
+    var rendezVous = false
+
+    func enRetard(at date: Date) -> Bool { !rendezVous && due < date }
 }
 
 extension WidgetTask {
     /// Les tâches datées à montrer : les Basses restent dans l'app, le widget montre ce qui presse.
-    @MainActor static func depuis(_ items: [TaskItem]) -> [WidgetTask] {
+    @MainActor static func depuis(_ items: [TaskItem], now: Date = .now) -> [WidgetTask] {
         items.filter { !$0.isCompleted && !$0.isTrashed && $0.priority != .low && !$0.estPourInfo }.compactMap { item in
-            item.dueInstant().map {
+            // Un rendez-vous passé n'a plus rien à dire.
+            if item.estRendezVous, (item.dueInstant() ?? .distantFuture) < now { return nil }
+            return item.dueInstant().map {
                 WidgetTask(id: item.localID.uuidString, title: item.title, due: $0, hasTime: item.dueMinutes != nil,
                            isUrgent: item.priority == .urgent, category: item.category,
-                           liste: item.liste.flatMap { $0.articles.isEmpty ? nil : "\($0.cochés)/\($0.articles.count)" })
+                           liste: item.liste.flatMap { $0.articles.isEmpty ? nil : "\($0.cochés)/\($0.articles.count)" },
+                           rendezVous: item.estRendezVous)
             }
         }
     }

@@ -41,7 +41,7 @@ struct TaskDetailView: View {
                     .formFieldWithoutLabel()
                 // L'information clé, juste sous le titre.
                 if let due = item.dueInstant(), !item.isCompleted {
-                    Label(DueText.long(due: due, hasTime: item.dueMinutes != nil, jamaisEnRetard: item.estPourInfo),
+                    Label(DueText.long(due: due, hasTime: item.dueMinutes != nil, jamaisEnRetard: item.jamaisEnRetard),
                           systemImage: item.isOverdue() ? "clock.fill" : "clock")
                         .foregroundStyle(item.isOverdue() ? .red : .secondary)
                 }
@@ -72,7 +72,7 @@ struct TaskDetailView: View {
                     LabeledContent {
                         HStack {
                             if hasDay { DatePicker("Jour", selection: $day, displayedComponents: .date).labelsHidden() }
-                            Toggle("Date", isOn: $hasDay).labelsHidden()
+                            if !RendezVous.est(notes) { Toggle("Date", isOn: $hasDay).labelsHidden() }
                         }
                     } label: {
                         Label("Date", systemImage: "calendar")
@@ -93,8 +93,8 @@ struct TaskDetailView: View {
                 }
             }
             ContactSection(notes: $notes, searching: $searchingPlace, memoSource: (category, tags), title: title)
-            // Une info n'a ni liste ni magasin (rien à faire) ; une liste de courses est déjà en haut.
-            if !PourInfo.est(notes), !estCourses { ListeSection(item: item) }
+            // Une info ou un rendez-vous n'a ni liste ni magasin ; une liste de courses est déjà en haut.
+            if !PourInfo.est(notes), !RendezVous.est(notes), !estCourses { ListeSection(item: item) }
             // Où une liste d'achats prévient (P9-Q) : le magasin nommé dans le titre, sinon Supermarchés, ou un choix.
             if !estCourses { magasin }
             PiecesSection(item: item, apercu: $apercu)
@@ -123,15 +123,17 @@ struct TaskDetailView: View {
                 // Une info ne relance jamais : ni priorité ni relances à régler.
                 if !PourInfo.est(notes) {
                 Section {
-                    PriorityPicker(priority: $priority)
+                    // Un rendez-vous a ses propres rappels : pas de priorité, seulement « Prévenir ».
+                    if !RendezVous.est(notes) { PriorityPicker(priority: $priority) }
                     TaskRemindersRow(reminders: $reminders, priority: priority)
                 } header: {
                     // Sur Mac, la ligne porte déjà le nom « Priorité ».
                     #if os(iOS)
-                    Text("Priorité")
+                    if !RendezVous.est(notes) { Text("Priorité") }
                     #endif
                 } footer: {
-                    PriorityFooter(priority: priority, reminders: reminders, isEvent: ToSee(notes: notes)?.kind.isDated == true)
+                    PriorityFooter(priority: priority, reminders: reminders, isEvent: ToSee(notes: notes)?.kind.isDated == true,
+                                   isRendezVous: RendezVous.est(notes))
                 }
                 }
                 Section {
@@ -184,6 +186,7 @@ struct TaskDetailView: View {
         .onChange(of: Recurrence(notes: notes)) { save() }
         .onChange(of: ContexteTache(notes: notes)) { save() }
         .onChange(of: PourInfo.est(notes)) { save() }
+        .onChange(of: RendezVous.est(notes)) { save() }
         // Texte : enregistré à la sortie du champ ou de la tâche, pas à chaque frappe (chaque enregistrement synchronise).
         .onSubmit { save() }
         .onDisappear { save() }
@@ -193,12 +196,14 @@ struct TaskDetailView: View {
     /// Actions de la tâche dans la barre d'outils, au-dessus du détail (comme Mail ou Rappels).
     @ToolbarContentBuilder private var macActions: some ToolbarContent {
         ToolbarItemGroup {
-            Button(item.isCompleted ? "Remettre à faire" : "Marquer fait",
-                   systemImage: item.isCompleted ? "arrow.uturn.backward.circle" : "checkmark.circle") {
-                if !askFavorite() { item.isCompleted ? store.reopen(item) : store.complete(item) }
+            if !sansFait {
+                Button(item.isCompleted ? "Remettre à faire" : "Marquer fait",
+                       systemImage: item.isCompleted ? "arrow.uturn.backward.circle" : "checkmark.circle") {
+                    if !askFavorite() { item.isCompleted ? store.reopen(item) : store.complete(item) }
+                }
+                .help(item.isCompleted ? "Remettre à faire (⌘↩)" : "Marquer fait (⌘↩)")
             }
-            .help(item.isCompleted ? "Remettre à faire (⌘↩)" : "Marquer fait (⌘↩)")
-            if !item.isCompleted {
+            if !item.isCompleted, !sansFait {
                 Menu("Reporter", systemImage: "clock.arrow.circlepath") {
                     Button("Dans 1 h") { store.snooze(item, until: .now.addingTimeInterval(3600)) }
                     Button("Demain matin") { store.moveToTomorrow(item) }
@@ -218,23 +223,25 @@ struct TaskDetailView: View {
     /// si un événement d'agenda suit la tâche). Toujours visible, quelle que soit la longueur de la fiche.
     @ToolbarContentBuilder private var bottomBar: some ToolbarContent {
         ToolbarItemGroup(placement: .bottomBar) {
-            Button {
-                guard !askFavorite() else { return }
-                item.isCompleted ? store.reopen(item) : store.complete(item)
-                onClose?()
-            } label: {
-                // Icône et texte côte à côte : un `Label` seul n'affiche que l'icône dans la barre d'iOS 26.
-                HStack(spacing: 6) {
-                    Image(systemName: item.isCompleted ? "arrow.uturn.backward" : "checkmark")
-                    Text(item.isCompleted ? "Remettre à faire" : "Fait")
+            if !sansFait {
+                Button {
+                    guard !askFavorite() else { return }
+                    item.isCompleted ? store.reopen(item) : store.complete(item)
+                    onClose?()
+                } label: {
+                    // Icône et texte côte à côte : un `Label` seul n'affiche que l'icône dans la barre d'iOS 26.
+                    HStack(spacing: 6) {
+                        Image(systemName: item.isCompleted ? "arrow.uturn.backward" : "checkmark")
+                        Text(item.isCompleted ? "Remettre à faire" : "Fait")
+                    }
+                    .fontWeight(.semibold)
                 }
-                .fontWeight(.semibold)
+                .buttonStyle(.borderedProminent)
+                .accessibilityLabel(item.isCompleted ? "Remettre à faire" : "Marquer fait")
+                .tabletShortcut(.return, modifiers: .command)
             }
-            .buttonStyle(.borderedProminent)
-            .accessibilityLabel(item.isCompleted ? "Remettre à faire" : "Marquer fait")
-            .tabletShortcut(.return, modifiers: .command)
             Spacer()
-            if !item.isCompleted {
+            if !item.isCompleted, !sansFait {
                 Menu {
                     Button("Dans 1 h", systemImage: "clock") { reporter(.now.addingTimeInterval(3600)) }
                     if let soir = ceSoir { Button("Ce soir", systemImage: "moon") { reporter(soir) } }
@@ -278,8 +285,11 @@ struct TaskDetailView: View {
         if item.calendarEventID != nil { confirmDelete = true } else { store.delete(item); onClose?() }
     }
 
+    /// Rendez-vous à venir : rien à cocher ni à reporter (P9-T). Rangé, il peut encore être remis à faire.
+    private var sansFait: Bool { RendezVous.est(notes) && !item.isCompleted }
+
     /// Liste de courses : catégorie Achats avec une liste (pas une info).
-    private var estCourses: Bool { category == "Achats" && item.liste != nil && !PourInfo.est(notes) }
+    private var estCourses: Bool { category == "Achats" && item.liste != nil && !PourInfo.est(notes) && !RendezVous.est(notes) }
 
     @ViewBuilder private var magasin: some View {
         if HAConfig.isActive, item.category == "Achats", item.liste != nil, !item.isCompleted { MagasinSection(item: item) }
@@ -289,6 +299,9 @@ struct TaskDetailView: View {
         NatureSection(notes: $notes) { nature in
             switch nature {
             case .info: if !hasDay { day = Calendar.current.startOfDay(for: .now); hasDay = true }
+            case .rendezVous:
+                if !hasDay { day = Calendar.current.startOfDay(for: .now); hasDay = true }
+                priority = .normal
             case .envie: if ToSee(notes: notes)?.kind.isDated != true { hasDay = false }
             case .tache: break
             }

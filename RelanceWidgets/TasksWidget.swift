@@ -80,7 +80,7 @@ struct TasksWidgetView: View {
                     HStack(spacing: 4) {
                         CategoryMark(name: next.category)
                         Text(DueText.short(due: next.due, hasTime: next.hasTime, now: entry.date))
-                            .foregroundStyle(next.due < entry.date ? .red : .secondary)
+                            .foregroundStyle(next.enRetard(at: entry.date) ? .red : .secondary)
                     }
                     .font(.caption2)
                 }
@@ -108,16 +108,21 @@ struct TasksWidgetView: View {
                 Spacer()
             } else {
                 ForEach(rows) { task in
-                    let late = task.due < entry.date
+                    let late = task.enRetard(at: entry.date)
                     HStack(spacing: 8) {
-                        Button(intent: CompleteTaskIntent(taskID: task.id)) {
-                            PriorityCircle(priority: task.isUrgent ? .urgent : .normal, late: late)
-                                .font(.body)
-                                .frame(width: 28, height: 30)
-                                .contentShape(Rectangle())
+                        if task.rendezVous {
+                            Image(systemName: "pin.fill").font(.body).foregroundStyle(.tint)
+                                .frame(width: 28, height: 30).accessibilityLabel("Rendez-vous")
+                        } else {
+                            Button(intent: CompleteTaskIntent(taskID: task.id)) {
+                                PriorityCircle(priority: task.isUrgent ? .urgent : .normal, late: late)
+                                    .font(.body)
+                                    .frame(width: 28, height: 30)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Marquer « \(task.title) » comme faite\(task.isUrgent ? ", urgente" : "")")
                         }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Marquer « \(task.title) » comme faite\(task.isUrgent ? ", urgente" : "")")
 
                         Text(task.title).font(.subheadline).lineLimit(1)
                         Spacer(minLength: 4)

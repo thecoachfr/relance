@@ -101,6 +101,7 @@ struct MacTaskList: View {
         let infos = sorted.filter { $0.pourInfoDuJour(now: now) }
         let today = calendar.startOfDay(for: now)
         let taches = sorted.filter { !$0.estPourInfo || (!$0.pourInfoDuJour(now: now) && ($0.dueDay ?? today) > today) }
+            .filter { !$0.estRendezVous || ($0.dueInstant() ?? .distantFuture) >= now }
         let overdue = taches.filter { $0.isOverdue(now: now) }
         let dated = taches.filter { $0.dueDay != nil && !$0.isOverdue(now: now) }
         return [
@@ -169,7 +170,20 @@ private struct MacTaskMenu: ViewModifier {
     let item: TaskItem
     let onDone: (TaskItem) -> Void
 
-    func body(content: Content) -> some View {
+    @ViewBuilder func body(content: Content) -> some View {
+        if item.estRendezVous {
+            // Rien à cocher ni à reporter (P9-T).
+            content.contextMenu {
+                Button("Supprimer", systemImage: "trash", role: .destructive) {
+                    if let deleteTask { deleteTask(item) } else { store.delete(item) }
+                }
+            }
+        } else {
+            tache(content)
+        }
+    }
+
+    private func tache(_ content: Content) -> some View {
         content
             .contextMenu {
                 Button("Marquer fait", systemImage: "checkmark") { onDone(item) }

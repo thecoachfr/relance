@@ -52,28 +52,30 @@ struct PourInfoAujourdhuiSection: View {
     }
 }
 
-/// Nature d'une tâche (revue d'ergonomie du 28/10) : une tâche ordinaire, un rappel « pour info » (P9-P) ou une envie.
+/// Nature d'une tâche (revue d'ergonomie du 28/10) : une tâche ordinaire, un rendez-vous (P9-T), un rappel « pour info » (P9-P) ou une envie.
 /// Avant : deux interrupteurs rangés dans « Plus d'options ». Chaque nature ne montre que ses sections.
 enum NatureTache: String, CaseIterable, Identifiable {
-    case tache = "Tâche", info = "Info", envie = "Envie"
+    case tache = "Tâche", rendezVous = "Rendez-vous", info = "Info", envie = "Envie"
     var id: Self { self }
 
     init(notes: String) {
-        self = ToSee(notes: notes) != nil ? .envie : PourInfo.est(notes) ? .info : .tache
+        self = ToSee(notes: notes) != nil ? .envie : PourInfo.est(notes) ? .info : RendezVous.est(notes) ? .rendezVous : .tache
     }
 
-    /// Les notes passées à cette nature (lignes 👀… et 📣 ajoutées ou retirées).
+    /// Les notes passées à cette nature (lignes 👀…, 📌 et 📣 ajoutées ou retirées).
     func notes(_ notes: String, envie kind: ToSee.Kind = .outing) -> String {
-        switch self {
-        case .tache: PourInfo.notes(ToSee.notes(notes, setting: nil), actif: false)
-        case .info: PourInfo.notes(ToSee.notes(notes, setting: nil), actif: true)
-        case .envie: ToSee.notes(PourInfo.notes(notes, actif: false), setting: ToSee(notes: notes) ?? ToSee(kind))
-        }
+        let envie = ToSee(notes: notes)
+        let base = RendezVous.notes(PourInfo.notes(ToSee.notes(notes, setting: nil), actif: self == .info), actif: self == .rendezVous)
+        return self == .envie ? ToSee.notes(base, setting: envie ?? ToSee(kind)) : base
     }
+
+    /// Dans le sélecteur : à quatre segments, « Rendez-vous » en toutes lettres déborde de l'écran de l'iPhone.
+    var libelle: String { self == .rendezVous ? "RDV" : rawValue }
 
     var explication: String? {
         switch self {
         case .tache: nil
+        case .rendezVous: "Rendez-vous : rappels la veille au soir et 2 h avant, jamais de retard, rien à cocher. Une fois passé, il se range tout seul. Avec « Répéter », seulement le résumé du matin."
         case .info: "Pour info : aucune relance, rien à cocher. Annoncé dans le résumé du matin et affiché le jour même, puis il disparaît. L'heure est facultative, seulement affichée. Avec « Répéter », il revient tout seul."
         // La section Envie, juste dessous, explique déjà où elle est rangée.
         case .envie: nil
@@ -81,7 +83,7 @@ enum NatureTache: String, CaseIterable, Identifiable {
     }
 }
 
-/// Sélecteur segmenté Tâche · Info · Envie, sous le titre de la fiche et de la saisie rapide.
+/// Sélecteur segmenté Tâche · Rendez-vous · Info · Envie, sous le titre de la fiche et de la saisie rapide.
 struct NatureSection: View {
     @Binding var notes: String
     /// Type proposé en passant en envie (celui de l'onglet Envies d'où vient la saisie).
@@ -99,7 +101,7 @@ struct NatureSection: View {
                     notes = nouvelle.notes(notes, envie: kind)
                     onChange(nouvelle)
                 })) {
-                    ForEach(NatureTache.allCases) { Text($0.rawValue).tag($0) }
+                    ForEach(NatureTache.allCases) { Text($0.libelle).accessibilityLabel($0.rawValue).tag($0) }
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()

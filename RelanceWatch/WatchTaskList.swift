@@ -108,10 +108,14 @@ struct WatchTaskList: View {
                         }
                     }
                         .swipeActions(edge: .leading) {
-                            Button("Fait", systemImage: "checkmark") { store.complete(task) }.tint(.green)
+                            if task.rendezVous != true {
+                                Button("Fait", systemImage: "checkmark") { store.complete(task) }.tint(.green)
+                            }
                         }
                         .swipeActions(edge: .trailing) {
-                            Button("1 h", systemImage: "clock") { store.snooze(task) }.tint(.orange)
+                            if task.rendezVous != true {
+                                Button("1 h", systemImage: "clock") { store.snooze(task) }.tint(.orange)
+                            }
                         }
                 }
             }
@@ -133,12 +137,16 @@ struct WatchTaskRow: View {
     var body: some View {
         let late = task.isLate(at: now) && (task.snoozedUntil ?? .distantPast) <= now
         HStack(spacing: 8) {
-            Button { store.complete(task) } label: {
-                PriorityCircle(priority: task.priority ?? .normal, late: late)
-                    .font(.title3)
+            if task.rendezVous == true {
+                Image(systemName: "pin.fill").font(.title3).foregroundStyle(.tint).accessibilityLabel("Rendez-vous")
+            } else {
+                Button { store.complete(task) } label: {
+                    PriorityCircle(priority: task.priority ?? .normal, late: late)
+                        .font(.title3)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Marquer « \(task.title) » comme faite")
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Marquer « \(task.title) » comme faite")
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(task.title).font(.body).lineLimit(2)
@@ -168,14 +176,18 @@ struct WatchTaskRow: View {
         }
         .accessibilityElement(children: .combine)
         .accessibilityValue(task.priority.map { $0 == .normal ? "" : "Priorité \($0.rawValue)" } ?? "")
-        .accessibilityAction(named: "Fait") { store.complete(task) }
-        .accessibilityAction(named: "Reporter d'une heure") { store.snooze(task) }
+        .accessibilityActions {
+            if task.rendezVous != true {
+                Button("Fait") { store.complete(task) }
+                Button("Reporter d'une heure") { store.snooze(task) }
+            }
+        }
     }
 
     private func status(late: Bool) -> String? {
         if let snoozed = task.snoozedUntil, snoozed > now { return "Relance à " + DueText.clock(snoozed) }
         guard let due = task.due else { return nil }
-        return DueText.long(due: due, hasTime: task.hasTime, now: now)
+        return DueText.long(due: due, hasTime: task.hasTime, now: now, jamaisEnRetard: task.rendezVous == true)
     }
 }
 

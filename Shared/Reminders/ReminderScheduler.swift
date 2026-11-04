@@ -17,6 +17,8 @@ final class ReminderScheduler {
         static let departure = "DEPARTURE"
         /// Avant l'heure prévue : « Fait » seulement (« Dans 1 h » ajoutait un rappel sans rien décaler).
         static let early = "EARLY"
+        /// Rendez-vous avec une adresse (P9-T) : Itinéraire, rien à cocher. Sans adresse : aucun bouton (`digest`).
+        static let rendezVous = "RENDEZ_VOUS"
         /// Près du lieu d'une tâche (« Me le rappeler en passant à côté »).
         static let nearby = "NEARBY"
         /// Envie proposée : une catégorie par type, pour « Lu », « Vu », « Écouté ».
@@ -77,6 +79,10 @@ final class ReminderScheduler {
                 UNNotificationAction(identifier: Action.route, title: "Itinéraire", options: .foreground,
                                      icon: UNNotificationActionIcon(systemImageName: "map")),
                 done,
+            ], intentIdentifiers: []),
+            UNNotificationCategory(identifier: Category.rendezVous, actions: [
+                UNNotificationAction(identifier: Action.route, title: "Itinéraire", options: .foreground,
+                                     icon: UNNotificationActionIcon(systemImageName: "map")),
             ], intentIdentifiers: []),
         ]))
     }
@@ -241,7 +247,21 @@ final class ReminderScheduler {
             content.interruptionLevel = .passive
         }
         content.threadIdentifier = reminder.taskID ?? "digest"
-        content.categoryIdentifier = switch reminder.kind {
+        content.categoryIdentifier = Self.categorie(of: reminder)
+        if let taskID = reminder.taskID { content.userInfo = ["taskID": taskID] }
+        // Image jointe (P9-K) : copiée, car iOS déplace le fichier d'une pièce jointe de notification.
+        if let id = reminder.imageID, let attachment = Self.imageAttachment(id) { content.attachments = [attachment] }
+
+        let components = Calendar.current.dateComponents(
+            [.year, .month, .day, .hour, .minute, .second], from: reminder.fireDate)
+        let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+        return UNNotificationRequest(identifier: reminder.id, content: content, trigger: trigger)
+    }
+
+    /// Les boutons de la notification.
+    static func categorie(of reminder: PlannedReminder) -> String {
+        if reminder.subtitle == PlannedReminder.sousTitreRendezVous { return reminder.hasPlace ? Category.rendezVous : Category.digest }
+        return switch reminder.kind {
         case .digest: Category.digest
         case .askTime: Category.askTime
         case .departure: Category.departure
@@ -252,13 +272,5 @@ final class ReminderScheduler {
             Category.suggestion(ToSee.Kind.allCases.first { $0.title == reminder.subtitle } ?? .read)
         default: Category.task
         }
-        if let taskID = reminder.taskID { content.userInfo = ["taskID": taskID] }
-        // Image jointe (P9-K) : copiée, car iOS déplace le fichier d'une pièce jointe de notification.
-        if let id = reminder.imageID, let attachment = Self.imageAttachment(id) { content.attachments = [attachment] }
-
-        let components = Calendar.current.dateComponents(
-            [.year, .month, .day, .hour, .minute, .second], from: reminder.fireDate)
-        let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
-        return UNNotificationRequest(identifier: reminder.id, content: content, trigger: trigger)
     }
 }
