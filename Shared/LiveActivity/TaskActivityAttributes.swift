@@ -45,6 +45,11 @@ nonisolated enum ActivityHiding {
         return until.flatMap { $0 > now ? $0 : nil }
     }
 
+    /// Hors de l'activité : « Plus tard » en cours, ou reportée (« Dans 1 h ») jusqu'à sa relance.
+    static func estMasquee(_ id: String, reporteeJusqua relance: Date?, now: Date = .now) -> Bool {
+        hiddenUntil(id, now: now) != nil || (relance ?? .distantPast) > now
+    }
+
     static func hide(_ id: String, until date: Date, now: Date = .now) {
         var all = (AppGroup.defaults.dictionary(forKey: key) as? [String: Double]) ?? [:]
         all = all.filter { $0.value > now.timeIntervalSince1970 }

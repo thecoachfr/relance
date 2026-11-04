@@ -26,7 +26,8 @@ nonisolated struct DemarrageActivite: Equatable, Sendable {
 /// en retard d'abord, puis celles prévues dans les deux prochaines heures.
 /// Selon le profil de la priorité : dès le jour prévu (Urgente, d'origine), peu avant, ou jamais (Basse).
 /// Les urgentes passent devant.
-/// Les tâches reportées passent après les autres.
+/// Les tâches reportées quittent l'activité jusqu'à leur relance (04/11/2026, demande d'Alexandre : avant, « Dans 1 h » les
+/// laissait affichées). S'il n'en reste aucune, l'activité se termine ; iOS ne la redémarre qu'à l'ouverture de l'app.
 final class LiveActivityManager {
     static let maxItems = 3
     private let upcomingWindow: TimeInterval = 2 * 3600
@@ -51,7 +52,8 @@ final class LiveActivityManager {
             .compactMap { item -> TaskActivityAttributes.ContentState.Item? in
                 let mode = settings[item.priority].liveActivity
                 guard mode != .never, !item.estPourInfo, !item.estRendezVous, let due = item.dueInstant(), let day = item.dueDay,
-                      ActivityHiding.hiddenUntil(item.localID.uuidString, now: now) == nil else { return nil }
+                      !ActivityHiding.estMasquee(item.localID.uuidString, reporteeJusqua: item.snoozedUntil, now: now)
+                else { return nil }
                 let isUrgent = item.priority == .urgent
                 guard due.timeIntervalSince(now) <= upcomingWindow
                         || (mode == .always && day <= Calendar.current.startOfDay(for: now)) else { return nil }
@@ -62,8 +64,6 @@ final class LiveActivityManager {
                              routeURL: route)
             }
             .sorted { a, b in
-                let (sa, sb) = (a.isSnoozed(at: now), b.isSnoozed(at: now))
-                if sa != sb { return !sa }
                 if a.isUrgent != b.isUrgent { return a.isUrgent }
                 return a.due < b.due
             }

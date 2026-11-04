@@ -297,6 +297,15 @@ struct ActivityButtonTests {
         #expect(ActivityHiding.laterDate(due: soon, now: now) == soon)
     }
 
+    /// « Dans 1 h » retire la tâche de l'activité jusqu'à sa relance (04/11/2026, « PHARMACIE MODERNE » restait affichée).
+    @Test func snoozedTaskLeavesTheActivityUntilItsReminder() {
+        let id = UUID().uuidString
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        #expect(ActivityHiding.estMasquee(id, reporteeJusqua: now.addingTimeInterval(3600), now: now))
+        #expect(!ActivityHiding.estMasquee(id, reporteeJusqua: now.addingTimeInterval(-60), now: now))
+        #expect(!ActivityHiding.estMasquee(id, reporteeJusqua: nil, now: now))
+    }
+
     @Test func urgentLiveActivityMigratesOnce() throws {
         var old = ReminderSettings()
         old.urgent.liveActivity = .always
