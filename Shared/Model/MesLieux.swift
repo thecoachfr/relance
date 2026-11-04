@@ -139,7 +139,25 @@ nonisolated extension MesLieux {
 
     /// Les articles à prendre dans ce groupe.
     func articles(de liste: TacheHA.Liste, dans groupe: String) -> [TacheHA.Liste.Article] {
-        liste.articles.filter { !$0.coche && groupes(de: $0).contains(groupe) }
+        liste.aPrendre.filter { groupes(de: $0).contains(groupe) }
+    }
+
+    /// Les groupes proposés pour un article : pas Domicile ni Travail (même règle que la vigie).
+    var groupesMagasins: [Groupe] {
+        groupes.filter { !["domicile", "travail", "maison"].contains(Self.normaliser($0.nom)) }
+    }
+
+    /// Nom d'un groupe ; Supermarchés existe même absent de Mes lieux.
+    func nom(_ id: String) -> String { groupe(id)?.nom ?? (id == Self.supermarches ? "Supermarchés" : id) }
+
+    /// Les magasins d'un article, en clair.
+    func noms(de article: TacheHA.Liste.Article) -> String { groupes(de: article).map(nom).joined(separator: ", ") }
+
+    /// « 5 à prendre · Droguerie 2 · Supermarchés 4 » (un article peut compter pour deux magasins).
+    func resume(de liste: TacheHA.Liste) -> String {
+        guard !liste.aPrendre.isEmpty else { return "Rien à prendre" }
+        let magasins = groupes(de: liste).map { "\(nom($0)) \(articles(de: liste, dans: $0).count)" }
+        return (["\(liste.aPrendre.count) à prendre"] + magasins).joined(separator: " · ")
     }
 }
 

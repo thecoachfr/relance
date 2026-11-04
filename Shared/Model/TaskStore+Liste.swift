@@ -15,9 +15,10 @@ extension TaskStore {
     }
 
     /// Ajoute un article (« 2 lait » → quantité « 2 », « lait ») ; rouvre la tâche si elle était faite.
-    func addArticle(_ saisie: String, to item: TaskItem, now: Date = .now) {
+    func addArticle(_ saisie: String, to item: TaskItem, magasins: [String] = [], now: Date = .now) {
         guard var article = Self.article(saisie) else { return }
         article.maj = TacheHA.timestamp(now)
+        article.magasins = magasins
         var liste = item.liste ?? Liste()
         liste.articles.append(article)
         if item.isCompleted { reopen(item) }

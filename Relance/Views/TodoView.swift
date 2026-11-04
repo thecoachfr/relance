@@ -85,7 +85,12 @@ struct TodoView: View {
                 PourInfoAujourdhuiSection(infos: dated.filter(\.estPourInfo), now: now, onSelect: open)
                 section("En retard", groups.overdue, now: now)
                 section("Aujourd'hui", groups.today, now: now)
-                section("Listes de courses", undated.filter { $0.estListeDeCoursesSansDate && $0.matches(categoryFilter: categoryFilter) }, now: now)
+                if let courses = undated.first(where: { $0.liste?.permanente == true }), courses.matches(categoryFilter: categoryFilter) {
+                    Section { CoursesLigne(item: courses, onOpen: open).tag(courses.localID) }
+                }
+                section("Listes de courses", undated.filter {
+                    $0.estListeDeCoursesSansDate && $0.liste?.permanente != true && $0.matches(categoryFilter: categoryFilter)
+                }, now: now)
                 section("Bientôt", groups.later, now: now)
                 doneLink(now: now)
             }

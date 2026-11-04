@@ -37,12 +37,16 @@ struct MacTaskList: View {
                     ForEach(groups, id: \.title) { group in
                         Section {
                             ForEach(group.items) { item in
-                                TaskRow(item: item, now: now, isSelected: selection == item.localID, onDone: complete)
-                                    // Le Mac ajoute de l'air au-dessus de la première ligne d'une section :
-                                    // on le retire, pour le même écart qu'entre deux tâches.
-                                    .padding(.top, item.localID == group.items.first?.localID ? -8 : 0)
-                                    .tag(item.localID)
-                                    .macTaskMenu(item, onDone: complete)
+                                if item.liste?.permanente == true {
+                                    CoursesLigne(item: item).tag(item.localID)
+                                } else {
+                                    TaskRow(item: item, now: now, isSelected: selection == item.localID, onDone: complete)
+                                        // Le Mac ajoute de l'air au-dessus de la première ligne d'une section :
+                                        // on le retire, pour le même écart qu'entre deux tâches.
+                                        .padding(.top, item.localID == group.items.first?.localID ? -8 : 0)
+                                        .tag(item.localID)
+                                        .macTaskMenu(item, onDone: complete)
+                                }
                             }
                         } header: {
                             Text(group.title)

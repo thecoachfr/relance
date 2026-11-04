@@ -160,6 +160,8 @@ nonisolated extension TacheHA {
             set { autres["permanente"] = newValue ? .booleen(true) : nil }
         }
 
+        var aPrendre: [Article] { articles.filter { !$0.coche } }
+
         /// La liste sans ses articles pris depuis plus de `delaiPris`. Sans date, un article coché est retiré.
         func sansArticlesPris(now: Date = .now) -> Liste {
             var liste = self

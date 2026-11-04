@@ -400,6 +400,24 @@ struct ListeStoreTests {
         #expect(courses.groupesDeLieux(lieux) == ["droguerie", MesLieux.supermarches])
     }
 
+    /// Ce que montre l'écran Courses : magasins proposés, noms, résumé de la ligne d'À faire.
+    @Test func ecranCourses() {
+        let lieux = MesLieux(groupes: [.init(id: MesLieux.supermarches, nom: "Supermarchés"), .init(id: "dom", nom: "Domicile"),
+                                       .init(id: "t", nom: "Travail"), .init(id: "drog", nom: "Droguerie")])
+        #expect(lieux.groupesMagasins.map(\.id) == [MesLieux.supermarches, "drog"])
+        let liste = TacheHA.Liste(articles: [.init(id: "a", texte: "Lessive", magasins: ["drog", MesLieux.supermarches]),
+                                             .init(id: "b", texte: "Pain"), .init(id: "c", texte: "Sel", coche: true)])
+        #expect(lieux.noms(de: liste.articles[0]) == "Droguerie, Supermarchés" && lieux.noms(de: liste.articles[1]) == "Supermarchés")
+        #expect(lieux.resume(de: liste) == "2 à prendre · Droguerie 1 · Supermarchés 2")
+        #expect(lieux.resume(de: TacheHA.Liste()) == "Rien à prendre")
+        #expect(MesLieux().nom(MesLieux.supermarches) == "Supermarchés")
+        // Article ajouté pendant un filtre : il va à ce magasin.
+        let store = TaskStore(auth: SlowAccount(), inMemory: true)
+        let courses = store.listeDeCourses()
+        store.addArticle("Javel", to: courses, magasins: ["drog"])
+        #expect(courses.liste?.articles.first?.magasins == ["drog"])
+    }
+
     /// Fusion : choix du magasin et coche sur deux appareils, un article retiré des deux côtés sans conflit.
     @Test func fusionDeLaListeUnique() throws {
         var base = TacheHA.Liste(articles: [

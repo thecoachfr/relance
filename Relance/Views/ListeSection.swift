@@ -115,9 +115,11 @@ struct ListeSection: View {
 }
 
 /// Une ligne de la liste, comme dans Rappels : le rond coche, le texte se modifie sur place (« 6 œufs » garde la
-/// quantité ; effacer le texte retire l'article).
-private struct ArticleRow: View {
+/// quantité ; effacer le texte retire l'article). Avec `magasin` (liste unique, P9-U), ses magasins sous le texte.
+struct ArticleRow: View {
     let article: TacheHA.Liste.Article
+    var magasin: String? = nil
+    var onMagasin: (() -> Void)? = nil
     var onToggle: () -> Void
     var onEdit: (String) -> Void
     @State private var texte = ""
@@ -138,15 +140,29 @@ private struct ArticleRow: View {
             }
             .buttonStyle(.borderless)
             .accessibilityLabel(article.coche ? "Décocher \(article.texte)" : "Cocher \(article.texte)")
-            // Sans étiquette : sur Mac, « Article » s'affichait à gauche et poussait le texte à droite (28/10).
-            TextField("Article", text: $texte)
-                .formFieldWithoutLabel()
-                .focused($actif)
-                .strikethrough(article.coche && !actif)
-                .foregroundStyle(article.coche && !actif ? .secondary : .primary)
-                .submitLabel(.done)
-                .onSubmit { onEdit(texte) }
-                .onChange(of: actif) { if !actif, texte != saisie { onEdit(texte) } }
+            VStack(alignment: .leading, spacing: 2) {
+                // Sans étiquette : sur Mac, « Article » s'affichait à gauche et poussait le texte à droite (28/10).
+                TextField("Article", text: $texte)
+                    .formFieldWithoutLabel()
+                    .focused($actif)
+                    .strikethrough(article.coche && !actif)
+                    .foregroundStyle(article.coche && !actif ? .secondary : .primary)
+                    .submitLabel(.done)
+                    .onSubmit { onEdit(texte) }
+                    .onChange(of: actif) { if !actif, texte != saisie { onEdit(texte) } }
+                if let magasin, !article.coche {
+                    Button { onMagasin?() } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "storefront").imageScale(.small)
+                            Text(magasin)
+                        }
+                        .font(.footnote)
+                    }
+                    .buttonStyle(.borderless)
+                    .tint(.secondary)
+                    .accessibilityLabel("Où l'acheter : \(magasin)")
+                }
+            }
             // Lu sur une photo, pas encore gardé (P9-R) : à sa place au bout de la ligne, pas par-dessus le texte.
             if article.propose {
                 Image(systemName: "sparkles").foregroundStyle(.secondary).accessibilityLabel("Proposé par Claude")

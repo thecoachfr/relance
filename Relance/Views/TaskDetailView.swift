@@ -32,6 +32,11 @@ struct TaskDetailView: View {
     var onClose: (() -> Void)? = nil
 
     var body: some View {
+        // La liste de courses unique a son écran (P9-U) : ni date, ni « Fait ».
+        if item.liste?.permanente == true { CoursesView(item: item) } else { fiche }
+    }
+
+    private var fiche: some View {
         // Ordre (P9-L3, 19/10) : l'essentiel d'abord (titre, échéance, lieu, ce que la tâche contient, actions),
         // les réglages rares dans « Plus d'options » ; Fait, Reporter et Supprimer dans la barre du bas.
         Form {

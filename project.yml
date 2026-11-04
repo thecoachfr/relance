@@ -131,6 +131,7 @@ targets:
       - Relance/Views/RestoSuggestionView.swift
       - Relance/Views/PourInfoViews.swift
       - Relance/Views/MagasinViews.swift
+      - Relance/Views/CoursesView.swift
       - Relance/Views/EnviesSettingsView.swift
       - Relance/Views/AgendaView.swift
       - Relance/Views/RecurrenceViews.swift

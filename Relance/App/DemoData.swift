@@ -20,6 +20,16 @@ enum DemoData {
         let books = store.add(title: "Rendre les livres à la médiathèque", day: day(3), minutes: nil, category: "Perso")
         books.notes = "📍 Bibliothèque de l'Hôtel de Ville · 5 rue de Lobau, 75004 Paris"
         store.add(title: "Trier les papiers de la banque", day: nil, minutes: nil)
+        // Liste de courses unique (P9-U).
+        store.setMesLieux(MesLieux(groupes: [.init(id: MesLieux.supermarches, nom: "Supermarchés"),
+                                             .init(id: "droguerie", nom: "Droguerie"), .init(id: "bricolage", nom: "Bricolage")]))
+        let courses = store.listeDeCourses()
+        store.addArticle("Pain", to: courses)
+        store.addArticle("Huile d'olive", to: courses)
+        store.addArticle("Lessive", to: courses, magasins: [MesLieux.supermarches, "droguerie"])
+        store.addArticle("Double face", to: courses, magasins: ["bricolage"])
+        store.addArticle("Vinaigre balsamique", to: courses)
+        if let pris = courses.liste?.articles[4] { store.toggleArticle(id: pris.id, of: courses) }
         // Lieu sans adresse (photo, point GPS) : seulement un lien Plans vers le point.
         store.add(title: "Le pont Marie", day: nil, minutes: nil, category: "Perso",
                   notes: "📍 Pont Marie · https://maps.apple.com/?ll=48.8519,2.3572&q=Pont%20Marie\n"
