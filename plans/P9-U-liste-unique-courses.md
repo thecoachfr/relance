@@ -114,7 +114,7 @@ Prix, stock à la maison, drive, partage de la liste avec d'autres personnes, ra
   `TaskStore.listeDeCourses()` (rien ne l'appelle encore), `setMagasins`, retrait à 24 h au début de chaque synchro HA,
   « Fait » refusé sur la liste permanente, `MesLieux.groupes(de:)` et `articles(de:dans:)`, `groupesDeLieux` par
   article. Tant que U5 n'a pas créé la liste, rien ne change pour Alexandre.
-- 04/11 : **U3 fait, pas déployé** : module `aiguillage_courses.py` et passe `courses_pass` de la vigie (20 s après une
+- 04/11 : **U3 fait, déployé le 04/11 à 20 h 13** : module `aiguillage_courses.py` et passe `courses_pass` de la vigie (20 s après une
   modification, et chaque heure ; rien sans la liste unique). Toute liste d'achats non datée, sans recette ni photo en
   attente et inchangée depuis 10 min **verse** ses articles dans la liste unique, puis passe en « Fait » (`versee_le`).
   Ce versement vaut aussi pour les recettes, les photos et la migration de U5, qui se réduit à créer la liste. Mémoire
