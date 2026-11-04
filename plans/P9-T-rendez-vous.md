@@ -116,4 +116,10 @@ réglage `tri_natures` (`essai` / `actif`) : en `essai`, les natures proposées 
   direct** (elle n'existe que pour relancer et porte un bouton Fait) ; « Marque comme fait » de Siri laissé tel quel,
   car c'est une demande explicite. Vu au simulateur (iPhone 17, démo) : liste, saisie, fiche, passage en RDV.
   Non vus : Mac, montre, widget, notification réelle (compilés et couverts par les tests, pas regardés à l'écran).
-  **Avant R4** : R3 (Hub), sinon un `📌` s'y afficherait en retard.
+  R1 et R2 commités en local (`f80f5b7`), pas poussés.
+- 04/11 : **R3 codé et testé, pas commité ni déployé.** Même règle dans `taskFrom` (Nest Hub), `Taches.kt` (Hub TV, H56) et
+  `Taches.swift` (Hub iPad) : un rendez-vous n'apparaît que le jour même, jusqu'à son heure (sans heure : toute la
+  journée) ; jamais en retard ni urgent ; épingle à la place de la case, rien à cocher. Il compte dans « N à faire »,
+  comme dans À faire de l'app. Un récurrent pas encore avancé par l'app reste caché, sans gravité.
+  Tests : Hub TV 167 verts, Hub iPad 174 verts, `taskFrom` essayé avec node. Non vu à l'écran sur les trois vues.
+  **Avant R4** : déployer la carte, le Hub TV et le Hub iPad.
