@@ -29,8 +29,7 @@ reprend.
 | Mac Studio M1 Max | whisper.cpp `small` | 2 min 16 en 11,7 s | non mesurée | sans faute sur l'extrait relu |
 | NUC | add-on Whisper `small-int8` | 2 min 16 en 85,5 s (1,6 × le temps réel) | 890 Mo | « Gare de Lyon » devient « Gardelion » |
 
-Modèles du Mac : `~/.config/aiguillage/whisper/`. L'add-on `core_whisper` est installé et arrêté (démarrage manuel,
-port 10300 ouvert seulement quand il tourne).
+Après l'arrêt, le 04/11 : add-on `core_whisper` désinstallé du NUC et modèles supprimés du Mac.
 
 ## Reste à faire
 
