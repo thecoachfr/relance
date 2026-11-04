@@ -26,6 +26,14 @@ def test_photos_a_lire():
     assert p.type_de_la_piece(v, "abc") == "image/jpeg" and p.type_de_la_piece(v, "zzz") == "image/jpeg"
 
 
+def test_photo_vers_la_liste_unique():
+    """P9-U : si la liste unique existe, elle reçoit toutes les photos, et rien n'en repart."""
+    unique = {"cle": "11111111-1111-4111-8111-111111111111", "version": 2, "supprime": False,
+              "valeur": {"titre": "Courses", "categorie": "Achats", "fait": False, "liste": {"permanente": True, "articles": []}}}
+    assert p.liste_cible([unique], "Leroy Merlin") == (unique, p.SUPERMARCHES, True)
+    assert p.destination([unique], unique, {"piece": "abc", "origine": "signal"}, "Leroy Merlin") == (None, None)
+
+
 def test_contenu_image_puis_texte():
     c = p.contenu(b"\xff\xd8image", "image/jpeg", ["Pain"], note="Leroy Merlin", magasins=["Supermarchés", "Leroy Merlin"])
     assert c[0]["type"] == "image" and c[0]["source"]["media_type"] == "image/jpeg"

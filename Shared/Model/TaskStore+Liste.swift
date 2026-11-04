@@ -73,11 +73,14 @@ extension TaskStore {
         if !coche, item.isCompleted { reopen(item) }
     }
 
-    /// Où acheter un article (P9-U) ; vide : Supermarchés.
+    /// Où acheter un article (P9-U) ; rien de coché : Supermarchés. Un choix à la main enlève la marque de Claude : la
+    /// vigie le retient pour ce produit.
     func setMagasins(_ magasins: [String], ofArticle id: String, of item: TaskItem, now: Date = .now) {
+        let choix = magasins.isEmpty ? [MesLieux.supermarches] : magasins
         guard var liste = item.liste, let i = liste.articles.firstIndex(where: { $0.id == id }),
-              liste.articles[i].magasins != magasins else { return }
-        liste.articles[i].magasins = magasins
+              liste.articles[i].magasins != choix || liste.articles[i].parClaude else { return }
+        liste.articles[i].magasins = choix
+        liste.articles[i].parClaude = false
         liste.articles[i].maj = TacheHA.timestamp(now)
         setListe(liste, of: item)
     }

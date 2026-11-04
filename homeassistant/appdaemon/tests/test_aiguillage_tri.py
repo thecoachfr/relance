@@ -259,6 +259,13 @@ def test_liste_nouvelle_et_existante():
     assert nv2 is None and refus
 
 
+def test_liste_unique_hors_du_tri():
+    """P9-U : chaque coche relancerait le tri."""
+    unique = rec({"titre": "Courses", "fait": False, "categorie": "Achats", "liste": {"permanente": True, "articles": []}})
+    assert t.ouvertes([unique]) == [] and t.selection([unique], complet=True) == []
+    assert len(t.ouvertes([rec({"titre": "Valise", "fait": False, "liste": {"articles": []}})])) == 1
+
+
 def test_liste_unique_gardee_par_le_tri():
     """P9-U : le tri repart de l'objet lu, `permanente` et `magasins` restent."""
     liste = {"permanente": True, "articles": [{"id": "a", "texte": "Lessive", "coche": False,

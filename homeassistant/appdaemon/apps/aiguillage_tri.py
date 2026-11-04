@@ -58,10 +58,11 @@ def est_cle_tache(cle):
 
 
 def ouvertes(enregistrements):
-    """Enregistrements de tâches non faites (clé UUID, non supprimés)."""
+    """Enregistrements de tâches non faites (clé UUID, non supprimés), sans la liste de courses unique (P9-U) : chaque
+    coche y relancerait le tri, et elle n'a rien à trier."""
     return [r for r in enregistrements
             if not r.get("supprime") and est_cle_tache(r.get("cle")) and isinstance(r.get("valeur"), dict)
-            and not r["valeur"].get("fait")]
+            and not r["valeur"].get("fait") and not (r["valeur"].get("liste") or {}).get("permanente")]
 
 
 def tags_autorises(enregistrements):

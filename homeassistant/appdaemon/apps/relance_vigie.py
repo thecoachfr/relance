@@ -26,6 +26,7 @@ from appdaemon.plugins.hass import Hass
 
 import aiguillage_actions
 import aiguillage_agenda
+import aiguillage_courses
 import aiguillage_lecteur
 import aiguillage_lecture_source
 import aiguillage_photos
@@ -62,6 +63,8 @@ TMDB_DEBOUNCE = 30
 # Photos de produits à lire (P9-R) : peu après l'écriture, quelques photos par passage.
 PHOTOS_DEBOUNCE = 5
 PHOTOS_PER_PASS = 3
+# Liste de courses unique (P9-U) : le temps d'ajouter plusieurs articles d'affilée.
+COURSES_DEBOUNCE = 20
 TMDB_PER_PASS = 10
 # Playlist Spotify « À écouter » (P9-D4) : même rythme que TMDB.
 SPOTIFY_DEBOUNCE = 30
@@ -143,6 +146,7 @@ class RelanceVigie(Hass):
         self._tmdb_handle = None
         self._tmdb_missing_logged = False
         self._photos_handle = None
+        self._courses_handle = None
         # Essais par photo (le fichier peut arriver après la fiche) : 5 au plus, puis la photo est notée en échec.
         self._photos_essais = {}
         # Spotify (P9-D4) : identifiants et jeton de rafraîchissement, écrits par homeassistant/scripts/spotify_jeton.py.
@@ -176,6 +180,7 @@ class RelanceVigie(Hass):
         if self._espace:
             self.listen_event(self.on_data_changed, "donnees_apps_modifie", espace=self._espace)
             self.run_in(lambda **_kw: self._load_known_keys(), 1)
+            self.run_every(self.courses_pass, "now+150", 3600)
             self.run_every(self.tmdb_pass, "now+90", 3600)
             self.run_every(self.spotify_pass, "now+120", 3600)
             self.run_every(self.radio_pass, "now+60", 3600)
@@ -337,6 +342,7 @@ class RelanceVigie(Hass):
         if self._photos_handle:
             self.cancel_timer(self._photos_handle)
         self._photos_handle = self.run_in(self.photos_pass, PHOTOS_DEBOUNCE)
+        self._courses_plus_tard(COURSES_DEBOUNCE)
         if self._radio_handle:
             self.cancel_timer(self._radio_handle)
         self._radio_handle = self.run_in(self.radio_pass, RADIO_DEBOUNCE)
@@ -460,6 +466,97 @@ class RelanceVigie(Hass):
             "valeur": aiguillage_photos.sans_piece(record["valeur"], photo["piece"], cle),
             "version_attendue": record["version"], "modifie_par": "vigie", "op_id": str(uuid.uuid4())})
         return cible.get("titre", "Courses")
+
+    # MARK: - Liste de courses unique (P9-U)
+
+    def _courses_plus_tard(self, delai):
+        if self._courses_handle:
+            self.cancel_timer(self._courses_handle)
+        self._courses_handle = self.run_in(self.courses_pass, delai)
+
+    def courses_pass(self, **kwargs):
+        """Listes d'achats versées dans la liste unique, corrections retenues, magasin des nouveaux articles : par la
+        mémoire, sinon par Claude. Même clé API et même budget que le tri. Rien tant que la liste n'existe pas."""
+        self._courses_handle = None
+        try:
+            records = self._service("donnees_apps", "lire", {"espace": self._espace}).get("enregistrements", [])
+        except Exception as error:  # noqa: BLE001
+            self.log(f"Courses : tâches illisibles : {error!r}", level="WARNING")
+            return
+        unique = aiguillage_courses.liste_unique(records)
+        if not unique:
+            return
+        instant = datetime.now(UTC)
+        maintenant = instant.isoformat()
+        ids = dict(aiguillage_courses.groupes_magasins(records))
+        memo, version_memo = aiguillage_courses.memoire(records)
+        avant_memo = dict(memo)
+        liste = unique["valeur"]["liste"]
+        articles = [a for a in liste.get("articles") or [] if isinstance(a, dict)]
+        aiguillage_courses.apprendre(articles, memo, ids)
+        prets, attente = aiguillage_courses.a_verser(records, instant)
+        for source in prets:
+            articles = aiguillage_courses.verser(articles, source["valeur"], ids, maintenant)
+        articles, a_demander = aiguillage_courses.classer_par_memoire(articles, memo, ids, maintenant)
+        if attente:
+            self._courses_plus_tard(int(aiguillage_courses.DELAI_VERSEMENT.total_seconds()))
+        if a_demander:
+            reponse = self._courses_claude(a_demander, ids)
+            if reponse is not None:
+                articles = aiguillage_courses.appliquer_reponse(articles, reponse, ids, memo, maintenant)
+        try:
+            if articles != liste.get("articles"):
+                self._service("donnees_apps", "ecrire", {
+                    "espace": self._espace, "cle": unique["cle"],
+                    "valeur": {**unique["valeur"], "liste": {**liste, "articles": articles}},
+                    "version_attendue": unique["version"], "modifie_par": "vigie", "op_id": str(uuid.uuid4())})
+            # Après la liste : reprise sans doublon si la fin échoue (le versement ignore les textes déjà là).
+            for source in prets:
+                self._service("donnees_apps", "ecrire", {
+                    "espace": self._espace, "cle": source["cle"],
+                    "valeur": aiguillage_courses.fermee(source["valeur"], maintenant),
+                    "version_attendue": source["version"], "modifie_par": "vigie", "op_id": str(uuid.uuid4())})
+                self.log(f"Courses : « {source['valeur'].get('titre')} » versée dans la liste unique")
+            if memo != avant_memo:
+                self._service("donnees_apps", "ecrire", {
+                    "espace": self._espace, "cle": aiguillage_courses.CLE_MEMOIRE, "valeur": {"articles": memo},
+                    "version_attendue": version_memo, "modifie_par": "vigie", "op_id": str(uuid.uuid4())})
+        except Exception as error:  # noqa: BLE001 - conflit : l'écriture en face relance un passage
+            self.log(f"Courses : écriture impossible : {error!r}", level="WARNING")
+
+    def _courses_claude(self, a_demander, ids):
+        """La réponse de Claude pour ces articles, ou None (ils attendent le prochain passage)."""
+        try:
+            import anthropic
+            cle_api = Path(self.args.get("tri_cle_api_file", "/config/anthropic_api_key")).read_text().strip()
+        except (ImportError, FileNotFoundError) as error:
+            self.log(f"Courses : Claude indisponible ({error!r})", level="WARNING")
+            return None
+        etat = self._tri_etat()
+        mois = datetime.now(PARIS).strftime("%Y-%m")
+        if etat.get("mois") != mois:
+            etat.update(mois=mois, cout_mois=0.0, passages_mois=0)
+        if etat.get("cout_mois", 0) >= float(self.args.get("tri_budget_mensuel", 30)):
+            self.log("Courses : budget du mois atteint (celui du tri), articles sans magasin", level="WARNING")
+            return None
+        espace_travail = self.args.get("tri_workspace_id")
+        client = anthropic.Anthropic(api_key=cle_api, timeout=60.0, max_retries=2,
+                                     default_headers={"anthropic-workspace-id": espace_travail} if espace_travail else None)
+        modele = self.args.get("courses_modele", aiguillage_courses.MODELE)
+        try:
+            message = client.messages.create(
+                model=modele, max_tokens=4000, system=aiguillage_courses.CONSIGNE,
+                messages=[{"role": "user", "content": aiguillage_courses.question(a_demander, list(ids.values()))}],
+                output_config={"format": {"type": "json_schema", "schema": aiguillage_courses.SCHEMA}})
+            etat["cout_mois"] = etat.get("cout_mois", 0) + aiguillage_tri.cout(message.usage, modele)
+            self._tri_etat(etat)
+            if message.stop_reason != "end_turn":
+                self.log(f"Courses : réponse interrompue ({message.stop_reason})", level="WARNING")
+                return None
+            return json.loads(next((b.text for b in message.content if b.type == "text"), "{}"))
+        except Exception as error:  # noqa: BLE001 - réseau, réponse illisible : au prochain passage
+            self.log(f"Courses : Claude injoignable : {error!r}", level="WARNING")
+            return None
 
     # MARK: - Disponibilités TMDB (P9-B3)
 

@@ -220,7 +220,10 @@ def liste_du_type(enregistrements, t, grps):
 def liste_cible(enregistrements, note=None):
     """Où ranger une photo reçue (Signal, partage) avant sa lecture : (enregistrement ou None, type, type_fixe).
     Une note qui nomme un magasin fixe le type ; sans note, la liste Supermarchés, et la vigie déplacera les articles
-    lus si Claude voit un autre magasin."""
+    lus si Claude voit un autre magasin. La liste unique (P9-U), si elle existe, reçoit tout."""
+    unique = next((e for e in listes_ouvertes(enregistrements) if e["valeur"]["liste"].get("permanente")), None)
+    if unique:
+        return unique, SUPERMARCHES, True
     grps = groupes(enregistrements)
     t = type_nomme(note, grps)
     fixe = t is not None
@@ -237,7 +240,8 @@ def nouvelle_liste(t=SUPERMARCHES, grps=()):
 def destination(enregistrements, hote, photo, magasin_lu):
     """Après lecture : (None, None) si les articles restent dans la liste de la photo ; sinon (enregistrement ou None
     pour une nouvelle liste, type). Une photo de la fiche (`origine: fiche`) ou au type fixé par une note reste."""
-    if photo.get("origine", "fiche") == "fiche" or photo.get("type_fixe"):
+    if (photo.get("origine", "fiche") == "fiche" or photo.get("type_fixe")
+            or (hote["valeur"].get("liste") or {}).get("permanente")):
         return None, None
     grps = groupes(enregistrements)
     t = type_nomme(magasin_lu, grps) or SUPERMARCHES

@@ -36,6 +36,12 @@ nonisolated extension TacheHA {
                 set { if newValue { autres["propose"] = .booleen(true) } else { autres["propose"] = nil } }
             }
 
+            /// Magasins choisis par la vigie (P9-U), pas par Alexandre : `magasins_claude: true` dans `autres`.
+            var parClaude: Bool {
+                get { autres["magasins_claude"] == .booleen(true) }
+                set { autres["magasins_claude"] = newValue ? .booleen(true) : nil }
+            }
+
             private static let known = ["id", "texte", "quantite", "rayon", "coche", "maj", "source", "magasins"]
 
             init(from decoder: Decoder) throws {

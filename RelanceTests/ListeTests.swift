@@ -379,6 +379,15 @@ struct ListeStoreTests {
         store.setMagasins(["brico"], ofArticle: articles[2].id, of: courses)
         store.setMagasins(["supprime"], ofArticle: articles[3].id, of: courses)
         #expect(courses.liste?.articles[1].maj != nil)
+        // Choix de la vigie repris à la main : même magasin, la marque part (la vigie le retiendra) ; rien : Supermarchés.
+        var parClaude = try #require(courses.liste)
+        parClaude.articles[0].magasins = ["droguerie"]
+        parClaude.articles[0].parClaude = true
+        store.setListe(parClaude, of: courses)
+        store.setMagasins(["droguerie"], ofArticle: articles[0].id, of: courses)
+        #expect(courses.liste?.articles[0].parClaude == false)
+        store.setMagasins([], ofArticle: articles[0].id, of: courses)
+        #expect(courses.liste?.articles[0].magasins == [MesLieux.supermarches])
         #expect(courses.groupesDeLieux(lieux) == ["brico", "droguerie", MesLieux.supermarches])
         let liste = try #require(courses.liste)
         #expect(lieux.articles(de: liste, dans: "droguerie").map(\.texte) == ["Lessive"])
