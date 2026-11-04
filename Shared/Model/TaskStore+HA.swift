@@ -65,6 +65,7 @@ extension TaskStore {
         isSyncing = true
         defer { isSyncing = false }
         let firstSync = ((try? synchro.base.dernierSeq) ?? 0) == 0
+        retirerArticlesPris()
         do {
             try haPush(synchro)
             await synchro.synchroniser()

@@ -122,15 +122,38 @@ nonisolated extension MesLieux {
     }
 }
 
+// MARK: - Magasins des articles (P9-U, 04/11/2026)
+
+nonisolated extension MesLieux {
+    /// Où prendre un article : ses magasins encore dans Mes lieux, sinon Supermarchés (un groupe supprimé ne doit pas
+    /// faire oublier l'article).
+    func groupes(de article: TacheHA.Liste.Article) -> [String] {
+        let connus = article.magasins.filter { groupe($0) != nil }
+        return connus.isEmpty ? [Self.supermarches] : connus
+    }
+
+    /// Les groupes où quelque chose attend d'être pris.
+    func groupes(de liste: TacheHA.Liste) -> [String] {
+        Array(Set(liste.articles.filter { !$0.coche }.flatMap { groupes(de: $0) })).sorted()
+    }
+
+    /// Les articles à prendre dans ce groupe.
+    func articles(de liste: TacheHA.Liste, dans groupe: String) -> [TacheHA.Liste.Article] {
+        liste.articles.filter { !$0.coche && groupes(de: $0).contains(groupe) }
+    }
+}
+
 /// Rattachement d'une tâche à des groupes de lieux (P9-H2, P9-Q).
 extension TaskItem {
     var groupesDeLieux: [String] { groupesDeLieux(MesLieux.cached()) }
 
     /// Groupes dont un lieu proche doit rappeler cette tâche : ceux de ses actions « Me le rappeler près de… » ; pour
-    /// une liste d'achats pas finie sans action, le magasin nommé dans le titre, sinon Supermarchés (P9-Q).
+    /// une liste d'achats pas finie sans action, le magasin nommé dans le titre, sinon Supermarchés (P9-Q). La liste
+    /// unique ajoute les magasins de ses articles à prendre (P9-U).
     func groupesDeLieux(_ lieux: MesLieux) -> [String] {
         guard !isCompleted, !isTrashed else { return [] }
         let explicites = actions.filter { $0.type == TacheHA.Action.rappelGroupe && $0.etat == "a_faire" }.compactMap(\.groupe)
+        if let liste, liste.permanente { return Array(Set(explicites + lieux.groupes(de: liste))).sorted() }
         guard category == "Achats", let liste, !liste.articles.isEmpty, !liste.toutCoché else {
             return Array(Set(explicites)).sorted()
         }

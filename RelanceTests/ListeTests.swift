@@ -307,4 +307,109 @@ struct ListeStoreTests {
         // Sans date : plus à trier depuis le 28/10 (le magasin la rappelle ; elle était bloquée dans À trier).
         #expect(!sansDate.needsTriage)
     }
+
+    // MARK: - Liste de courses unique (P9-U)
+
+    /// Le champ `magasins` et `permanente` passent par HA ; une liste ordinaire n'écrit rien de plus.
+    @Test func magasinsDansLeFormat() throws {
+        var liste = TacheHA.Liste(articles: [.init(id: "a", texte: "Lessive", magasins: ["supermarches", "droguerie"]),
+                                             .init(id: "b", texte: "Pain")])
+        liste.permanente = true
+        let relue = try JSONDecoder().decode(TacheHA.Liste.self, from: JSONEncoder().encode(liste))
+        #expect(relue == liste && relue.permanente && relue.articles[0].magasins.count == 2)
+        let brut = String(decoding: try JSONEncoder().encode(TacheHA.Liste(articles: [.init(id: "b", texte: "Pain")])), as: UTF8.self)
+        #expect(!brut.contains("magasins") && !brut.contains("permanente"))
+    }
+
+    /// Une liste permanente ne finit jamais, même tout cochée ou par « Fait ».
+    @Test func listeUniqueJamaisFaite() throws {
+        let store = TaskStore(auth: SlowAccount(), inMemory: true)
+        let courses = store.listeDeCourses()
+        #expect(courses.localID == TacheHA.Liste.idCourses && courses.category == "Achats" && courses.liste?.permanente == true)
+        #expect(store.listeDeCourses().localID == courses.localID)
+        store.addArticle("Pain", to: courses)
+        let pain = try #require(courses.liste?.articles.first)
+        #expect(store.toggleArticle(id: pain.id, of: courses) == false)
+        #expect(!courses.isCompleted && courses.liste?.toutCoché == false)
+        store.complete(courses)
+        #expect(!courses.isCompleted)
+        #expect(!courses.needsTriage)
+        // Mise à la corbeille : elle revient au lieu d'être recréée à côté.
+        courses.isTrashed = true
+        #expect(store.listeDeCourses().localID == courses.localID && !courses.isTrashed)
+    }
+
+    /// Un article pris reste 24 h, on peut l'annuler, puis il est retiré ; un article à prendre reste.
+    @Test func articlesPrisRetiresApres24h() throws {
+        let store = TaskStore(auth: SlowAccount(), inMemory: true)
+        let courses = store.listeDeCourses()
+        let t0 = Date(timeIntervalSince1970: 1_800_000_000)
+        store.addArticle("Pain", to: courses, now: t0)
+        store.addArticle("Lait", to: courses, now: t0)
+        let pain = try #require(courses.liste?.articles.first)
+        store.toggleArticle(id: pain.id, of: courses, now: t0)
+        store.retirerArticlesPris(now: t0.addingTimeInterval(23 * 3600))
+        #expect(courses.liste?.articles.count == 2)
+        store.retirerArticlesPris(now: t0.addingTimeInterval(24 * 3600))
+        #expect(courses.liste?.articles.map(\.texte) == ["Lait"])
+        // Sans date, un article coché ne reste pas pour toujours.
+        let sansDate = TacheHA.Liste(articles: [.init(id: "x", texte: "Beurre", coche: true)])
+        #expect(sansDate.sansArticlesPris(now: t0).articles.isEmpty)
+        // Une liste ordinaire n'est pas touchée.
+        let autre = store.add(title: "Valise", day: nil, minutes: nil)
+        store.addArticle("Chaussettes", to: autre, now: t0)
+        store.toggleArticle(id: try #require(autre.liste?.articles.first?.id), of: autre, now: t0)
+        store.retirerArticlesPris(now: t0.addingTimeInterval(48 * 3600))
+        #expect(autre.liste?.articles.count == 1)
+    }
+
+    /// Chaque article donne ses magasins : sans choix ou groupe supprimé, Supermarchés.
+    @Test func magasinsParArticle() throws {
+        let lieux = MesLieux(groupes: [.init(id: MesLieux.supermarches, nom: "Supermarchés"),
+                                       .init(id: "droguerie", nom: "Droguerie"), .init(id: "brico", nom: "Bricolage")])
+        let store = TaskStore(auth: SlowAccount(), inMemory: true)
+        let courses = store.listeDeCourses()
+        #expect(courses.groupesDeLieux(lieux).isEmpty)  // liste vide : aucun rappel
+        store.addArticle("Pain", to: courses)
+        store.addArticle("Lessive", to: courses)
+        store.addArticle("Gouttière", to: courses)
+        store.addArticle("Colle", to: courses)
+        let articles = try #require(courses.liste?.articles)
+        store.setMagasins([MesLieux.supermarches, "droguerie"], ofArticle: articles[1].id, of: courses)
+        store.setMagasins(["brico"], ofArticle: articles[2].id, of: courses)
+        store.setMagasins(["supprime"], ofArticle: articles[3].id, of: courses)
+        #expect(courses.liste?.articles[1].maj != nil)
+        #expect(courses.groupesDeLieux(lieux) == ["brico", "droguerie", MesLieux.supermarches])
+        let liste = try #require(courses.liste)
+        #expect(lieux.articles(de: liste, dans: "droguerie").map(\.texte) == ["Lessive"])
+        #expect(lieux.articles(de: liste, dans: MesLieux.supermarches).map(\.texte) == ["Pain", "Lessive", "Colle"])
+        // Pris : le magasin ne l'attend plus.
+        store.toggleArticle(id: articles[2].id, of: courses)
+        #expect(courses.groupesDeLieux(lieux) == ["droguerie", MesLieux.supermarches])
+        // Le titre et l'enseigne ne comptent pas : seuls les articles décident.
+        courses.title = "Courses Leroy Merlin"
+        #expect(courses.groupesDeLieux(lieux) == ["droguerie", MesLieux.supermarches])
+    }
+
+    /// Fusion : choix du magasin et coche sur deux appareils, un article retiré des deux côtés sans conflit.
+    @Test func fusionDeLaListeUnique() throws {
+        var base = TacheHA.Liste(articles: [
+            .init(id: "a", texte: "Lessive", maj: "2026-11-04T10:00:00Z"),
+            .init(id: "b", texte: "Pain", coche: true, maj: "2026-11-03T10:00:00Z"),
+        ])
+        base.permanente = true
+        var ici = base, enFace = base
+        ici.articles[0].magasins = ["droguerie"]
+        ici.articles[0].maj = "2026-11-04T11:00:00Z"
+        ici.articles.remove(at: 1)  // article pris retiré ici, inchangé en face
+        enFace.articles.append(.init(id: "c", texte: "Huile", maj: "2026-11-04T11:30:00Z"))
+        let fusion = try #require(TacheHA.Liste.fusion(locale: ici, serveur: enFace, base: base))
+        #expect(fusion.permanente && fusion.articles.map(\.id) == ["a", "c"])
+        #expect(fusion.articles[0].magasins == ["droguerie"])
+        // Décoché en face pendant le retrait ici : l'annulation gagne, l'article revient.
+        var annule = base
+        annule.articles[1].coche = false
+        annule.articles[1].maj = "2026-11-04T12:00:00Z"
+        #expect(TacheHA.Liste.fusion(locale: ici, serveur: annule, base: base)?.articles.map(\.id) == ["a", "b"])
+    }
 }

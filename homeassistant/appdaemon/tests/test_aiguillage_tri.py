@@ -259,6 +259,14 @@ def test_liste_nouvelle_et_existante():
     assert nv2 is None and refus
 
 
+def test_liste_unique_gardee_par_le_tri():
+    """P9-U : le tri repart de l'objet lu, `permanente` et `magasins` restent."""
+    liste = {"permanente": True, "articles": [{"id": "a", "texte": "Lessive", "coche": False,
+                                               "magasins": ["supermarches", "droguerie"]}]}
+    nv, _ = t.appliquer({"titre": "Courses", "fait": False, "liste": liste}, ch(categorie="Achats"), AUJ, NOW, TAGS)
+    assert nv["liste"] == liste
+
+
 def test_recette_preparee():
     liste = {"articles": [{"id": "a1", "texte": "Oignons", "quantite": "2", "coche": True, "maj": "avant"}],
              "recettes": [{"titre": "Soupe", "a_preparer": True, "ingredients": ["1 oignon", "1 l d'eau"]},

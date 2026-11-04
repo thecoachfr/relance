@@ -18,12 +18,16 @@ nonisolated extension TacheHA {
             var maj: String?
             /// `saisie`, `recette`, `dictee`, `routine`.
             var source: String?
+            /// Où l'acheter (P9-U) : des groupes de Mes lieux, un type (« Droguerie ») ou une enseigne. Vide :
+            /// Supermarchés (`MesLieux.groupes(de:)`).
+            var magasins: [String] = []
             var autres: [String: JSONValeur] = [:]
 
             init(id: String = UUID().uuidString.lowercased(), texte: String, quantite: String? = nil,
-                 rayon: String? = nil, coche: Bool = false, maj: String? = nil, source: String? = "saisie") {
+                 rayon: String? = nil, coche: Bool = false, maj: String? = nil, source: String? = "saisie",
+                 magasins: [String] = []) {
                 (self.id, self.texte, self.quantite, self.rayon) = (id, texte, quantite, rayon)
-                (self.coche, self.maj, self.source) = (coche, maj, source)
+                (self.coche, self.maj, self.source, self.magasins) = (coche, maj, source, magasins)
             }
 
             /// Lu sur une photo par Claude et pas encore gardé (P9-R) : `propose: true` dans `autres`.
@@ -32,7 +36,7 @@ nonisolated extension TacheHA {
                 set { if newValue { autres["propose"] = .booleen(true) } else { autres["propose"] = nil } }
             }
 
-            private static let known = ["id", "texte", "quantite", "rayon", "coche", "maj", "source"]
+            private static let known = ["id", "texte", "quantite", "rayon", "coche", "maj", "source", "magasins"]
 
             init(from decoder: Decoder) throws {
                 let c = try decoder.container(keyedBy: AnyKey.self)
@@ -43,6 +47,7 @@ nonisolated extension TacheHA {
                 coche = try c.decodeIfPresent(Bool.self, forKey: AnyKey("coche")) ?? false
                 maj = try c.decodeIfPresent(String.self, forKey: AnyKey("maj"))
                 source = try c.decodeIfPresent(String.self, forKey: AnyKey("source"))
+                magasins = (try? c.decodeIfPresent([String].self, forKey: AnyKey("magasins"))) ?? []
                 for key in c.allKeys where !Self.known.contains(key.stringValue) {
                     autres[key.stringValue] = try c.decode(JSONValeur.self, forKey: key)
                 }
@@ -57,6 +62,7 @@ nonisolated extension TacheHA {
                 try c.encode(coche, forKey: AnyKey("coche"))
                 try c.encodeIfPresent(maj, forKey: AnyKey("maj"))
                 try c.encodeIfPresent(source, forKey: AnyKey("source"))
+                if !magasins.isEmpty { try c.encode(magasins, forKey: AnyKey("magasins")) }
                 for (key, value) in autres where !Self.known.contains(key) { try c.encode(value, forKey: AnyKey(key)) }
             }
         }
@@ -132,8 +138,30 @@ nonisolated extension TacheHA {
                 return "Recette"
             }
         }
-        /// Au moins un article, tous cochés : la tâche passe en « Fait ».
-        var toutCoché: Bool { !articles.isEmpty && articles.allSatisfy(\.coche) }
+        /// Au moins un article, tous cochés : la tâche passe en « Fait » (jamais la liste permanente, P9-U).
+        var toutCoché: Bool { !permanente && !articles.isEmpty && articles.allSatisfy(\.coche) }
+
+        // MARK: Liste de courses unique (P9-U)
+
+        /// La tâche de la liste unique : identifiant fixe, pour que deux appareils hors ligne créent la même.
+        static let idCourses = UUID(uuidString: "1429ecec-3c3c-44ba-808b-5a68f8f70f19")!
+        /// Un article pris reste barré ce temps-là (pour annuler), puis il est retiré.
+        static let delaiPris: TimeInterval = 24 * 3600
+
+        /// Liste qui ne finit jamais : `permanente: true` dans `autres`, comme `propose` sur un article.
+        var permanente: Bool {
+            get { autres["permanente"] == .booleen(true) }
+            set { autres["permanente"] = newValue ? .booleen(true) : nil }
+        }
+
+        /// La liste sans ses articles pris depuis plus de `delaiPris`. Sans date, un article coché est retiré.
+        func sansArticlesPris(now: Date = .now) -> Liste {
+            var liste = self
+            liste.articles.removeAll {
+                $0.coche && now.timeIntervalSince(TacheHA.date($0.maj) ?? .distantPast) >= Self.delaiPris
+            }
+            return liste
+        }
 
         /// Copie lisible dans les notes : `🛒 Liste : 3/12 cochés`.
         var ligne: String { "\(Self.marque) \(cochés)/\(articles.count) cochés" }

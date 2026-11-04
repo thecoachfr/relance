@@ -2,6 +2,7 @@ import Foundation
 
 /// Listes d'articles cochables (P9-G1). Chaque changement d'article est horodaté (`maj`) pour la fusion entre
 /// appareils ; la tâche passe en « Fait » quand tout est coché, et se rouvre si un article est décoché ou ajouté.
+/// La liste de courses unique (P9-U) ne finit jamais : ses articles pris sont retirés après 24 h.
 extension TaskStore {
     typealias Liste = TacheHA.Liste
 
@@ -70,6 +71,44 @@ extension TaskStore {
         setListe(liste, of: item)
         if liste.toutCoché, !item.isCompleted { complete(item) }
         if !coche, item.isCompleted { reopen(item) }
+    }
+
+    /// Où acheter un article (P9-U) ; vide : Supermarchés.
+    func setMagasins(_ magasins: [String], ofArticle id: String, of item: TaskItem, now: Date = .now) {
+        guard var liste = item.liste, let i = liste.articles.firstIndex(where: { $0.id == id }),
+              liste.articles[i].magasins != magasins else { return }
+        liste.articles[i].magasins = magasins
+        liste.articles[i].maj = TacheHA.timestamp(now)
+        setListe(liste, of: item)
+    }
+
+    /// La liste de courses unique (P9-U), créée si besoin ; une liste retirée de la corbeille reprend sa place.
+    @discardableResult
+    func listeDeCourses() -> TaskItem {
+        if let item = task(Liste.idCourses) {
+            if item.isTrashed {
+                item.isTrashed = false
+                item.markChanged()
+                commit()
+            }
+            return item
+        }
+        let item = TaskItem(title: "Courses", notes: "", dueDay: nil, dueMinutes: nil)
+        item.localID = Liste.idCourses
+        item.category = "Achats"
+        var liste = Liste()
+        liste.permanente = true
+        item.liste = liste
+        context.insert(item)
+        commit()
+        return item
+    }
+
+    /// Retire de la liste unique les articles pris depuis plus de 24 h (P9-U). Chaque appareil peut le faire : la
+    /// fusion ne reprend pas un article retiré d'un côté et inchangé de l'autre.
+    func retirerArticlesPris(now: Date = .now) {
+        guard let item = task(Liste.idCourses), let liste = item.liste, liste.permanente else { return }
+        setListe(liste.sansArticlesPris(now: now), of: item)
     }
 
     /// Modifie le texte d'un article (« 6 œufs » → quantité 6) ; vide, l'article est retiré.

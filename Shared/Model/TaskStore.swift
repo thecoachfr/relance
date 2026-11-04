@@ -109,6 +109,7 @@ final class TaskStore {
     }
 
     func complete(_ item: TaskItem) {
+        guard item.liste?.permanente != true else { return }  // La liste de courses unique ne finit pas (P9-U).
         item.isCompleted = true
         item.completedAt = .now
         item.snoozedUntil = nil
