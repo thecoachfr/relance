@@ -135,3 +135,7 @@ réglage `tri_natures` (`essai` / `actif`) : en `essai`, les natures proposées 
 - 04/11 : **R5 fait.** Sans `demande`, le titre devient « Expéditeur : objet ». Écart avec le plan : `tache_du_mail` ne
   propose pas de nature. Une tâche créée depuis un mail n'a pas de catégorie, elle passe donc par le tri, qui voit le
   résumé ; un mail sans demande peut être une vraie action (cas relevé : une exonération fiscale). Règle V complétée.
+- 04/11 : **R6 fait.** 6 tâches ouvertes passées en `📌` (`modifie_par: claude-code`), 💡 et priorité retirées ; 3 titres
+  « Répondre à … » renommés. Relecture : 9 enregistrements changés sur 178, rien d'autre. Sauvegarde sur le Mac, hors dépôt :
+  `~/ha-sauvegardes/aiguillage-avant-r6-20261104.json`. Le titre « Pendaison de randonnées solene » reste à corriger
+  par Alexandre. **Reste du plan** : relecture de l'essai de R4 vers le 11/11, puis `tri_natures: actif`.
