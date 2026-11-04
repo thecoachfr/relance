@@ -124,4 +124,5 @@ réglage `tri_natures` (`essai` / `actif`) : en `essai`, les natures proposées 
   Tests : Hub TV 167 verts, Hub iPad 174 verts, `taskFrom` essayé avec node. Non vu à l'écran sur les trois vues.
 - 04/11 : **R3 déployé en partie.** Hub TV installé à 14 h 06 (`b62596e`, versionCode 157, accueil vérifié). Hub iPad
   (`d718a8b`) et Aiguillage (R1, R2, et les 7 commits d'avant) poussés : TestFlight par Xcode Cloud, build non vérifié.
-  **Reste, avant R4** : la carte du Nest Hub (partage `config` non monté). Rien vu à l'écran sur les trois vues.
+  Nest Hub déployé vers 14 h 20 (`?v=05b6f309`, copie vérifiée, cast relancé, capture de l'accueil normale).
+  **R3 déployé. À voir au premier vrai rendez-vous** : l'épingle sur les trois vues, jamais vue à l'écran.
