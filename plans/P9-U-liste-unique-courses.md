@@ -140,5 +140,12 @@ Prix, stock à la maison, drive, partage de la liste avec d'autres personnes, ra
   (`versee_le`) : elle était datée, la vigie ne l'aurait pas versée. Premier appel réel à Claude : réussi, trois
   articles classés, mémoire `config:articles` créée. **Ancien code gardé** (ligne « Magasin », `destination`,
   `_photos_deplacer`) : à retirer à part, les listes versées passent encore par lui pendant leurs 10 minutes.
+- 05/11 : **horaires, renommage** (demande d'Alexandre) : `MesLieux.Horaires` sur chaque lieu (lundi à dimanche, créneaux
+  en minutes, saisis à la main : Apple Plans ne les donne pas aux apps). Tout rappel de passage (`notifyGroup`) se tait
+  magasin fermé, sans consommer le rappel du jour ni se rattraper à l'ouverture ; lieu sans horaires : prévient à toute
+  heure (décision d'Alexandre). Jours fériés inconnus. Mes lieux : toucher un lieu pour son nom et ses horaires
+  (copie sur les jours, sur le groupe), « Renommer le groupe » (identifiant inchangé, Domicile et Travail exclus car
+  reconnus par leur nom). Pré-rempli dans HA depuis des annuaires web, à vérifier ; un build plus ancien efface les
+  horaires s'il modifie Mes lieux.
 - À surveiller : le bruit des magasins très proches du domicile (un groupe a un lieu pratiquement à la porte, dans la
   zone de 150 m).

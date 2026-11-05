@@ -12,6 +12,51 @@ nonisolated struct MesLieux: Codable, Equatable, Sendable {
         var adresse: String?
         var lat: Double
         var lon: Double
+        /// Saisis à la main (Apple Plans ne les donne pas aux apps) ; absents : le lieu prévient à toute heure.
+        var horaires: Horaires?
+
+        func ouvert(a date: Date = .now, calendar: Calendar = .current) -> Bool {
+            horaires?.ouvert(a: date, calendar: calendar) ?? true
+        }
+    }
+
+    /// Horaires d'ouverture d'un magasin : un rappel de passage ne sonne que magasin ouvert (05/11/2026).
+    struct Horaires: Codable, Equatable, Sendable, Hashable {
+        struct Creneau: Codable, Equatable, Sendable, Hashable {
+            /// Minutes depuis minuit, `fin` jusqu'à 1440 (minuit).
+            var debut: Int
+            var fin: Int
+        }
+
+        /// Du lundi au dimanche ; un jour sans créneau est fermé.
+        var jours: [[Creneau]]
+
+        /// Proposés quand on active les horaires d'un lieu, à corriger.
+        static let courants = Horaires(jours: Array(repeating: [Creneau(debut: 9 * 60, fin: 20 * 60)], count: 6) + [[]])
+
+        /// 0 pour lundi, 6 pour dimanche.
+        static func jour(de date: Date, calendar: Calendar = .current) -> Int {
+            (calendar.component(.weekday, from: date) + 5) % 7
+        }
+
+        func ouvert(a date: Date, calendar: Calendar = .current) -> Bool {
+            let jour = Self.jour(de: date, calendar: calendar)
+            guard jours.indices.contains(jour) else { return false }
+            let c = calendar.dateComponents([.hour, .minute], from: date)
+            let minute = (c.hour ?? 0) * 60 + (c.minute ?? 0)
+            return jours[jour].contains { $0.debut <= minute && minute < $0.fin }
+        }
+
+        /// « 9 h – 12 h 30, 14 h 30 – 19 h », ou « Fermé ».
+        func texte(jour: Int) -> String {
+            guard jours.indices.contains(jour), !jours[jour].isEmpty else { return "Fermé" }
+            return jours[jour].map { Self.heure($0.debut) + " – " + Self.heure($0.fin) }.joined(separator: ", ")
+        }
+
+        private static func heure(_ minutes: Int) -> String {
+            let (h, m) = (minutes / 60 % 24, minutes % 60)
+            return m == 0 ? "\(h) h" : String(format: "%d h %02d", h, m)
+        }
     }
 
     struct Groupe: Codable, Equatable, Sendable, Identifiable {

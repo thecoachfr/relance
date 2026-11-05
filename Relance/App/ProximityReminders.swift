@@ -146,10 +146,11 @@ final class ProximityReminders: NSObject, CLLocationManagerDelegate {
     }
 
     /// Près d'un de mes lieux (P9-H2) : chaque tâche qui attend ce groupe, au plus une fois toutes les 2 h devant
-    /// ce magasin. La notification remplace celle d'un autre magasin (une seule par tâche, la plus récente).
+    /// ce magasin. La notification remplace celle d'un autre magasin (une seule par tâche, la plus récente). Lieu
+    /// fermé : rien, et le rappel du jour reste à prendre au prochain passage.
     private func notifyGroup(lieuID: String, now: Date = .now) async {
         guard let store, ReminderScheduler.isEnabledOnThisDevice,
-              let (lieu, groupe) = store.mesLieux.lieu(lieuID) else { return }
+              let (lieu, groupe) = store.mesLieux.lieu(lieuID), lieu.ouvert(a: now) else { return }
         var notified = AppGroup.defaults.dictionary(forKey: Self.groupNotifiedKey) as? [String: Double] ?? [:]
         notified = Self.recentGroupNotifications(notified, now: now)
         let c = Calendar.current.dateComponents([.hour, .minute], from: now)

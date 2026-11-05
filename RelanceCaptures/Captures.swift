@@ -36,6 +36,16 @@ nonisolated final class Captures: XCTestCase {
 
     @MainActor func testReglages() { defiler(ouvrir(["-reglages", "1"]), "reglages") }
     @MainActor func testRelances() { defiler(ouvrir(["-reglages", "1", "-sousreglage", "relances"]), "relances") }
+    /// Mes lieux, puis la fiche d'un magasin (nom et horaires, 05/11).
+    @MainActor func testMesLieux() {
+        let app = ouvrir(["-reglages", "1", "-sousreglage", "lieux"])
+        defiler(app, "lieux")
+        app.terminate()
+        let relance = ouvrir(["-reglages", "1", "-sousreglage", "lieux"])
+        relance.buttons.containing(NSPredicate(format: "label CONTAINS 'Monoprix'")).firstMatch.tap()
+        sleep(2)
+        defiler(relance, "lieu")
+    }
     @MainActor func testFicheAvecLieu() { defiler(ouvrir(["-fiche", "Réserver le contrôle"]), "fiche-lieu") }
     @MainActor func testFicheSimple() { defiler(ouvrir(["-fiche", "Acheter un cadeau"]), "fiche-simple") }
     @MainActor func testFicheEnvie() { defiler(ouvrir(["-fiche", "Chez Janou"]), "fiche-envie") }

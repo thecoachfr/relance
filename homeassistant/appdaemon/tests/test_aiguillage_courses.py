@@ -95,6 +95,14 @@ def test_correction_retenue_et_prioritaire():
     assert memo["lessive"]["par"] == "alexandre" and articles[0]["magasins"] == ["supermarches"]
 
 
+def test_supermarches_renomme():
+    ids = {"supermarches": "Grandes surfaces", "drog": "Droguerie"}
+    memo = {}
+    reponse = {"articles": [{"id": "lessive", "magasins": ["Supermarchés"]}]}
+    articles = c.appliquer_reponse([art("Lessive")], reponse, ids, memo, NOW)
+    assert articles[0]["magasins"] == ["supermarches"] and memo["lessive"]["magasins"] == ["supermarches"]
+
+
 def test_memoire_avant_claude():
     memo = {"lessive": {"magasins": ["drog", "ancien"], "par": "alexandre"}, "vieux": {"magasins": ["ancien"], "par": "claude"}}
     articles, a_demander = c.classer_par_memoire(

@@ -29,7 +29,9 @@ nonisolated extension TacheHA.Action {
         return s
     }
 
+    /// Le nom actuel du groupe (il a pu être renommé), sinon celui noté à la création de l'action.
     var nomGroupe: String? {
+        if let groupe, let nom = MesLieux.cached().groupe(groupe)?.nom { return nom }
         guard case .objet(let p)? = params, case .texte(let s)? = p["nom"] else { return groupe }
         return s
     }

@@ -72,9 +72,9 @@ struct SettingsView: View {
                 ToolbarItem(placement: .confirmationAction) { Button("OK") { dismiss() } }
             }
             #if DEBUG
-            // `-sousreglage relances|envies` (debug) : une sous-page ouverte d'emblée, pour les captures.
+            // `-sousreglage relances|envies|lieux` (debug) : une sous-page ouverte d'emblée, pour les captures.
             .navigationDestination(item: $sousReglage) { page in
-                if page == "envies" { EnviesSettingsView() } else { ReminderSettingsView() }
+                if page == "envies" { EnviesSettingsView() } else if page == "lieux" { MesLieuxView() } else { ReminderSettingsView() }
             }
             #endif
         }

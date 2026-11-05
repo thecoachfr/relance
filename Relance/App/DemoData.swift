@@ -21,7 +21,9 @@ enum DemoData {
         books.notes = "📍 Bibliothèque de l'Hôtel de Ville · 5 rue de Lobau, 75004 Paris"
         store.add(title: "Trier les papiers de la banque", day: nil, minutes: nil)
         // Liste de courses unique (P9-U).
-        store.setMesLieux(MesLieux(groupes: [.init(id: MesLieux.supermarches, nom: "Supermarchés"),
+        store.setMesLieux(MesLieux(groupes: [.init(id: MesLieux.supermarches, nom: "Supermarchés", lieux: [
+                                                .init(nom: "Monoprix", adresse: "1 rue de Rivoli, Paris", lat: 48.85, lon: 2.36, horaires: .courants),
+                                                .init(nom: "Franprix", adresse: "2 rue de Rivoli, Paris", lat: 48.85, lon: 2.35)]),
                                              .init(id: "droguerie", nom: "Droguerie"), .init(id: "bricolage", nom: "Bricolage")]))
         let courses = store.listeDeCourses()
         store.addArticle("Pain", to: courses)

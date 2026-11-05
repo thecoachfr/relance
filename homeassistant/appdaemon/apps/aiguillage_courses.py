@@ -157,6 +157,7 @@ def question(a_demander, noms):
 def appliquer_reponse(articles, reponse, ids, memo, maintenant):
     """Les articles avec le choix de Claude. Une réponse hors de la liste vaut Supermarchés et n'est pas retenue."""
     par_nom = {photos._normaliser(nom): gid for gid, nom in ids.items()}
+    par_nom.setdefault("supermarches", SUPERMARCHES)  # la consigne garde ce nom si le groupe est renommé
     choix = {r.get("id"): r.get("magasins") or [] for r in (reponse or {}).get("articles") or [] if isinstance(r, dict)}
     resultat = []
     for a in articles:

@@ -80,7 +80,7 @@ struct ActionsSection: View {
                 Text("Actions")
             } footer: {
                 if actions.contains(where: { $0.type == TacheHA.Action.rappelGroupe }) {
-                    Text("Aiguillage te prévient à 150 m d'un lieu du groupe (Réglages › Mes lieux), au plus une fois toutes les 2 heures.")
+                    Text("Aiguillage te prévient à 150 m d'un lieu du groupe (Réglages › Mes lieux), pendant ses horaires s'ils sont saisis, au plus une fois toutes les 2 heures.")
                 } else if actions.contains(where: { $0.type == TacheHA.Action.rappelMaison || $0.type == TacheHA.Action.rappelPiece }) {
                     Text("Home Assistant te prévient quand tu rentres ou entres dans la pièce, une fois par jour, jusqu'à ce que la tâche soit faite.")
                 } else if !actions.isEmpty {

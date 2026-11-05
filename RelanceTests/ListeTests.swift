@@ -192,6 +192,34 @@ struct ListeStoreTests {
         #expect(WatchLink.decode(WatchLink.encode([envoye])) == [envoye])
     }
 
+    /// Horaires d'un lieu : ouvert dans un créneau, fin exclue, jour fermé, absents = toujours ouvert, relus de HA.
+    @Test func horairesDunLieu() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(identifier: "Europe/Paris"))
+        func date(_ jour: Int, _ h: Int, _ m: Int = 0) throws -> Date {  // novembre 2026 : le 2 est un lundi
+            try #require(calendar.date(from: DateComponents(year: 2026, month: 11, day: jour, hour: h, minute: m)))
+        }
+        typealias Creneau = MesLieux.Horaires.Creneau
+        var lieu = MesLieux.Lieu(nom: "Droguerie", lat: 48.8, lon: 2.4)
+        #expect(lieu.ouvert(a: try date(8, 3), calendar: calendar))
+        lieu.horaires = .init(jours: Array(repeating: [Creneau(debut: 540, fin: 750), Creneau(debut: 870, fin: 1140)], count: 6) + [[]])
+        #expect(MesLieux.Horaires.jour(de: try date(2, 12), calendar: calendar) == 0)
+        #expect(lieu.ouvert(a: try date(2, 9), calendar: calendar))
+        #expect(!lieu.ouvert(a: try date(2, 8, 59), calendar: calendar))
+        #expect(!lieu.ouvert(a: try date(2, 12, 30), calendar: calendar))  // coupure
+        #expect(lieu.ouvert(a: try date(7, 15), calendar: calendar))  // samedi
+        #expect(!lieu.ouvert(a: try date(8, 15), calendar: calendar))  // dimanche
+        #expect(lieu.horaires?.texte(jour: 0) == "9 h – 12 h 30, 14 h 30 – 19 h" && lieu.horaires?.texte(jour: 6) == "Fermé")
+        let toujours = MesLieux.Horaires(jours: Array(repeating: [Creneau(debut: 0, fin: 1440)], count: 7))
+        #expect(toujours.ouvert(a: try date(2, 23, 59), calendar: calendar))
+        let lieux = MesLieux(groupes: [.init(id: "g", nom: "Droguerie", lieux: [lieu])])
+        #expect(MesLieux(valeur: lieux.valeur) == lieux)
+        // Écrit par un ancien build, sans horaires : toujours lisible.
+        let ancien = MesLieux(valeur: .objet(["groupes": .liste([.objet(["id": .texte("g"), "nom": .texte("Droguerie"), "lieux": .liste([
+            .objet(["id": .texte("l"), "nom": .texte("D"), "lat": .nombre(48.8), "lon": .nombre(2.4)])])])])]))
+        #expect(ancien?.groupes[0].lieux[0].horaires == nil)
+    }
+
     /// Mes lieux (P9-H2) : format dans HA, rattachement automatique et manuel.
     @Test func mesLieux() throws {
         var lieux = MesLieux.parDefaut
