@@ -2,7 +2,8 @@ import EventKit
 import Foundation
 
 /// Lien entre une tâche et un événement de l'agenda (Calendrier d'iOS, donc Google Agenda si le compte
-/// Google y est ajouté). L'événement dure 1 h et n'a pas d'alerte : c'est Relance qui relance.
+/// Google y est ajouté). L'événement dure 1 h (ou la durée de la tâche) et n'a pas d'alerte : c'est Relance qui relance.
+/// Une info sur plusieurs jours (P9-W) devient un événement « journée entière » de sa date à sa fin.
 /// La tâche garde l'identifiant de l'événement (sur cet appareil) et une ligne « 📅 Dans l'agenda » dans ses
 /// notes, pour que les autres appareils sachent qu'il existe.
 @MainActor
@@ -15,6 +16,16 @@ final class CalendarLink {
     static func duration(of item: TaskItem) -> TimeInterval {
         item.dureeMinutes.map { TimeInterval($0 * 60) } ?? duration
     }
+
+    /// Info sur plusieurs jours sans heure (P9-W, « En voyage à … ») : événement « journée entière » de sa date à sa
+    /// fin. `nil` pour une tâche ordinaire.
+    static func journees(of item: TaskItem) -> (debut: Date, fin: Date)? {
+        guard item.dueMinutes == nil, let debut = item.dueDay, let fin = item.finDay() else { return nil }
+        return (debut, fin)
+    }
+
+    /// La tâche peut aller à l'agenda : une heure, ou une période sur plusieurs jours.
+    static func peutAjouter(_ item: TaskItem) -> Bool { item.dueMinutes != nil || journees(of: item) != nil }
 
     private let store = EKEventStore()
 
@@ -47,7 +58,9 @@ final class CalendarLink {
 
     /// Crée l'événement ; renvoie un message d'erreur lisible, ou `nil` si tout va bien.
     func add(_ item: TaskItem, taskStore: TaskStore) async -> String? {
-        guard let start = item.dueInstant(), item.dueMinutes != nil else { return "Donne d'abord une heure à la tâche." }
+        guard let start = Self.journees(of: item)?.debut ?? (item.dueMinutes == nil ? nil : item.dueInstant()) else {
+            return "Donne d'abord une heure à la tâche."
+        }
         if !isAuthorized, !(await requestAccess()) {
             return "Aiguillage n'a pas accès au Calendrier. Autorise-le dans Réglages › Aiguillage."
         }
@@ -83,9 +96,17 @@ final class CalendarLink {
     func reconcile(_ items: [TaskItem]) {
         guard isAuthorized else { return }
         for item in items where item.calendarEventID != nil {
-            guard let event = event(for: item), let start = item.dueInstant(), item.dueMinutes != nil else { continue }
-            let end = start.addingTimeInterval(Self.duration(of: item))
-            guard event.startDate != start || event.endDate != end || event.title != item.title else { continue }
+            guard let event = event(for: item) else { continue }
+            let start: Date, end: Date
+            if let periode = Self.journees(of: item) {
+                (start, end) = (periode.debut, periode.fin)
+                guard !event.isAllDay || event.startDate != start || !Calendar.current.isDate(event.endDate, inSameDayAs: end)
+                        || event.title != item.title else { continue }
+            } else {
+                guard let debut = item.dueInstant(), item.dueMinutes != nil else { continue }
+                (start, end) = (debut, debut.addingTimeInterval(Self.duration(of: item)))
+                guard event.isAllDay || event.startDate != start || event.endDate != end || event.title != item.title else { continue }
+            }
             fill(event, from: item, start: start)
             Journal.essayer(.stockage, "Mise à jour de l'événement d'agenda") { try store.save(event, span: .thisEvent) }
         }
@@ -93,8 +114,16 @@ final class CalendarLink {
 
     private func fill(_ event: EKEvent, from item: TaskItem, start: Date) {
         event.title = item.title
-        event.startDate = start
-        event.endDate = start.addingTimeInterval(Self.duration(of: item))
+        if let periode = Self.journees(of: item) {
+            // Journée entière : EventKit montre l'événement jusqu'au jour de `endDate` compris.
+            event.isAllDay = true
+            event.startDate = periode.debut
+            event.endDate = periode.fin
+        } else {
+            event.isAllDay = false
+            event.startDate = start
+            event.endDate = start.addingTimeInterval(Self.duration(of: item))
+        }
         let contact = TaskContact(notes: item.notes)
         event.location = contact?.address
         event.url = contact?.link

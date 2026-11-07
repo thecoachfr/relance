@@ -104,3 +104,26 @@ def test_rien_aujourd_hui():
     etat, attributs = p.calculer([], datetime(2026, 10, 26, 7, 30, tzinfo=p.PARIS))
     assert etat == 0 and attributs["infos"] == [] and attributs["texte"] is None and attributs["a_venir"] == []
     assert p.texte_notification(attributs) is None
+
+
+def test_info_sur_plusieurs_jours_voyage():
+    """Repère d'un voyage (P9-W) : `fin` le montre chaque jour du séjour, annoncé le premier matin seulement."""
+    voyage = enregistrement(CLE, "En voyage à Lyon", "2026-11-20", "📣 Pour info", fin="2026-11-23")
+    assert p.tombe(date(2026, 11, 22), date(2026, 11, 20), None, date(2026, 11, 23))
+    assert not p.tombe(date(2026, 11, 24), date(2026, 11, 20), None, date(2026, 11, 23))
+    _, avant = p.calculer([voyage], datetime(2026, 11, 18, 7, 0, tzinfo=p.PARIS))
+    assert avant["infos"] == [] and avant["a_venir"] == [
+        {"cle": CLE, "titre": "En voyage à Lyon", "jour": "2026-11-20", "heure": None, "heure_texte": None,
+         "fin": "2026-11-23"}]
+    _, premier = p.calculer([voyage], datetime(2026, 11, 20, 7, 0, tzinfo=p.PARIS))
+    assert premier["infos"][0]["fin"] == "2026-11-23" and not premier["infos"][0]["deja_annoncee"]
+    assert p.texte_notification(premier) == "Pour info : En voyage à Lyon"
+    etat, pendant = p.calculer([voyage], datetime(2026, 11, 22, 7, 0, tzinfo=p.PARIS))
+    assert etat == 1 and pendant["infos"][0]["deja_annoncee"] and pendant["a_venir"] == []
+    assert pendant["texte"] == "En voyage à Lyon" and p.texte_notification(pendant) is None
+    etat, apres = p.calculer([voyage], datetime(2026, 11, 24, 7, 0, tzinfo=p.PARIS))
+    assert etat == 0
+    # Une fin avant la date (corrigée à la main) est ignorée : l'info redevient d'un seul jour.
+    _, seul = p.calculer([enregistrement(CLE, "X", "2026-11-20", "📣 Pour info", fin="2026-11-01")],
+                         datetime(2026, 11, 21, 7, 0, tzinfo=p.PARIS))
+    assert seul["infos"] == []

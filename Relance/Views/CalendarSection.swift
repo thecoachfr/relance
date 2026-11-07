@@ -45,13 +45,15 @@ struct CalendarSection: View {
                         if working { Spacer(); ProgressView() }
                     }
                 }
-                .disabled(item.dueMinutes == nil || working)
+                .disabled(!CalendarLink.peutAjouter(item) || working)
             }
         } footer: {
             if let error {
                 Text(error).foregroundStyle(.red)
-            } else if item.dueMinutes == nil, item.calendarEventID == nil {
+            } else if !CalendarLink.peutAjouter(item), item.calendarEventID == nil {
                 Text("Donne une heure à la tâche pour l'ajouter à l'agenda.")
+            } else if item.calendarEventID == nil, !CalendarLink.isLinked(item.notes), let periode = item.periodePourInfo() {
+                Text("Événement « journée entière » \(periode) dans \(link.defaultCalendarName.map { "« \($0) »" } ?? "ton agenda par défaut"), sans alerte.")
             } else if item.calendarEventID == nil, !CalendarLink.isLinked(item.notes) {
                 Text("Événement d'1 h dans \(link.defaultCalendarName.map { "« \($0) »" } ?? "ton agenda par défaut"), sans alerte : c'est Aiguillage qui relance.")
             } else {

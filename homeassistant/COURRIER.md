@@ -901,3 +901,32 @@ pièces jointes de la dernière facture Free dans mon Drive » → `chercher_mai
 Tests : `tests/test_aiguillage_drive.py` (15 : pièces jointes sans contenu, rien sans accord, proposition sans
 écriture, refus de toute confirmation qui ne correspond pas, dossiers créés et réutilisés, multipart et resumable,
 session d'envoi hors Drive refusée, journal sans contenu ni noms, garde-fou, limite des unions, portée du script).
+
+## Billets de train (07/11, plan P9-W, demande d'Alexandre)
+
+Module `aiguillage_voyages.py`, appelé par la relève (`trier`, paramètre `voyages`) pour chaque nouveau message de la
+boîte de réception, après son tri (une erreur n'empêche pas le tri). Réglage `voyages` dans le bloc
+`aiguillage_courrier` d'`apps.yaml` (vrai par défaut ; `false` coupe tout). Tests : `tests/test_aiguillage_voyages.py`.
+
+1. **Filtre gratuit** (`candidat`) : expéditeur d'une billetterie ferroviaire (`DOMAINES` : SNCF Connect, Ouigo,
+   Trainline, Eurostar, Lyria, Renfe, Trenitalia, DB…) ou objet de billetterie (« e-billet », « réservation »…) avec
+   un mot de train dans l'objet ou l'extrait.
+2. **Lecture par Haiku 5.5** (même clé et même budget que le tri, `budget_ok`) : texte du mail jusqu'à 6 000
+   caractères et noms des pièces jointes ; sortie structurée `{est_billet, annulation, destination, reference,
+   trajets: [{date, heure_depart, date_arrivee, heure_arrivee, gare_depart, gare_arrivee, train, voiture, place}]}`.
+   Rien n'est écrit si ce n'est pas un billet ou si c'est une annulation (journalisé).
+3. **Voyage** (table `voyages` de `aiguillage_courrier.sqlite`) : même dossier, ou trajet en sens inverse (villes
+   d'origine et de destination inversées) dans les 60 jours après l'aller → le même voyage ; sinon un nouveau.
+4. **Écritures dans l'espace `aiguillage`** (`modifie_par: courrier`) :
+   - un **rendez-vous par trajet**, clé `uuid5(NAMESPACE_VOYAGES, "trajet:<date>:<heure>:<ville>")` (le même trajet
+     reçu deux fois n'est écrit qu'une fois), `version_attendue: 0` (jamais par-dessus une correction) : titre
+     « Train aller Paris Gare de Lyon → Lyon Part-Dieu », `jour`, `heure`, `duree` (12 h au plus), `categorie`
+     Perso, `lieu` (gare de départ), notes (train · voiture · place, arrivée, dossier, lien Gmail, `📧`, `📍`, `📎`,
+     `📌 Rendez-vous`), `pieces` : les billets PDF ou `.pkpass` du mail (deux au plus, 10 Mo), lus en mémoire par
+     `ClientGmail.piece_jointe` (lecture seule, `attachments.get`) et déposés par l'API `fichiers` de HA ;
+   - un **repère** « En voyage à X », clé `uuid5(NAMESPACE_VOYAGES, "repere:<voyage>")` : `📣 Pour info`, `jour` =
+     départ, `fin` = arrivée du dernier trajet (absent pour un aller seul), ligne « Du 20/11 au 23/11 ». Quand un
+     second mail élargit le voyage, seules ses dates (et cette ligne) sont réécrites, le reste est gardé ; fait ou
+     supprimé, il n'est plus touché.
+5. **Limites** : un retour acheté avant l'aller crée un voyage « En voyage à <ville de départ> » (à corriger à la
+   main) ; les correspondances comptent pour un trajet ; une annulation ne retire rien.

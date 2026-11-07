@@ -624,7 +624,10 @@ def test_metadonnees_sans_corps():
 def test_garde_fou_lecture_seule():
     publiques = {n for n, _ in inspect.getmembers(c.ClientGmail, inspect.isfunction) if not n.startswith("_")}
     assert publiques == {"profil", "historique", "lister", "lister_fils", "message", "fil", "metadonnees", "libelles",
-                         "creer_libelle", "poser_libelles"}
+                         "creer_libelle", "poser_libelles", "piece_jointe"}
+    # piece_jointe (billets de train, P9-W) : une lecture de `attachments`, rien d'autre.
+    piece = inspect.getsource(c.ClientGmail.piece_jointe)
+    assert 'self._lire(f"messages/{message_id}/attachments/{piece}")' in piece and "_ecrire" not in piece
     # lister_fils (« Aujourd'hui », 28/10) : une lecture de `threads`, rien d'autre.
     fils = inspect.getsource(c.ClientGmail.lister_fils)
     assert 'self._lire("threads"' in fils and "_ecrire" not in fils

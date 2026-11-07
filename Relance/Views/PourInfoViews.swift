@@ -24,12 +24,15 @@ struct PourInfoAujourdhuiSection: View {
     var body: some View {
         if !infos.isEmpty {
             Section("Pour info") {
-                ForEach(duJour) { item in ligne(item, detail: item.heurePourInfo ?? "Aujourd'hui") }
+                ForEach(duJour) { item in
+                    ligne(item, detail: item.heurePourInfo ?? item.finDay().map { "jusqu'au " + $0.formatted(.dateTime.day().month(.abbreviated)) } ?? "Aujourd'hui")
+                }
                 if !aVenir.isEmpty {
                     DisclosureGroup("À venir (\(aVenir.count))", isExpanded: $aVenirOuvert) {
                         ForEach(aVenir) { item in
-                            ligne(item, detail: (item.dueDay.map { $0.formatted(.dateTime.weekday(.wide).day().month(.wide)) } ?? "")
-                                  + (item.heurePourInfo.map { " · " + $0 } ?? ""))
+                            ligne(item, detail: item.periodePourInfo().map { String($0.prefix(1)).uppercased() + String($0.dropFirst()) }
+                                  ?? ((item.dueDay.map { $0.formatted(.dateTime.weekday(.wide).day().month(.wide)) } ?? "")
+                                      + (item.heurePourInfo.map { " · " + $0 } ?? "")))
                         }
                     }
                 }

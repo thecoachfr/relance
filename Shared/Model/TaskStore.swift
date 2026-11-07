@@ -171,6 +171,8 @@ final class TaskStore {
         var change = false
         for item in activeTasks() where item.estPourInfo || item.estRendezVous {
             guard let due = item.dueDay else { continue }
+            // Info sur plusieurs jours (P9-W) : rangée seulement après sa fin.
+            if let fin = item.finDay(), PourInfo.suite(echeance: fin, repetition: nil, aujourdhui: now) == .inchangee { continue }
             switch PourInfo.suite(echeance: due, repetition: Recurrence(notes: item.notes), aujourdhui: now) {
             case .inchangee:
                 continue
