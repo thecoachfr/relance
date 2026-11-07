@@ -23,9 +23,9 @@ cocher. Voulu : **un rendez-vous pour l'aller, un pour le retour, et un élémen
 
 | Lot | Contenu | État |
 |---|---|---|
-| W1 | NUC : `aiguillage_voyages.py` (filtre, lecture par Haiku 5.5, table `voyages`, fusion, rendez-vous, repère, billets joints) ; branchement dans la relève de `aiguillage_courrier` ; `ClientGmail.piece_jointe` (lecture seule) | Codé, 16 tests ; **pas déployé** |
-| W2 | Champ `fin` (index P9, section 3) : `sensor.hub_pour_info` montre le repère chaque jour du séjour dans les trois Hubs, annoncé le premier matin seulement | Codé, testé (Python) ; **pas déployé** |
-| W3 | App : info sur plusieurs jours (`PourInfo.tombe` avec `fin`, `TaskItem.finDay`, rangée après sa fin), « jusqu'au … » dans Pour info, « Du … au … » dans À venir, agenda « journée entière » sur la période | Codé, tests Swift ajoutés ; **non compilé** (pas de Xcode dans la session) |
+| W1 | NUC : `aiguillage_voyages.py` (filtre, lecture par Haiku 5.5, table `voyages`, fusion, rendez-vous, repère, billets joints) ; branchement dans la relève de `aiguillage_courrier` ; `ClientGmail.piece_jointe` (lecture seule) | Codé, 16 tests ; **déployé le 07/11 à 22 h 17** |
+| W2 | Champ `fin` (index P9, section 3) : `sensor.hub_pour_info` montre le repère chaque jour du séjour dans les trois Hubs, annoncé le premier matin seulement | Codé, testé (Python) ; **déployé le 07/11 à 22 h 17** |
+| W3 | App : info sur plusieurs jours (`PourInfo.tombe` avec `fin`, `TaskItem.finDay`, rangée après sa fin), « jusqu'au … » dans Pour info, « Du … au … » dans À venir, agenda « journée entière » sur la période | Compilé sans correction le 07/11 au soir, 299 tests Swift verts, app Mac construite ; dans `main` (TestFlight) |
 | W4 | Consigne du tri : règle W (ne pas toucher aux voyages, garder `fin`) dans `docs/TRI-CONSIGNE.md` | **À recopier dans la consigne réelle** (`/config/aiguillage_tri_consigne.md`) |
 
 Choix en codant :
@@ -35,13 +35,17 @@ Choix en codant :
   sa fin le ramène à un seul jour (fin ignorée).
 - **Les rendez-vous ont la catégorie Perso** : le tri ne les reclasse pas (règle V : seulement sans catégorie).
 
-## 4. Déploiement (à faire)
+## 4. Déploiement
 
-1. Compiler et lancer les tests sur le Mac (hook `pre-push`), puis fusionner dans `main`.
-2. Copier `aiguillage_voyages.py`, `aiguillage_courrier.py` et `hub_pour_info.py` dans le dossier des apps
-   d'AppDaemon (`addon_configs` monté dans le Finder) ; rien à ajouter à `apps.yaml` (`voyages` vrai par défaut).
-3. Ajouter la règle W à la consigne réelle du tri.
-4. Essai : se transférer un mail de billet (ou attendre le prochain), vérifier les deux rendez-vous (heure, billet
+1. ✅ 07/11 au soir : compilé et testé sur le Mac (299 tests Swift, app Mac construite, 485 tests Python), fusionné
+   dans `main` et poussé (hook `pre-push` vert).
+2. ✅ 07/11, 22 h 17 : `aiguillage_voyages.py`, `aiguillage_courrier.py` et `hub_pour_info.py` copiés dans le dossier
+   des apps d'AppDaemon (`addon_configs`) ; rien ajouté à `apps.yaml` (`voyages` vrai par défaut). Journal :
+   `aiguillage_courrier` et `hub_pour_info` redémarrés sans erreur, `error.log` vide depuis. Retour arrière : copies
+   `aiguillage_courrier.py.avant-voyages-20261107` et `hub_pour_info.py.avant-voyages-20261107` à la racine du
+   dossier d'AppDaemon (et retirer `aiguillage_voyages.py`).
+3. À faire : ajouter la règle W à la consigne réelle du tri.
+4. À faire : essai, se transférer un mail de billet (ou attendre le prochain), vérifier les deux rendez-vous (heure, billet
    joint), le repère dans l'app et sur les trois Hubs, puis le retour dans un second mail.
 
 ## 5. Risques et limites
