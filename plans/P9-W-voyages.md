@@ -26,7 +26,7 @@ cocher. Voulu : **un rendez-vous pour l'aller, un pour le retour, et un élémen
 | W1 | NUC : `aiguillage_voyages.py` (filtre, lecture par Haiku 5.5, table `voyages`, fusion, rendez-vous, repère, billets joints) ; branchement dans la relève de `aiguillage_courrier` ; `ClientGmail.piece_jointe` (lecture seule) | Codé, 16 tests ; **déployé le 07/11 à 22 h 17** |
 | W2 | Champ `fin` (index P9, section 3) : `sensor.hub_pour_info` montre le repère chaque jour du séjour dans les trois Hubs, annoncé le premier matin seulement | Codé, testé (Python) ; **déployé le 07/11 à 22 h 17** |
 | W3 | App : info sur plusieurs jours (`PourInfo.tombe` avec `fin`, `TaskItem.finDay`, rangée après sa fin), « jusqu'au … » dans Pour info, « Du … au … » dans À venir, agenda « journée entière » sur la période | Compilé sans correction le 07/11 au soir, 299 tests Swift verts, app Mac construite ; dans `main` (TestFlight) |
-| W4 | Consigne du tri : règle W (ne pas toucher aux voyages, garder `fin`) dans `docs/TRI-CONSIGNE.md` | **À recopier dans la consigne réelle** (`/config/aiguillage_tri_consigne.md`) |
+| W4 | Consigne du tri : règle W (ne pas toucher aux voyages, garder `fin`) dans `docs/TRI-CONSIGNE.md` | Recopiée dans la consigne réelle (`/config/aiguillage_tri_consigne.md`, après V) le 07/11 au soir |
 
 Choix en codant :
 - **Le repère n'est pas dans le résumé du matin de l'iPhone chaque jour** : le planificateur ne reçoit que son premier
@@ -44,7 +44,8 @@ Choix en codant :
    `aiguillage_courrier` et `hub_pour_info` redémarrés sans erreur, `error.log` vide depuis. Retour arrière : copies
    `aiguillage_courrier.py.avant-voyages-20261107` et `hub_pour_info.py.avant-voyages-20261107` à la racine du
    dossier d'AppDaemon (et retirer `aiguillage_voyages.py`).
-3. À faire : ajouter la règle W à la consigne réelle du tri.
+3. ✅ 07/11 au soir : règle W ajoutée à la consigne réelle du tri (après V ; copie d'avant
+   `aiguillage_tri_consigne.md.avant-voyages-20261107`, copie de travail du Mac mise à jour). Relue à chaque tri.
 4. À faire : essai, se transférer un mail de billet (ou attendre le prochain), vérifier les deux rendez-vous (heure, billet
    joint), le repère dans l'app et sur les trois Hubs, puis le retour dans un second mail.
 
