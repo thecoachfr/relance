@@ -8,6 +8,7 @@ envoyer à chaque appareil (Spotify Connect compris), range les jetons et compte
 Côté app : `hub-ipad/Partage/LecteurLS50.swift` (`LecteurLS50Attributes`, son `ContentState` a les mêmes champs).
 """
 
+from datetime import datetime
 import re
 
 ENTITE_MA = "media_player.salon_ls50_5"
@@ -20,6 +21,8 @@ SUJET = "fr.alexandrefau.hubipad.push-type.liveactivity"
 RAFALE = 2
 ARRET_AVANT_FIN = 5 * 60
 JOUE = ("playing", "paused")
+# La KEF, relue toutes les 10 s, suit une pause de Music Assistant en moins de 10 s (relevés du 02 au 07/11/2026).
+KEF_SUIT_PAUSE = 20
 # Contenu de fin quand on ne sait plus ce qui jouait (vigie relancée) : l'app doit pouvoir le décoder.
 REPOS = {"titre": NOM, "artiste": "", "source": "", "image": None, "etat": "pause", "volume": 0, "radio": False}
 # Entrées de l'enceinte KEF (lecture hors Music Assistant).
@@ -34,8 +37,24 @@ SOURCES_KEF = {
 }
 
 
-def choisir_entite(etats):
-    """L'état de l'entité qui joue (ou en pause) : Music Assistant, sinon KEF, sinon None (règle du Hub)."""
+def _pause_ancienne(etat, maintenant):
+    """En pause depuis plus de `KEF_SUIT_PAUSE` secondes ? Date illisible ou inconnue : non."""
+    try:
+        return maintenant - datetime.fromisoformat(etat.get("last_changed")).timestamp() > KEF_SUIT_PAUSE
+    except (TypeError, ValueError):
+        return False
+
+
+def choisir_entite(etats, maintenant=None):
+    """L'état de l'entité qui joue (ou en pause) : Music Assistant, sinon KEF, sinon None (règle du Hub).
+
+    Exception (07/11/2026) : Music Assistant en pause depuis plus de 20 s alors que la KEF joue, c'est une file restée
+    en pause pendant que Spotify joue sur les enceintes : la KEF dit vrai. `maintenant` (secondes) : l'instant du passage.
+    """
+    ma, kef = etats.get(ENTITE_MA), etats.get(ENTITE_KEF)
+    if (maintenant is not None and ma and kef and ma.get("state") == "paused" and kef.get("state") == "playing"
+            and _pause_ancienne(ma, maintenant)):
+        return kef
     for entite in (ENTITE_MA, ENTITE_KEF):
         etat = etats.get(entite)
         if etat and etat.get("state") in JOUE:

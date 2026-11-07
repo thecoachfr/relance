@@ -39,6 +39,8 @@
 | **Pour info (26/10, P9-P, P1 et P2 codés, à essayer sur les appareils)** | Rappel sans action (femme de ménage, poubelles) : interrupteur « Pour info, sans action » dans la saisie rapide et la fiche (date obligatoire, sans heure ni priorité), ligne cachée `📣 Pour info`. Aucune relance, jamais en retard ni à trier ; section « Pour info » en tête d'À faire (du jour, à venir replié), groupe « Pour info » sur Mac ; nommé dans le résumé du matin (« · Pour info : Femme de ménage, Poubelles »), qui part aussi s'il n'y a que des infos. Passée, une info avance à sa prochaine occurrence (🔄) ou se range dans Fait (appareil qui relance). Pas dans les widgets, la montre (hors notification), l'activité en direct, Siri. Hub (P3) déployé le 27/10 (`sensor.hub_pour_info`, bloc « Pour info » dans À faire des trois vues, notification à 7 h 30) |
 | **Logo** | « Boucle » (flèche circulaire + coche, orange), variantes sombre / teintée / montre |
 
+Lecteur des LS50 (07/11/2026) : `aiguillage_lecteur.choisir_entite` prend la KEF quand Music Assistant est en pause depuis plus de 20 s et que la KEF joue (file restée en pause pendant que Spotify joue). Déployé vers 16 h 15, copies d'avant dans `~/ha-sauvegardes/*.avant-pause-fantome-20261107` ; même règle au Hub TV (H62) et au Hub iPad. Reste ouvert : activité de l'iPhone sans jeton, figée (voir `hub-ipad/docs/STATUT.md`).
+
 ### Conventions dans les notes Google Tasks
 Google Tasks n'a ni heure (dans son API) ni étiquettes : en tête des notes, dans cet ordre :
 ```

@@ -1892,7 +1892,7 @@ class RelanceVigie(Hass):
     def _lecteur_passage(self, **kwargs):
         self._lecteur_handle = None
         etats = {e: self.get_state(e, attribute="all") for e in (aiguillage_lecteur.ENTITE_MA, aiguillage_lecteur.ENTITE_KEF)}
-        choisi = aiguillage_lecteur.choisir_entite(etats)
+        choisi = aiguillage_lecteur.choisir_entite(etats, time.time())
         # Radios ajoutées : pour reconnaître la station qui joue (nom et logo), comme les trois vues du Hub.
         ajoutees = self.get_state(aiguillage_radio.ENTITE, attribute="radios") or []
         actuel = aiguillage_lecteur.contenu(choisi, self._ha_url, ajoutees)

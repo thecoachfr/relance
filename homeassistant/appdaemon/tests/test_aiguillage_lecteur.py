@@ -1,6 +1,7 @@
 """Tests hors Home Assistant de `aiguillage_lecteur` (activité en direct du Hub iPad) :
 uv run --with pytest python -m pytest -q homeassistant/appdaemon/tests"""
 
+from datetime import datetime
 from pathlib import Path
 import sys
 
@@ -25,6 +26,18 @@ def test_choisir_ma_puis_kef():
     assert l.choisir_entite({l.ENTITE_MA: {**MA, "state": "idle"}, l.ENTITE_KEF: KEF}) is KEF
     assert l.choisir_entite({l.ENTITE_MA: {**MA, "state": "idle"}, l.ENTITE_KEF: {**KEF, "state": "off"}}) is None
     assert l.choisir_entite({}) is None
+
+
+def test_ma_reste_en_pause_pendant_que_spotify_joue():
+    # États réels du 07/11/2026 : « Lom » en pause dans Music Assistant, Spotify joue par la KEF.
+    ma = {**MA, "state": "paused", "last_changed": "2026-11-07T15:58:56.156897+01:00"}
+    t0 = datetime.fromisoformat("2026-11-07T15:58:56+01:00").timestamp()
+    etats = {l.ENTITE_MA: ma, l.ENTITE_KEF: KEF}
+    assert l.choisir_entite(etats, t0 + 5) is ma  # vraie pause : la KEF n'a pas encore suivi
+    assert l.choisir_entite(etats, t0 + 25) is KEF  # plus de 20 s après : la KEF dit vrai
+    assert l.spotify_connect(l.choisir_entite(etats, t0 + 25))  # l'activité est alors masquée comme Spotify Connect
+    assert l.choisir_entite({l.ENTITE_MA: ma, l.ENTITE_KEF: {**KEF, "state": "paused"}}, t0 + 25) is ma
+    assert l.choisir_entite({l.ENTITE_MA: {**MA, "state": "paused"}, l.ENTITE_KEF: KEF}, t0 + 25)["entity_id"] == l.ENTITE_MA
 
 
 def test_contenu_radio_music_assistant():
