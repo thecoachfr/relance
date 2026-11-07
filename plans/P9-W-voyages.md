@@ -46,8 +46,15 @@ Choix en codant :
    dossier d'AppDaemon (et retirer `aiguillage_voyages.py`).
 3. ✅ 07/11 au soir : règle W ajoutée à la consigne réelle du tri (après V ; copie d'avant
    `aiguillage_tri_consigne.md.avant-voyages-20261107`, copie de travail du Mac mise à jour). Relue à chaque tri.
-4. À faire : essai, se transférer un mail de billet (ou attendre le prochain), vérifier les deux rendez-vous (heure, billet
-   joint), le repère dans l'app et sur les trois Hubs, puis le retour dans un second mail.
+4. ✅ 07/11, 22 h 30 : essai avec les deux vrais billets de la semaine (Paris → Strasbourg 12-15/11, Paris → Aix-les-Bains
+   27-29/11, aller et retour dans le même mail), arrivés avant le déploiement et relus par le nouvel événement
+   `aiguillage_courrier_voyages` (`homeassistant/COURRIER.md`, « Billets de train », point 7). Résultat : 4 rendez-vous
+   avec heure, train et gare, 2 repères avec `fin`. Trois défauts trouvés et corrigés le soir même (déployés,
+   copies d'avant `*.avant-rejouer-20261107`) : le domaine `connect.sncf` manquait au filtre ; le texte brut de
+   SNCF Connect n'a parfois ni trajet ni heure (le HTML est lu d'abord) ; un mail non reconnu ne laissait aucune trace
+   au journal. Les deux rendez-vous de Strasbourg lus d'abord sans heure ont été supprimés puis recréés.
+5. À vérifier : les rendez-vous et repères dans l'app et sur les trois Hubs ; un aller et un retour reçus dans deux
+   mails ; un billet PDF joint (les deux mails de SNCF Connect n'en avaient pas).
 
 ## 5. Risques et limites
 
@@ -56,3 +63,5 @@ Choix en codant :
 - **Retour acheté avant l'aller** : le voyage prend la ville de départ comme destination ; à corriger à la main.
 - **Annulation** : rien n'est retiré automatiquement (journalisé seulement).
 - **Coût** : un appel Haiku par mail candidat (quelques par mois), dans le budget du courrier.
+- **Pas de durée ni d'arrivée** sur les rendez-vous de l'essai du 07/11 : l'heure d'arrivée n'a pas été lue dans les
+  mails de SNCF Connect (à surveiller ; la durée par défaut d'un rendez-vous s'applique).

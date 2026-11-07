@@ -930,3 +930,11 @@ boîte de réception, après son tri (une erreur n'empêche pas le tri). Réglag
      supprimé, il n'est plus touché.
 5. **Limites** : un retour acheté avant l'aller crée un voyage « En voyage à <ville de départ> » (à corriger à la
    main) ; les correspondances comptent pour un trajet ; une annulation ne retire rien.
+6. **Texte lu** : la version HTML du mail d'abord (`texte_du_message(..., html_d_abord=True)`), le texte brut en
+   repli : chez SNCF Connect, le texte brut n'a parfois que le paiement, sans trajets ni heures (vu le 07/11). Un mail
+   candidat qui n'est pas lu comme un billet est journalisé (« pas lu comme un billet »). Les domaines en `.sncf`
+   (`noreply@connect.sncf`) sont des billetteries.
+7. **Relire un mail manqué** (arrivé avant le déploiement, pendant une panne, ou mal lu) : événement
+   `aiguillage_courrier_voyages` avec `{"ids": ["<id Gmail>", …]}` (10 au plus) ; seul le billet est relu, le mail
+   n'est pas retrié (`rejouer_voyages`). Un trajet déjà écrit avec la même date, heure et ville n'est pas doublé ; un
+   trajet écrit sans heure aura une autre clé : supprimer d'abord l'ancien rendez-vous s'il n'a pas été retouché.

@@ -58,6 +58,10 @@ def test_texte_multipart_prefere_le_texte_brut():
         {"mimeType": "application/pdf", "filename": "facture.pdf", "body": {"attachmentId": "a"}},
         {"mimeType": "text/plain", "filename": "notes.txt", "body": {"data": b64("pièce jointe")}}]}
     assert c.texte_du_message(payload) == "Bonjour,\nVoici la facture."
+    # Billets de train : le HTML d'abord (le texte brut de SNCF Connect n'a parfois que le paiement).
+    assert c.texte_du_message(payload, html_d_abord=True) == "HTML"
+    seul_brut = {"mimeType": "text/plain", "body": {"data": b64("Train 6611")}}
+    assert c.texte_du_message(seul_brut, html_d_abord=True) == "Train 6611"
 
 
 def test_texte_html_seul():
@@ -297,6 +301,29 @@ def test_memo_passe_par_la_releve():
     assert len(ia.appels) == 1 and "Swile" in ia.appels[0]["system"][1]["text"]
     r = c.lignes(db)[0]
     assert r["source"] == "ia" and r["raison"] == "IA (expéditeur du mémo : Swile)"
+
+
+def test_rejouer_voyages_sans_retrier():
+    db = c.ouvrir_base(":memory:")
+    mails = {"b1": msg("b1", de="SNCF Connect <noreply@connect.sncf>", sujet="Votre voyage Paris - Lyon"),
+             "b2": msg("b2", de="x@y.fr", sujet="illisible")}
+
+    def message(i):
+        if i not in mails:
+            raise c.Introuvable(i)
+        return mails[i]
+
+    vus, notes = [], []
+
+    def voyages(f, brut):
+        if f["id"] == "b2":
+            raise ValueError("pas lu")
+        vus.append((f["id"], f["sujet"], brut["id"]))
+
+    n = c.rejouer_voyages(SimpleNamespace(message=message), ["b1", "absent", "b2"], voyages, journal=notes.append)
+    assert n == 1 and vus == [("b1", "Votre voyage Paris - Lyon", "b1")]
+    assert any("absent" in t and "introuvable" in t for t in notes) and any("b2" in t for t in notes)
+    assert c.lignes(db) == []   # rien n'est retrié ni enregistré dans la base du courrier
 
 
 def test_regle_apprise_contre_memo_dans_la_base():

@@ -117,9 +117,10 @@ def _parties(partie):
         yield from _parties(p)
 
 
-def texte_du_message(payload, snippet="", limite=LONGUEUR_EXTRAIT):
+def texte_du_message(payload, snippet="", limite=LONGUEUR_EXTRAIT, html_d_abord=False):
     """Extrait du texte (limité à `limite` caractères) : parties text/plain, sinon text/html, sinon l'aperçu de
-    Gmail. Les pièces jointes (nom de fichier) sont ignorées."""
+    Gmail. Les pièces jointes (nom de fichier) sont ignorées. `html_d_abord` : l'ordre inverse, pour les billets de
+    train (P9-W) : le texte brut de SNCF Connect n'a parfois que le paiement, sans les trajets (vu le 07/11)."""
     plain, riche = [], []
     for p in _parties(payload or {}):
         if p.get("filename"):
@@ -132,7 +133,8 @@ def texte_du_message(payload, snippet="", limite=LONGUEUR_EXTRAIT):
             plain.append(b64url(data))
         elif mime == "text/html":
             riche.append(html_en_texte(b64url(data)))
-    texte = _resserrer("\n".join(plain) if plain else "\n".join(riche)) or _resserrer(html.unescape(snippet or ""))
+    premier, second = (riche, plain) if html_d_abord else (plain, riche)
+    texte = _resserrer("\n".join(premier or second)) or _resserrer(html.unescape(snippet or ""))
     return texte[:limite]
 
 
@@ -2395,6 +2397,25 @@ def trier(gmail, db, ia_client, ids, etat, budget, maintenant, regles_en_place, 
     return n
 
 
+def rejouer_voyages(gmail, ids, voyages, journal=print):
+    """Relit les messages `ids` pour les seuls billets de train (P9-W), sans les retrier ni toucher à la base du
+    courrier : rattrape un billet arrivé avant le déploiement ou pendant une panne. Un même trajet n'est jamais écrit
+    deux fois (clés stables de `aiguillage_voyages`). Renvoie le nombre de messages passés à `voyages`."""
+    n = 0
+    for message_id in ids:
+        try:
+            brut = gmail.message(message_id)
+        except Introuvable:
+            journal(f"Courrier : message {message_id} introuvable, pas de billet relu")
+            continue
+        try:
+            voyages(fiche(brut), brut)
+            n += 1
+        except Exception as exc:  # noqa: BLE001 - un message illisible n'arrête pas les suivants
+            journal(f"Courrier : billet de train illisible pour {message_id} ({exc!r})")
+    return n
+
+
 def releve(gmail, db, ia_client, etat, budget, maintenant, journal=print, limite_amorcage=200, memo=None,
            voyages=None):
     """Une relève complète : amorçage (2 derniers jours) au premier lancement ou après un historique trop vieux,
@@ -2577,6 +2598,8 @@ if hass is not None:
             self.run_daily(self._purger, "03:40:00")
             # Après un changement de consigne : repasse les « à traiter » ouverts à l'IA, puis range (bilan du 24/10).
             self.listen_event(self._reclasser, "aiguillage_courrier_reclasser")
+            # Billets de train manqués (P9-W) : `{"ids": ["<id Gmail>", …]}`, 10 au plus.
+            self.listen_event(self._rejouer_voyages, "aiguillage_courrier_voyages")
 
         # État : historyId, compteur du mois, dernière relève, dernière erreur.
         def _lire_etat(self):
@@ -2750,6 +2773,29 @@ if hass is not None:
             except Exception as exc:  # noqa: BLE001
                 self.log(f"Courrier : reclassement impossible ({exc!r})", level="WARNING")
 
+        def _rejouer_voyages(self, event_name, data, **kwargs):
+            ids = [str(i) for i in ((data or {}).get("ids") or [])][:10]
+            if not ids:
+                self.log("Courrier : billets à relire sans « ids », rien fait", level="WARNING")
+                return
+            maintenant = datetime.now(PARIS)
+            etat = self._lire_etat()
+            try:
+                db = ouvrir_base(self._db_path)
+                try:
+                    voyages = self._voyages(db, etat, maintenant)
+                    if voyages is None:
+                        self.log("Courrier : billets non relus (voyages coupés ou IA absente)", level="WARNING")
+                        return
+                    n = rejouer_voyages(self._client_gmail(), ids, voyages,
+                                        journal=lambda t: self.log(t, level="WARNING"))
+                finally:
+                    db.close()
+                self._ecrire_etat(etat)
+                self.log(f"Courrier : {n} mail(s) relu(s) pour les billets de train sur {len(ids)} demandé(s)")
+            except Exception as exc:  # noqa: BLE001
+                self.log(f"Courrier : billets non relus ({exc!r})", level="WARNING")
+
         def _contexte_memo(self, force=False):
             """Mémo (`todo.aiguillage_memo`, comme le tri des tâches) et Mes lieux (`config:lieux`, espace
             `aiguillage`), relus au plus toutes les 30 minutes. Une lecture ratée garde le contexte précédent."""
@@ -2787,7 +2833,8 @@ if hass is not None:
             def traiter(f, brut):
                 if not voyages_.candidat(f) or not budget_ok(etat, self._budget, maintenant):
                     return
-                texte = texte_du_message(brut.get("payload"), brut.get("snippet", ""), voyages_.LONGUEUR_TEXTE)
+                texte = texte_du_message(brut.get("payload"), brut.get("snippet", ""), voyages_.LONGUEUR_TEXTE,
+                                         html_d_abord=True)
                 pieces = _pieces_du_message(brut)
                 ha.gmail = gmail
                 _, usage = voyages_.traiter(f, texte, pieces, ia, db, ha, maintenant,

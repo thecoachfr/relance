@@ -98,6 +98,10 @@ def base():
 def test_candidat_par_domaine_ou_par_objet():
     assert v.candidat(mail())
     assert v.candidat(mail(de="confirmation@info.trainline.com", sujet="Vos billets"))
+    # Vrai billet du 07/11 : expéditeur en .sncf, objet sans mot de billetterie.
+    assert v.candidat(mail(de="noreply@connect.sncf", sujet="Votre voyage Paris Est - Strasbourg, aller le "
+                           "jeudi 12 novembre 2026") | {"extrait": "Merci Et bon voyage !"})
+    assert not v.candidat(mail(de="x@pas-sncf.fr", sujet="Bonjour"))
     assert v.candidat(mail(de="ami@exemple.fr", sujet="Votre réservation", nom="x") | {"extrait": "TGV 6611 voiture 4"})
     assert not v.candidat(mail(de="ami@exemple.fr", sujet="Dîner samedi ?"))
     assert not v.candidat(mail(de="promo@boutique.fr", sujet="Confirmation de commande") | {"extrait": "Vos chaussures"})

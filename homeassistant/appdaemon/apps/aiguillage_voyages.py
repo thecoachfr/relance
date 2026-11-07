@@ -48,7 +48,8 @@ _JOUR = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _HEURE = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 
 # Expéditeurs de billetterie ferroviaire (domaine de l'adresse, ou un de ses parents).
-DOMAINES = ("sncf-connect.com", "sncf.fr", "sncf.com", "oui.sncf", "ouigo.com", "trainline.com", "trainline.fr",
+# « sncf » : extension réservée à la SNCF (noreply@connect.sncf, oui.sncf…), vu le 07/11 sur un vrai billet.
+DOMAINES = ("sncf", "sncf-connect.com", "sncf.fr", "sncf.com", "ouigo.com", "trainline.com", "trainline.fr",
             "thetrainline.com", "eurostar.com", "tgv-lyria.com", "sncf-voyageurs.com", "ter.sncf.com", "renfe.com",
             "trenitalia.com", "italotreno.com", "italotreno.it", "bahn.de", "db.de", "sbb.ch", "kombo.co",
             "busbud.com", "omio.com", "omio.fr")
@@ -366,6 +367,7 @@ def traiter(f, texte, pieces, ia_client, db, ha, maintenant, journal=print):
     f = dict(f, noms_pieces=[p["nom"] for p in pieces][:10])
     extrait, usage = extraire(ia_client, f, texte, maintenant)
     if extrait is None:
+        journal(f"Voyages : « {f.get('sujet')} » pas lu comme un billet (ni trajet daté), rien d'écrit")
         return None, usage
     if extrait["annulation"]:
         journal(f"Voyages : annulation lue dans « {f.get('sujet')} », rien d'écrit (à retirer à la main)")
