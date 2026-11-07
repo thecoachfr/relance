@@ -17,6 +17,10 @@ Attributs :
 - `infos` : infos du jour, celles avec une heure d'abord (par heure), puis les autres par titre : [{ `cle` (clé de
   la tâche dans `donnees_apps`), `titre`, `heure` (« 07:30 » ou null), `heure_texte` (« 7 h 30 », « 18 h » ou
   null) }].
+- `fin` et `deja_annoncee` (P9-W, 07/11), seulement pour une info sur plusieurs jours (repère « En voyage à X ») :
+  `fin` = son dernier jour (`AAAA-MM-JJ`), l'info est dans `infos` chaque jour de `jour` à `fin` ; `deja_annoncee`
+  (dans `infos`) vrai après son premier jour : la notification du matin ne la répète pas, l'écran la montre toujours.
+  Pendant le séjour, elle n'est pas dans `a_venir`.
 - `texte` : les titres du jour, avec l'heure, joints par « · » (« Sport à 7 h 30 · Poubelles »), ou null.
 - `a_venir` : la prochaine occurrence de chaque info dans les 7 jours suivants : [{ `cle`, `titre`, `jour`, `heure`,
   `heure_texte` }], triée par jour puis heure. Les vues ne l'affichent pas pour l'instant.

@@ -44,6 +44,7 @@ import unicodedata
 from zoneinfo import ZoneInfo
 
 import aiguillage_apns as apns
+import aiguillage_voyages as voyages_
 
 PARIS = ZoneInfo("Europe/Paris")
 ENTITE = "sensor.aiguillage_courrier"
@@ -1009,7 +1010,7 @@ class HistoriqueTropVieux(ErreurGmail):
 
 class ClientGmail:
     """Client REST minimal. Lecture : `profil`, `historique`, `lister`, `lister_fils` (28/10), `message`, `fil`,
-    `metadonnees`. Seule écriture (accord
+    `metadonnees`, `piece_jointe` (billets de train, P9-W). Seule écriture (accord
     d'Alexandre du 24/10 au soir) : les libellés du tri, `Tri/À traiter`, `Tri/Lettre`, `Tri/Bruit` (`libelles`,
     `creer_libelle`, `poser_libelles`). `poser_libelles` refuse tout autre libellé (INBOX, UNREAD, TRASH…) : rien
     n'est archivé, déplacé ni marqué lu. AUCUNE méthode d'envoi, de suppression ni de corbeille (règle d'Alexandre)."""
@@ -1091,6 +1092,12 @@ class ClientGmail:
 
     def message(self, message_id):
         return self._lire(f"messages/{message_id}", {"format": "full"})
+
+    def piece_jointe(self, message_id, piece):
+        """Octets d'UNE pièce jointe (billet de train, P9-W), rendus en mémoire : jamais écrits ni journalisés."""
+        d = self._lire(f"messages/{message_id}/attachments/{piece}")
+        donnees = str(d.get("data") or "")
+        return base64.urlsafe_b64decode(donnees + "=" * (-len(donnees) % 4))
 
     def fil(self, fil_id):
         return self._lire(f"threads/{fil_id}", {"format": "metadata"})
@@ -2354,8 +2361,10 @@ def lignes_aujourdhui(valeur, maintenant, n=3):
 # MARK: - Une relève (sans AppDaemon, testable avec des clients simulés)
 
 def trier(gmail, db, ia_client, ids, etat, budget, maintenant, regles_en_place, journal=print, verifier_fil=True,
-          memo=None, manuelles=None):
-    """Lit, trie et enregistre les messages `ids` pas encore connus. Renvoie le nombre de messages triés."""
+          memo=None, manuelles=None, voyages=None):
+    """Lit, trie et enregistre les messages `ids` pas encore connus. Renvoie le nombre de messages triés.
+    `voyages` (P9-W) : appelé avec (fiche, message brut) après l'enregistrement de chaque message, pour les billets
+    de train ; une erreur n'empêche pas le tri."""
     n = 0
     for message_id in ids:
         if connu(db, message_id):
@@ -2378,10 +2387,16 @@ def trier(gmail, db, ia_client, ids, etat, budget, maintenant, regles_en_place, 
                 journal(f"Courrier : IA indisponible pour {message_id} ({exc!r})")
         enregistrer(db, f, finaliser(d, ia), maintenant, prix, repondu)
         n += 1
+        if voyages is not None:
+            try:
+                voyages(f, brut)
+            except Exception as exc:  # noqa: BLE001 - le mail reste trié ; le voyage se crée à la main
+                journal(f"Courrier : billet de train illisible pour {message_id} ({exc!r})")
     return n
 
 
-def releve(gmail, db, ia_client, etat, budget, maintenant, journal=print, limite_amorcage=200, memo=None):
+def releve(gmail, db, ia_client, etat, budget, maintenant, journal=print, limite_amorcage=200, memo=None,
+           voyages=None):
     """Une relève complète : amorçage (2 derniers jours) au premier lancement ou après un historique trop vieux,
     sinon historique depuis `etat['historyId']`. Met à jour `etat` (historyId, compteur). Renvoie un résumé."""
     regles_en_place = regles(db)
@@ -2398,12 +2413,12 @@ def releve(gmail, db, ia_client, etat, budget, maintenant, journal=print, limite
         ids = gmail.lister("in:inbox newer_than:2d", limite_amorcage)
         resume["amorcage"] = True
         resume["nouveaux"] = trier(gmail, db, ia_client, ids, etat, budget, maintenant, regles_en_place, journal,
-                                   memo=memo)
+                                   memo=memo, voyages=voyages)
     else:
         # Un message tout juste arrivé n'a pas encore de réponse : pas de lecture du fil (le geste viendra).
         ids, gestes = lire_historique(entrees)
         resume["nouveaux"] = trier(gmail, db, ia_client, ids, etat, budget, maintenant, regles_en_place, journal,
-                                   verifier_fil=False, memo=memo)
+                                   verifier_fil=False, memo=memo, voyages=voyages)
         resume["gestes"] = appliquer_gestes(db, gestes, maintenant)
     # Messages rangés par défaut pendant une panne de l'IA : reclassés quand elle revient (2 jours au plus).
     if ia_client is not None:
@@ -2442,6 +2457,40 @@ if hass is not None:
 
     CORE_API = "http://supervisor/core/api"
     ATTENTE_AUTORISATION = 600
+
+    def _pieces_du_message(brut):
+        """Pièces jointes d'un message `format=full` (même lecture que `aiguillage_drive.pieces_jointes`)."""
+        import aiguillage_drive
+        return aiguillage_drive.pieces_jointes(brut)
+
+    class _HAVoyages:
+        """Ce dont `aiguillage_voyages.traiter` a besoin : lire et écrire dans l'espace des tâches, lire une pièce
+        jointe de Gmail, la déposer dans le stockage de fichiers de HA (P9-K)."""
+
+        def __init__(self, app):
+            self._app, self.gmail = app, None
+
+        def lire(self, cle):
+            rep = self._app._service("donnees_apps", "lire", {"espace": self._app._espace, "cle": cle}) or {}
+            return rep.get("enregistrement")
+
+        def ecrire(self, cle, valeur, version):
+            rep = self._app._service("donnees_apps", "ecrire", {
+                "espace": self._app._espace, "cle": cle, "valeur": valeur, "version_attendue": version,
+                "modifie_le": datetime.now(timezone.utc).isoformat(), "modifie_par": "courrier",
+                "op_id": str(uuid.uuid4())}) or {}
+            return rep.get("statut")
+
+        def piece(self, message_id, piece):
+            return self.gmail.piece_jointe(message_id, piece)
+
+        def deposer(self, nom, type_, octets):
+            from urllib.parse import quote
+            r = httpx.post(f"{CORE_API}/donnees_apps/fichiers/{self._app._espace}", content=octets, timeout=30,
+                           headers={"Authorization": f"Bearer {os.environ['SUPERVISOR_TOKEN']}",
+                                    "Content-Type": type_, "X-Nom": quote(nom)})
+            r.raise_for_status()
+            return r.json()["id"]
 
     class AiguillageCourrier(hass.Hass):
 
@@ -2503,6 +2552,7 @@ if hass is not None:
             self._gmail = None
             self._ia = None
             # Mémo d'Aiguillage pour l'IA (27/10) : relu au plus toutes les 30 min ; `memo: false` pour le couper.
+            self._voyages_actif = bool(self.args.get("voyages", True))   # billets de train (P9-W, 07/11)
             self._memo_actif = bool(self.args.get("memo", True))
             self._memo_entite = self.args.get("memo_entity", MEMO_ENTITE)
             self._memo, self._memo_lu = Memo(), 0.0
@@ -2588,7 +2638,8 @@ if hass is not None:
                     db = ouvrir_base(self._db_path)
                     try:
                         resume = releve(self._client_gmail(), db, self._client_ia(), etat, self._budget, maintenant,
-                                        journal=lambda t: self.log(t, level="WARNING"), memo=self._contexte_memo())
+                                        journal=lambda t: self.log(t, level="WARNING"), memo=self._contexte_memo(),
+                                        voyages=self._voyages(db, etat, maintenant))
                         if self._libelles:
                             try:
                                 n = synchroniser_libelles(self._client_gmail(), db, etat, maintenant, journal=self.log)
@@ -2723,6 +2774,26 @@ if hass is not None:
                 self.log(f"Courrier : mémo d'Aiguillage illisible ({type(exc).__name__}), précédent gardé",
                          level="WARNING")
             return self._memo
+
+        def _voyages(self, db, etat, maintenant):
+            """Billets de train (P9-W) : rendez-vous et repère dans Aiguillage. None si coupé (`voyages: false`) ou
+            sans IA ; rien n'est lu au-delà du budget du mois (`budget_ok`)."""
+            ia = self._client_ia()
+            if not self._voyages_actif or ia is None:
+                return None
+            gmail = self._client_gmail()
+            ha = _HAVoyages(self)
+
+            def traiter(f, brut):
+                if not voyages_.candidat(f) or not budget_ok(etat, self._budget, maintenant):
+                    return
+                texte = texte_du_message(brut.get("payload"), brut.get("snippet", ""), voyages_.LONGUEUR_TEXTE)
+                pieces = _pieces_du_message(brut)
+                ha.gmail = gmail
+                _, usage = voyages_.traiter(f, texte, pieces, ia, db, ha, maintenant,
+                                            journal=lambda t: self.log(t))
+                compter(etat, cout(usage, voyages_.MODELE), maintenant)
+            return traiter
 
         def _service(self, domaine, service, data, reponse=True):
             url = f"{CORE_API}/services/{domaine}/{service}" + ("?return_response" if reponse else "")

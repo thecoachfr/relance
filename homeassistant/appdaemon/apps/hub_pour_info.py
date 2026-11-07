@@ -140,9 +140,10 @@ def jour_suivant(regle, echeance, fait):
     return jour
 
 
-def tombe(jour, echeance, regle):
-    """`PourInfo.tombe` : sa date, ou sa date est passée et sa répétition tombe ce jour-là."""
-    if jour == echeance:
+def tombe(jour, echeance, regle, fin=None):
+    """`PourInfo.tombe` : sa date, ou sa date est passée et sa répétition tombe ce jour-là ; avec une `fin` (P9-W,
+    repère d'un voyage), chaque jour de `echeance` à `fin` compris."""
+    if jour == echeance or (fin is not None and echeance <= jour <= fin):
         return True
     if echeance > jour or regle is None:
         return False
@@ -165,7 +166,8 @@ def _avec_heure(info):
 
 
 def infos(enregistrements, aujourdhui):
-    """Infos actives : liste de (cle, titre, echeance, regle, heure), par heure (sans heure à la fin) puis titre."""
+    """Infos actives : liste de (cle, titre, echeance, regle, heure, fin), par heure (sans heure à la fin) puis titre.
+    `fin` (P9-W) : dernier jour d'une info sur plusieurs jours, ou None (absente, mal formée ou avant `jour`)."""
     trouvees = []
     for e in enregistrements or []:
         v = e.get("valeur") or {}
@@ -176,7 +178,12 @@ def infos(enregistrements, aujourdhui):
         except ValueError:
             continue
         heure = v.get("heure") if heure_texte(v.get("heure")) else None
-        trouvees.append((e["cle"], v.get("titre") or "", echeance, repetition(v.get("notes")), heure))
+        try:
+            fin = date.fromisoformat(str(v.get("fin") or "")[:10])
+        except ValueError:
+            fin = None
+        fin = fin if fin is not None and fin > echeance else None
+        trouvees.append((e["cle"], v.get("titre") or "", echeance, repetition(v.get("notes")), heure, fin))
     return sorted(trouvees, key=lambda i: (i[4] is None, (i[4] or "").zfill(5), i[1].lower()))
 
 
@@ -184,14 +191,20 @@ def calculer(enregistrements, maintenant):
     """(état, attributs) de `sensor.hub_pour_info` (contrat : HUB-POUR-INFO.md)."""
     aujourdhui = maintenant.date()
     toutes = infos(enregistrements, aujourdhui)
+    # Info sur plusieurs jours (P9-W) : `fin` donné ; `deja_annoncee` après son premier jour (pas de nouvelle
+    # notification chaque matin du voyage, l'écran la montre toujours).
     du_jour = [{"cle": c, "titre": t, "heure": h, "heure_texte": heure_texte(h)}
-               for c, t, e, r, h in toutes if tombe(aujourdhui, e, r)]
+               | ({"fin": f.isoformat(), "deja_annoncee": aujourdhui > e} if f else {})
+               for c, t, e, r, h, f in toutes if tombe(aujourdhui, e, r, f)]
     a_venir = []
-    for c, t, e, r, h in toutes:
+    for c, t, e, r, h, f in toutes:
+        if tombe(aujourdhui, e, r, f) and f is not None:
+            continue                                # voyage en cours : déjà dans les infos du jour
         for n in range(1, A_VENIR_JOURS + 1):
             jour = aujourdhui + timedelta(days=n)
-            if tombe(jour, e, r):
-                a_venir.append({"cle": c, "titre": t, "jour": jour.isoformat(), "heure": h, "heure_texte": heure_texte(h)})
+            if tombe(jour, e, r, f):
+                a_venir.append({"cle": c, "titre": t, "jour": jour.isoformat(), "heure": h, "heure_texte": heure_texte(h)}
+                               | ({"fin": f.isoformat()} if f else {}))
                 break
     a_venir.sort(key=lambda i: (i["jour"], i["heure"] is None, (i["heure"] or "").zfill(5), i["titre"].lower()))
     return len(du_jour), {
@@ -205,7 +218,7 @@ def calculer(enregistrements, maintenant):
 
 def texte_notification(attributs):
     """« Pour info : Sport à 7 h 30, Poubelles » (tous les titres : l'écran a la place), ou None si rien."""
-    titres = [_avec_heure(i) for i in attributs.get("infos") or []]
+    titres = [_avec_heure(i) for i in attributs.get("infos") or [] if not i.get("deja_annoncee")]
     return "Pour info : " + ", ".join(titres) if titres else None
 
 

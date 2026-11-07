@@ -27,6 +27,7 @@
 | T — Rendez-vous : quatrième nature (date fixe, rappels avant, jamais en retard, rien à cocher), et un tri qui pose les natures Rendez-vous et Info | `P9-T-rendez-vous.md` | relance + HA + hub-ipad + hub-tv | plan du 04/11, R1 à R3 déployés, R5 et R6 faits, R4 en essai à blanc jusque vers le 11/11 |
 | U — Une seule liste de courses, le magasin porté par chaque article, notifications par magasin (04/11 : U1 à U6 faits, liste créée dans HA ; 05/11 : horaires des magasins, lieux et groupes renommables) | `P9-U-liste-unique-courses.md` |
 | V — Vocaux Signal de Yoann transcrits en local, texte dans la Note à moi-même | `P9-V-vocaux-signal.md` | relance + HA | arrêté le 04/11 après étude et mesures ; pièces jointes activées et purge déployée, transcription non codée |
+| W — Billets de train : un rendez-vous par trajet (billet PDF joint) et un repère « En voyage à X » du départ au retour (`fin`), créés par le NUC depuis le mail ; aller et retour reçus séparément fusionnés | `P9-W-voyages.md` | relance (NUC + app) | plan et code du 07/11 ; à déployer sur le NUC et à essayer avec un vrai billet ; app non compilée dans la session |
 | O — Copropriété : mémoire du groupe WhatsApp (réception seule), ordres du jour d'AG, PV et appels de charges en brouillons de mails validés | `P9-O-copropriete-whatsapp.md` | HA + relance | plan du 24/10, pas commencé ; O1 1 soirée, O2 une demi-soirée, O3 1, O4 1, O5 1–2 |
 
 **Ordre** : lot 0 ci-dessous (avec E1, la mesure de référence), puis A, B, C, D, et E2 après A4 et D3. C dépend de B (liens testés sur le Player, champs `envie`). D réutilise « Sur la TV » (B) comme une action. F, d'abord une piste, a été fait après D. G (ajouté le 16/10, déposé le 16/10 à 22 h) vient ensuite, indépendant des autres plans.
@@ -84,6 +85,10 @@ Les tâches sont dans l'espace `aiguillage` de `donnees_apps` (`Shared/HA/TacheH
   correspond d'après `sensor.aiguillage_lieu_travail` (`jours` : bureau → `bureau` ; maison → `teletravail`, `off` ou
   `ferie`, aujourd'hui compris), sinon reste sans date. Connu du tri avant sa mise en service (24/10) : règle U de la
   consigne, champ recopié, déduit d'une phrase (« au bureau », « à la maison ») et daté par la vigie.
+- `fin` : plan W (07/11), facultatif : dernier jour (`AAAA-MM-JJ`) d'une info sur plusieurs jours (repère « En voyage à
+  X »), seulement après `jour`. Écrit par le NUC (`aiguillage_voyages`) ; l'app le lit et le garde tel quel (champs
+  inconnus, `haExtrasRaw`) sans jamais l'écrire ; `sensor.hub_pour_info` le lit pour les trois Hubs. Copie lisible
+  « Du 20/11 au 23/11 » en tête des notes.
 - `duree` : plan H1 (17/10), facultatif : durée en minutes (entier), seulement avec `heure` ; l'événement d'agenda dure autant.
 - `liste` : plan G (16/10), facultatif : `{"articles": [{"id", "texte", "quantite", "rayon", "coche", "maj", "source"}], "parts", "recettes": [{"titre", "lien"}]}` ; quantités indicatives en texte libre ; copie lisible `🛒 Liste : 3/12 cochés` dans les notes ; fusion des coches article par article (détail et tests dans `P9-G-listes-courses.md`). La routine de tri doit connaître ce champ avant sa mise en service (section 4).
 - **Compatibilité, obligatoire pendant la transition** : continuer d'écrire les lignes techniques des notes (`📍 …`, `👀 À voir`, `🎬 À regarder`… et les nouvelles `🍽 À tester`, `🛍 Magasin`, `📷 Spot photo`), car la vigie, la routine de tri, la carte du Nest Hub (`nest-hub-entree-card`) et le mode Google Tasks les lisent. Le champ structuré fait foi ; la ligne en est une copie. Lecture : si le champ manque, le déduire de la ligne (anciennes tâches), sans réécrire toutes les tâches d'un coup.

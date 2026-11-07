@@ -57,6 +57,37 @@ struct PourInfoTests {
         #expect(!item.pourInfoDuJour(now: day(27, 12), calendar: calendar))
     }
 
+    // MARK: - Sur plusieurs jours (P9-W, repère d'un voyage)
+
+    @Test func multiDayInfoFallsEveryDayUntilItsEnd() {
+        #expect(PourInfo.tombe(le: day(21, 9), echeance: day(20), repetition: nil, fin: day(23), calendar: calendar))
+        #expect(PourInfo.tombe(le: day(23, 22), echeance: day(20), repetition: nil, fin: day(23), calendar: calendar))
+        #expect(!PourInfo.tombe(le: day(24), echeance: day(20), repetition: nil, fin: day(23), calendar: calendar))
+        #expect(!PourInfo.tombe(le: day(19), echeance: day(20), repetition: nil, fin: day(23), calendar: calendar))
+        let item = TaskItem(title: "En voyage à Lyon", notes: PourInfo.notes("", actif: true), dueDay: day(20))
+        item.haExtrasRaw = #"{"fin":"2026-10-23","autre":1}"#
+        #expect(item.finDay(calendar: calendar) == day(23))
+        #expect(item.pourInfoDuJour(now: day(22, 12), calendar: calendar))
+        #expect(!item.pourInfoDuJour(now: day(24, 12), calendar: calendar))
+        #expect(item.periodePourInfo(calendar: calendar) != nil)
+        // Date déplacée après la fin dans la fiche : l'info redevient d'un seul jour.
+        item.dueDay = day(25)
+        #expect(item.finDay(calendar: calendar) == nil)
+        #expect(item.periodePourInfo(calendar: calendar) == nil)
+        item.haExtrasRaw = nil
+        #expect(item.finDay(calendar: calendar) == nil)
+    }
+
+    @Test func endFieldIsKeptWhenTheAppWritesTheTaskBack() throws {
+        let json = #"{"v":2,"titre":"En voyage à Lyon","notes":"📣 Pour info","jour":"2026-11-20","fin":"2026-11-23","fait":false}"#
+        let tache = try JSONDecoder().decode(TacheHA.self, from: Data(json.utf8))
+        let item = TaskItem(title: "")
+        tache.apply(to: item)
+        #expect(item.finDay() == Calendar.current.date(from: DateComponents(year: 2026, month: 11, day: 23)))
+        let renvoye = String(decoding: try JSONEncoder().encode(TacheHA(item)), as: UTF8.self)
+        #expect(renvoye.contains(#""fin":"2026-11-23""#))
+    }
+
     // MARK: - Planificateur
 
     var planner: ReminderPlanner { ReminderPlanner(calendar: calendar) }

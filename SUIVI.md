@@ -52,6 +52,7 @@ Google Tasks n'a ni heure (dans son API) ni étiquettes : en tête des notes, da
 🎙 Dicté : … (titre d'origine, si le tri l'a nettoyé)
 📣 Pour info         (rappel sans action, P9-P ; ligne cachée, à la fin)
 📌 Rendez-vous       (date fixe, rappels avant, rien à cocher, P9-T ; ligne cachée, à la fin)
+Du 20/11 au 23/11    (copie du champ `fin` d'une info sur plusieurs jours, repère d'un voyage, P9-W)
 Notes libres…
 💡 Suggestion : … (ajoutée par le tri)
 ```
@@ -99,6 +100,7 @@ Code fait et fusionné dans `main` (désactivé tant qu'on ne bascule pas dans l
 
 ### P9 : ce qui reste (16/10 au soir, dernier build : 46, a7cb3d2)
 
+- **P9-W, billets de train (07/11, demande d'Alexandre)** : `plans/P9-W-voyages.md`. Un mail de billet (SNCF Connect, Ouigo, Trainline…) donne un rendez-vous `📌` par trajet (heure, durée, gare, train, voiture, place, billet PDF joint) et un repère `📣` « En voyage à X » du départ au retour (nouveau champ `fin`) ; un retour reçu dans un second mail complète le voyage. Choix d'Alexandre : repère sans relance, billet joint aux deux rendez-vous, fusion des deux mails. **Codé, pas déployé** : NUC (`aiguillage_voyages.py`, branchement dans `aiguillage_courrier`, `hub_pour_info` pour les trois Hubs ; 482 tests Python verts) et app (info sur plusieurs jours, agenda « journée entière » ; **Swift non compilé dans la session**, sans Xcode : à compiler et tester sur le Mac avant de fusionner). Reste : copier `aiguillage_voyages.py`, `aiguillage_courrier.py` et `hub_pour_info.py` sur le NUC, ajouter la règle W à la consigne réelle du tri, essayer avec un vrai billet.
 - **P9-V, vocaux Signal (04/11)** : texte prévu dans la Note à moi-même, en local (`plans/P9-V-vocaux-signal.md`). Pièces jointes activées sur l'add-on (15 h 11) et purge étendue à toutes les conversations (déployée à 15 h 08). Mesures sur voix synthétique : Mac Studio 23 × le temps réel, NUC 1,6 ×. **Arrêté par Alexandre après les mesures** : pas de transcription codée, pas de moteur retenu. Reste à vérifier avec une vraie photo : P9-R, qui ne pouvait pas marcher avant l'activation des pièces jointes.
 - **Notifications du matin (18/10, remarque d'Alexandre)** : les relances qui tombent avec « Ta journée » (report « demain matin », moment du matin, retard) sont fondues dedans : une seule notification au réveil, avec « · urgent : <titres> » s'il y a des urgentes (et alors sensible au temps). L'heure prévue, le rappel « avant », le départ et « À quelle heure ? » restent à part (`ReminderPlanner.folding`).
 - **P9-K, pièces jointes (18/10)** : fait (détail dans `plans/P9-K-pieces-jointes.md`) : fichiers dans HA (`ha-donnees-apps` 0.3.0, active sur le NUC depuis le 18/10), section de la fiche, feuille de partage, texte lu pour la routine de tri (règle S), Spotlight, photo dans la notification, copie Google Drive. Essai réel réussi (build 58 : PDF partagé, rangé dans HA, texte lu). À faire par Alexandre : activer l'API Google Drive dans le projet Google Cloud, puis essayer la copie Drive.

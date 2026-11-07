@@ -195,6 +195,8 @@ Courrier (plan P9-N, lot N3, en service depuis le 24/10) : app AppDaemon `aiguil
 `sensor.aiguillage_courrier`, tri de la boîte perso Gmail (à traiter, lettres d'info, bruit, fait) par règles apprises,
 règles sûres et Haiku 5.5, publié pour l'app Courrier (`../courrier`) dans l'espace `courrier` ; aucun envoi,
 archivage ni suppression ; contrat, autorisation et déploiement dans [homeassistant/COURRIER.md](homeassistant/COURRIER.md).
+Billets de train (plan P9-W, 07/11) : un mail de billet devient un rendez-vous par trajet (billet PDF joint) et un repère
+« En voyage à X » du départ au retour (`aiguillage_voyages`, appelé par la relève du courrier ; champ de tâche `fin`).
 
 Pièces jointes (plan P9-K) : les fichiers d'une tâche (photo, PDF, scan) sont rangés dans Home Assistant par
 l'API `fichiers` de `ha-donnees-apps` 0.3.0 (`/api/donnees_apps/fichiers/aiguillage`, même jeton) ; la tâche garde leurs
