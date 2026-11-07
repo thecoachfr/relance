@@ -23,6 +23,9 @@ ARRET_AVANT_FIN = 5 * 60
 JOUE = ("playing", "paused")
 # La KEF, relue toutes les 10 s, suit une pause de Music Assistant en moins de 10 s (relevés du 02 au 07/11/2026).
 KEF_SUIT_PAUSE = 20
+# Activité sans jeton : périmée 3 min après le démarrage. Mise à jour reçue : bien au-delà des 8 h de vie d'une activité.
+PERIME_SANS_JETON = 3 * 60
+PERIME_MISE_A_JOUR = 12 * 3600
 # Contenu de fin quand on ne sait plus ce qui jouait (vigie relancée) : l'app doit pouvoir le décoder.
 REPOS = {"titre": NOM, "artiste": "", "source": "", "image": None, "etat": "pause", "volume": 0, "radio": False}
 # Entrées de l'enceinte KEF (lecture hors Music Assistant).
@@ -207,9 +210,12 @@ def alerte(c):
 
 
 def payload_start(c, maintenant, nom=NOM):
+    """Démarrage, périmé au bout de `PERIME_SANS_JETON` : sans jeton, l'activité dit « à actualiser » (constat du
+    07/11/2026 : Tsugi Radio figée sur l'iPhone). La première mise à jour repousse la date, le jeton arrive en 2 s."""
     return {"aps": {
         "timestamp": int(maintenant),
         "event": "start",
+        "stale-date": int(maintenant) + PERIME_SANS_JETON,
         "content-state": c,
         "attributes-type": TYPE_ATTRIBUTS,
         "attributes": {"nom": nom},
@@ -218,7 +224,8 @@ def payload_start(c, maintenant, nom=NOM):
 
 
 def payload_update(c, maintenant):
-    return {"aps": {"timestamp": int(maintenant), "event": "update", "content-state": c}}
+    return {"aps": {"timestamp": int(maintenant), "event": "update", "stale-date": int(maintenant) + PERIME_MISE_A_JOUR,
+                    "content-state": c}}
 
 
 def payload_end(c, maintenant):

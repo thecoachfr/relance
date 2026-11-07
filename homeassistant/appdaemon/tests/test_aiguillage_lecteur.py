@@ -40,6 +40,15 @@ def test_ma_reste_en_pause_pendant_que_spotify_joue():
     assert l.choisir_entite({l.ENTITE_MA: {**MA, "state": "paused"}, l.ENTITE_KEF: KEF}, t0 + 25)["entity_id"] == l.ENTITE_MA
 
 
+def test_activite_sans_jeton_perimee():
+    # Démarrage : périmée 3 min après si aucune mise à jour ne suit (jeton jamais reçu, constat du 07/11/2026).
+    c = l.contenu(MA, HA)
+    assert l.payload_start(c, 100)["aps"]["stale-date"] == 100 + l.PERIME_SANS_JETON
+    # Mise à jour : repoussée au-delà de la vie d'une activité (8 h), sinon une pause longue passerait pour périmée.
+    assert l.payload_update(c, 100)["aps"]["stale-date"] == 100 + l.PERIME_MISE_A_JOUR
+    assert l.PERIME_MISE_A_JOUR > 8 * 3600
+
+
 def test_contenu_radio_music_assistant():
     # Le même JSON que `testContenuDeLaVigie` côté Swift (ActiviteLecteurTests).
     assert l.contenu(MA, HA) == {
@@ -145,7 +154,7 @@ def test_payloads():
     assert s["alert"] == {"title": "En lecture sur les LS50", "body": "VAMOS A LA PLAYA · Righeira"}
     assert "sound" not in s
     u = l.payload_update(c, 10)["aps"]
-    assert u == {"timestamp": 10, "event": "update", "content-state": c}
+    assert u == {"timestamp": 10, "event": "update", "stale-date": 10 + l.PERIME_MISE_A_JOUR, "content-state": c}
     e = l.payload_end(c, 20)["aps"]
     assert e["event"] == "end" and e["dismissal-date"] == 20
     assert l.entetes(5) == {"apns-push-type": "liveactivity",
