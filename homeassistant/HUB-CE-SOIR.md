@@ -73,7 +73,10 @@ Code : `homeassistant/appdaemon/apps/hub_ce_soir.py` (fonctions pures, puis la c
   d'Alexandre (42, validée par lui le 28/10/2026 ; info, sport, musique et jeunesse laissées de côté ; **Gulli (12) ajoutée le 01/11/2026** à sa demande, 43 chaînes : *Beetlejuice* y passait le 31/10 et manquait). Pas de filtre
   par la Freebox (retiré le 28/10 au soir) : son `has_abo` veut dire « chaîne payante », pas « dans l'abonnement »
   (CANAL+ Cinéma(s) 47 et CANAL+ Docs 48 marquées oui alors qu'Alexandre ne les a pas, CANAL+ Box Office 45 marquée
-  non alors qu'il l'a). Changement d'abonnement : modifier la table à la main.
+  non alors qu'il l'a). Changement d'abonnement : modifier la table à la main. **Revue le 08/11/2026** avec la page
+  « abonnements télévision » de Free (packs Universal+ et TV by Canal) : rien à changer. RTL9, AB1, TLC, National
+  Geographic et Comedy Central, absents de ces packs, sont bien reçus (confirmé par Alexandre) ; CANAL+ 40, 45, 46 hors
+  de cette page (abonnement CANAL+) ; Love Nature, dans le pack, pas voulue.
 - **Relier une nouvelle chaîne** : télécharger quelques heures des deux guides (OQEE `epg/all/<heure>` et Freebox
   `tv/epg/by_time/<heure>`), et pour l'uuid Freebox de la chaîne, compter les identifiants OQEE qui ont le même titre
   à 15 min près : le plus fréquent est le bon (méthode du 28/10/2026 ; France 2 et France 3 ont des doublons
