@@ -32,6 +32,8 @@ def test_genres_gardes_et_ecartes():
     assert c.genre("Documentaire", "Documentaire histoire") == "documentaire"
     assert c.genre("Magazine", "Magazine de reportages") == "reportage"
     assert c.genre("Téléfilm", "Téléfilm dramatique") == "telefilm"
+    # 08/11/2026 : *Super Mario Galaxy le film* (CANAL+ Box Office, 07/11) manquait.
+    assert c.genre("Film", "Film d'animation") == "film"
     for cat, sous in [("Film", "Film pornographique"), ("Série", "Série d'animation"), ("Série", "Série jeunesse"),
                       ("Documentaire", "Documentaire téléréalité"), ("Magazine", "Magazine d'actualité"),
                       ("Divers", "Journal"), ("Emission sportive", "Football"), ("Téléfilm", "Téléfilm érotique")]:

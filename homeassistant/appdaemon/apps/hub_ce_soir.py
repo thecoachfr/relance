@@ -79,6 +79,8 @@ FAMILLE = {"reportage": "documentaire"}
 FAMILLES = [("film", "Films"), ("serie", "Séries"), ("documentaire", "Docs et reportages"), ("telefilm", "Téléfilms")]
 EXCLUS = ("pornographique", "érotique", "animation", "dessin animé", "jeunesse", "marionnettes", "téléréalité",
           "féerique", "charme")
+# Les films d'animation restent (08/11/2026 : *Super Mario Galaxy le film* manquait le 07/11) ; pas les séries d'animation.
+GARDES_FILM = ("animation",)
 
 
 def _sans_accents(texte):
@@ -103,7 +105,8 @@ def genre(categorie, sous_categorie):
     """Code du genre gardé (film, documentaire, reportage, serie, telefilm) ou None."""
     cat = (categorie or "").strip().lower()
     sous = (sous_categorie or "").strip().lower()
-    if any(mot in sous or mot in cat for mot in EXCLUS):
+    exclus = [m for m in EXCLUS if not (cat == "film" and m in GARDES_FILM)]
+    if any(mot in sous or mot in cat for mot in exclus):
         return None
     if cat == "film":
         return "film"

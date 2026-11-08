@@ -7,7 +7,9 @@ Ce que c'est : les films, séries, documentaires et reportages qui **commencent 
 chaînes d'Alexandre (liste fixe validée par lui le 28/10/2026 : TNT, CANAL+ 40, 45 et 46, et ses chaînes cinéma,
 séries et documentaires). Direct
 seulement. Programmes de moins de 20 min, interdits aux moins de 18 ans et déjà finis écartés ; d'une série dont
-plusieurs épisodes se suivent sur la même chaîne, seul le premier est gardé.
+plusieurs épisodes se suivent sur la même chaîne, seul le premier est gardé. Écartés aussi : séries d'animation,
+jeunesse, téléréalité (`EXCLUS`) ; **les films d'animation sont gardés** depuis le 08/11/2026 (*Super Mario Galaxy le
+film*, CANAL+ Box Office, 07/11 à 21 h, manquait : OQEE le classe « Film d'animation »).
 
 État : nombre de programmes (entier, 0 s'il n'y en a pas, par exemple après 23 h quand tout est fini).
 
