@@ -29,7 +29,7 @@ FREEBOX = "http://mafreebox.freebox.fr"
 
 # Fenêtre du début de soirée : un programme compte s'il commence entre ces deux heures.
 DEBUT_MIN = time(20, 40)
-DEBUT_MAX = time(21, 20)
+DEBUT_MAX = time(21, 30)  # 21 h 20 jusqu'au 09/11/2026 (*Le Seigneur des anneaux*, TMC, 21 h 25, manquait)
 PRIME = time(20, 50)  # avant : courts programmes d'avant-soirée (sitcoms, feuilletons), mis après à genre égal
 DUREE_MIN = 20 * 60  # écarte les pastilles (« Scènes de ménages », météo…)
 PAR_GENRE = 10  # boutons par genre (01/11/2026) : jusqu'à 10 programmes par famille (avant : 12 en tout, quotas)
@@ -328,7 +328,7 @@ def calculer(bruts, chaines, envies, maintenant, source="oqee", notes=None):
 
 def heure_du_guide(maintenant):
     """L'heure ronde de 21 h du jour : le guide d'OQEE y donne ce qui passe à 21 h et ce qui commence avant 22 h,
-    donc tout ce qui commence entre 20 h 40 et 21 h 20 (hors pastilles de moins de 20 min)."""
+    donc tout ce qui commence entre 20 h 40 et 21 h 30 (hors pastilles de moins de 20 min)."""
     return int(datetime.combine(maintenant.date(), time(21, 0), PARIS).timestamp())
 
 

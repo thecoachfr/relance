@@ -48,8 +48,9 @@ def test_titres_et_episodes():
 
 
 def test_fenetre_duree_age_et_fin():
-    bruts = [prog(273, "Dans la fenêtre", h=21, m=20), prog(273, "Trop tôt", h=20, m=30),
-             prog(273, "Trop tard", h=21, m=25), prog(536, "Pastille", cat="Série", sous="Série humoristique",
+    # 09/11/2026 : fin de fenêtre à 21 h 30 (*Le Seigneur des anneaux : les deux tours*, TMC, 21 h 25, manquait).
+    bruts = [prog(273, "Dans la fenêtre", h=21, m=30), prog(273, "Trop tôt", h=20, m=30),
+             prog(273, "Trop tard", h=21, m=35), prog(536, "Pastille", cat="Série", sous="Série humoristique",
                                                       duree=600), prog(537, "Interdit", age=18)]
     assert titres(bruts) == ["Dans la fenêtre"]
     # Fini à 23 h : n'est plus « ce soir ».

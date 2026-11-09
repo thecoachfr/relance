@@ -3,7 +3,7 @@
 Cadrage : `hub-tv/docs/CE-SOIR.md` (H46). Calculé par l'app AppDaemon `hub_ce_soir` (dépôt Rappels, à côté de la
 vigie). Les vues ne font QUE l'afficher : aucun filtre ni tri dans les vues. Le Nest Hub n'a pas de Vidéo.
 
-Ce que c'est : les films, séries, documentaires et reportages qui **commencent entre 20 h 40 et 21 h 20** sur les
+Ce que c'est : les films, séries, documentaires et reportages qui **commencent entre 20 h 40 et 21 h 30** (21 h 20 jusqu'au 09/11/2026 : *Le Seigneur des anneaux : les deux tours*, TMC, 21 h 25, manquait) sur les
 chaînes d'Alexandre (liste fixe validée par lui le 28/10/2026 : TNT, CANAL+ 40, 45 et 46, et ses chaînes cinéma,
 séries et documentaires). Direct
 seulement. Programmes de moins de 20 min, interdits aux moins de 18 ans et déjà finis écartés ; d'une série dont
