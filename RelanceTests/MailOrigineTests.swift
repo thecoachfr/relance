@@ -10,11 +10,13 @@ struct MailOrigineTests {
         #expect(MailOrigine.lien(in: notes)?.absoluteString == "https://mail.google.com/mail/u/0/#inbox/19a2b3c4d5e6f708")
         #expect(MailOrigine.fil(in: notes) == "19a2b3c4d5e6f708")
         #expect(MailOrigine.destination(in: notes) == MailOrigine.lien(in: notes))
+        #expect(MailOrigine.dansCourrier(in: notes)?.absoluteString == "courrier://fil/19a2b3c4d5e6f708")
     }
 
     @Test func sansMail() {
         #expect(MailOrigine.lien(in: "Appeler le garage\nhttps://example.com/mail.google.com") == nil)
         #expect(MailOrigine.lien(in: "") == nil)
+        #expect(MailOrigine.dansCourrier(in: "") == nil)
         #expect(MailOrigine.fil(in: "https://mail.google.com/mail/u/0/#inbox/../x;y") == nil)
     }
 

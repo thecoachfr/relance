@@ -52,8 +52,12 @@ nonisolated enum MailOrigine {
         return fil
     }
 
-    /// Ce que « Voir le mail » ouvre : le lien web Gmail (l'app Gmail le prend si elle est installée). L'app Courrier
-    /// ne sait ouvrir qu'un message (`courrier://mail/<id>`), pas un fil : quand elle saura `courrier://fil/<fil>`,
-    /// la préférer ici (et ajouter `courrier` à LSApplicationQueriesSchemes).
+    /// Lien web Gmail, ouvert quand Courrier n'est pas installé (l'app Gmail le prend si elle l'est).
     static func destination(in notes: String) -> URL? { lien(in: notes) }
+
+    /// Ce que « Voir le mail » essaie d'abord (11/11) : le fil dans l'app Courrier (`courrier://fil/<fil>`, route
+    /// ajoutée dans Courrier le même jour). Si aucune app ne prend le lien, la fiche ouvre `destination`.
+    static func dansCourrier(in notes: String) -> URL? {
+        fil(in: notes).flatMap { URL(string: "courrier://fil/\($0)") }
+    }
 }

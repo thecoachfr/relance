@@ -51,7 +51,7 @@ struct TaskDetailView: View {
                         .foregroundStyle(item.isOverdue() ? .red : .secondary)
                 }
                 // Tâche venue d'un mail (11/11) : le mail d'origine, au lieu du lien Gmail brut dans les notes.
-                if let mail = MailOrigine.destination(in: notes) { VoirLeMail(url: mail) }
+                if let mail = MailOrigine.destination(in: notes) { VoirLeMail(url: mail, courrier: MailOrigine.dansCourrier(in: notes)) }
                 // Une ligne tant qu'il n'y a rien (revue du 28/10 : trois lignes vides prenaient de la place).
                 TextField("Notes", text: visibleNotes, prompt: Text("Notes"), axis: .vertical)
                     .lineLimit(1...)
@@ -382,9 +382,17 @@ struct TaskDetailView: View {
 private struct VoirLeMail: View {
     @Environment(\.openURL) private var openURL
     let url: URL
+    /// Le fil dans l'app Courrier, essayé d'abord ; repli sur le lien web Gmail si aucune app ne le prend.
+    let courrier: URL?
 
     var body: some View {
-        Button { openURL(url) } label: {
+        Button {
+            if let courrier {
+                openURL(courrier) { ouvert in if !ouvert { openURL(url) } }
+            } else {
+                openURL(url)
+            }
+        } label: {
             HStack {
                 Label("Voir le mail", systemImage: "envelope")
                 Spacer()
@@ -397,7 +405,7 @@ private struct VoirLeMail: View {
         .buttonStyle(.plain)
         .foregroundStyle(.tint)
         .accessibilityLabel("Voir le mail")
-        .accessibilityHint("Ouvre dans Gmail le mail d'où vient cette tâche")
+        .accessibilityHint("Ouvre dans Courrier, sinon dans Gmail, le mail d'où vient cette tâche")
         .accessibilityAddTraits(.isLink)
     }
 }
