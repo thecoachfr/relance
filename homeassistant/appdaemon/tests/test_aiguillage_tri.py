@@ -402,3 +402,26 @@ def test_pas_de_suggestion_sur_une_nature_existante():
         v, refus = nature(NEUVE | {"categorie": "Maison", "notes": ligne}, notes_a_la_fin=["💡 Suggestion : x"])
         assert v is None
         assert refus == ["suggestion sur un rendez-vous ou une info"]
+
+
+def test_page_du_lien_partage():
+    """Règle X (11/11) : la page lue par la vigie part avec la tâche ; le lieu qu'elle donne est noté « page »."""
+    page = {"lien": "https://exemple.fr/x", "titre": "Marché Exemple", "texte": "Salle Exemple, 12 rue de l'Essai"}
+    texte = t.message(NOW, [], [rec({"titre": "Voir le marché", "notes": "📩 Message partagé"}),
+                                rec({"titre": "Autre"}, cle="22222222-2222-4222-8222-222222222222")],
+                      TAGS, [], {CLE: page})
+    donnees = json.loads(texte[texte.index("{"):])
+    assert donnees["taches"][0]["page"] == page and "page" not in donnees["taches"][1]
+    valeur = {"titre": "Voir le marché", "fait": False, "notes": "📩 Message partagé\n👀 À voir",
+              "envie": {"type": "voir"}, "categorie": "Perso"}
+    nv, refus = t.appliquer(valeur, ch(lieu={"nom": "Salle Exemple", "adresse": "12 rue de l'Essai, 75012 Paris",
+                                            "telephone": "", "lien": ""},
+                                       notes_a_la_fin=["📍 Salle Exemple · 12 rue de l'Essai, 75012 Paris",
+                                                       "🗓 Du 05/12/2026 au 06/12/2026"]),
+                            AUJ, NOW, TAGS, source_lieu="page")
+    assert refus == []
+    assert nv["lieu"] == {"nom": "Salle Exemple", "adresse": "12 rue de l'Essai, 75012 Paris", "source": "page"}
+    # Les lignes existantes restent en place, les nouvelles s'ajoutent à la fin.
+    assert nv["notes"].split("\n")[-3:] == ["👀 À voir", "📍 Salle Exemple · 12 rue de l'Essai, 75012 Paris",
+                                            "🗓 Du 05/12/2026 au 06/12/2026"]
+    assert "jour" not in nv

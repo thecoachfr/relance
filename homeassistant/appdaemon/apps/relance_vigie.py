@@ -29,6 +29,7 @@ import aiguillage_agenda
 import aiguillage_courses
 import aiguillage_lecteur
 import aiguillage_lecture_source
+import aiguillage_page
 import aiguillage_photos
 import aiguillage_radio
 import aiguillage_radio_morceau
@@ -1650,6 +1651,33 @@ class RelanceVigie(Hass):
         finally:
             self._tri_lock.release()
 
+    def _tri_pages(self, lot):
+        """Pages des liens partagés du lot (règle X), lues une fois par lien et gardées en mémoire (50 au plus).
+        Une page illisible n'empêche pas le tri : la tâche part sans page."""
+        cache = self.__dict__.setdefault("_pages_lues", {})
+        pages = {}
+        for record in lot:
+            lien = aiguillage_page.lien_a_lire(record.get("valeur") or {})
+            if not lien:
+                continue
+            if lien not in cache:
+                with httpx.Client() as client:
+                    cache[lien] = aiguillage_page.lire(client, lien)
+                while len(cache) > 50:
+                    cache.pop(next(iter(cache)))
+                page = cache[lien]
+                self.log(f"Tri par l'API : page du lien partagé {'lue' if page else 'illisible'} ({lien[:80]})"
+                         + (f", {len(page.get('texte') or '')} caractères, {len(page.get('evenements') or [])} "
+                            f"événement(s)" if page else ""))
+            if cache[lien]:
+                pages[record["cle"]] = cache[lien]
+        return pages
+
+    def _tri_source_lieu(self, record):
+        """« page » si le lieu ajouté par le tri peut venir de la page lue (règle X), sinon « memo » (règle I)."""
+        lien = aiguillage_page.lien_a_lire(record.get("valeur") or {})
+        return "page" if lien and (self.__dict__.get("_pages_lues") or {}).get(lien) else "memo"
+
     def _tri_passage(self, ecrire, complet):
         try:
             import anthropic
@@ -1703,7 +1731,7 @@ class RelanceVigie(Hass):
         def demander(lot):
             local = datetime.now(PARIS)
             maintenant = f"{local:%Y-%m-%d %H:%M} ({JOURS[local.weekday()]}), Europe/Paris"
-            texte = aiguillage_tri.message(maintenant, memo, lot, tags, titres)
+            texte = aiguillage_tri.message(maintenant, memo, lot, tags, titres, self._tri_pages(lot))
             try:
                 reponse, usage, stop = aiguillage_tri.appeler(client, consigne, texte, modele, effort)
             except anthropic.APIError as error:
@@ -1736,7 +1764,8 @@ class RelanceVigie(Hass):
                 continue
             nouvelle, refus = aiguillage_tri.appliquer(record["valeur"], changement, aujourdhui,
                                                        datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"), tags,
-                                                       jours_lieu, self._tri_natures == "actif")
+                                                       jours_lieu, self._tri_natures == "actif",
+                                                       self._tri_source_lieu(record))
             trace = {"cle": record["cle"], "titre": record["valeur"].get("titre"), "raison": changement.get("raison"),
                      "changements": self._tri_diff(record["valeur"], nouvelle), "refus": refus}
             if changement.get("nature"):
@@ -1755,7 +1784,7 @@ class RelanceVigie(Hass):
                         if ch2:
                             nouvelle, refus2 = aiguillage_tri.appliquer(
                                 relu["valeur"], ch2, aujourdhui, datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"), tags,
-                                jours_lieu, self._tri_natures == "actif")
+                                jours_lieu, self._tri_natures == "actif", self._tri_source_lieu(relu))
                             trace["refus"] += refus2
                             statut = self._tri_ecrire(relu, nouvelle) if nouvelle is not None else "rien"
                         self._tri_etat(etat)
