@@ -22,6 +22,33 @@ Revue batterie, mémoire et réseau des apps (checklist `bonnes-pratiques-apps-a
 
 Restent, repérés mais pas faits : au-delà de 20 lieux de rappel, iOS suit aussi les changements de position importants en continu, et les adresses introuvables sont recherchées dans Plans à chaque réveil (échecs oubliés à la fermeture, `PlaceLocator`) ; boucle de 60 s sur le Mac même fenêtre fermée ; `DriveCopie` sur `URLSession.shared` (60 s) ; `MKLocalSearch` sans délai de garde.
 
+## Point mémoire, réseau et processeur du 11/11/2026
+
+Relevé par copie de l'App Group (`xcrun devicectl … --domain-type appGroupDataContainer`, lecture seule, rien installé) le 11/11 vers 11 h 30. Copies hors dépôt (dossier temporaire de la session). Périodes : **avant** = 16/10 au 02/11, **après** = 03/11 au 10/11 (revue batterie du 03/11 ; mémoire de l'iPhone et de l'iPad suivie depuis).
+
+**Ce qui manque** : aucun dossier `Metrics/` sur l'iPhone ni sur l'iPad, donc **aucun rapport MetricKit gardé depuis le 16/10** (ni processeur, ni temps en arrière-plan, ni position, ni réseau en Mo), alors que `EnergyMetrics.shared.start()` est bien appelé au lancement. Cause probable : partage des analyses avec les développeurs coupé sur ces appareils (iOS ne livre alors rien à `MXMetricManager`) ; à vérifier dans Réglages › Confidentialité et sécurité › Analyse et améliorations. Les widgets et l'extension de partage n'ont pas d'abonné MetricKit. Aucun compteur de requêtes ni de nouveaux essais dans `Reseau` : seul le journal des erreurs renseigne le réseau. **Montre** : injoignable (tunnel `devicectl` refusé, erreur 4000), pas de chiffres. **Mac** : app non lancée au moment du relevé et App Group illisible depuis le terminal (protection macOS), pas de chiffres.
+
+| Mesure | Seuil | iPhone avant | iPhone après | iPad avant | iPad après |
+|---|---|---|---|---|---|
+| Processeur, arrière-plan, position, réseau (MetricKit) | < 15 min / < 30 min par jour | non mesuré | non mesuré | non mesuré | non mesuré |
+| Pushs de la vigie reçus par jour (moyenne / max) | ≤ 30 | 18,9 / 51 (3 jours > 30) | 14,5 / 27 | 27,2 / 103 (5 jours > 30) | 19,9 / 41 (2 jours > 30 : 03 et 04/11) |
+| Autres réveils par jour (arrêts relevés, zones, lots du tracé) | — | 15,6 | 36,4 | 0 | 0 |
+| Temps à l'écran par jour (sessions suivies) | — | — | 1 à 7 min | — | 1 à 17 min |
+| Mémoire à l'écran : médiane des pics / 90 % des sessions sous | à surveiller | — | 71 Mo / 121 Mo | — | 90 Mo / 129 Mo |
+| Mémoire : pic maximal | à surveiller | — | **643 Mo** (08/11) | — | **895 Mo** (09/11) |
+| Arrêts inattendus à l'écran | 0 par semaine | — | 0 (61 sessions) | — | 0 (62 sessions) |
+| Erreurs réseau gardées (journal, 30 au plus) | — | — | 30, toutes vers Home Assistant | — | 1 (TLS, 10/11, 4 fois) |
+
+**Anomalies** (causes probables, rien de corrigé) :
+
+1. **Pics de mémoire de 270 à 900 Mo** en sessions courtes (20 à 150 s, départ à 40-90 Mo) : iPhone 04/11 18 h 40 (274), 05/11 17 h 01 (481), 08/11 21 h 37 (643) ; iPad 04/11 21 h 08 à 21 h 42 (834, puis 509, 339, 279), 09/11 20 h 40 (895). Pas d'arrêt, mais 900 Mo approche la limite d'un iPhone. Les données ne disent pas quel écran ; candidats dans le code : lecture du texte des pièces jointes (Vision, reconnaissance précise avec correction, deuxième passe par étiquette, `SharedPhoto.text`), scan de documents (`imageOfPage` en pleine définition, puis JPEG, puis `UIImage`, `PiecesSection`), photos chargées entières (`loadTransferable(type: Data.self)`, jusqu'à 4). Correctif proposé : demander à Alexandre ce qu'il faisait à ces heures, mesurer avec Instruments ; libérer chaque page du scan (`autoreleasepool`) et lire le texte d'une photo à la fois.
+2. **iPhone, envois à Home Assistant en échec** : `NSURLErrorDomain -1200` (TLS) sur « Envoi des trajets » et « Lecture du lieu de travail », et « Envoi du tracé précis : ErreurHA 0 » aux mêmes minutes (03/11 23 h 47-52, 23 fois ; 04/11 9 h 50-11 h 28 ; 06/11 13 h 31 ; 10/11 19 h 48, 8 fois ; 11/11 11 h 03-11 h 07). Cause probable : réseau qui intercepte TLS ou portail captif (même erreur sur trois requêtes indépendantes vers Nabu Casa). Pas de tempête : -1200 n'est pas réessayé (`Reseau.attente`) et le tracé s'arrête au premier lot raté. Mais `ErreurHA 0` (paquet `DonneesHA`) cache l'erreur réelle, et chaque nouveau point du tracé relance un envoi voué à l'échec. Correctif proposé : garder l'erreur d'origine dans `ErreurHA`, et attendre quelques minutes après un échec TLS avant de renvoyer.
+3. **iPad, pushs de la vigie** : 103 le 16/10 (jour des essais), encore 35 et 41 les 03 et 04/11, pour un iPad qui n'en fait rien d'autre que se réveiller. À rapprocher de `relance_push_stats.json` (non relu ici). Correctif proposé : ne pas envoyer à l'iPad les salves qui ne changent rien à l'écran, ou les regrouper.
+4. **Mac, boucle de 60 s (B1 partiel), confirmée dans le code** : `MacAppDelegate` lance `while true { sleep 60 s ; status.update ; toutes les 5 min store.sync() }`, qui tourne tant que l'app vit, fenêtre fermée comprise (l'app reste dans la barre des menus). Coût réel non mesuré. Correctif proposé : synchro régulière par `NSBackgroundActivityScheduler` (5 min, avec tolérance, que macOS peut différer) et compteur de la barre des menus par un minuteur avec tolérance.
+5. Ancien, plus vu depuis le 27/10 : « Démarrage de l'activité en direct : Target is not foreground », 57 fois sur l'iPad.
+
+**Bilan** : pushs ≤ 30 par jour tenus sur l'iPhone depuis le 03/11, pas encore sur l'iPad. Aucun arrêt à l'écran. Les réveils de l'iPhone montent (34,6 → 50,9 par jour) avec les trajets et le tracé précis « Toujours », sans MetricKit pour dire ce qu'ils coûtent : premier point à mesurer une fois le partage des analyses vérifié.
+
 ## E1 — Mesure de référence
 
 **Protocole** : installer le build qui contient le diagnostic, puis une semaine d'usage normal sans fonction P9. À J+7 :
