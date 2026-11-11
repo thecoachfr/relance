@@ -139,7 +139,7 @@ def test_nettoyer_ia():
     r = c.nettoyer_ia({"categorie": "a_traiter", "resume": " Facture EDF. ", "demande": "", "echeance": "2026-13-01",
                        "confiance": 1.7})
     assert r == {"categorie": "a_traiter", "resume": "Facture EDF.", "demande": None, "echeance": None, "confiance": 1.0,
-                 "urgent": False}
+                 "urgent": False, "rendez_vous": None}
     assert c.nettoyer_ia({"categorie": "lettre", "resume": "x", "demande": None, "echeance": "2026-11-05",
                           "confiance": 0.4})["echeance"] == "2026-11-05"
 
@@ -882,6 +882,90 @@ def test_actions_de_notification():
     assert t2["titre"] == "Enedis : Coupure" and t2["jour"] == "2026-10-24"
 
 
+# MARK: - Rendez-vous lu dans un mail (11/11, constat d'Alexandre : Doctolib et Le Bon Coin au mauvais jour)
+
+def _mail_rdv(**kw):
+    return dict({"id": "rd1", "fil": "fR", "nom": "Doctolib", "de": "no-reply@doctolib.fr",
+                 "sujet": "Votre rendez-vous est confirmé", "resume": "RDV confirmé chez le Dr Martin.",
+                 "demande": None, "echeance": None, "date": "2026-11-10T09:12:00+00:00"}, **kw)
+
+
+def test_consigne_et_schema_du_rendez_vous():
+    assert "rendez_vous" in c.SCHEMA["required"] and "rendez_vous" in c.SCHEMA["properties"]
+    assert "date du MAIL" in c.CONSIGNE and "rendez_vous" in c.CONSIGNE
+    # La date du mail, à Paris et avec son jour, est donnée à l'IA pour résoudre « aujourd'hui », « mardi ».
+    assert c.date_du_mail("2026-11-10T23:30:00+00:00") == "mercredi 2026-11-11 00:30"
+    assert c.date_du_mail(None) is None and c.date_du_mail("pas une date") is None
+    f = {"nom": "Tom", "de": "tom@x.fr", "date": "2026-11-11T07:05:00+00:00", "extrait": "Remise aujourd'hui vers 15 h"}
+    assert '"date_du_mail": "mercredi 2026-11-11 08:05"' in c.texte_pour_ia(f, MAINTENANT)
+
+
+def test_rendez_vous_complet():
+    brut = {"categorie": "a_traiter", "resume": "x", "demande": None, "echeance": None, "confiance": 0.9,
+            "urgent": False, "rendez_vous": {"date": "2026-11-17", "heure": "15:00",
+                                             "lieu": " 12 rue  de la Paix, Paris ", "titre": "dentiste Dr Martin"}}
+    rdv = c.nettoyer_ia(brut)["rendez_vous"]
+    assert rdv == {"date": "2026-11-17", "heure": "15:00", "lieu": "12 rue de la Paix, Paris",
+                   "titre": "dentiste Dr Martin"}
+    # Gardé dans la base (JSON), relu par la tâche et publié pour l'app Courrier.
+    db = _base()
+    f = c.fiche(msg("rd1", de="Doctolib <no-reply@doctolib.fr>", sujet="RDV confirmé", fil="fR", quand=MAINTENANT))
+    c.enregistrer(db, f, c.finaliser({"categorie": None, "source": "ia", "raison": ""}, c.nettoyer_ia(brut)),
+                  MAINTENANT)
+    r = c.lignes(db)[0]
+    assert json.loads(r["rendez_vous"]) == rdv and c.valeur_courrier(r)["rendez_vous"] == rdv
+    cle, t = c.tache_du_mail(r, MAINTENANT)
+    assert t == {"v": 2, "titre": "Dentiste Dr Martin", "fait": False, "jour": "2026-11-17", "heure": "15:00",
+                 "notes": "https://mail.google.com/mail/u/0/#inbox/fR\nx\n📧 Mail de Doctolib\n"
+                          "📍 12 rue de la Paix, Paris\n📌 Rendez-vous",
+                 "lieu": {"nom": "12 rue de la Paix, Paris", "adresse": "12 rue de la Paix, Paris",
+                          "source": "courrier"}}
+    assert cle == c.tache_du_mail(dict(r, rendez_vous=None), MAINTENANT)[0]  # même clé qu'avant : pas de doublon
+    # Reclassé plus tard (IA revenue) : le rendez-vous suit.
+    c.reclasser(db, "rd1", dict(c.finaliser({"categorie": None, "source": "ia", "raison": ""}, c.nettoyer_ia(
+        dict(brut, rendez_vous=None)))), 0.0)
+    assert c.lignes(db)[0]["rendez_vous"] is None
+
+
+def test_rendez_vous_sans_heure_ni_lieu_ni_titre():
+    rdv = c.rendez_vous_valide({"date": "2026-11-17", "heure": None, "lieu": None, "titre": None})
+    assert rdv == {"date": "2026-11-17", "heure": None, "lieu": None, "titre": None}
+    _, t = c.tache_du_mail(_mail_rdv(rendez_vous=json.dumps(rdv)), MAINTENANT)
+    assert t["titre"] == "Rendez-vous Doctolib" and t["jour"] == "2026-11-17"
+    assert "heure" not in t and "lieu" not in t
+    assert t["notes"].split("\n")[-2:] == ["📧 Mail de Doctolib", "📌 Rendez-vous"]
+
+
+def test_rendez_vous_relatif_aujourdhui():
+    # « remise aujourd'hui vers 15 h » dans un mail du 11/11 : l'IA résout la date par rapport au mail ; « 15h »
+    # et « 9:5 »… sont remis au format HH:MM ou abandonnés.
+    mail = _mail_rdv(nom="Tom (leboncoin)", de="tom@messagerie.leboncoin.fr", date="2026-11-11T07:05:00+00:00",
+                     demande="Remettre la Switch à Tom")
+    rdv = c.rendez_vous_valide({"date": "2026-11-11", "heure": "15h", "lieu": None, "titre": "Remise de la Switch"})
+    assert rdv["heure"] == "15:00"
+    _, t = c.tache_du_mail(dict(mail, rendez_vous=rdv), datetime(2026, 11, 11, 9, 0, tzinfo=c.PARIS))
+    assert (t["jour"], t["heure"], t["titre"]) == ("2026-11-11", "15:00", "Remise de la Switch")
+    assert c.rendez_vous_valide({"date": "2026-11-11", "heure": "9h30"})["heure"] == "09:30"
+    assert c.rendez_vous_valide({"date": "2026-11-11", "heure": "25:00"})["heure"] is None
+    assert c.rendez_vous_valide({"date": "2026-11-11", "heure": "vers 15 h"})["heure"] is None
+
+
+def test_rendez_vous_mal_forme_ou_absent():
+    for brut in ({"date": "17/11/2026", "heure": "15:00"}, {"date": "2026-02-30"}, {"heure": "15:00"}, "pas du json",
+                 ["2026-11-17"], None, ""):
+        assert c.rendez_vous_valide(brut) is None, brut
+    # Mal formé : la tâche reste comme avant (échéance, sinon aujourd'hui ; ni heure, ni 📌).
+    for rdv in ({"date": "mardi", "heure": "15:00"}, None):
+        _, t = c.tache_du_mail(_mail_rdv(rendez_vous=rdv, echeance="2026-11-20"), MAINTENANT)
+        assert t == {"v": 2, "titre": "Doctolib : Votre rendez-vous est confirmé", "fait": False, "jour": "2026-11-20",
+                     "notes": "https://mail.google.com/mail/u/0/#inbox/fR\nRDV confirmé chez le Dr Martin.\n"
+                              "📧 Mail de Doctolib"}
+    # Absent de la réponse de l'IA (ancienne réponse) : null.
+    assert c.nettoyer_ia({"categorie": "lettre", "resume": "x"})["rendez_vous"] is None
+    # Ancienne base sans la colonne : ajoutée à l'ouverture.
+    assert "rendez_vous" in {r["name"] for r in _base().execute("PRAGMA table_info(messages)")}
+
+
 # MARK: - Espace `courrier` de donnees_apps (lot C2 de l'app Courrier, 26/10)
 
 class FauxDonnees:
@@ -924,7 +1008,7 @@ def test_valeur_courrier_sans_corps_ni_extrait():
     v = c.valeur_courrier(r)
     assert v == {"v": 1, "fil": "fU", "de": "Tom", "adresse": "tom@x.fr", "sujet": "Nouveau message Switch",
                  "date": r["date"], "resume": "Veut la Switch.", "demande": "Lui répondre",
-                 "echeance": "2026-10-25", "urgent": True, "raison": "IA"}
+                 "echeance": "2026-10-25", "urgent": True, "raison": "IA", "rendez_vous": None}
     assert "extrait" not in v and r["extrait"] not in json.dumps(v)
     assert c.empreinte(v) == c.empreinte(dict(reversed(list(v.items()))))  # ordre des clés indifférent
     assert c.empreinte(v) != c.empreinte(dict(v, urgent=False))

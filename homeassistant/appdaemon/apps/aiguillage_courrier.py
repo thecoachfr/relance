@@ -59,6 +59,7 @@ GARDE_JOURS = 90
 NB_CAPTEUR = 15
 SEUIL_APPRENTISSAGE = 4
 LIEN_GMAIL = "https://mail.google.com/mail/u/0/#inbox/{}"
+LIGNE_RENDEZ_VOUS = "📌 Rendez-vous"   # même ligne que les trains (`aiguillage_voyages.LIGNE_RDV`, P9-T)
 EN_TETES = ("from", "to", "subject", "date", "list-unsubscribe", "list-id", "precedence", "reply-to",
             "message-id")
 
@@ -258,10 +259,10 @@ def finaliser(decision, ia):
     """Combine la décision et la réponse de l'IA (ou None : budget atteint, erreur). Sans IA ni règle : `a_traiter`
     par défaut (`source: defaut`), pour ne rien manquer."""
     out = {"categorie": decision["categorie"], "source": decision["source"], "raison": decision["raison"],
-           "resume": None, "demande": None, "echeance": None, "confiance": None, "urgent": False}
+           "resume": None, "demande": None, "echeance": None, "confiance": None, "urgent": False, "rendez_vous": None}
     if ia:
         out.update(resume=ia.get("resume"), demande=ia.get("demande"), echeance=ia.get("echeance"),
-                   confiance=ia.get("confiance"), urgent=bool(ia.get("urgent")))
+                   confiance=ia.get("confiance"), urgent=bool(ia.get("urgent")), rendez_vous=ia.get("rendez_vous"))
         if decision["categorie"] is None:
             out["categorie"] = ia["categorie"]
             out["raison"] = f"IA ({decision['raison']})" if decision.get("raison") else "IA"
@@ -457,6 +458,14 @@ Réponds :
 - resume : une phrase en français, courte, qui dit de quoi il s'agit (qui, quoi) ;
 - demande : ce qu'on attend d'Alexandre, en quelques mots à l'infinitif (« Confirmer le rendez-vous de jeudi »), ou null ;
 - echeance : la date limite au format AAAA-MM-JJ si le mail en donne une, sinon null ;
+- rendez_vous : un moment fixé où il suffit d'y aller ou d'être là (rendez-vous médical, remise d'un objet vendu ou \
+acheté, visite, intervention à domicile, réunion), sinon null. Pas une date limite (une facture à payer avant le 15 \
+est une echeance, pas un rendez-vous). Objet : date (AAAA-MM-JJ), heure (HH:MM sur 24 h, ou null si le mail n'en \
+donne pas ; « vers 15 h » donne 15:00), lieu (adresse ou nom du lieu tel que le mail le donne, ou null), titre (court, \
+qui dit avec qui ou quoi, par exemple « Dentiste Dr Martin » ou « Remise de la Switch à Tom », ou null). La date se \
+résout par rapport à la date du MAIL (date_du_mail, heure de Paris), pas à aujourd'hui : « aujourd'hui » est le jour \
+du mail, « demain » le lendemain, « mardi » le prochain mardi à partir du jour du mail (le jour même s'il est mardi). \
+Un rendez-vous annulé, ou déjà passé à la date du mail, donne null.
 - confiance : de 0 à 1, ta certitude sur la catégorie ;
 - urgent : vrai seulement pour un a_traiter qui ne peut pas attendre le prochain résumé (9 h, 12 h, 18 h) : échéance \
 aujourd'hui ou demain, alerte de sécurité réelle (connexion inconnue, paiement suspect), personne qui attend une réponse \
@@ -499,17 +508,63 @@ SCHEMA = {
         "echeance": {"anyOf": [{"type": "string"}, {"type": "null"}]},
         "confiance": {"type": "number"},
         "urgent": {"type": "boolean"},
+        # 11/11 (constat d'Alexandre : Doctolib et Le Bon Coin donnaient le mauvais jour) ; contrat dans COURRIER.md.
+        "rendez_vous": {"anyOf": [{"type": "null"}, {
+            "type": "object",
+            "properties": {"date": {"type": "string"}, "heure": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+                           "lieu": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+                           "titre": {"anyOf": [{"type": "string"}, {"type": "null"}]}},
+            "required": ["date", "heure", "lieu", "titre"],
+            "additionalProperties": False}]},
     },
-    "required": ["categorie", "resume", "demande", "echeance", "confiance", "urgent"],
+    "required": ["categorie", "resume", "demande", "echeance", "confiance", "urgent", "rendez_vous"],
     "additionalProperties": False,
 }
+
+
+def date_du_mail(date_iso):
+    """« mardi 2026-11-10 14:05 » : la date du mail à Paris, avec son jour, pour résoudre « aujourd'hui », « mardi »."""
+    try:
+        d = datetime.fromisoformat(str(date_iso).replace("Z", "+00:00")).astimezone(PARIS)
+    except (TypeError, ValueError):
+        return None
+    return f"{JOURS_FR[d.weekday()]} {d.strftime('%Y-%m-%d %H:%M')}"
+
+
+_HEURE_RDV = re.compile(r"^(\d{1,2})[:hH](\d{2})?$")
+
+
+def rendez_vous_valide(brut):
+    """Le `rendez_vous` d'une réponse de l'IA (ou de la base, en JSON) rendu sûr : {date, heure, lieu, titre} avec une
+    date AAAA-MM-JJ valide, une heure HH:MM ou None, des textes coupés ou None ; None s'il manque ou s'il est mal
+    formé (la tâche reprend alors l'échéance ou aujourd'hui, comme avant le 11/11)."""
+    if isinstance(brut, str):
+        try:
+            brut = json.loads(brut)
+        except ValueError:
+            return None
+    if not isinstance(brut, dict):
+        return None
+    try:
+        jour = datetime.strptime(str(brut.get("date") or ""), "%Y-%m-%d").date().isoformat()
+    except ValueError:
+        return None
+    heure = None
+    m = _HEURE_RDV.match(str(brut.get("heure") or "").strip())
+    if m and int(m.group(1)) < 24 and int(m.group(2) or 0) < 60:
+        heure = f"{int(m.group(1)):02d}:{int(m.group(2) or 0):02d}"
+
+    def texte(cle, n):
+        v = " ".join(str(brut.get(cle) or "").split())
+        return v[:n] or None
+    return {"date": jour, "heure": heure, "lieu": texte("lieu", 200), "titre": texte("titre", 120)}
 
 
 def texte_pour_ia(f, maintenant):
     donnees = {
         "aujourdhui": maintenant.astimezone(PARIS).date().isoformat(),
         "de": f"{f.get('nom')} <{f.get('de')}>" if f.get("nom") else f.get("de"),
-        "a": f.get("a"), "sujet": f.get("sujet"), "date": f.get("date"),
+        "a": f.get("a"), "sujet": f.get("sujet"), "date": f.get("date"), "date_du_mail": date_du_mail(f.get("date")),
         "libelles_gmail": [x for x in f.get("libelles") or [] if x.startswith("CATEGORY_") or x == "IMPORTANT"],
         "liste_de_diffusion": bool(f.get("list_unsubscribe") or f.get("list_id")),
         "extrait": f.get("extrait"),
@@ -533,7 +588,8 @@ def nettoyer_ia(brut):
     demande = (str(brut.get("demande") or "").strip() or None)
     return {"categorie": brut["categorie"], "resume": str(brut.get("resume") or "").strip()[:300] or None,
             "demande": demande[:300] if demande else None, "echeance": echeance, "confiance": confiance,
-            "urgent": brut.get("urgent") is True and brut["categorie"] == "a_traiter"}
+            "urgent": brut.get("urgent") is True and brut["categorie"] == "a_traiter",
+            "rendez_vous": rendez_vous_valide(brut.get("rendez_vous"))}
 
 
 def classer_ia(client, f, maintenant, modele=MODELE, memo=None, usages=None):
@@ -689,7 +745,15 @@ def ouvrir_base(chemin):
         db.execute("ALTER TABLE appareils ADD COLUMN pastille INTEGER DEFAULT 1")
         db.execute("ALTER TABLE appareils ADD COLUMN badge INTEGER")
         db.commit()
+    if "rendez_vous" not in {r["name"] for r in db.execute("PRAGMA table_info(messages)")}:
+        db.execute("ALTER TABLE messages ADD COLUMN rendez_vous TEXT")  # JSON {date, heure, lieu, titre} (11/11)
+        db.commit()
     return db
+
+
+def _rdv_json(d):
+    rdv = rendez_vous_valide(d.get("rendez_vous"))
+    return json.dumps(rdv, ensure_ascii=False) if rdv else None
 
 
 def connu(db, message_id):
@@ -710,7 +774,8 @@ def enregistrer(db, f, d, maintenant, cout_ia=0.0, repondu=False):
          int(ouvert), int(repondu), quand if repondu else None, quand))
     if f.get("message_id"):
         db.execute("UPDATE messages SET message_id = ? WHERE id = ?", (f["message_id"], f["id"]))
-    db.execute("UPDATE messages SET urgent = ? WHERE id = ?", (int(bool(d.get("urgent"))), f["id"]))
+    db.execute("UPDATE messages SET urgent = ?, rendez_vous = ? WHERE id = ?",
+               (int(bool(d.get("urgent"))), _rdv_json(d), f["id"]))
     if repondu:
         db.execute("INSERT INTO gestes (message, geste, quand) VALUES (?, 'repondu', ?)", (f["id"], quand))
     db.commit()
@@ -902,9 +967,11 @@ def a_reessayer(db, depuis_ms, limite=20):
 
 def reclasser(db, message_id, d, cout_ia):
     db.execute("UPDATE messages SET categorie = ?, categorie_tri = ?, source = ?, raison = ?, resume = ?, demande = ?, "
-               "echeance = ?, confiance = ?, urgent = ?, cout = cout + ? WHERE id = ? AND categorie != 'fait'",
+               "echeance = ?, confiance = ?, urgent = ?, rendez_vous = ?, cout = cout + ? "
+               "WHERE id = ? AND categorie != 'fait'",
                (d["categorie"], d["categorie"], d["source"], d.get("raison"), d.get("resume"), d.get("demande"),
-                d.get("echeance"), d.get("confiance"), int(bool(d.get("urgent"))), round(cout_ia, 6), message_id))
+                d.get("echeance"), d.get("confiance"), int(bool(d.get("urgent"))), _rdv_json(d), round(cout_ia, 6),
+                message_id))
     db.commit()
 
 
@@ -1343,10 +1410,24 @@ def tache_du_mail(r, maintenant):
     `courrier` viendra avec N4, après la consigne du tri). Datée de l'échéance du mail, sinon d'aujourd'hui.
     Sans demande, le titre reste neutre (P9-T) : un avis d'expédition ou une promo n'attend pas de réponse. La nature
     (tâche, info, rendez-vous) est laissée au tri, qui lit le résumé : une action prise pour une info ne relancerait plus."""
+    cle = str(uuid.uuid5(NAMESPACE_TACHES, f"courrier:{r['id']}"))
+    rdv = rendez_vous_valide(r.get("rendez_vous"))
+    if rdv:
+        # Rendez-vous lu dans le mail (11/11) : son jour, son heure et son lieu, ligne 📌 comme les trains (P9-W) ;
+        # le tri n'y touche plus (règle Y de la consigne).
+        titre = rdv["titre"] or f"Rendez-vous {_qui(r)}".strip()
+        lignes = [LIEN_GMAIL.format(r["fil"]), r.get("resume") or "", f"📧 Mail de {_qui(r)}",
+                  rdv["lieu"] and f"📍 {rdv['lieu']}", LIGNE_RENDEZ_VOUS]
+        valeur = {"v": 2, "titre": (titre[:1].upper() + titre[1:])[:200], "fait": False,
+                  "notes": "\n".join(x for x in lignes if x), "jour": rdv["date"]}
+        if rdv["heure"]:
+            valeur["heure"] = rdv["heure"]
+        if rdv["lieu"]:
+            valeur["lieu"] = {"nom": rdv["lieu"], "adresse": rdv["lieu"], "source": "courrier"}
+        return cle, valeur
     titre = r.get("demande") or " : ".join(x for x in (_qui(r), (r.get("sujet") or "").strip()) if x)
     notes = "\n".join(x for x in (LIEN_GMAIL.format(r["fil"]), r.get("resume") or "", f"📧 Mail de {_qui(r)}") if x)
     jour = r.get("echeance") or maintenant.astimezone(PARIS).date().isoformat()
-    cle = str(uuid.uuid5(NAMESPACE_TACHES, f"courrier:{r['id']}"))
     return cle, {"v": 2, "titre": titre[:200], "fait": False, "notes": notes, "jour": jour}
 
 
@@ -1384,7 +1465,8 @@ def valeur_courrier(r):
     """Ce que l'app Courrier reçoit d'un « à traiter » (contrat dans `homeassistant/COURRIER.md`)."""
     return {"v": 1, "fil": r["fil"], "de": r.get("nom") or r.get("de"), "adresse": r.get("de"),
             "sujet": r.get("sujet"), "date": r.get("date"), "resume": r.get("resume"), "demande": r.get("demande"),
-            "echeance": r.get("echeance"), "urgent": bool(r.get("urgent")), "raison": r.get("raison")}
+            "echeance": r.get("echeance"), "urgent": bool(r.get("urgent")), "raison": r.get("raison"),
+            "rendez_vous": rendez_vous_valide(r.get("rendez_vous"))}
 
 
 def empreinte(valeur):

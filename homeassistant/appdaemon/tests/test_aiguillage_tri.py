@@ -425,3 +425,22 @@ def test_page_du_lien_partage():
     assert nv["notes"].split("\n")[-3:] == ["👀 À voir", "📍 Salle Exemple · 12 rue de l'Essai, 75012 Paris",
                                             "🗓 Du 05/12/2026 au 06/12/2026"]
     assert "jour" not in nv
+
+
+def test_rendez_vous_lu_dans_un_mail_laisse_tranquille():
+    # Tâche créée par `aiguillage_courrier.tache_du_mail` depuis un rendez-vous lu dans le mail (11/11, règle Y).
+    notes = ("https://mail.google.com/mail/u/0/#inbox/fR\nRDV confirmé.\n📧 Mail de Doctolib\n"
+             "📍 12 rue de la Paix\n📌 Rendez-vous")
+    v = {"v": 2, "titre": "Dentiste Dr Martin", "fait": False, "notes": notes, "jour": "2026-10-20"}
+    assert t.rendez_vous_du_mail(notes.split("\n"))
+    nv, refus = t.appliquer(v, ch(titre="Dentiste", jour="2026-10-21", heure="10:00", priorite="Urgente",
+                                  categorie="Santé", notes_a_la_fin=["💡 Suggestion : lundi", "🎒 À prendre : carte Vitale"]),
+                            AUJ, NOW, TAGS)
+    assert (nv["titre"], nv["jour"], "heure" in nv, "priorite" in nv) == ("Dentiste Dr Martin", "2026-10-20", False, False)
+    assert nv["categorie"] == "Santé" and "💡" not in nv["notes"] and nv["notes"].endswith("🎒 À prendre : carte Vitale")
+    assert {"titre (rendez-vous lu dans un mail)", "heure (rendez-vous lu dans un mail)",
+            "priorite (rendez-vous lu dans un mail)", "jour (déjà fixé)"} <= set(refus)
+    # Sans 📌 (mail ordinaire) ou sans 📧 (rendez-vous saisi à la main) : les règles habituelles.
+    assert not t.rendez_vous_du_mail(["📧 Mail de Doctolib"]) and not t.rendez_vous_du_mail(["📌 Rendez-vous"])
+    nv, _ = t.appliquer(dict(v, notes="📧 Mail de Doctolib"), ch(heure="10:00"), AUJ, NOW, TAGS)
+    assert nv["heure"] == "10:00"

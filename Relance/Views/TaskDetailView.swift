@@ -50,6 +50,8 @@ struct TaskDetailView: View {
                           systemImage: item.isOverdue() ? "clock.fill" : "clock")
                         .foregroundStyle(item.isOverdue() ? .red : .secondary)
                 }
+                // Tâche venue d'un mail (11/11) : le mail d'origine, au lieu du lien Gmail brut dans les notes.
+                if let mail = MailOrigine.destination(in: notes) { VoirLeMail(url: mail) }
                 // Une ligne tant qu'il n'y a rien (revue du 28/10 : trois lignes vides prenaient de la place).
                 TextField("Notes", text: visibleNotes, prompt: Text("Notes"), axis: .vertical)
                     .lineLimit(1...)
@@ -375,3 +377,27 @@ struct TaskDetailView: View {
     }
 }
 
+
+/// Ligne « Voir le mail › » de la fiche (11/11, maquette validée par Alexandre) : ouvre le mail d'où vient la tâche.
+private struct VoirLeMail: View {
+    @Environment(\.openURL) private var openURL
+    let url: URL
+
+    var body: some View {
+        Button { openURL(url) } label: {
+            HStack {
+                Label("Voir le mail", systemImage: "envelope")
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(.tint)
+        .accessibilityLabel("Voir le mail")
+        .accessibilityHint("Ouvre dans Gmail le mail d'où vient cette tâche")
+        .accessibilityAddTraits(.isLink)
+    }
+}

@@ -400,6 +400,7 @@
 		D1F27F2D01E56E2A8DD14586 /* TaskContact.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB47AF80FF2840FC777CCEC2 /* TaskContact.swift */; };
 		D288108966F0C109908BA988 /* Reseau.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65817F3183341A8C7C9D9383 /* Reseau.swift */; };
 		D2980DE7904DDC494DF1D79C /* WatchDiagnostic.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E526C5D9F0B04CD181AE51F /* WatchDiagnostic.swift */; };
+		D30C0AD8EFEA8FB9C8C985E9 /* MailOrigineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9779E603198E0252ADCC0D22 /* MailOrigineTests.swift */; };
 		D364D0AE0703F901816860E8 /* TaskStore+HA.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAC867B66467D5B63EC30FDD /* TaskStore+HA.swift */; };
 		D4625DE40629DBA020CCCFC7 /* ActiviteEcranTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06A8874BEC1E5C75E58D34B0 /* ActiviteEcranTests.swift */; };
 		D51C6FDA1B60603EDDF4FF0E /* TVRemote.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5115FA3B8E348E91F0DCFEF /* TVRemote.swift */; };
@@ -704,6 +705,7 @@
 		950A03316412CBC5F27C5479 /* Groupes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Groupes.swift; sourceTree = "<group>"; };
 		965A3B9A7F0371E3299ADA39 /* TasksAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksAPI.swift; sourceTree = "<group>"; };
 		967ED0E0B086490E32E03E0B /* WatchQuickAdd.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchQuickAdd.swift; sourceTree = "<group>"; };
+		9779E603198E0252ADCC0D22 /* MailOrigineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MailOrigineTests.swift; sourceTree = "<group>"; };
 		97FADF69313D958AAEDF4ED3 /* HAConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HAConfig.swift; sourceTree = "<group>"; };
 		98189E62C7922E8F582E78C1 /* ReminderDeviceSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderDeviceSection.swift; sourceTree = "<group>"; };
 		99497611DEDEE32981DDB105 /* RendezVous.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RendezVous.swift; sourceTree = "<group>"; };
@@ -877,6 +879,7 @@
 				C2DCB896CD10FB50A9BDD8FB /* LieuTests.swift */,
 				F72D50ABCE6B9C1E9ABBA973 /* LieuTravailTests.swift */,
 				69CF78204F9215F7576BF46B /* ListeTests.swift */,
+				9779E603198E0252ADCC0D22 /* MailOrigineTests.swift */,
 				7849697AF3E02FD8CEAA126B /* MapClusterTests.swift */,
 				1D5B40F509B64DF9DF0291C1 /* MemoMergeTests.swift */,
 				77112E8A0B99D6D1C55C2D66 /* NotesTimeCodecTests.swift */,
@@ -1849,6 +1852,7 @@
 				9D2DE725C74A796128FFBC6A /* LieuTests.swift in Sources */,
 				421999C6A818492DA5BE9AE9 /* LieuTravailTests.swift in Sources */,
 				1B4F1DE67C53C78FDD956153 /* ListeTests.swift in Sources */,
+				D30C0AD8EFEA8FB9C8C985E9 /* MailOrigineTests.swift in Sources */,
 				D17484C92A8768EEDC373C27 /* MapClusterTests.swift in Sources */,
 				754F56298037383538A680A5 /* MemoMergeTests.swift in Sources */,
 				B124EB00A072E175CD261404 /* NotesTimeCodecTests.swift in Sources */,

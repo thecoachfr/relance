@@ -246,6 +246,14 @@ def a_une_nature(lignes):
     return any(_sans_variante(l).strip().startswith(tuple(LIGNES_NATURE.values())) for l in lignes)
 
 
+def rendez_vous_du_mail(lignes):
+    """Tâche créée depuis un mail (ligne « 📧 Mail de … ») qui porte la ligne « 📌 Rendez-vous » : rendez-vous lu dans
+    le mail par le classement du courrier (11/11) ou train (P9-W)."""
+    propres = [_sans_variante(l).strip() for l in lignes]
+    return (any(l.startswith("📧 Mail de") for l in propres)
+            and any(l.startswith(LIGNES_NATURE["rendez_vous"]) for l in propres))
+
+
 def nature_acceptee(valeur, apres, ch, lignes):
     """(nature retenue ou None, refus) pour `ch["nature"]`. Une tâche déjà triée n'est jamais reclassée : c'est ce qui
     protège une correction à la main. `apres` : la tâche après ce passage (jour, heure et envie fraîchement posés)."""
@@ -284,6 +292,15 @@ def appliquer(valeur, ch, aujourdhui, maintenant, tags_ok, jours_lieu=None, pose
 
     def absent(champ):
         return t.get(champ) in (None, "", [])
+
+    # Rendez-vous lu dans un mail (règles W et Y, 11/11) : titre, heure et priorité sont ceux du mail, gardés tels
+    # quels (le jour l'est déjà : jamais changé quand il existe ; pas de 💡 sur un 📌, plus bas).
+    rdv_du_mail = rendez_vous_du_mail(lignes)
+    if rdv_du_mail:
+        for champ in ("titre", "heure", "priorite"):
+            if ch.get(champ) and ch[champ] != t.get(champ):
+                refus.append(f"{champ} (rendez-vous lu dans un mail)")
+        ch = {k: v for k, v in ch.items() if k not in ("titre", "heure", "priorite")}
 
     # Titre : une seule fois (pas de ligne 🎙), ou le cas F (message partagé au titre à revoir).
     titre = (ch.get("titre") or "").strip()

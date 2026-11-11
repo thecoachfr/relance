@@ -237,7 +237,8 @@ première passe : 3 « à traiter » publiés, vérifiés par `donnees_apps.lire
 
 - **Clé** : l'id Gmail du message (`1a1799bf96829a0a`).
 - **Valeur** : `{v: 1, fil, de (nom affiché, sinon adresse), adresse, sujet, date (ISO UTC), resume, demande,
-  echeance (AAAA-MM-JJ ou null), urgent (booléen), raison}`. **Jamais le corps ni l'extrait** : l'extrait de 1 500
+  echeance (AAAA-MM-JJ ou null), urgent (booléen), raison, rendez_vous (null ou objet, depuis le 11/11 : voir
+  « Rendez-vous lu dans le mail »)}`. **Jamais le corps ni l'extrait** : l'extrait de 1 500
   caractères reste dans la base SQLite du NUC.
 - **Suppression** (`supprimer`, tombstone) dès que le mail sort de `a_traiter` : fait (répondu, archivé, bouton),
   remplacé par un message plus récent de la conversation, expiré, reclassé.
@@ -938,3 +939,53 @@ boîte de réception, après son tri (une erreur n'empêche pas le tri). Réglag
    `aiguillage_courrier_voyages` avec `{"ids": ["<id Gmail>", …]}` (10 au plus) ; seul le billet est relu, le mail
    n'est pas retrié (`rejouer_voyages`). Un trajet déjà écrit avec la même date, heure et ville n'est pas doublé ; un
    trajet écrit sans heure aura une autre clé : supprimer d'abord l'ancien rendez-vous s'il n'a pas été retouché.
+
+
+## Rendez-vous lu dans le mail (11/11, correctif 3a validé par Alexandre)
+
+Constat : un mail Doctolib « RDV confirmé le mardi 17/11 à 15h00 » et un mail Le Bon Coin « remise aujourd'hui vers
+15 h » donnaient des tâches au mauvais jour (date du mail, faute d'échéance) et sans heure : le classement ne
+fournissait que `demande` et `echeance` (une date limite).
+
+### Contrat (fixé pour les deux dépôts : la vigie et l'app Courrier)
+
+Le classement (`CONSIGNE`, `SCHEMA` et `nettoyer_ia` de `aiguillage_courrier.py`) rend en plus un champ obligatoire
+`rendez_vous`, écrit tel quel :
+
+```
+rendez_vous = null
+            | {"date": "AAAA-MM-JJ", "heure": "HH:MM" ou null, "lieu": texte ou null, "titre": texte court ou null}
+```
+
+- **Sens** : un moment où il suffit d'y aller ou d'être là (médecin, remise d'un objet, visite, intervention à
+  domicile, réunion), **pas une date limite** (celle-ci reste `echeance`). Annulé ou déjà passé à la date du mail : null.
+- **Date** résolue par rapport à la **date du mail** (heure de Paris), pas au jour du classement : « aujourd'hui » =
+  jour du mail, « mardi » = le prochain mardi à partir du jour du mail. Le modèle reçoit `date_du_mail`
+  (« mercredi 2026-11-11 08:05 ») en plus de `aujourdhui`.
+- **Nettoyage** (`rendez_vous_valide`) : date AAAA-MM-JJ valide, sinon tout le rendez-vous vaut null ; heure remise en
+  HH:MM (« 15h » → 15:00, « 9h30 » → 09:30), illisible → null ; lieu (200 car.) et titre (120 car.) sans espaces
+  multiples, vides → null.
+- **Stockage** : colonne `rendez_vous` (JSON) de la table `messages` (ajoutée à l'ouverture d'une ancienne base),
+  écrite par `enregistrer` et `reclasser` ; publiée dans l'espace `courrier` (`valeur_courrier`), là où l'app lit déjà
+  `demande` et `echeance`. Le champ est toujours présent (null le plus souvent) : à la première relève après le
+  déploiement, les « à traiter » ouverts sont republiés une fois (au plus 40 par passe).
+
+### Tâche créée depuis le mail (`tache_du_mail`)
+
+Avec un `rendez_vous` valide : `jour` = sa date, `heure` s'il y en a une, titre = `rendez_vous.titre` (majuscule
+initiale), sinon « Rendez-vous <expéditeur> » ; notes = lien Gmail, résumé, `📧 Mail de …`, `📍 <lieu>` s'il y en a
+un, puis `📌 Rendez-vous` (même ligne que les trains, P9-W) ; `lieu` = `{nom, adresse, source: "courrier"}` (nom et
+adresse = le texte du mail). Même clé qu'avant (uuid5 `courrier:<id>`). Sans rendez-vous (ou mal formé) : comme avant
+(échéance, sinon aujourd'hui ; titre = demande, sinon « Expéditeur : objet »). **L'app Courrier, qui crée aussi la
+tâche (appui long › Tâche), doit suivre la même règle** si elle compose la valeur elle-même.
+
+Le tri laisse ensuite cette tâche tranquille (règle **Y** de `docs/TRI-CONSIGNE.md`, et dans le code
+`aiguillage_tri.rendez_vous_du_mail` : titre, heure et priorité refusés ; le jour ne change jamais quand il existe ; pas
+de 💡 sur un 📌). Il peut encore poser catégorie, tags, 🎒 (rendez-vous médical) et contact du mémo si le mail n'a pas
+donné de lieu.
+
+Tests : `test_consigne_et_schema_du_rendez_vous`, `test_rendez_vous_complet`, `test_rendez_vous_sans_heure_ni_lieu_ni_titre`,
+`test_rendez_vous_relatif_aujourdhui`, `test_rendez_vous_mal_forme_ou_absent` (courrier),
+`test_rendez_vous_lu_dans_un_mail_laisse_tranquille` (tri). **Pas encore déployé** (accord d'Alexandre attendu) :
+`aiguillage_courrier.py` et `aiguillage_tri.py`, plus la règle Y dans la consigne réelle.
+
