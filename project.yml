@@ -197,6 +197,9 @@ targets:
       - Shared/Divers/Journal.swift
       - Shared/Divers/Reseau.swift
       - Shared/Divers/Groupes.swift
+      # Écran ou action en cours pour le diagnostic mémoire (PiecesJointes les note ; 11/11) et l'empreinte qu'il relève.
+      - Shared/Divers/ActiviteEcran.swift
+      - Shared/Divers/SessionsEcran.swift
       - Shared/Google
       - Shared/Model/MemoMerge.swift
       - Shared/Model/DateDetection.swift
@@ -211,6 +214,7 @@ targets:
       - Shared/HA/TacheHA.swift
       - Shared/HA/TacheHA+Liste.swift
       - Shared/HA/TacheHA+Pieces.swift
+      - Shared/HA/ErreurHA+Texte.swift
       - Shared/Model/PiecesJointes.swift
       - Shared/HA/MemoHA.swift
     dependencies:

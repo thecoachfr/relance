@@ -33,6 +33,7 @@ import aiguillage_page
 import aiguillage_photos
 import aiguillage_radio
 import aiguillage_radio_morceau
+import aiguillage_salves
 import aiguillage_spotify
 import aiguillage_spotify_lecture
 import aiguillage_tmdb
@@ -176,6 +177,11 @@ class RelanceVigie(Hass):
         self._inbox_path = Path(self.args.get("inbox_file", "/config/relance_inbox.json"))
         self._push_handle = None
         self._changes = 0
+        # Salves (11/11) : clés modifiées depuis la dernière salve, plus petit `seq` vu, empreintes de ce que l'app
+        # affiche (`aiguillage_salves`) : pas de salve si rien de visible n'a changé, pas d'écho à l'appareil auteur.
+        self._salve_cles = set()
+        self._salve_seq = None
+        self._empreintes = {}
         # Clés connues de l'espace : une clé nouvelle (tâche créée dans l'app ou reprise de Google) lance le tri.
         self._known_keys = None
         if self._espace:
@@ -329,6 +335,11 @@ class RelanceVigie(Hass):
             self.log(f"{self._espace} : nouvelle tâche ({key[:8]}…), tri demandé")
             self.schedule_triage()
         self._changes += 1
+        if key:
+            self._salve_cles.add(key)
+        seq = data.get("seq")
+        if isinstance(seq, int) and (self._salve_seq is None or seq < self._salve_seq):
+            self._salve_seq = seq
         if self._push_handle:
             self.cancel_timer(self._push_handle)
         self._push_handle = self.run_in(self._push_after_change, PUSH_DEBOUNCE)
@@ -350,9 +361,25 @@ class RelanceVigie(Hass):
 
     def _push_after_change(self, **kwargs):
         self._push_handle = None
-        self.log(f"{self._espace} : {self._changes} modification(s) dans Home Assistant, réveil des appareils")
-        self._changes = 0
-        self.push_all("modification_ha")
+        changes, cles, seq = self._changes, self._salve_cles, self._salve_seq
+        self._changes, self._salve_cles, self._salve_seq = 0, set(), None
+        auteur = None
+        if cles and seq is not None:
+            try:
+                reponse = self._service("donnees_apps", "changements", {"espace": self._espace, "depuis_seq": seq - 1})
+                lus = [r for r in (reponse or {}).get("enregistrements", []) if r.get("cle") in cles]
+            except Exception as error:  # noqa: BLE001 — sans la relecture, on réveille tout le monde comme avant
+                self.log(f"Salve : relecture impossible ({error!r}), réveil de tous les appareils", level="WARNING")
+                lus = None
+            if lus is not None:
+                visibles = aiguillage_salves.changements_visibles(lus, self._empreintes)
+                if not visibles:
+                    self.log(f"{self._espace} : {changes} modification(s) sans effet visible dans l'app, pas de réveil")
+                    self._count_evitee("rien_de_visible")
+                    return
+                auteur = aiguillage_salves.auteur_unique(visibles)
+        self.log(f"{self._espace} : {changes} modification(s) dans Home Assistant, réveil des appareils")
+        self.push_all("modification_ha", auteur=auteur)
 
     # MARK: - Photos de produits → liste de courses (P9-R)
 
@@ -1465,6 +1492,7 @@ class RelanceVigie(Hass):
             self.log(f"Clés de l'espace illisibles, tri des nouvelles tâches inactif : {error!r}", level="WARNING")
             return
         self._known_keys = {r["cle"] for r in records.get("enregistrements", [])}
+        aiguillage_salves.changements_visibles(records.get("enregistrements", []), self._empreintes)
 
     @staticmethod
     def _is_task_key(key):
@@ -1854,6 +1882,8 @@ class RelanceVigie(Hass):
             tokens[token] = {
                 "environment": environment,
                 "device": str(data.get("device", ""))[:60],
+                # Nom d'émetteur (`modifie_par`) de l'appareil, pour ne pas lui renvoyer ses propres modifications.
+                "appareil": str(data.get("appareil", "") or "")[:100],
                 "updated": int(time.time()),
             }
             self._save_tokens(tokens)
@@ -2027,11 +2057,19 @@ class RelanceVigie(Hass):
 
     # MARK: - APNs
 
-    def push_all(self, cause="autre"):
+    def push_all(self, cause="autre", auteur=None):
+        """Push silencieux à chaque appareil ; `auteur` (nom d'émetteur) : celui qui a fait toutes les modifications
+        n'est pas réveillé pour elles (écho, 11/11)."""
         with self._lock:
             tokens = self._load_tokens()
         if not tokens:
             self.log("Aucun appareil enregistré", level="WARNING")
+            return
+        tous = len(tokens)
+        tokens = aiguillage_salves.destinataires(tokens, auteur)
+        for _ in range(tous - len(tokens)):
+            self._count_evitee("echo")
+        if not tokens:
             return
         self._count_push(cause, len(tokens))
 
@@ -2069,6 +2107,16 @@ class RelanceVigie(Hass):
                 stats.pop(old)
             self._push_stats_path.write_text(json.dumps(stats, indent=2, sort_keys=True))
 
+    def _count_evitee(self, raison):
+        day = datetime.now().strftime("%Y-%m-%d")
+        with self._lock:
+            try:
+                stats = json.loads(self._push_stats_path.read_text())
+            except (FileNotFoundError, json.JSONDecodeError):
+                stats = {}
+            aiguillage_salves.compter_evitee(stats, day, raison)
+            self._push_stats_path.write_text(json.dumps(stats, indent=2, sort_keys=True))
+
     def _log_push_stats(self, **kwargs):
         try:
             stats = json.loads(self._push_stats_path.read_text())
@@ -2078,7 +2126,9 @@ class RelanceVigie(Hass):
         if days:
             jour = stats[days[-1]]
             detail = ", ".join(f"{cause} {n}" for cause, n in sorted(jour["salves"].items()))
-            self.log(f"Pushs du {days[-1]} : {sum(jour['salves'].values())} salve(s) ({detail}), {jour['envois']} envoi(s)")
+            evitees = ", ".join(f"{r} {n}" for r, n in sorted(jour.get("evitees", {}).items()))
+            self.log(f"Pushs du {days[-1]} : {sum(jour['salves'].values())} salve(s) ({detail}), {jour['envois']} envoi(s)"
+                     + (f" ; évités : {evitees}" if evitees else ""))
 
     def _send(self, client, token, environment, alerte=None):
         """Push silencieux (réveil pour synchroniser), ou notification visible si `alerte` = (titre, texte)."""

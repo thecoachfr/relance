@@ -35,17 +35,17 @@ struct MainTabs: View {
         @Bindable var store = store
         TabView(selection: $tab) {
             Tab("À faire", systemImage: "checklist", value: 0) {
-                TodoView()
+                TodoView().activiteEcran(.aFaire)
             }
             Tab("À trier", systemImage: "tray", value: 1) {
-                InboxView()
+                InboxView().activiteEcran(.aTrier)
             }
             .badge(active.filter(\.needsTriage).count)
             Tab("Envies", systemImage: "bookmark", value: 4) {
-                NavigationStack { ToSeeListView() }
+                NavigationStack { ToSeeListView() }.activiteEcran(.envies)
             }
             Tab("Carte", systemImage: "map", value: 3) {
-                NavigationStack { TaskMapView(selection: $mapSelection) }
+                NavigationStack { TaskMapView(selection: $mapSelection) }.activiteEcran(.carte)
             }
             // « Fait » n'a plus d'onglet : il s'ouvre depuis le bas de « À faire ».
         }

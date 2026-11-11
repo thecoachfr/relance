@@ -78,6 +78,12 @@ nonisolated enum PiecesJointes {
     /// La pièce prête à joindre : photo réduite à 2 048 px en JPEG, texte lu, fichier rangé dans le cache et mis
     /// dans la file d'envoi.
     static func preparer(_ donnees: Data, nom: String, type: UTType?, source: String, now: Date = .now) throws -> Piece {
+        try ActiviteEcran.pendant(.preparationPiece) {
+            try preparerSansSuivi(donnees, nom: nom, type: type, source: source, now: now)
+        }
+    }
+
+    private static func preparerSansSuivi(_ donnees: Data, nom: String, type: UTType?, source: String, now: Date) throws -> Piece {
         var contenu = donnees
         var mime = type?.preferredMIMEType ?? "application/octet-stream"
         var nomFinal = nom
@@ -117,8 +123,10 @@ nonisolated enum PiecesJointes {
     static func texte(_ donnees: Data, type: String) -> String? {
         var texte: String?
         if type.hasPrefix("image/"), let source = CGImageSourceCreateWithData(donnees as CFData, nil) {
-            texte = SharedPhoto.text(in: source)
+            texte = ActiviteEcran.pendant(.texteImage) { SharedPhoto.text(in: source) }
         } else if type == "application/pdf", let pdf = PDFDocument(data: donnees) {
+            let jeton = ActiviteEcran.debut(.textePDF)
+            defer { ActiviteEcran.fin(jeton) }
             texte = pdf.string
             if (texte ?? "").trimmingCharacters(in: .whitespacesAndNewlines).count < 20, let page = pdf.page(at: 0) {
                 let image = page.thumbnail(of: CGSize(width: 1700, height: 2200), for: .mediaBox)
@@ -128,7 +136,7 @@ nonisolated enum PiecesJointes {
                 let cg = image.cgImage
                 #endif
                 if let cg, let png = Self.png(cg), let source = CGImageSourceCreateWithData(png as CFData, nil) {
-                    texte = SharedPhoto.text(in: source)
+                    texte = ActiviteEcran.pendant(.texteImage) { SharedPhoto.text(in: source) }
                 }
             }
         }

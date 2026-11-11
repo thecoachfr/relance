@@ -90,6 +90,7 @@ struct PiecesSection: View {
                     if let pdf { Task { await joindre([(pdf, "Document scanné.pdf", .pdf)], source: "scan") } }
                 }
                 .ignoresSafeArea()
+                .activiteEcran(.scan)
             }
             #endif
             .dropDestination(for: URL.self) { urls, _ in
@@ -127,9 +128,11 @@ struct PiecesSection: View {
 
     private func joindrePhotos(_ choix: [PhotosPickerItem]) async {
         var fichiers: [(Data, String, UTType?)] = []
-        for (i, element) in choix.enumerated() {
-            if let data = try? await element.loadTransferable(type: Data.self) {
-                fichiers.append((data, "Photo \(i + 1).jpg", element.supportedContentTypes.first))
+        await ActiviteEcran.pendant(.chargementPhotos) {
+            for (i, element) in choix.enumerated() {
+                if let data = try? await element.loadTransferable(type: Data.self) {
+                    fichiers.append((data, "Photo \(i + 1).jpg", element.supportedContentTypes.first))
+                }
             }
         }
         await joindre(fichiers, source: "photo")
@@ -222,7 +225,7 @@ struct ScannerDocument: UIViewControllerRepresentable {
         init(fini: @escaping (Data?) -> Void) { self.fini = fini }
 
         func documentCameraViewController(_ controller: VNDocumentCameraViewController, didFinishWith scan: VNDocumentCameraScan) {
-            let pdf = PDFDocumentFromScan.pdf(scan)
+            let pdf = ActiviteEcran.pendant(.scanPDF) { PDFDocumentFromScan.pdf(scan) }
             fini(pdf)
         }
 

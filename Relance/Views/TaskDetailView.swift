@@ -150,6 +150,8 @@ struct TaskDetailView: View {
             }
         }
         .quickLookPreview($apercu)
+        .activiteEcran(.apercuPiece, si: apercu != nil)
+        .activiteEcran(.fiche)
         .deleteTaskConfirmation(item, isPresented: $confirmDelete) { onClose?() }
         .keepAsFavorite($tested) { onClose?() }
         .placeSearch(isPresented: $searchingPlace, notes: $notes)

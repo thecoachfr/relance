@@ -29,19 +29,25 @@ nonisolated struct SessionEcran: Codable, Equatable, Sendable {
     var picMo: Double
     /// Restée ouverte : l'app s'est arrêtée à l'écran sans passer par la fermeture.
     var interrompue = false
+    /// Écran ou action en cours au moment du pic (« À faire › Fiche d'une tâche › Scan de document »), libellés fixes
+    /// d'`ActiviteEcran`, sans contenu (11/11/2026). Nil : rien de noté, ou session d'avant le 11/11.
+    var picContexte: String?
 
-    init(debut: Date, mo: Double) {
+    init(debut: Date, mo: Double, contexte: String? = nil) {
         self.debut = debut
         self.derniereMesure = debut
         self.debutMo = mo
         self.picMo = mo
+        self.picContexte = contexte
     }
 
     var duree: TimeInterval { (fin ?? derniereMesure).timeIntervalSince(debut) }
 
-    /// « Arrêt inattendu à l'écran (pic 38 Mo, durée 2 min 10 s) », pour le journal des erreurs.
+    /// « Arrêt inattendu à l'écran (pic 38 Mo, durée 2 min 10 s) », pour le journal des erreurs ; avec l'écran du
+    /// pic s'il est connu (« …, durée 20 s, Scan de document) »).
     var messageArret: String {
-        "Arrêt inattendu à l'écran (pic \(Int(picMo.rounded())) Mo, durée \(Self.texteDuree(duree)))"
+        "Arrêt inattendu à l'écran (pic \(Int(picMo.rounded())) Mo, durée \(Self.texteDuree(duree))"
+            + (picContexte.map { ", \($0)" } ?? "") + ")"
     }
 
     static func texteDuree(_ secondes: TimeInterval) -> String {
@@ -63,13 +69,13 @@ nonisolated struct JournalSessions: Codable, Equatable, Sendable {
     /// Ouvre une session. Renvoie la session précédente si elle était restée ouverte (arrêt inattendu à l'écran),
     /// pour la noter dans le journal des erreurs. Une session déjà ouverte n'est pas rouverte.
     @discardableResult
-    mutating func ouvrir(a date: Date, mo: Double) -> SessionEcran? {
+    mutating func ouvrir(a date: Date, mo: Double, contexte: String? = nil) -> SessionEcran? {
         var arretee: SessionEcran?
         if let i = sessions.indices.last, sessions[i].fin == nil, !sessions[i].interrompue {
             sessions[i].interrompue = true
             arretee = sessions[i]
         }
-        sessions.append(SessionEcran(debut: date, mo: mo))
+        sessions.append(SessionEcran(debut: date, mo: mo, contexte: contexte))
         sessions.removeAll { date.timeIntervalSince($0.debut) > Self.garde }
         if sessions.count > Self.maxSessions { sessions.removeFirst(sessions.count - Self.maxSessions) }
         return arretee
@@ -79,19 +85,20 @@ nonisolated struct JournalSessions: Codable, Equatable, Sendable {
 
     var picSessionOuverte: Double? { indexOuvert.map { sessions[$0].picMo } }
 
-    /// Note une mesure. Renvoie vrai si c'est un nouveau pic de la session.
+    /// Note une mesure. Renvoie vrai si c'est un nouveau pic de la session ; il garde alors `contexte`.
     @discardableResult
-    mutating func mesurer(a date: Date, mo: Double) -> Bool {
+    mutating func mesurer(a date: Date, mo: Double, contexte: String? = nil) -> Bool {
         guard let i = indexOuvert else { return false }
         sessions[i].derniereMesure = date
         guard mo > sessions[i].picMo else { return false }
         sessions[i].picMo = mo
+        sessions[i].picContexte = contexte
         return true
     }
 
-    mutating func fermer(a date: Date, mo: Double) {
+    mutating func fermer(a date: Date, mo: Double, contexte: String? = nil) {
         guard let i = indexOuvert else { return }
-        mesurer(a: date, mo: mo)
+        mesurer(a: date, mo: mo, contexte: contexte)
         sessions[i].fin = date
     }
 
@@ -105,12 +112,21 @@ nonisolated struct JournalSessions: Codable, Equatable, Sendable {
         var picMo: Double = 0
         var arrets = 0
         var tempsEcran: TimeInterval = 0
+        /// Écran ou action du plus gros pic.
+        var picContexte: String?
     }
 
     func bilan(depuis date: Date) -> Bilan {
         let liste = sessions.filter { $0.debut >= date }
-        return Bilan(sessions: liste.count, picMo: liste.map(\.picMo).max() ?? 0,
-                     arrets: liste.filter(\.interrompue).count, tempsEcran: liste.reduce(0) { $0 + $1.duree })
+        let plusGros = liste.max { $0.picMo < $1.picMo }
+        return Bilan(sessions: liste.count, picMo: plusGros?.picMo ?? 0,
+                     arrets: liste.filter(\.interrompue).count, tempsEcran: liste.reduce(0) { $0 + $1.duree },
+                     picContexte: plusGros?.picContexte)
+    }
+
+    /// Les sessions dont le pic dépasse `seuil` Mo, de la plus récente à la plus ancienne (diagnostic).
+    func gros(depuis date: Date, seuil: Double) -> [SessionEcran] {
+        sessions.filter { $0.debut >= date && $0.picMo >= seuil }.reversed()
     }
 
     func arrets(depuis date: Date) -> [SessionEcran] {

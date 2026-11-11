@@ -18,6 +18,11 @@ struct DiagnosticView: View {
                 LabeledContent("Maintenant", value: Self.mo(actuelMo))
                 LabeledContent("Pic du jour", value: Self.mo(jour.picMo))
                 LabeledContent("Pic sur 7 jours", value: Self.mo(semaine.picMo))
+                // Écran ou action au moment des gros pics (11/11), pour savoir d'où viennent les 270 à 900 Mo.
+                ForEach(sessions.gros(depuis: maintenant.addingTimeInterval(-7 * 86_400), seuil: 250).prefix(5), id: \.debut) { s in
+                    Text("\(s.debut, format: .dateTime.day().month().hour().minute()) : pic \(Self.mo(s.picMo)) · \(s.picContexte ?? "écran non noté")")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
                 LabeledContent("À l'écran sur 7 jours", value: SessionEcran.texteDuree(semaine.tempsEcran))
                 LabeledContent("Arrêts inattendus à l'écran", value: arrets.isEmpty ? "Aucun" : "\(arrets.count)")
                 ForEach(arrets.prefix(5), id: \.debut) { s in
@@ -27,7 +32,7 @@ struct DiagnosticView: View {
             } header: {
                 Text("Mémoire")
             } footer: {
-                Text("Empreinte mesurée toutes les 10 s, seulement app à l'écran. Un arrêt inattendu : l'app a été arrêtée à l'écran (limite de mémoire ou plantage).")
+                Text("Empreinte mesurée toutes les 10 s, seulement app à l'écran, avec l'écran ou l'action en cours (pics de plus de 250 Mo listés). Un arrêt inattendu : l'app a été arrêtée à l'écran (limite de mémoire ou plantage).")
             }
 
             Section {
@@ -77,7 +82,7 @@ struct DiagnosticView: View {
                     ShareLink("Exporter les mesures", item: exportURL)
                 }
             } footer: {
-                Text("Un fichier JSON avec les résumés, les réveils et les rapports bruts de MetricKit.")
+                Text("Un fichier JSON avec les résumés, les réveils, les sessions à l'écran (mémoire, écran du pic) et les rapports bruts de MetricKit.")
             }
         }
         .navigationTitle("Diagnostic batterie")

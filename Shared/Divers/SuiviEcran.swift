@@ -4,6 +4,7 @@ import SwiftUI
 /// le 23/10, iPhone et iPad depuis le 03/11 (revue batterie : rien n'était mesuré hors de la montre).
 /// Une session = le temps passé en `.active` ; les réveils en arrière-plan (rafraîchissement, complications) n'en
 /// ouvrent pas. Une mesure toutes les 10 s, seulement à l'écran ; écriture si le pic monte de 1 Mo ou toutes les 30 s.
+/// Depuis le 11/11, chaque pic garde l'écran ou l'action en cours (`ActiviteEcran`, libellés fixes sans contenu).
 @MainActor
 final class SuiviEcran {
     static let shared = SuiviEcran()
@@ -24,7 +25,8 @@ final class SuiviEcran {
     func ouvrir() {
         guard !Self.enTests, !journal.estOuverte else { return }
         let maintenant = Date.now, mo = Empreinte.megaoctets()
-        if let arretee = journal.ouvrir(a: maintenant, mo: mo) {
+        _ = ActiviteEcran.prendrePic()   // un pic d'avant l'ouverture (arrière-plan) n'est pas de cette session
+        if let arretee = journal.ouvrir(a: maintenant, mo: mo, contexte: ActiviteEcran.contexte) {
             Journal.echec(.systeme, arretee.messageArret)
         }
         cadence.reinitialiser()
@@ -32,16 +34,20 @@ final class SuiviEcran {
         registre.enregistrer(journal)
     }
 
+    /// Mesure, avec l'écran ou l'action en cours (`ActiviteEcran`) ; reprend d'abord le pic relevé à la fin d'une
+    /// action depuis la mesure précédente.
     func mesurer() {
         guard journal.estOuverte else { return }
         let maintenant = Date.now
-        journal.mesurer(a: maintenant, mo: Empreinte.megaoctets())
+        if let pic = ActiviteEcran.prendrePic() { journal.mesurer(a: maintenant, mo: pic.mo, contexte: pic.contexte) }
+        journal.mesurer(a: maintenant, mo: Empreinte.megaoctets(), contexte: ActiviteEcran.contexte)
         if cadence.doitEcrire(a: maintenant, pic: journal.picSessionOuverte ?? 0) { registre.enregistrer(journal) }
     }
 
     func fermer() {
         guard journal.estOuverte else { return }
-        journal.fermer(a: .now, mo: Empreinte.megaoctets())
+        if let pic = ActiviteEcran.prendrePic() { journal.mesurer(a: .now, mo: pic.mo, contexte: pic.contexte) }
+        journal.fermer(a: .now, mo: Empreinte.megaoctets(), contexte: ActiviteEcran.contexte)
         registre.enregistrer(journal)
     }
 }

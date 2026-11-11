@@ -122,10 +122,14 @@ nonisolated final class EnergyMetrics: NSObject, MXMetricManagerSubscriber, @unc
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         let summaries = (try? encoder.encode(reports())).flatMap { try? JSONSerialization.jsonObject(with: $0) } ?? []
+        // Sessions à l'écran (mémoire, écran du pic : libellés fixes, sans contenu) depuis le 11/11.
+        let sessions = (try? encoder.encode(RegistreSessions.partage.charger().sessions))
+            .flatMap { try? JSONSerialization.jsonObject(with: $0) } ?? []
         let export: [String: Any] = [
             "version": AppVersion.text,
             "exporte": ISO8601DateFormatter().string(from: .now),
             "resumes": summaries,
+            "sessions_ecran": sessions,
             "reveils": wakes(),
             "bruts": raw,
         ]

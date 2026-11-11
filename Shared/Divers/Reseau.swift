@@ -59,3 +59,30 @@ nonisolated enum Reseau {
         }
     }
 }
+
+/// Envoi en arrière-plan qui a échoué (TLS refusé, réseau absent, Home Assistant injoignable) : on attend avant de
+/// retenter, de plus en plus longtemps (2, 4, 8, 16, puis 30 min au plus), au lieu de renvoyer à chaque occasion.
+/// Vécu le 03/11 : le tracé précis retentait à chaque nouveau point, 23 échecs TLS en 5 min (BATTERIE.md, 11/11).
+/// Ce qui attendait d'être envoyé reste dans sa file locale.
+nonisolated struct AttenteApresEchec: Codable, Equatable, Sendable {
+    static let premiere: TimeInterval = 2 * 60
+    static let maximum: TimeInterval = 30 * 60
+
+    private(set) var echecs = 0
+    private(set) var prochainEssai: Date?
+
+    /// Faut-il attendre encore à `date` ?
+    func doitAttendre(a date: Date) -> Bool { prochainEssai.map { date < $0 } ?? false }
+
+    mutating func echec(a date: Date) {
+        echecs += 1
+        prochainEssai = date.addingTimeInterval(Self.pause(apres: echecs))
+    }
+
+    mutating func reussite() { self = AttenteApresEchec() }
+
+    /// Attente après `echecs` échecs de suite : 2 min, puis le double à chaque fois, 30 min au plus.
+    static func pause(apres echecs: Int) -> TimeInterval {
+        min(premiere * pow(2, Double(min(max(echecs, 1) - 1, 10))), maximum)
+    }
+}

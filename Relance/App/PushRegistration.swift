@@ -8,6 +8,9 @@ import UIKit
 enum PushRegistration {
     private static let sentKey = "pushTokenSent"
     private static let sentAtKey = "pushTokenSentAt"
+    /// Version de ce qui est envoyé : 2 = avec `appareil` (11/11), renvoyé une fois aux appareils déjà inscrits.
+    private static let sentVersionKey = "pushTokenSentVersion"
+    private static let version = 2
 
     static var webhookURL: URL? {
         guard let raw = Bundle.main.object(forInfoDictionaryKey: "RelanceWebhookURL") as? String,
@@ -23,6 +26,7 @@ enum PushRegistration {
         let lastSent = defaults.object(forKey: sentAtKey) as? Date ?? .distantPast
         guard let url = webhookURL,
               defaults.string(forKey: sentKey) != token || lastSent < .now.addingTimeInterval(-7 * 86400)
+                || defaults.integer(forKey: sentVersionKey) < version
         else { return }
 
         #if DEBUG
@@ -38,6 +42,9 @@ enum PushRegistration {
             "token": token,
             "environment": environment,
             "device": UIDevice.current.name,
+            // Nom d'émetteur dans Home Assistant (`modifie_par`) : la vigie ne réveille pas l'appareil pour ses propres
+            // modifications (11/11, trop de pushs vers l'iPad). Identifiant technique, pas de nom de personne.
+            "appareil": HAConfig.device,
         ])
         // Rejouable : la vigie range l'appareil sous son jeton (`on_register`), un second envoi écrase le premier.
         guard let (_, response) = await Journal.essayer(.reseau, "Inscription aux push", {
@@ -45,6 +52,7 @@ enum PushRegistration {
               Journal.reponseOK(response, .reseau, "Inscription aux push") else { return }
         defaults.set(token, forKey: sentKey)
         defaults.set(Date.now, forKey: sentAtKey)
+        defaults.set(version, forKey: sentVersionKey)
     }
     #endif
 }

@@ -206,7 +206,9 @@ struct PhotoDeCoursesBouton: View {
             choix = []
             Task {
                 var images: [Data] = []
-                for e in elements { if let d = try? await e.loadTransferable(type: Data.self) { images.append(d) } }
+                await ActiviteEcran.pendant(.chargementPhotos) {
+                    for e in elements { if let d = try? await e.loadTransferable(type: Data.self) { images.append(d) } }
+                }
                 await joindre(images)
             }
         }
@@ -217,6 +219,7 @@ struct PhotoDeCoursesBouton: View {
                 if let data = image?.jpegData(compressionQuality: 0.9) { Task { await joindre([data]) } }
             }
             .ignoresSafeArea()
+            .activiteEcran(.appareilPhoto)
         }
         #endif
         if let erreur { Text(erreur).font(.footnote).foregroundStyle(.red) }

@@ -214,6 +214,7 @@ struct QuickAddSheet: View {
                 }
             }
             .placeSearch(isPresented: $searchingPlace, notes: $notes)
+            .activiteEcran(.saisieRapide)
             #if os(iOS)
             .fullScreenCover(isPresented: $scanning) {
                 ScannerDocument { pdf in
@@ -221,6 +222,7 @@ struct QuickAddSheet: View {
                     if let pdf { lireRendezVous(pdf) }
                 }
                 .ignoresSafeArea()
+                .activiteEcran(.scan)
             }
             #endif
             .navigationTitle(isToSee ? kind.title : "Nouvelle tâche")

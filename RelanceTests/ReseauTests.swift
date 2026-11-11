@@ -50,3 +50,39 @@ struct ReseauHATests {
         #expect(Reseau.session.configuration.timeoutIntervalForRequest == 15)
     }
 }
+
+/// Après un envoi raté en arrière-plan (tracé précis, 11/11) : attente croissante avant le nouvel essai.
+struct AttenteApresEchecTests {
+    let t0 = Date(timeIntervalSince1970: 1_800_000_000)
+
+    @Test func pasDAttenteSansEchec() {
+        #expect(!AttenteApresEchec().doitAttendre(a: t0))
+    }
+
+    @Test func attenteCroissantePlafonnee() {
+        #expect(AttenteApresEchec.pause(apres: 1) == 120)
+        #expect(AttenteApresEchec.pause(apres: 2) == 240)
+        #expect(AttenteApresEchec.pause(apres: 4) == 960)
+        #expect(AttenteApresEchec.pause(apres: 5) == 1800)
+        #expect(AttenteApresEchec.pause(apres: 50) == 1800)
+    }
+
+    @Test func echecPuisReussite() {
+        var a = AttenteApresEchec()
+        a.echec(a: t0)
+        #expect(a.doitAttendre(a: t0 + 60))      // 23 points en 5 min : plus 23 essais
+        #expect(!a.doitAttendre(a: t0 + 120))
+        a.echec(a: t0 + 120)
+        #expect(a.doitAttendre(a: t0 + 120 + 239))
+        #expect(!a.doitAttendre(a: t0 + 120 + 240))
+        a.reussite()
+        #expect(a == AttenteApresEchec())
+    }
+
+    @Test func gardeeEnJSON() throws {
+        var a = AttenteApresEchec()
+        a.echec(a: t0)
+        let relue = try JSONDecoder().decode(AttenteApresEchec.self, from: JSONEncoder().encode(a))
+        #expect(relue == a)
+    }
+}

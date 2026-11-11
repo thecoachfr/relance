@@ -34,6 +34,7 @@ final class TraceRecorder: NSObject, CLLocationManagerDelegate {
     private static let fileKey = "trace.file"
     private static let reposKey = "trace.repos"
     private static let envoiKey = "trace.dernierEnvoi"
+    private static let attenteKey = "trace.attente"
     /// Lot envoyé : 400 points au plus (un enregistrement de `donnees_apps` tient en 64 Ko).
     static let parLot = 400
     static let maximum = 20_000
@@ -103,6 +104,18 @@ final class TraceRecorder: NSObject, CLLocationManagerDelegate {
 
     static var dernierEnvoi: Date? { AppGroup.defaults.object(forKey: envoiKey) as? Date }
 
+    /// Après un envoi raté (11/11) : plus de nouvel essai à chaque point avant 2, 4, 8… 30 min (`AttenteApresEchec`).
+    static var attente: AttenteApresEchec {
+        get {
+            AppGroup.defaults.data(forKey: attenteKey)
+                .flatMap { try? JSONDecoder().decode(AttenteApresEchec.self, from: $0) } ?? AttenteApresEchec()
+        }
+        set {
+            if newValue == AttenteApresEchec() { AppGroup.defaults.removeObject(forKey: attenteKey) }
+            else if let data = try? JSONEncoder().encode(newValue) { AppGroup.defaults.set(data, forKey: attenteKey) }
+        }
+    }
+
     /// Le tracé tourne en ce moment (mode actif et pas expiré).
     static var actif: Bool {
         switch mode {
@@ -124,7 +137,8 @@ final class TraceRecorder: NSObject, CLLocationManagerDelegate {
         location.showsBackgroundLocationIndicator = false
         NotificationCenter.default.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil,
                                                queue: .main) { _ in
-            Task { @MainActor in await TraceRecorder.shared.envoyer(force: true) }
+            // À l'ouverture, un essai même pendant l'attente : le réseau a pu changer (sortie d'un Wi-Fi qui filtre).
+            Task { @MainActor in await TraceRecorder.shared.envoyer(force: true, malgreAttente: true) }
         }
         appliquer()
     }
@@ -222,8 +236,11 @@ final class TraceRecorder: NSObject, CLLocationManagerDelegate {
     }
 
     /// Lots de 400 points vers Home Assistant ; sans `force`, au plus tous les quarts d'heure (ou dès 400 points).
-    func envoyer(force: Bool) async {
+    /// Après un échec, rien avant la fin de l'attente (`attente`), sauf `malgreAttente` (ouverture de l'app) ;
+    /// les points restent dans la file.
+    func envoyer(force: Bool, malgreAttente: Bool = false) async {
         guard !envoiEnCours, Self.fileTrace.compte > 0, let url = HAConfig.url, let jeton = HAConfig.token, !jeton.isEmpty else { return }
+        if !malgreAttente, Self.attente.doitAttendre(a: .now) { return }
         if !force, Self.fileTrace.compte < Self.parLot, let d = Self.dernierEnvoi, Date.now.timeIntervalSince(d) < Self.intervalleEnvoi { return }
         envoiEnCours = true
         defer { envoiEnCours = false }
@@ -232,25 +249,38 @@ final class TraceRecorder: NSObject, CLLocationManagerDelegate {
         defer { if tache != .invalid { UIApplication.shared.endBackgroundTask(tache) } }
         let client = HAClient(url: url, jeton: jeton, delai: 20)
         var envoyes = 0
+        var echec = false
         for debut in stride(from: 0, to: file.count, by: Self.parLot) {
             let lot = Array(file[debut..<min(debut + Self.parLot, file.count)])
             let valeur: JSONValeur = .objet([
                 "device": .texte(HAConfig.device),
                 "points": .liste(lot.map { .liste($0.map { .nombre($0) }) }),
             ])
-            let ok = await Journal.essayer(.reseau, "Envoi du tracé précis", {
-                try await client.lot(espace: TrajetsService.espace, operations: [
+            do {
+                _ = try await client.lot(espace: TrajetsService.espace, operations: [
                     OperationDonnees(type: .ecrire, cle: "lot:" + UUID().uuidString.lowercased(), valeur: valeur,
                                      versionAttendue: nil, modifieLe: Horodatage.texte(.now), modifiePar: HAConfig.device),
                 ])
-            }) != nil
-            guard ok else { break }
+            } catch is CancellationError {
+                break
+            } catch {
+                // L'erreur d'origine (ErreurHA+Texte : « Home Assistant injoignable : Une erreur SSL… »), sans contenu.
+                Journal.echec(.reseau, "Envoi du tracé précis", error)
+                echec = true
+                break
+            }
             envoyes += lot.count
         }
-        guard envoyes > 0 else {
-            SyncLog.add("Tracé précis : envoi de \(file.count) point(s) impossible, nouvel essai plus tard")
-            return
+        var attente = Self.attente
+        if echec {
+            attente.echec(a: .now)
+            let minutes = Int((AttenteApresEchec.pause(apres: attente.echecs) / 60).rounded())
+            SyncLog.add("Tracé précis : envoi impossible (\(file.count - envoyes) point(s) gardé(s)), nouvel essai dans \(minutes) min")
+        } else if envoyes > 0 {
+            attente.reussite()
         }
+        Self.attente = attente
+        guard envoyes > 0 else { return }
         // Les points reçus pendant l'envoi restent dans la file.
         Journal.essayer(.stockage, "File du tracé après l'envoi") { try Self.fileTrace.retirerPremiers(envoyes) }
         AppGroup.defaults.set(Date.now, forKey: Self.envoiKey)
