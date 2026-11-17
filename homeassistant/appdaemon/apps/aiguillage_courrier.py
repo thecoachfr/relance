@@ -465,7 +465,12 @@ donne pas ; « vers 15 h » donne 15:00), lieu (adresse ou nom du lieu tel que l
 qui dit avec qui ou quoi, par exemple « Dentiste Dr Martin » ou « Remise de la Switch à Tom », ou null). La date se \
 résout par rapport à la date du MAIL (date_du_mail, heure de Paris), pas à aujourd'hui : « aujourd'hui » est le jour \
 du mail, « demain » le lendemain, « mardi » le prochain mardi à partir du jour du mail (le jour même s'il est mardi). \
-Un rendez-vous annulé, ou déjà passé à la date du mail, donne null.
+Un rendez-vous annulé, ou déjà passé à la date du mail, donne null. nature : « rendez_vous » dans ce cas. Mets \
+aussi ici, avec nature « info », un événement daté qui le concerne où il n'a RIEN à faire ni à être présent : coupure \
+de courant, d'eau ou de gaz annoncée, travaux dans l'immeuble ou la rue, passage annoncé sans présence requise ; \
+titre court qui dit quoi (« Coupure de courant Enedis »), lieu null sauf adresse précise. Si une action est demandée \
+avant (« merci d'être présent », « libérer l'accès »), c'est un rendez-vous ou une demande, pas une info. fin : \
+l'heure de fin (HH:MM) si le mail la donne (« de 9 h 30 à 14 h 30 » donne heure 09:30, fin 14:30), sinon null.
 - confiance : de 0 à 1, ta certitude sur la catégorie ;
 - urgent : vrai seulement pour un a_traiter qui ne peut pas attendre le prochain résumé (9 h, 12 h, 18 h) : échéance \
 aujourd'hui ou demain, alerte de sécurité réelle (connexion inconnue, paiement suspect), personne qui attend une réponse \
@@ -513,8 +518,11 @@ SCHEMA = {
             "type": "object",
             "properties": {"date": {"type": "string"}, "heure": {"anyOf": [{"type": "string"}, {"type": "null"}]},
                            "lieu": {"anyOf": [{"type": "string"}, {"type": "null"}]},
-                           "titre": {"anyOf": [{"type": "string"}, {"type": "null"}]}},
-            "required": ["date", "heure", "lieu", "titre"],
+                           "titre": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+                           # 17/11 : coupure de courant annoncée (Enedis) = info datée, pas un rendez-vous.
+                           "nature": {"type": "string", "enum": ["rendez_vous", "info"]},
+                           "fin": {"anyOf": [{"type": "string"}, {"type": "null"}]}},
+            "required": ["date", "heure", "lieu", "titre", "nature", "fin"],
             "additionalProperties": False}]},
     },
     "required": ["categorie", "resume", "demande", "echeance", "confiance", "urgent", "rendez_vous"],
@@ -549,15 +557,20 @@ def rendez_vous_valide(brut):
         jour = datetime.strptime(str(brut.get("date") or ""), "%Y-%m-%d").date().isoformat()
     except ValueError:
         return None
-    heure = None
-    m = _HEURE_RDV.match(str(brut.get("heure") or "").strip())
-    if m and int(m.group(1)) < 24 and int(m.group(2) or 0) < 60:
-        heure = f"{int(m.group(1)):02d}:{int(m.group(2) or 0):02d}"
+    def heure_de(cle):
+        m = _HEURE_RDV.match(str(brut.get(cle) or "").strip())
+        if m and int(m.group(1)) < 24 and int(m.group(2) or 0) < 60:
+            return f"{int(m.group(1)):02d}:{int(m.group(2) or 0):02d}"
+        return None
 
     def texte(cle, n):
         v = " ".join(str(brut.get(cle) or "").split())
         return v[:n] or None
-    return {"date": jour, "heure": heure, "lieu": texte("lieu", 200), "titre": texte("titre", 120)}
+    rdv = {"date": jour, "heure": heure_de("heure"), "lieu": texte("lieu", 200), "titre": texte("titre", 120)}
+    # Info datée (17/11) : clés seulement dans ce cas, un rendez-vous garde la forme du 11/11.
+    if brut.get("nature") == "info":
+        rdv |= {"nature": "info", "fin": heure_de("fin")}
+    return rdv
 
 
 def texte_pour_ia(f, maintenant):
@@ -1405,6 +1418,9 @@ def marquer_fait(db, message_id, raison, maintenant):
     return n
 
 
+LIGNE_POUR_INFO = "📣 Pour info"   # nature « info » d'Aiguillage (P9-T), comme les repères de voyage
+
+
 def tache_du_mail(r, maintenant):
     """(clé, valeur) de la tâche Aiguillage créée depuis un mail (format TacheHA v2, notes seulement : le champ
     `courrier` viendra avec N4, après la consigne du tri). Datée de l'échéance du mail, sinon d'aujourd'hui.
@@ -1412,6 +1428,23 @@ def tache_du_mail(r, maintenant):
     (tâche, info, rendez-vous) est laissée au tri, qui lit le résumé : une action prise pour une info ne relancerait plus."""
     cle = str(uuid.uuid5(NAMESPACE_TACHES, f"courrier:{r['id']}"))
     rdv = rendez_vous_valide(r.get("rendez_vous"))
+    if rdv and rdv.get("nature") == "info":
+        # Info datée lue dans le mail (17/11 : coupure de courant Enedis qui gardait la date du mail) : son jour, son
+        # heure et sa durée, ligne 📣 (P9-T : rien à faire, pas de relance).
+        titre = rdv["titre"] or (r.get("sujet") or "").strip() or f"Info {_qui(r)}".strip()
+        lignes = [LIEN_GMAIL.format(r["fil"]), r.get("resume") or "", f"📧 Mail de {_qui(r)}",
+                  rdv["lieu"] and f"📍 {rdv['lieu']}", LIGNE_POUR_INFO]
+        valeur = {"v": 2, "titre": (titre[:1].upper() + titre[1:])[:200], "fait": False,
+                  "notes": "\n".join(x for x in lignes if x), "jour": rdv["date"]}
+        if rdv["heure"]:
+            valeur["heure"] = rdv["heure"]
+            if rdv.get("fin") and rdv["fin"] > rdv["heure"]:
+                h, m = map(int, rdv["heure"].split(":"))
+                fh, fm = map(int, rdv["fin"].split(":"))
+                valeur["duree"] = fh * 60 + fm - h * 60 - m
+        if rdv["lieu"]:
+            valeur["lieu"] = {"nom": rdv["lieu"], "adresse": rdv["lieu"], "source": "courrier"}
+        return cle, valeur
     if rdv:
         # Rendez-vous lu dans le mail (11/11) : son jour, son heure et son lieu, ligne 📌 comme les trains (P9-W) ;
         # le tri n'y touche plus (règle Y de la consigne).

@@ -442,5 +442,7 @@ def test_rendez_vous_lu_dans_un_mail_laisse_tranquille():
             "priorite (rendez-vous lu dans un mail)", "jour (déjà fixé)"} <= set(refus)
     # Sans 📌 (mail ordinaire) ou sans 📧 (rendez-vous saisi à la main) : les règles habituelles.
     assert not t.rendez_vous_du_mail(["📧 Mail de Doctolib"]) and not t.rendez_vous_du_mail(["📌 Rendez-vous"])
+    # Info datée lue dans un mail (coupure de courant, 17/11) : protégée de même.
+    assert t.rendez_vous_du_mail(["📧 Mail de Enedis", "📣 Pour info"])
     nv, _ = t.appliquer(dict(v, notes="📧 Mail de Doctolib"), ch(heure="10:00"), AUJ, NOW, TAGS)
     assert nv["heure"] == "10:00"

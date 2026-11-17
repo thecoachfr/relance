@@ -966,6 +966,29 @@ def test_rendez_vous_mal_forme_ou_absent():
     assert "rendez_vous" in {r["name"] for r in _base().execute("PRAGMA table_info(messages)")}
 
 
+def test_info_datee_coupure_de_courant():
+    # 17/11 : un mail Enedis « coupure le 10 décembre de 9 h 30 à 14 h 30 » donnait une tâche datée du jour du mail.
+    assert {"nature", "fin"} <= set(c.SCHEMA["properties"]["rendez_vous"]["anyOf"][1]["required"])
+    assert "coupure de courant" in c.CONSIGNE
+    rdv = c.rendez_vous_valide({"date": "2026-12-10", "heure": "9h30", "lieu": None,
+                                "titre": "coupure de courant Enedis", "nature": "info", "fin": "14h30"})
+    assert rdv == {"date": "2026-12-10", "heure": "09:30", "lieu": None, "titre": "coupure de courant Enedis",
+                   "nature": "info", "fin": "14:30"}
+    mail = _mail_rdv(nom="Enedis", de="noreply@enedis.fr", sujet="Coupure programmée", resume="Coupure le 10/12.",
+                     date="2026-11-16T08:00:00+00:00")
+    cle, t = c.tache_du_mail(dict(mail, rendez_vous=json.dumps(rdv)), MAINTENANT)
+    assert t == {"v": 2, "titre": "Coupure de courant Enedis", "fait": False, "jour": "2026-12-10", "heure": "09:30",
+                 "duree": 300, "notes": "https://mail.google.com/mail/u/0/#inbox/fR\nCoupure le 10/12.\n"
+                                        "📧 Mail de Enedis\n📣 Pour info"}
+    assert cle == c.tache_du_mail(dict(mail, rendez_vous=None), MAINTENANT)[0]
+    # Sans heure ni titre : le jour seul, l'objet du mail pour titre, pas de durée.
+    _, t = c.tache_du_mail(dict(mail, rendez_vous={"date": "2026-12-10", "nature": "info", "fin": "14:30"}), MAINTENANT)
+    assert (t["titre"], t["jour"]) == ("Coupure programmée", "2026-12-10") and "heure" not in t and "duree" not in t
+    # Un rendez-vous garde la forme du 11/11 (pas de clé nature ni fin).
+    assert c.rendez_vous_valide({"date": "2026-12-10", "nature": "rendez_vous", "fin": "10:00"}) == \
+        {"date": "2026-12-10", "heure": None, "lieu": None, "titre": None}
+
+
 # MARK: - Espace `courrier` de donnees_apps (lot C2 de l'app Courrier, 26/10)
 
 class FauxDonnees:

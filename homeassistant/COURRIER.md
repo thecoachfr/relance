@@ -979,6 +979,17 @@ adresse = le texte du mail). Même clé qu'avant (uuid5 `courrier:<id>`). Sans r
 (échéance, sinon aujourd'hui ; titre = demande, sinon « Expéditeur : objet »). **L'app Courrier, qui crée aussi la
 tâche (appui long › Tâche), doit suivre la même règle** si elle compose la valeur elle-même.
 
+### Info datée lue dans le mail (17/11, choix d'Alexandre)
+
+Constat : deux mails Enedis « coupure de courant programmée le 9/12 (23 h 30-23 h 45) / le 10/12 (9 h 30-14 h 30) »
+donnaient des tâches « Prévoir la coupure… » datées du jour du mail : ni échéance, ni rendez-vous, et le tri ne change
+jamais un jour déjà fixé. Le `rendez_vous` du classement porte désormais `nature` (`rendez_vous` ou `info`) et `fin`
+(HH:MM ou null) : un événement daté où Alexandre n'a rien à faire ni à être présent (coupure de courant, d'eau, de gaz,
+travaux, passage sans présence requise) a la nature `info`. Après nettoyage, ces deux clés ne sont gardées que pour une
+info (un rendez-vous garde la forme du 11/11) ; l'app Courrier les ignore pour l'instant. `tache_du_mail` en fait une
+tâche `📣 Pour info` : jour, heure, `duree` = fin − heure, titre = `titre` (sinon l'objet du mail), même clé uuid5. Le
+tri la protège comme un 📌 (`rendez_vous_du_mail` reconnaît aussi 📣). Test : `test_info_datee_coupure_de_courant`.
+
 Le tri laisse ensuite cette tâche tranquille (règle **Y** de `docs/TRI-CONSIGNE.md`, et dans le code
 `aiguillage_tri.rendez_vous_du_mail` : titre, heure et priorité refusés ; le jour ne change jamais quand il existe ; pas
 de 💡 sur un 📌). Il peut encore poser catégorie, tags, 🎒 (rendez-vous médical) et contact du mémo si le mail n'a pas

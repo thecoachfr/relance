@@ -248,10 +248,11 @@ def a_une_nature(lignes):
 
 def rendez_vous_du_mail(lignes):
     """Tâche créée depuis un mail (ligne « 📧 Mail de … ») qui porte la ligne « 📌 Rendez-vous » : rendez-vous lu dans
-    le mail par le classement du courrier (11/11) ou train (P9-W)."""
+    le mail par le classement du courrier (11/11) ou train (P9-W) ; aussi « 📣 Pour info », info datée lue dans le
+    mail (coupure de courant, 17/11)."""
     propres = [_sans_variante(l).strip() for l in lignes]
     return (any(l.startswith("📧 Mail de") for l in propres)
-            and any(l.startswith(LIGNES_NATURE["rendez_vous"]) for l in propres))
+            and any(l.startswith(tuple(LIGNES_NATURE.values())) for l in propres))
 
 
 def nature_acceptee(valeur, apres, ch, lignes):
