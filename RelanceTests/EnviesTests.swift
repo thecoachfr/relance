@@ -71,6 +71,9 @@ struct EnviesTests {
         #expect(kind("https://youtu.be/abc") == .watch)
         #expect(kind("https://music.youtube.com/watch?v=abc") == .listen)
         #expect(kind("https://open.spotify.com/album/123") == .listen)
+        // Un concert Spotify est une sortie (17/11), même avec `intl-fr` et les paramètres du lien copié.
+        #expect(kind("https://open.spotify.com/concert/4udZSpo8FIcPQGDBJ9sdlP?si=7vL&utm_source=copy-link") == .event)
+        #expect(kind("https://open.spotify.com/intl-fr/concert/4udZSpo8FIcPQGDBJ9sdlP") == .event)
         #expect(kind("https://music.apple.com/fr/album/x/1") == .listen)
         #expect(kind("https://www.senscritique.com/livre/x/1") == .read)
         #expect(kind("https://www.senscritique.com/film/x/1") == .watch)

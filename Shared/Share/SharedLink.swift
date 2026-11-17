@@ -90,6 +90,12 @@ nonisolated enum SharedLink {
     /// Le type d'envie d'après l'adresse ; `.read` pour un lien seul d'un autre site (un article, le plus souvent).
     static func kind(for url: URL, linkOnly: Bool) -> ToSee.Kind? {
         guard let host = url.host()?.lowercased() else { return nil }
+        // Page d'un concert sur Spotify (`open.spotify.com/concert/<id>`, partagé le 17/11) : une sortie, pas un
+        // morceau à écouter (sinon la recette « playlist À écouter » se déclenche et échoue).
+        if host == "open.spotify.com" || host.hasSuffix(".open.spotify.com"),
+           url.path().split(separator: "/").contains(where: { $0 == "concert" || $0 == "concerts" }) {
+            return .event
+        }
         if let found = hosts.first(where: { host == $0.0 || host.hasSuffix("." + $0.0) }) { return found.1 }
         if host.hasSuffix("senscritique.com") {
             let path = url.path().lowercased()
